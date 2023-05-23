@@ -1,0 +1,174 @@
+---
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# initSDK
+
+## 功能介绍
+
+:::info 说明
+
+初始化是客户端调用 sdk 的第一步，在应用的生命周期内只能调用一次，重复调用可能会导致未知的问题。
+
+:::
+
+:::caution 注意
+
+（1）初始化成功，只能调用 login，不能调用其他接口；  
+（2）客户端的底层日志会存放在指定目录，供调试查看。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'Uniapp', value: 'Uniapp', },
+{ label: 'Web', value: 'Web', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 参数详解
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+- (BOOL)initSDKWithConfig:(OIMInitConfig *)config
+             onConnecting:(nullable OIMVoidCallback)onConnecting
+         onConnectFailure:(nullable OIMFailureCallback)onConnectFailure
+         onConnectSuccess:(nullable OIMVoidCallback)onConnectSuccess
+          onKickedOffline:(nullable OIMVoidCallback)onKickedOffline
+       onUserTokenExpired:(nullable OIMVoidCallback)onUserTokenExpired;
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                             | 是否必填 | 描述       |
+| -------- | ---------------------------------------------------- | -------- | ---------- |
+| config   | [OIMInitConfig](docs/sdks/Class/Init/Config.mdx) | 是       | 初始化参数 |
+
+### 返回结果
+
+| 名称               | 数值类型           | 描述               |
+| ------------------ | ------------------ | ------------------ |
+| success            | BOOL               | 标识是否初始化成功 |
+| onConnecting       | OIMVoidCallback    | 连接中的回调       |
+| onConnectFailure   | OIMFailureCallback | 连接失败的回调     |
+| onConnectSuccess   | OIMFailureCallback | 连接成功的回调     |
+| onKickedOffline    | OIMVoidCallback    | 踢下线的回调       |
+| onUserTokenExpired | OIMVoidCallback    | token 过期的回调   |
+
+### 代码示例
+
+```swift showLineNumbers
+OIMInitConfig *config = [OIMInitConfig new];
+config.apiAddr = @"";
+config.wsAddr = @"";
+config.objectStorage = @"";
+
+BOOL success = [OIMManager.manager initSDKWithConfig:config
+                                        onConnecting:^{
+
+} onConnectFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 连接失败的回调函数
+    // code 错误码
+    // error 错误信息
+} onConnectSuccess:^{
+    // SDK 已经成功连接到IM服务器
+} onKickedOffline:^{
+    // SDK 正在连接到IM服务器
+} onUserTokenExpired:^{
+    // 在线时票据过期：此时您需要生成新的 token 并再次调用 的 login() 函数重新登录。
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 参数详解
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 参数详解
+
+</TabItem>
+
+<TabItem value="Uniapp">
+
+### 参数详解
+
+| 参数名称       | 参数类型                                   | 是否必填 | 描述                                                                         |
+| -------------- | ------------------------------------------ | -------- | ---------------------------------------------------------------------------- |
+| operationID    | string                                     | 是       | 唯一随机字符串，用于根据日志定位问题                                         |
+| platform       | [Platform](/sdks/enum/Initialization)      | 是       | 平台号，用于区分当前登录平台                                                 |
+| api_addr       | string                                     | 是       | IM api 地址，一般为`http://xxx:10002`或`https://xxx/api`                     |
+| ws_addr        | string                                     | 是       | IM ws 地址，一般为`ws://xxx:10001`或`wss://xxx/message_gateway`              |
+| data_dir       | string                                     | 是       | IM 客户端 DB 存放目录，要求绝对路径，一般通过`plus.io.requestFileSystem`获取 |
+| object_storage | [ObjectStorage](/sdks/enum/Initialization) | 是       | IM 文件资源存放方式                                                          |
+| log_level      | [LogLevel](/sdks/enum/Initialization)      | 是       | SDK 日志打印级别                                                             |
+
+### 返回模板
+
+```
+flag:boolean
+```
+
+### 返回值详解
+
+| 名称 | 数值类型 | 描述               |
+| ---- | -------- | ------------------ |
+| flag | boolean  | 标识是否初始化成功 |
+
+### 代码示例
+
+```js showLineNumbers
+// App.vue
+import IMSDK from '@openim-sdk/uniapp-polyfill';
+
+const path = await getDbDir();
+const flag = IMSDK.Api.initSDK(IMSDK.uuidv4(), {
+  platform: uni.$u.os() === 'ios' ? 1 : 2, // 当前登录平台
+  api_addr: 'http://xxx:10002', // IM api 接口地址
+  ws_addr: 'ws://xxx:10001', // im websocket 地址
+  data_dir: path, // 数据存储路径
+  object_storage: 'minio', // 文件资源存放方式
+  log_level: 6, //日志打印级别
+});
+
+// utils.js
+export const getDbDir = () =>
+  new Promise((resolve, reject) => {
+    plus.io.requestFileSystem(plus.io.PRIVATE_DOC, (fs) => {
+      fs.root.getDirectory(
+        'user',
+        {
+          create: true,
+        },
+        (entry) => {
+          resolve(entry.fullPath);
+        },
+        (error) => {
+          reject(error);
+        }
+      );
+    });
+  });
+```
+
+</TabItem>
+
+</Tabs>

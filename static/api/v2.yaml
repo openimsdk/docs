@@ -1,0 +1,4226 @@
+openapi: 3.0.0
+x-stoplight:
+  id: f49d2395cc273
+servers:
+  - url: 'https://api.cluster.dyte.in/v2'
+    description: ''
+    variables: {}
+info:
+  version: v2
+  title: Dyte REST APIs V2
+  description: |-
+    ## Rate Limiting
+
+    Rate limits specify the maximum number of requests (GET, POST, PUT, or DELETE) a user can make in a given time period. When you exceed a rate limit, the API request fails and returns the HTTP 429 status code. The HTTP 429 status code indicates that the user made too many requests in a given period of time ("rate limiting").
+
+    We apply rate limits at the IP address level.
+
+    ### Rate Limit by IP Address
+
+    The rate limit threshold is set at 2000 calls per minute per IP address. After 2000 calls, a 429 status code is sent, and access to any of our APIs is denied. 
+
+    Note: Rate limit is applied at the domain level, which means that all APIs are included in the threshold.
+
+    | Number of Requests | Resources | Time Window | Status Code Returned when Threshold Exceeds |
+    |--|--|--|--|
+    | 2000 | Per IP | Per minute | HTTP 429 |
+
+    ### Sample
+
+    The following sample shows the API response for the status code 429.
+
+    ```http
+    HTTP/1.1 429 Too Many Requests
+    retry-after: 4
+    x-envoy-ratelimited: true
+    date: Tue, 06 Sep 2022 08:32:55 GMT
+    server: envoy
+    ```
+
+    ### Why Do You Set a Rate Limit?
+
+    Rate limiting is required to prevent the network from becoming overloaded as a result of numerous requests. This could be due to hacking activity, overuse of the Dyte APIs by a bot, or a bug in the code. Setting a rate limit helps to prevent this type of API overuse.
+
+    Setting a rate limit also protects us from various types of attacks, such as:
+    - [Brute Force Attack](https://www.fortinet.com/resources/cyberglossary/brute-force-attack)
+    - [DDOS attack](https://aws.amazon.com/shield/ddos-attack-protection/)
+    - [Web-scraping](https://www.geeksforgeeks.org/what-is-web-scraping-and-how-to-use-it/)
+  termsOfService: ''
+  license:
+    name: ''
+paths:
+  /livestreams:
+    post:
+      summary: Create an independent livestream
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              x-examples:
+                example-1:
+                  name: prdmmp-xhycsl-asdf
+              properties:
+                name:
+                  type: string
+                  description: Name of the livestream
+                  pattern: '^[a-zA-Z0-9-_]*$'
+                  nullable: true
+            examples:
+              example-1:
+                value:
+                  name: prdmmp-xhycsl
+        description: ''
+      parameters: []
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples: null
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - LIVE
+                          - OFFLINE
+                          - ERRORED
+                      name:
+                        type: string
+                        nullable: true
+                      meeting_id:
+                        type: string
+                        nullable: true
+                      ingest_seconds:
+                        type: number
+                        description: The time duration for which the input was given or the meeting was streamed.
+                      viewer_seconds:
+                        type: number
+                        description: The total view time for which the viewers watched the stream.
+                      ingest_server:
+                        type: string
+                        description: The server URL to which the RTMP encoder should send the video and audio data.
+                      id:
+                        type: string
+                        description: The livestream ID.
+                      stream_key:
+                        type: string
+                        description: Unique key for accessing each livestream.
+                      playback_url:
+                        type: string
+                        description: The web address that viewers can use to watch the livestream.
+              examples:
+                example-1:
+                  value:
+                    success: true
+                    data:
+                      status: OFFLINE
+                      name: Livestreaming-Demo
+                      meeting_id: null
+                      ingest_seconds: 0
+                      viewer_seconds: 0
+                      ingest_server: 'rtmps://2ec802dd47b0.global-contribute.live-video.net:443/app/'
+                      id: 78dd0b50-4147-4bb8-88d3-2ccc2e98bff0
+                      stream_key: sk_ap-south-1_BSErwBSdrcWn_0eG01cFGCJcRcCsflOAX3Eu4B3RyRX
+                      playback_url: 'https://2ec802dd47b0.ap-south-1.playback.live-video.net/api/video/v1/ap-south-1.944908621410.channel.Jk1l97eJF0ME.m3u8'
+      description: 'Creates a livestream for the given organization ID and returns ingest server, stream key, and playback URL. Custom input can be passed to the ingest server and stream key, and freely distributed using the playback URL on any HLS/LHLS supported player.'
+      tags:
+        - Live streams
+    get:
+      operationId: fetch_all_livestreams
+      summary: Fetch all livestreams
+      parameters:
+        - schema:
+            type: boolean
+            default: false
+          in: query
+          name: excludeMeetings
+          description: Exclude the Dyte meetings that are livestreamed.
+        - schema:
+            type: integer
+          in: query
+          name: limit
+          description: 'Specifies the number of results to return on each page. The default value is 10. '
+        - schema:
+            type: integer
+          in: query
+          name: offset
+          description: Sets the first position to return from the results of the query. The default is 0.
+      responses:
+        '200':
+          description: OK
+          headers: {}
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples: null
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                        description: The number of results returned on each page. The default value is 10.
+                      total:
+                        type: integer
+                        description: Total number of livestreams returned.
+                      total_count:
+                        type: integer
+                        description: Total number of livestreams returned.
+                      page_count:
+                        type: integer
+                        description: Total number of pages returned.
+                      current_page:
+                        type: integer
+                        description: The current page number that is returned.
+                      livestreams:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            status:
+                              type: string
+                              enum:
+                                - LIVE
+                                - OFFLINE
+                                - ERRORED
+                            name:
+                              type: string
+                              description: Name of the livestream.
+                              nullable: true
+                            meeting_id:
+                              type: string
+                              nullable: true
+                            ingest_seconds:
+                              type: number
+                              description: The time duration for which the input was given or the meeting was streamed.
+                            viewer_seconds:
+                              type: number
+                              description: The total view time for which the viewers watched the stream.
+                            ingest_server:
+                              type: string
+                              description: The server URL to which the RTMP encoder sends the video and audio data.
+                            id:
+                              type: string
+                              description: The livestream ID.
+                            stream_key:
+                              type: string
+                              description: Unique key for accessing each livestream.
+                            playback_url:
+                              type: string
+                              description: The web address that viewers can use to watch the livestream.
+              examples:
+                example-0:
+                  summary: Get All Live streams Of An Org Staging Success
+                  value:
+                    success: true
+                    message: ''
+                    data:
+                      limit: 10
+                      total: 17
+                      total_count: 17
+                      page_count: 2
+                      current_page: 1
+                      livestreams:
+                        - status: OFFLINE
+                          name: prdmmp-xhycsl
+                          meeting_id: null
+                          ingest_seconds: 0
+                          viewer_seconds: 0
+                          ingest_server: 'rtmps://2ec802dd47b0.global-contribute.live-video.net:443/app/'
+                          id: 82e363e9-6ce2-462a-a9e5-37068a729548
+                          stream_key: sk_ap-south-1_6z1GZy7HtfQh_9qCdXZVrLV8E2xDxrkPO0uzXSvB2Eg
+                          playback_url: 'https://2ec802dd47b0.ap-south-1.playback.live-video.net/api/video/v1/ap-south-1.944908621410.channel.rHYG1VHblte6.m3u8'
+      description: 'Returns details of all livestreams associated with the given organization ID. This includes the livestreams that you have created for your organization and also the Dyte meetings that are livestreamed by that organization. If you only want details of livestreams created by your organization and not Dyte meetings that are streamed, use the `excludeMeetings` query parameter.'
+      tags:
+        - Live streams
+  '/meetings/{meeting_id}/livestreams':
+    post:
+      summary: Start livestreaming a meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              x-examples:
+                example-1:
+                  name: prdmmp-xhycsl
+              properties:
+                name:
+                  type: string
+                  pattern: '^[a-zA-Z0-9-_]*$'
+                  nullable: true
+            examples:
+              example-1:
+                value:
+                  name: prdmmp-xhycsl
+      parameters: []
+      responses:
+        '201':
+          description: Created
+          headers: {}
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples: null
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - LIVE
+                          - OFFLINE
+                          - ERRORED
+                      name:
+                        type: string
+                        description: Name of the livestream.
+                        nullable: true
+                      meeting_id:
+                        type: string
+                      ingest_server:
+                        type: string
+                        description: The server URL to which the RTMP encoder sends the video and audio data.
+                      id:
+                        type: string
+                        description: The livestream ID.
+                      stream_key:
+                        type: string
+                        description: Unique key for accessing each livestream.
+                      playback_url:
+                        type: string
+                        description: The web address that viewers can use to watch the livestream.
+              examples:
+                example-1:
+                  value:
+                    success: true
+                    data:
+                      status: OFFLINE
+                      name: null
+                      meeting_id: 188566bc-8770-4ca0-9eb3-24b594ecaf7e
+                      ingest_server: 'rtmps://2ec802dd47b0.global-contribute.live-video.net:443/app/'
+                      id: 7088bba8-f522-49a8-b59b-3cd0e946bbb0
+                      stream_key: sk_ap-south-1_AfnVpeYZjidO_fBpWKody7sDUOEfy9Zc6XAZegkR0Va
+                      playback_url: 'https://2ec802dd47b0.ap-south-1.playback.live-video.net/api/video/v1/ap-south-1.944908621410.channel.rVKA2KM5Lunt.m3u8'
+            application/xml:
+              schema:
+                type: object
+                properties: {}
+      description: Starts livestreaming a meeting for the given meeting ID.
+      tags:
+        - Live streams
+    get:
+      summary: Fetch all livestreams for a meeting
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: limit
+          description: 'Specifies the number of results to return on each page. The default value is 10. '
+        - schema:
+            type: integer
+          in: query
+          name: offset
+          description: Sets the first position to return from the results of the query. The default is 0.
+      responses:
+        '200':
+          description: OK
+          headers: {}
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples: null
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                        description: The number of results returned on each page. The default value is 10.
+                      total:
+                        type: integer
+                        description: Total number of livestreams returned.
+                      total_count:
+                        type: integer
+                        description: Total number of livestreams returned.
+                      page_count:
+                        type: integer
+                        description: Total number of pages returned.
+                      current_page:
+                        type: integer
+                        description: 'The current page number that is returned. '
+                      livestreams:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            status:
+                              type: string
+                              enum:
+                                - LIVE
+                                - OFFLINE
+                                - ERRORED
+                            name:
+                              type: string
+                              description: Name of the livestream.
+                              nullable: true
+                            meeting_id:
+                              type: string
+                            ingest_seconds:
+                              type: number
+                              description: The time duration for which the input was given or the meeting was streamed.
+                            viewer_seconds:
+                              type: number
+                              description: The total view time for which the viewers watched the stream.
+                            ingest_server:
+                              type: string
+                              description: The server URL to which the RTMP encoder sends the video and audio data.
+                            id:
+                              type: string
+                              description: The livestream ID.
+                            stream_key:
+                              type: string
+                              description: Unique key for accessing each livestream.
+                            playback_url:
+                              type: string
+                              description: The web address that viewers can use to watch the livestream.
+              examples:
+                example-0:
+                  summary: Get LiveStream From StreamId Success
+                  value:
+                    success: true
+                    message: ''
+                    data:
+                      limit: 10
+                      total: 1
+                      total_count: 1
+                      page_count: 1
+                      curren_page: 1
+                      livestreams:
+                        - status: OFFLINE
+                          name: null
+                          meeting_id: 188566bc-8770-4ca0-9eb3-24b594ecaf7e
+                          ingest_seconds: 171
+                          viewer_seconds: 160.15999992
+                          ingest_server: 'rtmps://2ec802dd47b0.global-contribute.live-video.net:443/app/'
+                          id: 7088bba8-f522-49a8-b59b-3cd0e946bbb0
+                          stream_key: sk_ap-south-1_AfnVpeYZjidO_fBpWKody7sDUOEfy9Zc6XAZegkR0Va
+                          playback_url: 'https://2ec802dd47b0.ap-south-1.playback.live-video.net/api/video/v1/ap-south-1.944908621410.channel.rVKA2KM5Lunt.m3u8'
+      description: Returns details of all livestreams for the given meeting ID.
+      tags:
+        - Live streams
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        required: true
+        description: ID of the meeting
+  '/meetings/{meeting_id}/active-livestream/stop':
+    post:
+      operationId: stop_livestreaming
+      summary: Stop livestreaming a meeting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: prdmmp-xhycsl
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          headers: {}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                x-examples: null
+              examples:
+                example-1:
+                  value:
+                    success: true
+                    data:
+                      message: livestream stopped
+      description: Stops active livestreaming of a meeting for the given meeting ID.
+      tags:
+        - Live streams
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        required: true
+        description: ID of the meeting
+  '/livestreams/{stream_id}':
+    get:
+      summary: Fetch livestream details using stream ID
+      parameters: []
+      responses:
+        '200':
+          description: OK
+          headers: {}
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples: null
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - LIVE
+                          - OFFLINE
+                          - ERRORED
+                      name:
+                        type: string
+                        description: Name of the livestream.
+                        nullable: true
+                      meeting_id:
+                        type: string
+                      ingest_seconds:
+                        type: number
+                        description: The time duration for which the input was given or the meeting was streamed.
+                      viewer_seconds:
+                        type: number
+                        description: The total view time for which the viewers watched the stream.
+                      ingest_server:
+                        type: string
+                        description: The server URL to which the RTMP encoder sends the video and audio data.
+                      id:
+                        type: string
+                        description: The livestream ID.
+                      stream_key:
+                        type: string
+                        description: Unique key for accessing each livestream.
+                      playback_url:
+                        type: string
+                        description: The web address that viewers can use to watch the livestream.
+              examples:
+                example-1:
+                  value:
+                    success: true
+                    data:
+                      status: OFFLINE
+                      name: null
+                      meeting_id: 188566bc-8770-4ca0-9eb3-24b594ecaf7e
+                      ingest_seconds: 171
+                      viewer_seconds: 160.15999992
+                      ingest_server: 'rtmps://2ec802dd47b0.global-contribute.live-video.net:443/app/'
+                      id: 7088bba8-f522-49a8-b59b-3cd0e946bbb0
+                      stream_key: sk_ap-south-1_AfnVpeYZjidO_fBpWKody7sDUOEfy9Zc6XAZegkR0Va
+                      playback_url: 'https://2ec802dd47b0.ap-south-1.playback.live-video.net/api/video/v1/ap-south-1.944908621410.channel.rVKA2KM5Lunt.m3u8'
+      description: Fetch details of a livestream for the given stream ID.
+      tags:
+        - Live streams
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: stream_id
+        in: path
+        required: true
+        description: ID of the livestream
+  '/meetings/{meeting_id}/active-livestream':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        required: true
+        description: ID of the meeting
+    get:
+      summary: Fetch active livestreams for a meeting
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                x-examples: null
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - LIVE
+                          - OFFLINE
+                          - ERRORED
+                      name:
+                        type: string
+                        description: Name of the livestream.
+                        nullable: true
+                      meeting_id:
+                        type: string
+                      ingest_seconds:
+                        type: integer
+                        description: The time duration for which the input was given or the meeting was streamed.
+                      viewer_seconds:
+                        type: integer
+                        description: The total view time for which the viewers watched the stream.
+                      ingest_server:
+                        type: string
+                        description: The server URL to which the RTMP encoder sends the video and audio data.
+                      id:
+                        type: string
+                        description: The livestream ID.
+                      stream_key:
+                        type: string
+                        description: Unique key for accessing each livestream.
+                      playback_url:
+                        type: string
+                        description: The web address that viewers can use to watch the livestream.
+              examples:
+                example-1:
+                  value:
+                    success: true
+                    data:
+                      status: LIVE
+                      name: null
+                      meeting_id: 188566bc-8770-4ca0-9eb3-24b594ecaf7e
+                      ingest_seconds: 0
+                      viewer_seconds: 0
+                      ingest_server: 'rtmps://2ec802dd47b0.global-contribute.live-video.net:443/app/'
+                      id: 7088bba8-f522-49a8-b59b-3cd0e946bbb0
+                      stream_key: sk_ap-south-1_AfnVpeYZjidO_fBpWKody7sDUOEfy9Zc6XAZegkR0Va
+                      playback_url: 'https://2ec802dd47b0.ap-south-1.playback.live-video.net/api/video/v1/ap-south-1.944908621410.channel.rVKA2KM5Lunt.m3u8'
+      operationId: get-v2-meetings-meetingId-active-livestream
+      description: Returns details of all active livestreams for the given meeting ID.
+      tags:
+        - Live streams
+      parameters: []
+  '/meetings/{meeting_id}/active-session':
+    get:
+      summary: Fetch details of an active session
+      description: Returns details of an ongoing active session for the given meeting ID.
+      operationId: GetActiveSession
+      parameters:
+        - $ref: '#/components/parameters/meetingId'
+      tags:
+        - Active session
+      responses:
+        '200':
+          $ref: '#/components/responses/GetActiveSession'
+        '404':
+          $ref: '#/components/responses/GetActiveSessionNotFound'
+  '/meetings/{meeting_id}/active-session/kick':
+    post:
+      summary: Kick participants from an active session
+      description: Kicks one or more participants from an active session using user ID or custom participant ID.
+      operationId: KickPartcipants
+      parameters:
+        - $ref: '#/components/parameters/meetingId'
+      tags:
+        - Active session
+      requestBody:
+        $ref: '#/components/requestBodies/KickParticipantsBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/KickParticipants'
+        '404':
+          $ref: '#/components/responses/ParticipantNotFound'
+  '/meetings/{meeting_id}/active-session/kick-all':
+    post:
+      summary: Kick all participants
+      description: Kicks all participants from an active session for the given meeting ID.
+      operationId: KickAllParticipants
+      parameters:
+        - $ref: '#/components/parameters/meetingId'
+      tags:
+        - Active session
+      responses:
+        '200':
+          $ref: '#/components/responses/KickAllParticipants'
+  '/meetings/{meeting_id}/active-session/mute':
+    post:
+      summary: Mute participants of an active session
+      description: Mutes one or more participants from an active session using user ID or custom participant ID.
+      operationId: MuteParticipants
+      parameters:
+        - $ref: '#/components/parameters/meetingId'
+      tags:
+        - Active session
+      requestBody:
+        $ref: '#/components/requestBodies/KickParticipantsBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/MuteParticipants'
+  '/meetings/{meeting_id}/active-session/mute-all':
+    post:
+      summary: Mute all participants
+      description: Mutes all participants of an active session for the given meeting ID.
+      operationId: MuteAllParticipants
+      parameters:
+        - $ref: '#/components/parameters/meetingId'
+      tags:
+        - Active session
+      requestBody:
+        $ref: '#/components/requestBodies/MuteAllParticipantsBody'
+      responses:
+        '200':
+          $ref: '#/components/responses/MuteAllParticipants'
+  '/meetings/{meeting_id}/active-session/poll':
+    post:
+      summary: Create a poll
+      description: Creates a new poll in an active session for the given meeting ID.
+      operationId: CreatePoll
+      parameters:
+        - $ref: '#/components/parameters/meetingId'
+      tags:
+        - Active session
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePollBody'
+      responses:
+        '201':
+          $ref: '#/components/responses/CreatePoll'
+  /sessions:
+    get:
+      summary: Fetch all sessions of an organization
+      description: Returns details of all sessions of an organization.
+      operationId: GetSessions
+      tags:
+        - Sessions
+      parameters:
+        - $ref: '#/components/parameters/pageNo'
+        - $ref: '#/components/parameters/perPage'
+        - $ref: '#/components/parameters/sortOrder'
+        - $ref: '#/components/parameters/startTime'
+        - $ref: '#/components/parameters/endTime'
+        - $ref: '#/components/parameters/participants'
+        - $ref: '#/components/parameters/status'
+        - schema:
+            type: string
+          in: query
+          name: search
+          description: 'Search string that matches sessions based on meeting title, meeting ID, and session ID'
+        - schema:
+            type: string
+          in: query
+          name: associated_id
+          description: ID of the meeting that sessions should be associated with
+      responses:
+        '200':
+          $ref: '#/components/responses/GetSessions'
+  '/sessions/{session_id}':
+    get:
+      summary: Fetch details of a session
+      description: Returns data of the given session ID including recording details.
+      operationId: GetSessionDetails
+      tags:
+        - Sessions
+      responses:
+        '200':
+          $ref: '#/components/responses/GetSessionDetails'
+    parameters:
+      - schema:
+          type: string
+        name: session_id
+        in: path
+        required: true
+        description: ID of the session
+  '/sessions/{session_id}/participants':
+    get:
+      summary: Fetch participants list of a session
+      description: Returns a list of participants for the given session ID.
+      operationId: GetSessionParticipants
+      tags:
+        - Sessions
+      parameters:
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/pageNo'
+        - $ref: '#/components/parameters/perPage'
+        - $ref: '#/components/parameters/sortOrder'
+        - $ref: '#/components/parameters/participantsSortBy'
+        - name: include_peer_events
+          in: query
+          description: 'if true, response includes all the peer events of participants'
+          schema:
+            type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/GetSessionParticipants'
+    parameters:
+      - schema:
+          type: string
+        name: session_id
+        in: path
+        required: true
+        description: ID of the session
+  '/sessions/{session_id}/participants/{participant_id}':
+    get:
+      summary: Fetch details of a participant
+      description: Returns details of the given participant ID along with call statistics for the given session ID.
+      operationId: GetParticipantDetails
+      tags:
+        - Sessions
+      responses:
+        '200':
+          $ref: '#/components/responses/GetParticipantDetails'
+      parameters:
+        - schema:
+            type: string
+            example: 'device_info,ip_information,events'
+            enum:
+              - device_info
+              - ip_information
+              - precall_network_information
+              - events
+              - quality_stats
+          in: query
+          name: filters
+          description: Comma separated list of filters to apply. Note that there must be no spaces between the filters.
+          allowEmptyValue: true
+    parameters:
+      - schema:
+          type: string
+        name: participant_id
+        in: path
+        required: true
+        description: ID of the participant
+      - schema:
+          type: string
+        name: session_id
+        in: path
+        required: true
+        description: ID of the session
+  '/sessions/{session_id}/chat':
+    get:
+      summary: Fetch all chat messages of a session
+      description: |
+        Returns a URL to download all chat messages of the session ID in CSV format.
+        <!-- theme: warning -->
+        > #### NOTE
+        >
+        > This API is in beta and is disabled by default. [Contact us](https://dyte.io/contact) to enable it
+        > for your organization.
+      operationId: GetSessionChat
+      tags:
+        - Sessions
+      responses:
+        '200':
+          $ref: '#/components/responses/GetSessionChat'
+    parameters:
+      - schema:
+          type: string
+        name: session_id
+        in: path
+        required: true
+        description: ID of the session
+  /analytics/overall:
+    get:
+      summary: Fetch complete analytics data
+      description: 'Returns complete analytics such as sessions_count, sessions_minutes_consumed and recordings_minutes_consumed of an organization in a given time period.'
+      operationId: GetOverallStats
+      tags:
+        - Analytics
+      parameters:
+        - $ref: '#/components/parameters/startDate'
+        - $ref: '#/components/parameters/endDate'
+      responses:
+        '200':
+          $ref: '#/components/responses/GetOverallStats'
+  /analytics/daywise:
+    get:
+      summary: Fetch daywise analytics data
+      description: 'Returns analytics such as sessions_count, sessions_minutes_consumed and recordings_minutes_consumed of an organization grouped by day in a given time period.'
+      operationId: GetDaywiseStats
+      tags:
+        - Analytics
+      parameters:
+        - $ref: '#/components/parameters/startDate'
+        - $ref: '#/components/parameters/endDate'
+      responses:
+        '200':
+          $ref: '#/components/responses/GetDaywiseStats'
+  /webhooks:
+    summary: Represents webhooks for organization
+    description: Represents webhooks for organization
+    get:
+      summary: Fetch all webhooks details
+      tags:
+        - Webhooks
+      description: Returns details of all webhooks for an organization.
+      operationId: getAllWebhooks
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhooksListSuccessResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              example: |
+                {
+                  message: "Unauthorized"
+                }
+    post:
+      summary: Add a webhook
+      tags:
+        - Webhooks
+      description: Adds a new webhook to an organization.
+      operationId: addWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+      responses:
+        '201':
+          description: Webhook registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSuccessResponse'
+        '400':
+          description: Error - malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                {
+                  success: false,
+                  error: { code: 400, message: 'BAD_REQUEST: "name" is required' }
+                }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              example: |
+                {
+                  message: "Unauthorized"
+                }
+  '/webhooks/{webhook_id}':
+    summary: Represents a single webhook
+    description: Represents a single webhook for an organization by ID
+    get:
+      summary: Fetch details of a webhook
+      description: Returns webhook details for the given webhook ID.
+      tags:
+        - Webhooks
+      operationId: getWebhook
+      parameters: null
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSuccessResponse'
+        '400':
+          description: Error - malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                {
+                  success: false,
+                  error: { code: 400, message: 'BAD_REQUEST: "id" must be a valid GUID' }
+                }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              example: |
+                {
+                  message: "Unauthorized"
+                }
+    put:
+      summary: Replace a webhook
+      description: Replace all details for the given webhook ID.
+      tags:
+        - Webhooks
+      operationId: replaceWebhook
+      parameters: null
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookRequest'
+            example: |
+              {
+                "name": "test",
+                "events": [ "meeting.started" ],
+                "url": "https://new-test-url.com"
+              }
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSuccessResponse'
+              example: |
+                {
+                  "success": true,
+                  "data": {
+                    id: "901e9adf-ebd9-41f0-9098-28171bc04ddd",
+                    "name": "test",
+                    "events": [ "meeting.started" ],
+                    "url": "https://new-test-url.com",
+                    "created_at": "2021-09-09T10:25:12.330Z",
+                    "updated_at": "2021-09-09T10:25:12.376Z"
+                  }
+                }
+        '400':
+          description: Error - malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                {
+                  "success": false,
+                  "error": { "code": 400, "message": "BAD_REQUEST \"id\" must be a valid GUID" }
+                }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              example: |
+                {
+                  message: "Unauthorized"
+                }
+    patch:
+      summary: Edit a webhook
+      description: Edits the webhook details for the given webhook ID.
+      tags:
+        - Webhooks
+      operationId: editWebhook
+      parameters: null
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchWebhookRequest'
+            example: |
+              {
+                "name": "test",
+                "events": [ "meeting.started" ],
+                "url": "https://new-test-url.com"
+              }
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSuccessResponse'
+              example: |
+                {
+                  "success": true,
+                  "data": {
+                    id: "901e9adf-ebd9-41f0-9098-28171bc04ddd",
+                    "name": "test",
+                    "events": [ "meeting.started" ],
+                    "url": "https://new-test-url.com",
+                    "created_at": "2021-09-09T10:25:12.330Z",
+                    "updated_at": "2021-09-09T10:25:12.376Z"
+                  }
+                }
+        '400':
+          description: Error - malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                {
+                  "success": false,
+                  "error": { "code": 400, "message": "BAD_REQUEST \"id\" must be a valid GUID" }
+                }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              example: |
+                {
+                  "message": "Unauthorized"
+                }
+    delete:
+      summary: Delete a webhook
+      description: Removes a webhook for the given webhook ID.
+      tags:
+        - Webhooks
+      operationId: deleteWebhook
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSuccessResponse'
+        '400':
+          description: Error - malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example: |
+                {
+                  "success": false,
+                  "error": { "code": 400, "message": "BAD_REQUEST \"id\" must be a valid GUID" }
+                }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              example: |
+                {
+                  "message": "Unauthorized"
+                }
+    parameters:
+      - schema:
+          type: string
+        name: webhook_id
+        in: path
+        required: true
+        description: ID of the webhook
+  /orgs:
+    get:
+      summary: Fetch organization details of all users
+      description: Returns organization details of all the users.
+      tags:
+        - Organizations
+      operationId: getAllOrgs
+      security:
+        - OrgBearer: []
+      parameters:
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            minimum: 1
+          description: Number of values to return in a single page. Default value is 25.
+        - in: query
+          name: page_no
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to return. Default value is 1.
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationListSuccessResponse'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create an organization
+      description: Creates an organization. The authenticated user becomes the owner of the organization.
+      tags:
+        - Organizations
+      operationId: createOrg
+      security:
+        - OrgBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+      responses:
+        '201':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationSuccessResponse'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Organization with the provided name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/orgs/{org_id}':
+    get:
+      summary: Fetch details of an organization
+      description: Returns organization details for the given organization ID. The user must be the organization's owner.
+      tags:
+        - Organizations
+      operationId: getOrg
+      security:
+        - OrgBearer: []
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationSuccessResponse'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User is not authorized to perform this operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Edit details of an organization
+      description: Edits organization details for the given organization ID. The user must be the organization's owner.
+      tags:
+        - Organizations
+      operationId: editOrg
+      security:
+        - OrgBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchOrganizationRequest'
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationSuccessResponse'
+        '400':
+          description: Malformed request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    parameters:
+      - schema:
+          type: string
+        name: org_id
+        in: path
+        required: true
+        description: ID of the organization
+  /meetings:
+    get:
+      summary: Fetch all meetings for an organization
+      tags:
+        - Meetings
+      responses:
+        '200':
+          $ref: '#/components/responses/GetAllMeetings'
+      operationId: get_all_meetings
+      description: Returns all meetings for the given organization ID.
+      parameters:
+        - $ref: '#/components/parameters/pageNo'
+        - $ref: '#/components/parameters/perPage'
+        - $ref: '#/components/parameters/startTime'
+        - $ref: '#/components/parameters/endTime'
+        - $ref: '#/components/parameters/search'
+    post:
+      summary: Create a meeting
+      operationId: create_meeting
+      responses:
+        '201':
+          $ref: '#/components/responses/GetMeeting'
+      description: Create a meeting for the given organization ID.
+      requestBody:
+        $ref: '#/components/requestBodies/CreateMeetingBody'
+      tags:
+        - Meetings
+  '/meetings/{meeting_id}':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        description: ID of the meeting. Fetch the meeting ID using the create a meeting API.
+        required: true
+    get:
+      summary: Fetch a meeting for an organization
+      tags:
+        - Meetings
+      responses:
+        '200':
+          $ref: '#/components/responses/GetMeeting'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      operationId: get_meeting
+      description: Returns a meeting details in an organization for the given meeting ID.
+      parameters:
+        - schema:
+            type: string
+          in: query
+    patch:
+      summary: Update a meeting
+      operationId: update_meeting
+      responses:
+        '200':
+          $ref: '#/components/responses/GetMeeting'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      description: Updates a meeting in an organization for the given meeting ID.
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateMeetingBody'
+      tags:
+        - Meetings
+  '/meetings/{meeting_id}/participants':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        description: ID of the meeting. Fetch the meeting ID using the create a meeting API.
+        required: true
+    get:
+      summary: Fetch all participants of a meeting
+      tags:
+        - Meetings
+      responses:
+        '200':
+          $ref: '#/components/responses/GetAllParticipants'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      operationId: get_meeting_participants
+      description: Returns all participants detail for the given meeting ID.
+      parameters:
+        - $ref: '#/components/parameters/pageNo'
+        - $ref: '#/components/parameters/perPage'
+    post:
+      summary: Add a participant
+      operationId: add_participant
+      responses:
+        '201':
+          $ref: '#/components/responses/AddParticipant'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      description: Adds a participant to the given meeting ID.
+      requestBody:
+        $ref: '#/components/requestBodies/AddParticipantBody'
+      tags:
+        - Meetings
+  '/meetings/{meeting_id}/participants/{participant_id}':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        description: ID of the meeting. You can fetch the meeting ID using the create a meeting API.
+        required: true
+      - schema:
+          type: string
+        name: participant_id
+        in: path
+        required: true
+        description: ID of the participant. You can fetch the participant ID using the add a participant API.
+    get:
+      summary: Fetch a participant's detail
+      tags:
+        - Meetings
+      responses:
+        '200':
+          $ref: '#/components/responses/GetParticipant'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      operationId: get_meeting_participant
+      description: Returns a participant details for the given meeting and participant ID.
+      parameters: []
+    patch:
+      summary: Edit a participant's detail
+      operationId: edit_participant
+      responses:
+        '200':
+          $ref: '#/components/responses/AddParticipant'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      description: Updates a participant's details for the given meeting and participant ID.
+      requestBody:
+        $ref: '#/components/requestBodies/EditParticipantBody'
+      tags:
+        - Meetings
+    delete:
+      summary: Delete a participant
+      operationId: delete_meeting_participant
+      responses:
+        '200':
+          $ref: '#/components/responses/DeleteParticipant'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      description: Deletes a participant for the given meeting and partcipant ID.
+      tags:
+        - Meetings
+  '/meetings/{meeting_id}/participants/{participant_id}/token':
+    parameters:
+      - schema:
+          type: string
+          format: uuid
+        name: meeting_id
+        in: path
+        description: ID of the meeting. You can fetch the meeting ID using the create a meeting API.
+        required: true
+      - schema:
+          type: string
+        name: participant_id
+        in: path
+        required: true
+        description: ID of the participant. You can fetch the participant ID using the add a  participant API.
+    post:
+      summary: Refresh participant's authentication token
+      tags:
+        - Meetings
+      responses:
+        '200':
+          $ref: '#/components/responses/RegenToken'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      operationId: regenerate_token
+      description: Regenerates participant's authentication token for the given meeting and participant ID.
+      parameters: []
+  /recordings:
+    get:
+      summary: Fetch all recordings for an organization
+      tags:
+        - Recordings
+      responses:
+        '200':
+          $ref: '#/components/responses/GetRecordings'
+      operationId: get_all_recordings
+      description: 'Returns all recordings for an organization. If the `meeting_id` parameter is passed, returns all recordings for the given meeting ID.'
+      security:
+        - Authorization: []
+        - Bearer: []
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          in: query
+          name: meeting_id
+          required: false
+          description: ID of a meeting. Optional. Will limit results to only this meeting if passed.
+        - $ref: '#/components/parameters/pageNo'
+        - $ref: '#/components/parameters/perPage'
+        - schema:
+            type: boolean
+          in: query
+          name: expired
+          required: false
+          description: "If passed, only shows expired/non-expired recordings on Dyte's bucket"
+        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/recordingSortBy'
+        - $ref: '#/components/parameters/sortOrder'
+        - $ref: '#/components/parameters/startTime'
+        - $ref: '#/components/parameters/endTime'
+        - $ref: '#/components/parameters/recordingStatus'
+    post:
+      summary: Start recording a meeting
+      operationId: start_recording
+      responses:
+        '200':
+          $ref: '#/components/responses/GetRecording'
+      description: 'Starts recording a meeting. The meeting can be started by an organization admin directly, or a participant with permissions to start a recording, based on the type of authorization used.'
+      security:
+        - Authorization: []
+        - Bearer: []
+      requestBody:
+        $ref: '#/components/requestBodies/StartRecording'
+      tags:
+        - Recordings
+  '/recordings/active-recording/{meeting_id}':
+    parameters:
+      - schema:
+          type: string
+        name: meeting_id
+        in: path
+        required: true
+        description: ID of the meeting
+    get:
+      summary: Fetch active recording
+      tags:
+        - Recordings
+      operationId: get_active_recording
+      description: Returns the active recording details for the given meeting ID.
+      security:
+        - Authorization: []
+        - Bearer: []
+      responses:
+        '200':
+          $ref: '#/components/responses/GetActiveRecording'
+        '404':
+          $ref: '#/components/responses/GenericError'
+  '/recordings/{recording_id}':
+    parameters:
+      - schema:
+          type: string
+        name: recording_id
+        in: path
+        required: true
+        description: ID of the recording
+    get:
+      summary: Fetch details of a recording
+      tags:
+        - Recordings
+      responses:
+        '200':
+          $ref: '#/components/responses/GetRecording'
+      operationId: get_one_recording
+      description: Returns details of a recording for the given recording ID.
+      security:
+        - Authorization: []
+        - Bearer: []
+    put:
+      summary: Stop recording
+      operationId: stop_recording
+      responses:
+        '200':
+          $ref: '#/components/responses/GetRecording'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - stop
+              required:
+                - action
+        description: ''
+      tags:
+        - Recordings
+      description: Stops recording for the given recording ID.
+  /presets:
+    get:
+      summary: Fetch all presets
+      tags:
+        - Presets
+      responses:
+        '200':
+          $ref: '#/components/responses/GetAllPresets'
+      operationId: get-presets
+      parameters:
+        - $ref: '#/components/parameters/perPage'
+        - $ref: '#/components/parameters/pageNo'
+      description: Fetches all the presets belonging to an organization.
+    post:
+      summary: Create a preset
+      operationId: post-presets
+      responses:
+        '200':
+          $ref: '#/components/responses/GetPresetBody'
+      description: Creates a preset belonging to the current organization
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePresetBody'
+      tags:
+        - Presets
+  '/presets/{preset_id}':
+    parameters:
+      - schema:
+          type: string
+        name: preset_id
+        in: path
+        required: true
+        description: ID of the preset to fetch
+    get:
+      summary: Fetch details of a preset
+      tags:
+        - Presets
+      responses:
+        '200':
+          $ref: '#/components/responses/GetPresetBody'
+      operationId: get-presets-preset_id
+      description: Fetches details of a preset using the provided preset ID
+    delete:
+      summary: Delete a preset
+      operationId: delete-presets-preset_id
+      responses:
+        '200':
+          $ref: '#/components/responses/GetPresetBody'
+      description: Deletes a preset using the provided preset ID
+      tags:
+        - Presets
+    patch:
+      summary: Update a preset
+      operationId: patch-presets-preset_id
+      responses:
+        '200':
+          $ref: '#/components/responses/GetPresetBody'
+      description: Update a preset by the provided preset ID
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePresetBody'
+      tags:
+        - Presets
+components:
+  schemas:
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 0d1f069d-43bb-489a-ad8c-7eb95592ba8e
+          description: ID of the webhook
+          readOnly: true
+        name:
+          type: string
+          example: All events webhook
+          description: Name of the webhook
+        url:
+          type: string
+          format: uri
+          example: 'https://webhook.site/b23a5bbd-c7b0-4ced-a9e2-78ae7889897e'
+          description: URL the webhook will send events to
+        events:
+          type: array
+          example:
+            - meeting.started
+            - meeting.ended
+            - meeting.participantJoined
+            - meeting.participantLeft
+            - meeting.chatSynced
+            - recording.statusUpdate
+            - livestreaming.statusUpdate
+          description: Events this webhook will send updates for
+          items:
+            type: string
+            enum:
+              - meeting.started
+              - meeting.ended
+              - meeting.participantJoined
+              - meeting.participantLeft
+              - meeting.chatSynced
+              - recording.statusUpdate
+              - livestreaming.statusUpdate
+        created_at:
+          type: string
+          format: date-time
+          example: '2022-05-28T07:01:53.075Z'
+          description: Timestamp when this webhook was created
+        updated_at:
+          type: string
+          format: date-time
+          example: '2022-05-28T07:01:53.075Z'
+          description: Timestamp when this webhook was updated
+      required:
+        - id
+        - name
+        - url
+        - events
+        - created_at
+        - updated_at
+    WebhookSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Webhook'
+      required:
+        - success
+        - data
+    WebhooksListSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Webhook'
+      required:
+        - success
+        - data
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+          description: Whether the operation succeeded or not
+        error:
+          type: object
+          required:
+            - code
+            - message
+          description: Object containing details of the error that occurred
+          properties:
+            code:
+              type: number
+              example: 404
+              description: Error code
+            message:
+              type: string
+              example: 'Error: resource not found'
+              description: Error message
+      required:
+        - success
+        - error
+    WebhookRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: All events webhook
+          description: Name of the webhook
+        url:
+          type: string
+          format: uri
+          example: 'https://webhook.site/b23a5bbd-c7b0-4ced-a9e2-78ae7889897e'
+          description: URL this webhook will send events to
+        events:
+          type: array
+          example:
+            - meeting.started
+            - meeting.ended
+            - meeting.participantJoined
+            - meeting.participantLeft
+            - meeting.chatSynced
+            - recording.statusUpdate
+            - livestreaming.statusUpdate
+          description: Events that this webhook will get triggered by
+          items:
+            type: string
+            enum:
+              - meeting.started
+              - meeting.ended
+              - meeting.participantJoined
+              - meeting.participantLeft
+              - meeting.chatSynced
+              - recording.statusUpdate
+              - livestreaming.statusUpdate
+      required:
+        - name
+        - url
+        - events
+    PatchWebhookRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the webhook
+        url:
+          type: string
+          format: uri
+          example: 'https://webhook.site/b23a5bbd-c7b0-4ced-a9e2-78ae7889897e'
+          description: URL the webhook will send events to
+        events:
+          type: array
+          description: Events that the webhook will get triggered by
+          items:
+            type: string
+            enum:
+              - meeting.started
+              - meeting.ended
+              - meeting.participantJoined
+              - meeting.participantLeft
+              - recording.statusUpdate
+              - livestreaming.statusUpdate
+    ActiveSession:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the session
+          readOnly: true
+        associated_id:
+          type: string
+          description: 'ID of the meeting this session is associated with. In the case of V2 meetings, it is always a UUID. In V1 meetings, it is a room name of the form `abcdef-ghijkl`'
+        meeting_display_name:
+          type: string
+          description: Title of the meeting this session belongs to
+        type:
+          type: string
+          description: type of session
+          enum:
+            - meeting
+            - livestream
+            - participant
+        status:
+          type: string
+          description: current status of session
+          enum:
+            - LIVE
+            - ENDED
+        live_participants:
+          type: number
+          description: number of participants currently in the session
+        max_concurrent_participants:
+          type: number
+          description: number of maximum participants that were in the session
+        minutes_consumed:
+          type: number
+          description: number of minutes consumed since the session started
+        organization_id:
+          type: string
+          description: Organization id that hosted this session
+        started_at:
+          type: string
+          description: timestamp when session started
+        created_at:
+          type: string
+          description: timestamp when session created
+        updated_at:
+          type: string
+          description: timestamp when session was last updated
+        ended_at:
+          type: string
+          description: timestamp when session ended
+        meta:
+          type: object
+          description: Any meta data about session.
+      required:
+        - id
+        - associated_id
+        - meeting_display_name
+        - type
+        - status
+        - live_participants
+        - max_concurrent_participants
+        - minutes_consumed
+        - organization_id
+        - started_at
+        - created_at
+        - updated_at
+    GenericErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Success status of the request.
+          default: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: number
+              description: HTTP status code of the error.
+            message:
+              type: string
+              description: Error message describing what went wrong.
+      required:
+        - success
+        - error
+      description: ''
+    ChatMessage:
+      type: object
+      properties:
+        chat_download_url:
+          type: string
+          description: URL where the chat logs can be downloaded
+        chat_download_url_expiry:
+          type: string
+          description: Time when the download URL will expire
+      required:
+        - chat_download_url
+        - chat_download_url_expiry
+    SessionParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the session participant
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        name:
+          type: string
+          description: Name of the session participant.
+        email:
+          type: string
+          description: Email of the session participant.
+        picture:
+          type: string
+          description: A URL pointing to a picture of the participant.
+      required:
+        - id
+        - created_at
+        - updated_at
+      title: SessionParticipant
+    Poll:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the poll
+          readOnly: true
+        question:
+          type: string
+          description: Question asked by the poll
+        options:
+          type: array
+          description: Answer options
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+                description: Text of the answer option
+              count:
+                type: number
+              votes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                    - id
+                    - name
+            required:
+              - text
+              - count
+              - votes
+        anonymous:
+          type: boolean
+        hide_votes:
+          type: boolean
+        created_by:
+          type: string
+        voted:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - question
+        - options
+    ParticipantsList:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Participant ID. This maps to the corresponding peerId.
+        user_id:
+          type: string
+          description: User id for this participant.
+        custom_participant_id:
+          type: string
+          description: ID passed by client to create this participant.
+        display_name:
+          type: string
+          description: Display name of participant when joining the session.
+        role:
+          type: string
+          description: Role of the participant.
+        joined_at:
+          type: string
+          description: timestamp at which participant joined the session.
+        left_at:
+          type: string
+          description: timestamp at which participant left the session.
+        duration:
+          type: number
+          description: number of minutes for which the participant was in the session.
+        created_at:
+          type: string
+          description: timestamp when this participant was created.
+        updated_at:
+          type: string
+          description: timestamp when this participant's data was last updated.
+    ParticipantPeerEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of peer event
+        peer_id:
+          type: string
+          description: peer id of the peer.
+        event_name:
+          type: string
+          description: Event name like peer_joining or peer_leaving
+        created_at:
+          type: string
+          description: timestamp at which peer event was created
+        updated_at:
+          type: string
+          description: timestap at which peer event was last updated
+    ParticipantPeerStats:
+      type: object
+      properties:
+        peer_stats:
+          type: object
+          properties:
+            config:
+              type: string
+            status:
+              type: string
+            device_info:
+              type: object
+              properties:
+                browser:
+                  type: string
+                browser_version:
+                  type: string
+                cpus:
+                  type: number
+                engine:
+                  type: string
+                is_mobile:
+                  type: boolean
+                memory:
+                  type: number
+                os:
+                  type: string
+                os_version:
+                  type: string
+                sdk_name:
+                  type: string
+                sdk_version:
+                  type: string
+                user_agent:
+                  type: string
+                webgl_support:
+                  type: string
+            events:
+              type: array
+              items:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                  type:
+                    type: string
+            ip_information:
+              type: object
+              properties:
+                city:
+                  type: string
+                country:
+                  type: string
+                ip_location:
+                  type: string
+                ipv4:
+                  type: string
+                org:
+                  type: string
+                portal:
+                  type: string
+                region:
+                  type: string
+                timezone:
+                  type: string
+            precall_network_information:
+              type: object
+              properties:
+                backend_rtt:
+                  type: number
+                turn_connectivity:
+                  type: boolean
+                effective_networktype:
+                  type: string
+                throughtput:
+                  type: number
+                jitter:
+                  type: number
+                rtt:
+                  type: number
+                reflexive_connectivity:
+                  type: boolean
+                relay_connectivity:
+                  type: boolean
+                fractional_loss:
+                  type: number
+    ParticipantQualityStats:
+      type: object
+      properties:
+        quality_stats:
+          type: array
+          items:
+            type: object
+            properties:
+              peer_id:
+                type: string
+              audio_bandwidth:
+                type: number
+              video_bandwidth:
+                type: number
+              average_quality:
+                type: number
+              start:
+                type: string
+              end:
+                type: string
+              audio_packet_loss:
+                type: number
+              video_packet_loss:
+                type: number
+              audio_stats:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                    concealment_events:
+                      type: number
+                    packets_lost:
+                      type: number
+                    jitter:
+                      type: number
+                    quality:
+                      type: number
+              video_stats:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                    frame_width:
+                      type: number
+                    frame_height:
+                      type: number
+                    frames_dropped:
+                      type: number
+                    frames_per_second:
+                      type: number
+                    packets_lost:
+                      type: number
+                    jitter:
+                      type: number
+                    quality:
+                      type: number
+    OverallStats:
+      type: object
+      properties:
+        sessions_count:
+          type: number
+          description: Number of sessions_count happened in the given time period
+        sessions_minutes_consumed:
+          type: number
+          description: Total meetings minutes consumed across all sessions in the given time period.
+        recordings_minutes_consumed:
+          type: number
+          description: Total recordings minutes consumed across all sessions in the given time period.
+    DaywiseStats:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date in YYYY-MM-DD format
+        sessions_count:
+          type: number
+          description: Number of sessions_count happened in the given time period
+        sessions_minutes_consumed:
+          type: number
+          description: Total meetings minutes consumed across all sessions in the given time period.
+        recordings_minutes_consumed:
+          type: number
+          description: Total recordings minutes consumed across all sessions in the given time period.
+    OrganizationRequest:
+      type: object
+      required:
+        - name
+        - contact
+        - website
+      properties:
+        name:
+          description: Must be a unique organization name
+          type: string
+          example: Dyte
+        contact:
+          type: string
+          example: 778-330-2389
+        website:
+          type: string
+          format: uri
+          example: 'https://www.dyte.io'
+        feature_flags:
+          type: array
+          items:
+            type: string
+        preferred_region:
+          type: string
+          enum:
+            - ap-south-1
+            - ap-southeast-1
+            - us-east-1
+            - eu-central-1
+          default: ap-south-1
+          example: us-east-1
+    PatchOrganizationRequest:
+      type: object
+      properties:
+        name:
+          description: Must be a unique organization name
+          type: string
+        contact:
+          type: string
+        website:
+          type: string
+          format: uri
+          example: 'https://www.dyte.io'
+        feature_flags:
+          type: array
+          items:
+            type: string
+        preferred_region:
+          type: string
+          enum:
+            - ap-south-1
+            - ap-southeast-1
+            - us-east-1
+            - eu-central-1
+    OrganizationData:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: bbb0e958-93ce-41c7-9745-16e7aa51c568
+          description: ID of the organization
+        name:
+          description: Must be a unique organization name
+          type: string
+          example: Dyte
+        contact:
+          type: string
+          example: 778-330-2389
+        website:
+          type: string
+          format: uri
+          example: 'https://www.dyte.io'
+        apikey:
+          type: string
+          example: 4deeb3d8e8b5e74d5522
+        preferred_region:
+          type: string
+          example: us-east-1
+        feature_flags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+          example: '2022-05-28T08:18:34.804Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2022-05-28T08:18:34.804Z'
+      required:
+        - id
+        - name
+        - contact
+        - website
+        - apikey
+        - preferred_region
+        - feature_flags
+        - created_at
+        - updated_at
+    OrganizationSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          allOf:
+            - $ref: '#/components/schemas/OrganizationData'
+    OrganizationListSuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+        - paging
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/OrganizationData'
+        paging:
+          type: object
+          properties:
+            total_count:
+              type: number
+              example: 30
+            start_offset:
+              type: number
+              example: 1
+            end_offset:
+              type: number
+              example: 30
+          required:
+            - total_count
+            - start_offset
+            - end_offset
+    Meeting:
+      type: object
+      x-examples:
+        Example 1:
+          preferred_region: ap-south-1
+          waiting_room: false
+          id: 7f951e37-492b-45dd-8256-7f1660341c17
+          record_on_start: false
+          created_at: '2022-11-04T18:22:11.369Z'
+          updated_at: '2022-11-04T18:22:11.369Z'
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of the meeting.
+          readOnly: true
+        preferred_region:
+          type: string
+          enum:
+            - ap-south-1
+            - ap-southeast-1
+            - us-east-1
+            - eu-central-1
+          description: The region in which this meeting should be created.
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp the object was created at. The time is returned in ISO format.
+          readOnly: true
+        record_on_start:
+          type: boolean
+          description: Specifies if the meeting should start getting recorded as soon as someone joins the meeting.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp the object was updated at. The time is returned in ISO format.
+          readOnly: true
+        live_stream_on_start:
+          type: boolean
+          description: Specifies if the meeting should start getting livestreamed on start.
+        status:
+          type: string
+          x-stoplight:
+            id: 7iltdkj13psqq
+          enum:
+            - ACTIVE
+            - INACTIVE
+          description: Whether the meeting is `ACTIVE` or `INACTIVE`. Users will not be able to join an `INACTIVE` meeting.
+      required:
+        - id
+        - created_at
+        - updated_at
+    PagingResponse:
+      title: PagingResponse
+      x-stoplight:
+        id: xogzxduy48b20
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items: {}
+        paging:
+          type: object
+          required:
+            - total_count
+            - start_offset
+            - end_offset
+          properties:
+            total_count:
+              type: number
+              example: 30
+              minimum: 0
+            start_offset:
+              type: number
+              example: 1
+            end_offset:
+              type: number
+              example: 30
+      required:
+        - success
+        - data
+        - paging
+    GenericSuccessResponse:
+      title: GenericSuccessResponse
+      x-stoplight:
+        id: 6g2id76io3wuw
+      type: object
+      properties:
+        success:
+          type: boolean
+          default: true
+          description: Success status of the operation
+        data:
+          type: object
+          description: Data returned by the operation
+      required:
+        - success
+    Participant:
+      title: Participant
+      x-stoplight:
+        id: oqlh14sj8p2i5
+      type: object
+      description: Represents a participant.
+      properties:
+        id:
+          type: string
+          description: ID of the participant.
+          format: uuid
+        name:
+          type: string
+          description: Name of the participant.
+          nullable: true
+        picture:
+          type: string
+          format: uri
+          description: URL to a picture of the participant.
+          nullable: true
+        custom_participant_id:
+          type: string
+          description: A unique participant ID generated by the client.
+        preset_name:
+          type: string
+          description: Preset applied to the participant.
+        created_at:
+          type: string
+          format: date-time
+          description: When this object was created. The time is returned in ISO format.
+        updated_at:
+          type: string
+          format: date-time
+          description: When this object was updated. The time is returned in ISO format.
+      required:
+        - id
+        - custom_participant_id
+        - preset_name
+        - created_at
+        - updated_at
+    Recording:
+      title: Recording
+      x-stoplight:
+        id: 25dzhno3e2es1
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the recording
+          format: uuid
+          readOnly: true
+        download_url:
+          type: string
+          format: uri
+          description: URL where the recording can be downloaded.
+          nullable: true
+          readOnly: true
+        download_url_expiry:
+          type: string
+          format: date-time
+          description: Timestamp when the download URL expires.
+          nullable: true
+          readOnly: true
+        audio_download_url:
+          type: string
+          format: uri
+          x-stoplight:
+            id: h5tzcaeuye8fk
+          description: 'If the audio_config is passed, the URL for downloading the audio recording is returned.'
+          nullable: true
+          readOnly: true
+        file_size:
+          type: number
+          description: 'File size of the recording, in bytes.'
+          nullable: true
+          readOnly: true
+        session_id:
+          type: string
+          format: uuid
+          description: ID of the meeting session this recording is for.
+          nullable: true
+          readOnly: true
+        output_file_name:
+          type: string
+          description: File name of the recording.
+        status:
+          type: string
+          enum:
+            - INVOKED
+            - RECORDING
+            - UPLOADING
+            - UPLOADED
+            - ERRORED
+          description: Current status of the recording.
+        invoked_time:
+          type: string
+          description: Timestamp when this recording was invoked.
+          format: date-time
+        started_time:
+          type: string
+          format: date-time
+          description: Timestamp when this recording actually started after being invoked. Usually a few seconds after `invoked_time`.
+          nullable: true
+        stopped_time:
+          type: string
+          format: date-time
+          description: Timestamp when this recording was stopped. Optional; is present only when the recording has actually been stopped.
+          nullable: true
+        recording_duration:
+          type: integer
+          x-stoplight:
+            id: prsgxotoknc3l
+          description: Total recording time in seconds.
+      required:
+        - id
+        - download_url
+        - download_url_expiry
+        - audio_download_url
+        - file_size
+        - session_id
+        - output_file_name
+        - status
+        - invoked_time
+        - started_time
+        - stopped_time
+    StorageConfig:
+      title: StorageConfig
+      x-stoplight:
+        id: tt67la5u5qhyv
+      type: object
+      nullable: true
+      properties:
+        type:
+          type: string
+          enum:
+            - aws
+            - azure
+            - digitalocean
+            - gcs
+          description: Type of storage media.
+        access_key:
+          type: string
+          description: |-
+            Access key of the storage medium. Access key is not required for the `gcs` storage media type.
+
+            Note that this field is not readable by clients, only writeable.
+          writeOnly: true
+        secret:
+          type: string
+          description: 'Secret key of the storage medium. Similar to `access_key`, it is only writeable by clients, not readable.'
+          x-stoplight:
+            id: 35o598ur3dm2s
+        bucket:
+          type: string
+          description: Name of the storage medium's bucket.
+        region:
+          type: string
+          description: Region of the storage medium.
+          example: us-east-1
+        path:
+          type: string
+          description: Path relative to the bucket root at which the recording will be placed.
+      required:
+        - type
+        - access_key
+        - secret
+        - bucket
+        - region
+    PresetListItem:
+      title: PresetListItem
+      x-stoplight:
+        id: 92m0mrllbxmgq
+      type: object
+      description: Returned by Get All Presets route
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID of the preset
+        name:
+          type: string
+          description: Name of the preset
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp this preset was created at
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp this preset was last updated
+    Preset:
+      title: Preset
+      x-stoplight:
+        id: xntgc715hdevf
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the preset
+        config:
+          type: object
+          required:
+            - view_type
+            - max_video_streams
+            - max_screenshare_count
+            - media
+          properties:
+            view_type:
+              type: string
+              enum:
+                - GROUP_CALL
+                - WEBINAR
+                - AUDIO_ROOM
+              description: Type of the meeting
+            max_video_streams:
+              type: object
+              description: Maximum number of streams that are visible on a device
+              required:
+                - mobile
+                - desktop
+              properties:
+                mobile:
+                  type: integer
+                  description: Maximum number of streams visible on mobile devices
+                desktop:
+                  type: integer
+                  description: Maximum number of video streams visible on desktop devices
+            max_screenshare_count:
+              type: integer
+              description: Maximum number of screen shares that can be active at a given time
+            media:
+              type: object
+              description: 'Media configuration options. eg: Video quality'
+              required:
+                - video
+                - screenshare
+              properties:
+                video:
+                  type: object
+                  description: Configuration options for participant videos
+                  required:
+                    - quality
+                    - frame_rate
+                  properties:
+                    quality:
+                      type: string
+                      enum:
+                        - hd
+                        - vga
+                        - qvga
+                      description: Video quality of participants
+                    frame_rate:
+                      type: integer
+                      maximum: 30
+                      description: Frame rate of participants' video
+                screenshare:
+                  type: object
+                  description: Configuration options for participant screen shares
+                  required:
+                    - quality
+                    - frame_rate
+                  properties:
+                    quality:
+                      type: string
+                      enum:
+                        - hd
+                        - vga
+                        - qvga
+                      description: 'Quality of screen share '
+                    frame_rate:
+                      type: integer
+                      description: Frame rate of screen share
+        permissions:
+          type: object
+          required:
+            - accept_waiting_requests
+            - can_accept_production_requests
+            - can_edit_display_name
+            - can_spotlight
+            - is_recorder
+            - recorder_type
+            - disable_participant_audio
+            - disable_participant_screensharing
+            - disable_participant_video
+            - kick_participant
+            - pin_participant
+            - can_record
+            - can_livestream
+            - waiting_room_type
+            - plugins
+            - connected_meetings
+            - polls
+            - media
+            - chat
+            - hidden_participant
+            - show_participant_list
+            - can_change_participant_permissions
+          properties:
+            accept_waiting_requests:
+              type: boolean
+              description: Whether this participant can accept waiting requests
+            can_accept_production_requests:
+              type: boolean
+            can_edit_display_name:
+              type: boolean
+            can_spotlight:
+              type: boolean
+            is_recorder:
+              type: boolean
+              default: false
+            recorder_type:
+              type: string
+              enum:
+                - RECORDER
+                - LIVESTREAMER
+                - NONE
+              default: NONE
+              description: Type of the recording peer
+            disable_participant_audio:
+              type: boolean
+            disable_participant_screensharing:
+              type: boolean
+            disable_participant_video:
+              type: boolean
+            kick_participant:
+              type: boolean
+            pin_participant:
+              type: boolean
+            can_record:
+              type: boolean
+            can_livestream:
+              type: boolean
+            waiting_room_type:
+              type: string
+              enum:
+                - SKIP
+                - ON_PRIVILEGED_USER_ENTRY
+                - SKIP_ON_ACCEPT
+              description: Waiting room type
+            plugins:
+              type: object
+              description: Plugin permissions
+              required:
+                - can_close
+                - can_start
+                - can_edit_config
+                - config
+              properties:
+                can_close:
+                  type: boolean
+                  description: Can close plugins that are already open
+                can_start:
+                  type: boolean
+                  description: Can start plugins
+                can_edit_config:
+                  type: boolean
+                  description: Can edit plugin config
+                config:
+                  oneOf:
+                    - type: string
+                      format: uuid
+                    - type: object
+                      properties:
+                        access_control:
+                          type: string
+                          enum:
+                            - FULL_ACCESS
+                            - VIEW_ONLY
+                        handles_view_only:
+                          type: boolean
+            connected_meetings:
+              type: object
+              required:
+                - can_alter_connected_meetings
+                - can_switch_connected_meetings
+                - can_switch_to_parent_meeting
+              properties:
+                can_alter_connected_meetings:
+                  type: boolean
+                can_switch_connected_meetings:
+                  type: boolean
+                can_switch_to_parent_meeting:
+                  type: boolean
+            polls:
+              type: object
+              description: Poll permissions
+              required:
+                - can_create
+                - can_vote
+                - can_view
+              properties:
+                can_create:
+                  type: boolean
+                  description: Can create polls
+                can_vote:
+                  type: boolean
+                  description: Can vote on polls
+                can_view:
+                  type: boolean
+                  description: Can view polls
+            media:
+              type: object
+              description: Media permissions
+              required:
+                - video
+                - audio
+                - screenshare
+              properties:
+                video:
+                  type: object
+                  description: Video permissions
+                  required:
+                    - can_produce
+                  properties:
+                    can_produce:
+                      type: string
+                      enum:
+                        - ALLOWED
+                        - NOT_ALLOWED
+                        - CAN_REQUEST
+                      description: Can produce video
+                audio:
+                  type: object
+                  description: Audio permissions
+                  required:
+                    - can_produce
+                  properties:
+                    can_produce:
+                      type: string
+                      enum:
+                        - ALLOWED
+                        - NOT_ALLOWED
+                        - CAN_REQUEST
+                      description: Can produce audio
+                screenshare:
+                  type: object
+                  description: Screenshare permissions
+                  required:
+                    - can_produce
+                  properties:
+                    can_produce:
+                      type: string
+                      enum:
+                        - ALLOWED
+                        - NOT_ALLOWED
+                        - CAN_REQUEST
+                      description: Can produce screen share video
+            chat:
+              type: object
+              description: Chat permissions
+              required:
+                - public
+                - private
+              properties:
+                public:
+                  type: object
+                  required:
+                    - can_send
+                    - text
+                    - files
+                  properties:
+                    can_send:
+                      type: boolean
+                      description: Can send messages in general
+                    text:
+                      type: boolean
+                      description: Can send text messages
+                    files:
+                      type: boolean
+                      description: Can send file messages
+                private:
+                  type: object
+                  required:
+                    - can_send
+                    - can_receive
+                    - text
+                    - files
+                  properties:
+                    can_send:
+                      type: boolean
+                    can_receive:
+                      type: boolean
+                    text:
+                      type: boolean
+                    files:
+                      type: boolean
+            hidden_participant:
+              type: boolean
+              description: Whether this participant is visible to others or not
+            show_participant_list:
+              type: boolean
+            can_change_participant_permissions:
+              type: boolean
+        ui:
+          type: object
+          required:
+            - design_tokens
+            - config_diff
+          properties:
+            design_tokens:
+              type: object
+              required:
+                - border_radius
+                - border_width
+                - spacing_base
+                - theme
+                - colors
+                - logo
+              properties:
+                border_radius:
+                  type: string
+                  enum:
+                    - rounded
+                border_width:
+                  type: string
+                  enum:
+                    - thin
+                spacing_base:
+                  type: number
+                  default: 4
+                theme:
+                  type: string
+                  enum:
+                    - dark
+                colors:
+                  type: object
+                  required:
+                    - brand
+                    - background
+                    - danger
+                    - text
+                    - text_on_brand
+                    - success
+                    - video_bg
+                    - warning
+                  properties:
+                    brand:
+                      type: object
+                      required:
+                        - '300'
+                        - '400'
+                        - '500'
+                        - '600'
+                        - '700'
+                      properties:
+                        '300':
+                          type: string
+                          default: '#844d1c'
+                        '400':
+                          type: string
+                          default: '#9d5b22'
+                        '500':
+                          type: string
+                          default: '#b56927'
+                        '600':
+                          type: string
+                          default: '#d37c30'
+                        '700':
+                          type: string
+                          default: '#d9904f'
+                    background:
+                      type: object
+                      required:
+                        - '600'
+                        - '700'
+                        - '800'
+                        - '900'
+                        - '1000'
+                      properties:
+                        '600':
+                          type: string
+                          default: '#222222'
+                        '700':
+                          type: string
+                          default: '#1f1f1f'
+                        '800':
+                          type: string
+                          default: '#1b1b1b'
+                        '900':
+                          type: string
+                          default: '#181818'
+                        '1000':
+                          type: string
+                          default: '#141414'
+                    danger:
+                      type: string
+                      default: '#FF2D2D'
+                    text:
+                      type: string
+                      default: '#EEEEEE'
+                    text_on_brand:
+                      type: string
+                      default: '#EEEEEE'
+                    success:
+                      type: string
+                      default: '#62A504'
+                    video_bg:
+                      type: string
+                      default: '#191919'
+                    warning:
+                      type: string
+                      default: '#FFCD07'
+                logo:
+                  type: string
+            config_diff:
+              type: object
+      required:
+        - name
+        - config
+        - permissions
+        - ui
+    VideoConfig:
+      title: VideoConfig
+      x-stoplight:
+        id: s67pizzbk2z0p
+      type: object
+      properties:
+        codec:
+          type: string
+          enum:
+            - H264
+            - VP8
+          default: H264
+          description: Codec using which the recording will be encoded.
+        width:
+          type: integer
+          description: Width of the recording video in pixels
+          minimum: 1
+          maximum: 1920
+          example: 1280
+          default: 1280
+        height:
+          type: integer
+          description: Height of the recording video in pixels
+          minimum: 1
+          maximum: 1920
+          example: 720
+          default: 720
+        watermark:
+          type: object
+          description: Watermark to be added to the recording
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL of the watermark image
+            size:
+              type: object
+              description: Size of the watermark
+              properties:
+                width:
+                  type: integer
+                  description: Width of the watermark in px
+                  minimum: 1
+                  default: 200
+                height:
+                  type: integer
+                  description: Height of the watermark in px
+                  minimum: 1
+                  default: auto
+            position:
+              type: string
+              enum:
+                - left top
+                - right top
+                - left bottom
+                - right bottom
+              description: Position of the watermark
+              default: left top
+        segment_length:
+          type: integer
+          x-stoplight:
+            id: nvz2itrdjphlb
+          default: 10 seconds
+          description: The duration of each segment or fragment of a video file.
+    LivestreamingConfig:
+      title: LivestreamingConfig
+      x-stoplight:
+        id: xtf0df61t74aj
+      type: object
+      properties:
+        rtmp_url:
+          type: string
+          format: uri
+          example: 'rtmp://a.rtmp.youtube.com/live2'
+          description: RTMP URL to stream to
+    AudioConfig:
+      title: AudioConfig
+      x-stoplight:
+        id: lokrgru2gznbx
+      type: object
+      description: Object containing configuration regarding the audio that is being recorded.
+      properties:
+        codec:
+          type: string
+          x-stoplight:
+            id: 8cvrd9bmm81ne
+          description: 'Codec using which the recording will be encoded. If VP8/VP9 is selected for videoConfig, changing audioConfig is not allowed. In this case, the codec in the audioConfig is automatically set to vorbis.'
+          enum:
+            - MP3
+            - AAC
+          default: AAC
+        channel:
+          type: string
+          x-stoplight:
+            id: p92vx222riq0s
+          description: Audio signal pathway within an audio file that carries a specific sound source.
+          enum:
+            - mono
+            - stereo
+          default: stereo
+    DyteBucketConfig:
+      title: DyteBucketConfig
+      x-stoplight:
+        id: nda2arv28bpxt
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          x-stoplight:
+            id: k1f2cjsd28631
+          description: "Controls whether recordings are uploaded to dyte's bucket. If set to false, `download_url`, `audio_download_url`, `download_url_expiry` won't be generated for a recording."
+          default: true
+      required:
+        - enabled
+    startReason:
+      title: startReason
+      x-stoplight:
+        id: uk66wrtnrqcnr
+      type: object
+      properties:
+        reason:
+          type: string
+          x-stoplight:
+            id: dn2j1jzggz3tg
+          enum:
+            - API_CALL
+            - RECORD_ON_START
+          description: |-
+            Specifies if the recording was started using the "Start a Recording"API or using the parameter RECORD_ON_START in the "Create a meeting" API. 
+
+            If the recording is initiated using the "RECORD_ON_START" parameter, the user details will not be populated.
+        caller:
+          type: object
+          x-stoplight:
+            id: ap08qalkux1vp
+          properties:
+            type:
+              type: string
+              x-stoplight:
+                id: fxgon7ps3760x
+              enum:
+                - ORGANIZATION
+                - USER
+              description: 'The type can be an organization or a user. If the type is `user`, then only the `user_Id` and `name` are returned.'
+            user_Id:
+              type: string
+              x-stoplight:
+                id: ofr7xxueb7d7b
+              format: uuid
+              description: The user ID of the person who started the recording.
+              example: d61f6956-e68f-4375-bf10-c38a704d1bec
+            name:
+              type: string
+              x-stoplight:
+                id: 2q0sigi7zuva4
+              description: Name of the user who started the recording.
+              example: Dyte_test
+    stopReason:
+      title: stopReason
+      x-stoplight:
+        id: 8g2hjugvbfd1i
+      type: object
+      properties:
+        reason:
+          type: string
+          x-stoplight:
+            id: tjp04tusymaft
+          enum:
+            - API_CALL
+            - INTERNAL_ERROR
+            - ALL_PEERS_LEFT
+          description: Specifies the reason why the recording stopped.
+        caller:
+          type: object
+          x-stoplight:
+            id: 8pji3iqxzke6z
+          properties:
+            type:
+              type: string
+              x-stoplight:
+                id: n54oq8jwz6hbv
+              enum:
+                - ORGANIZATION
+                - USER
+              description: 'The type can be an organization or a user. If the type is `user`, then only the `user_Id` and `name` are returned.'
+            user_Id:
+              type: string
+              x-stoplight:
+                id: nhq76tz89qbnd
+              description: The user ID of the person who stopped the recording.
+              format: uuid
+              example: d61f6956-e68f-4375-bf10-c38a704d1bec
+            name:
+              type: string
+              x-stoplight:
+                id: fylgc8uhbqf1v
+              description: Name of the user who stopped the recording.
+              example: Dyte_test
+    InteractiveConfig:
+      title: InteractiveConfig
+      x-stoplight:
+        id: k4wu4coh0k0wj
+      type: object
+      description: 'Allows you to add timed metadata to your recordings, which are digital markers inserted into a video file to provide contextual information at specific points in the content range. The ID3 tags containing this information are available to clients on the playback timeline in HLS format. The output files are generated in a compressed .tar format.'
+      properties:
+        type:
+          type: string
+          x-stoplight:
+            id: 8jh42ug6apgau
+          enum:
+            - ID3
+          description: The metadata is presented in the form of ID3 tags.
+  parameters:
+    Content-Type:
+      name: Content-Type
+      in: header
+      required: true
+      style: simple
+      schema:
+        type: string
+        example: application/json
+    streamId:
+      name: stream_id
+      in: path
+      required: true
+      style: simple
+      description: ID of the livestream
+      schema:
+        type: number
+    meetingId:
+      name: meeting_id
+      in: path
+      required: true
+      description: ID of the meeting
+      schema:
+        type: string
+    sessionId:
+      name: session_id
+      in: path
+      required: true
+      description: ID of the session
+      schema:
+        type: string
+    participantId:
+      name: participant_id
+      in: path
+      required: true
+      description: ID of the participant
+      schema:
+        type: string
+    pageNo:
+      name: page_no
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 0
+      description: The page number from which you want your page search results to be displayed.
+      allowEmptyValue: true
+    perPage:
+      name: per_page
+      in: query
+      required: false
+      schema:
+        type: number
+        minimum: 0
+      description: Number of results per page
+      allowEmptyValue: true
+    search:
+      name: search
+      in: query
+      required: false
+      schema:
+        type: string
+      description: The search query string. You can search using the meeting ID or title.
+    sortOrder:
+      name: sort_order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - ASC
+          - DESC
+    startTime:
+      name: start_time
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+      description: The start time range for which you want to retrieve the meetings. The time must be specified in ISO format.
+    endTime:
+      name: end_time
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+      description: The end time range for which you want to retrieve the meetings. The time must be specified in ISO format.
+    participants:
+      name: participants
+      in: query
+      required: false
+      schema:
+        type: string
+      example: '1:10'
+    status:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - LIVE
+          - ENDED
+    recordingStatus:
+      name: status
+      in: query
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - INVOKED
+            - RECORDING
+            - UPLOADING
+            - UPLOADED
+      description: Filter by one or more recording status
+      explode: false
+    recordingSortBy:
+      name: sort_by
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - invokedTime
+    participantsSortBy:
+      name: sort_by
+      in: query
+      schema:
+        type: string
+        enum:
+          - joinedAt
+          - duration
+    startDate:
+      name: start_date
+      in: query
+      schema:
+        type: string
+      example: '2022-09-01'
+      description: start date in YYYY-MM-DD format
+    endDate:
+      name: end_date
+      in: query
+      schema:
+        type: string
+      example: '2022-09-22'
+      description: end date in YYYY-MM-DD format
+  requestBodies:
+    KickParticipantsBody:
+      description: Request body for kicking participants from an active session. Only one of `participant_id` or `custom_participant_id` is required.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              participant_ids:
+                type: array
+                items:
+                  type: string
+              custom_participant_ids:
+                type: array
+                items:
+                  type: string
+    MuteAllParticipantsBody:
+      description: Request body for muting all participants in an active session.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              allow_unmute:
+                type: boolean
+                description: "if false, participants won't be able to unmute themselves after they are muted"
+    CreatePollBody:
+      description: Request body for creating a new poll
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              question:
+                type: string
+                description: Question of the poll
+              options:
+                type: array
+                description: Different options for the question
+                items:
+                  type: string
+              anonymous:
+                type: boolean
+                description: if voters on a poll are anonymous
+              hide_votes:
+                type: boolean
+                description: if votes on an option are visible before a person votes
+    CreateMeetingBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Title of the meeting
+                nullable: true
+              preferred_region:
+                type: string
+                enum:
+                  - ap-south-1
+                  - ap-southeast-1
+                  - us-east-1
+                  - eu-central-1
+                description: The region in which this meeting should be created.
+                nullable: true
+              record_on_start:
+                type: boolean
+                default: false
+                description: Specifies if the meeting should start getting recorded as soon as someone joins the meeting.
+                nullable: true
+              live_stream_on_start:
+                type: boolean
+                default: false
+                description: Specifies if the meeting should start getting livestreamed on start.
+                nullable: true
+      description: Create meeting body
+    UpdateMeetingBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Title of the meeting
+              preferred_region:
+                type: string
+                enum:
+                  - ap-south-1
+                  - ap-southeast-1
+                  - us-east-1
+                  - eu-central-1
+                description: The region in which this meeting should be created.
+              record_on_start:
+                type: boolean
+                default: false
+                description: Specifies if the meeting should start getting recorded as soon as someone joins the meeting.
+              live_stream_on_start:
+                type: boolean
+                default: false
+                description: Specifies if the meeting should start getting livestreamed on start.
+              status:
+                type: string
+                x-stoplight:
+                  id: 5hu6kyh2s2c8y
+                enum:
+                  - ACTIVE
+                  - INACTIVE
+                example: INACTIVE
+                description: Whether the meeting is `ACTIVE` or `INACTIVE`. Users will not be able to join an `INACTIVE` meeting.
+      description: Create meeting body
+    AddParticipantBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: '(Optional) Name of the participant. '
+                example: Mary Sue
+                nullable: true
+              picture:
+                type: string
+                example: 'https://i.imgur.com/test.jpg'
+                format: uri
+                description: '(Optional) A URL to a picture to be used for the participant. '
+                nullable: true
+              preset_name:
+                type: string
+                description: Name of the preset to apply to this participant.
+              custom_participant_id:
+                type: string
+                description: 'A unique participant ID. You must specify a unique ID for the participant, for example, UUID, email address, and so on. '
+            required:
+              - preset_name
+              - custom_participant_id
+    EditParticipantBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Jane Doe
+                description: (Optional) Name of the participant.
+                nullable: true
+              picture:
+                type: string
+                format: uri
+                description: (Optional) A URL to a picture to be used for the participant.
+                nullable: true
+              preset_name:
+                type: string
+                description: (Optional) Name of the preset to apply to this participant.
+                nullable: true
+    StartRecording:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              meeting_id:
+                type: string
+                format: uuid
+                description: ID of the meeting to record.
+              max_seconds:
+                type: integer
+                x-stoplight:
+                  id: k7f6838dflqlz
+                description: 'Specifies the maximum duration for recording in seconds, ranging from a minimum of 60 seconds to a maximum of 24 hours.'
+                minimum: 60
+                maximum: 86400
+              storage_config:
+                $ref: '#/components/schemas/StorageConfig'
+              video_config:
+                $ref: '#/components/schemas/VideoConfig'
+              audio_config:
+                $ref: '#/components/schemas/AudioConfig'
+              live_streaming_config:
+                $ref: '#/components/schemas/LivestreamingConfig'
+              file_name_prefix:
+                type: string
+                x-stoplight:
+                  id: 7456eveh34y08
+                description: Update the recording file name.
+              url:
+                type: string
+                x-stoplight:
+                  id: kctff4maz6g44
+                format: uri
+                description: Pass a custom url to record arbitary screen
+              dyte_bucket_config:
+                $ref: '#/components/schemas/DyteBucketConfig'
+              interactive_config:
+                $ref: '#/components/schemas/InteractiveConfig'
+            required:
+              - meeting_id
+    CreatePresetBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Preset'
+  responses:
+    GetActiveSession:
+      description: Active Session Success response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                $ref: '#/components/schemas/ActiveSession'
+          examples:
+            activeSessionSuccess:
+              $ref: '#/components/examples/GetActiveSessionSuccessResponse'
+    GetActiveSessionNotFound:
+      description: Active Session is not found for the given meetingId
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericErrorResponse'
+          examples:
+            activeSessionNotFound:
+              $ref: '#/components/examples/GetActiveSessionNotFoundResponse'
+    KickParticipants:
+      description: Kick participants success response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  action:
+                    type: string
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionParticipant'
+    ParticipantNotFound:
+      description: No participant found for the given `participant_id` or `custom_participant_id`
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericErrorResponse'
+          examples:
+            participantNotFound:
+              $ref: '#/components/examples/ParticipantNotFoundResponse'
+    KickAllParticipants:
+      description: Kick all participants from a meeeting
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  action:
+                    type: string
+                  kicked_participants_count:
+                    type: number
+    MuteParticipants:
+      description: Mute one or more participants of a meeting
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  action:
+                    type: string
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SessionParticipant'
+    MuteAllParticipants:
+      description: Mute all participants of a meeting
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  action:
+                    type: string
+                  muted_participants_count:
+                    type: number
+    CreatePoll:
+      description: response for creating a poll
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  action:
+                    type: string
+                  poll:
+                    $ref: '#/components/schemas/Poll'
+    GetSessions:
+      description: Get all sessions success response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActiveSession'
+    GetSessionDetails:
+      description: Get details about a particular session
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  session:
+                    $ref: '#/components/schemas/ActiveSession'
+    GetSessionParticipants:
+      description: Get participants list of a particular session
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ParticipantsList'
+          examples:
+            ParticipantListSuccess:
+              $ref: '#/components/examples/ParticipantListSuccess'
+            ParticipantListWithPeerStatsSuccess:
+              $ref: '#/components/examples/ParticipantListWithPeerEventSucces'
+    GetParticipantDetails:
+      description: Returns details of a participant along with callstats data.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                properties:
+                  participant:
+                    allOf:
+                      - $ref: '#/components/schemas/ParticipantsList'
+                      - $ref: '#/components/schemas/ParticipantPeerStats'
+                      - $ref: '#/components/schemas/ParticipantQualityStats'
+    GetSessionChat:
+      description: Returns all chat messages of a session.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+                $ref: '#/components/schemas/ChatMessage'
+    GetOverallStats:
+      description: Returns complete analytics of an organization
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                $ref: '#/components/schemas/OverallStats'
+          examples:
+            OverallStatsSuccess:
+              $ref: '#/components/examples/OverallStatsSuccessResponse'
+    GetDaywiseStats:
+      description: Returns daywise analytics of an organization
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              succes:
+                type: boolean
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DaywiseStats'
+          examples:
+            DaywiseStatsSuccess:
+              $ref: '#/components/examples/DaywiseStatsSuccessResponse'
+    GetMeeting:
+      description: Success Response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Meeting'
+      headers: {}
+    GetAllMeetings:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PagingResponse'
+              - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Meeting'
+    GenericError:
+      description: Failure response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GenericErrorResponse'
+        application/xml:
+          schema:
+            type: object
+            properties: {}
+    GetAllParticipants:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PagingResponse'
+              - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Participant'
+    AddParticipant:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Participant'
+                      - type: object
+                        properties:
+                          token:
+                            type: string
+                            description: The participant's auth token that can be used for joining a meeting from the client side.
+                        required:
+                          - token
+    GetParticipant:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Participant'
+                required:
+                  - data
+    DeleteParticipant:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      custom_participant_id:
+                        type: string
+                        description: A unique participant ID generated by the client.
+                      preset_id:
+                        type: string
+                        format: uuid
+                        description: ID of the preset applied to this participant.
+                      created_at:
+                        type: string
+                        format: date-time
+                        description: Timestamp this object was created at. The time is returned in ISO format.
+                      updated_at:
+                        type: string
+                        format: date-time
+                        description: Timestamp this object was updated at. The time is returned in ISO format.
+                    required:
+                      - custom_participant_id
+                      - preset_id
+                      - created_at
+                      - updated_at
+    RegenToken:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - token
+                    properties:
+                      token:
+                        type: string
+                        description: Regenerated participant's authentication token.
+                required:
+                  - data
+    GetRecordings:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PagingResponse'
+              - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Recording'
+                        - type: object
+                          properties:
+                            storage_config:
+                              $ref: '#/components/schemas/StorageConfig'
+                        - type: object
+                          properties:
+                            meeting:
+                              $ref: '#/components/schemas/Meeting'
+    GetRecording:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Recording'
+                      - type: object
+                        properties:
+                          storage_config:
+                            $ref: '#/components/schemas/StorageConfig'
+                          start_reason:
+                            $ref: '#/components/schemas/startReason'
+                          stop_reason:
+                            $ref: '#/components/schemas/stopReason'
+    GetActiveRecording:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Recording'
+                required:
+                  - data
+    GetAllPresets:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/PagingResponse'
+              - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PresetListItem'
+    GetPresetBody:
+      description: Success response
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/GenericSuccessResponse'
+              - type: object
+                properties:
+                  data:
+                    allOf:
+                      - type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                            description: ID of the preset
+                        required:
+                          - id
+                      - $ref: '#/components/schemas/Preset'
+                required:
+                  - data
+  examples:
+    GetActiveSessionSuccessResponse:
+      summary: Success response for fetching active session
+      value:
+        success: true
+        data:
+          id: 813432c7-3c5a-45e2-9acf-eef7061c7584
+          associated_id: 6bf2b8be-04dd-4191-b602-1128921a306b
+          type: meeting
+          status: LIVE
+          live_participants: 1
+          max_concurrent_participants: 2
+          minutes_consumed: 2.3434
+          started_at: '2022-01-12T14:21:34.388Z'
+          ended_at: 'null'
+          created_at: '2022-01-12T14:21:34.398Z'
+          updated_at: '2022-01-12T14:26:00.784Z'
+    GetActiveSessionNotFoundResponse:
+      summary: Active Session not found
+      value:
+        success: false
+        error:
+          code: 404
+          message: No active session found for meeting_id 6bf2b8be-04dd-4191-b602-1128921a306b
+    ParticipantListSuccess:
+      summary: success response for session's participants list
+      value:
+        success: true
+        data:
+          participants:
+            - id: 005f4e0c-4d08-4d4e-a391-a76be75cd296
+              user_id: 0a08343d-a9dc-45f0-9feb-6a64afcc4f81
+              custom_participant_id: 83qi0i
+              display_name: Mark
+              role: webinar_participant
+              joined_at: '2023-02-01T10:51:08.030Z'
+              left_at: '2023-02-01T10:56:56.612Z'
+              duration: 5.8097
+              created_at: '2023-02-01T10:51:08.039Z'
+              updated_at: '2023-02-01T10:56:56.618Z'
+            - id: 51fdf95f-d893-471a-922b-7db7adb14453
+              user_id: 85e7f0fd-7c16-45e9-9d68-f17ef007c4eb
+              custom_participant_id: 3uggr
+              display_name: Henry
+              role: webinar_participant
+              joined_at: '2023-02-01T10:50:36.846Z"'
+              left_at: '2023-02-01T10:57:32.424Z'
+              duration: 6.9263
+              created_at: '2023-02-01T10:50:36.853Z'
+              updated_at: '2023-02-01T10:57:32.431Z'
+          paging:
+            total_count: 123
+            start_offset: 1
+            end_offset: 2
+    ParticipantListWithPeerEventSucces:
+      summary: success response for sessions participants list with peer events
+      value:
+        success: true
+        data:
+          participants:
+            - id: 005f4e0c-4d08-4d4e-a391-a76be75cd296
+              user_id: 0a08343d-a9dc-45f0-9feb-6a64afcc4f81
+              custom_participant_id: 83qi0i
+              display_name: Mark
+              role: webinar_participant
+              joined_at: '2023-02-01T10:51:08.030Z'
+              left_at: '2023-02-01T10:56:56.612Z'
+              duration: 5.8097
+              created_at: '2023-02-01T10:51:08.039Z'
+              updated_at: '2023-02-01T10:56:56.618Z'
+              peer_events:
+                - id: 94af3bac-f30b-40b9-ab45-4b9e6eff191a
+                  peer_id: 79d87ca5-7e47-452a-b3c1-b6842ad84bf5
+                  event_name: PEER_JOINING
+                  created_at: '2023-02-01T10:51:50.786Z'
+                  updated_at: '2023-02-01T10:51:50.792Z'
+                - id: 94af3bac-f30b-40b9-ab45-4b9e6eff191b
+                  peer_id: 79d87ca5-7e47-452a-b3c1-b6842ad84bf5
+                  event_name: PEER_LEAVING
+                  created_at: '2023-02-01T10:56:50.786Z'
+                  updated_at: '2023-02-01T10:56:50.792Z'
+            - id: 51fdf95f-d893-471a-922b-7db7adb14453
+              user_id: 85e7f0fd-7c16-45e9-9d68-f17ef007c4eb
+              custom_participant_id: 3uggr
+              display_name: Henry
+              role: webinar_participant
+              joined_at: '2023-02-01T10:50:36.846Z"'
+              left_at: '2023-02-01T10:57:32.424Z'
+              duration: 6.9263
+              created_at: '2023-02-01T10:50:36.853Z'
+              updated_at: '2023-02-01T10:57:32.431Z'
+              peer_events:
+                - id: 94af3bac-f30b-40b9-ab45-4b9e6eff191a
+                  peer_id: 51fdf95f-d893-471a-922b-7db7adb14453
+                  event_name: PEER_JOINING
+                  created_at: '2023-02-01T10:51:50.786Z'
+                  updated_at: '2023-02-01T10:51:50.792Z'
+                - id: 94af3bac-f30b-40b9-ab45-4b9e6eff191b
+                  peer_id: 51fdf95f-d893-471a-922b-7db7adb14453
+                  event_name: PEER_LEAVING
+                  created_at: '2023-02-01T10:56:50.786Z'
+                  updated_at: '2023-02-01T10:56:50.792Z'
+          paging:
+            total_count: 123
+            start_offset: 1
+            end_offset: 2
+    ParticipantNotFoundResponse:
+      summary: Participant Not Found
+      value:
+        success: false
+        error:
+          code: 404
+          message: No user found with id 813432c7-3c5a-45e2-9acf-eef7061c7584
+    OverallStatsSuccessResponse:
+      summary: Overall Stats response
+      value:
+        success: true
+        data:
+          sessions_count: 26
+          sessions_minutes_consumed: 1323.23
+          recordings_minutes_consumed: 468.8932
+    DaywiseStatsSuccessResponse:
+      summary: Daywise stats response
+      value:
+        success: true
+        data:
+          - date: '2022-03-01'
+            sessions_count: 10
+            sessions_minutes_consumed: 123.22
+            recordings_minutes_consumed: 129.14
+          - date: '2022-03-02'
+            sessions_count: 16
+            sessions_minutes_consumed: 1278.87
+            recordings_minutes_consumed: 338.12
+  securitySchemes:
+    Authorization:
+      type: http
+      scheme: basic
+    Bearer:
+      type: http
+      scheme: bearer
+      description: Provide bearer token for a participant who has permissions for recording. Note that this is only useful for the `/recordings` routes.
+    OrgBearer:
+      type: http
+      scheme: bearer
+      description: Provide auth token obtained from Dyte CLI
+tags:
+  - name: Meetings
+  - name: Presets
+  - name: Sessions
+  - name: Recordings
+  - name: Webhooks
+  - name: Active session
+  - name: Live streams
+  - name: Analytics
+  - name: Organizations
+externalDocs:
+  url: 'https://docs.dyte.io'
+  description: ''
+security:
+  - Authorization: []
