@@ -10,7 +10,6 @@ import useBreakpoint from '../lib/useBreakpoint';
 import SectionsMenu from '../components/SectionsMenu';
 import RunInPostmanButton from '../components/RunInPostmanButton';
 import { Monitor } from 'react-feather';
-import Link from '@docusaurus/Link';
 import { APIIcon } from '../icons';
 
 function APIElement({ layout = 'sidebar', currentVersion = 'v1' }) {
