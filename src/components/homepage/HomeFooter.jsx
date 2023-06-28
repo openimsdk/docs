@@ -3,7 +3,6 @@ import Link from '@docusaurus/Link';
 import ThemedImage from '@theme/ThemedImage';
 import clsx from 'clsx';
 
-import { Linkedin, Twitter } from 'react-feather';
 import { DiscordIcon } from '@site/src/icons';
 
 export default function HomeFooter({ className }) {
@@ -31,7 +30,7 @@ export default function HomeFooter({ className }) {
           </Link>
         </div>
         <div className="flex-1 text-zinc-400 lg:text-right">
-          Copyright &copy; OpenIM since 2020. All rights reserved.
+          Copyright &copy; OpenIM since 2023. All rights reserved.
         </div>
       </div>
     </footer>

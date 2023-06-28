@@ -36,7 +36,7 @@ export default function HelpSection({ className = '' }) {
               </Translate>
             </p>
             <Link
-              href="https://dyte.io/schedule-demo"
+              href="https://www.openim.online/demo"
               className="text-primary dark:text-primary-100"
             >
               <Translate id="homepage.helpSection.goNow">Go Now</Translate>
@@ -61,7 +61,7 @@ export default function HelpSection({ className = '' }) {
               </Translate>
             </p>
             <Link
-              href="https://dyte.io/contact"
+              href="https://github.com/OpenIMSDK/Open-IM-Server/issues"
               className="text-primary dark:text-primary-100"
             >
               <Translate id="homepage.helpSection.goNow">Go Now</Translate>
