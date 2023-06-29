@@ -65,8 +65,6 @@ function create_doc_plugin({
   ];
 }
 
-const isDev = process.env.NODE_ENV === 'development';
-
 const { webpackPlugin } = require('./plugins/webpack-plugin.cjs');
 const tailwindPlugin = require('./plugins/tailwind-plugin.cjs');
 const docs_plugins = docs.map((doc) => create_doc_plugin(doc));
@@ -198,7 +196,7 @@ const config = {
             items: [
               {
                 label: 'Documentation',
-                href: '/guides',
+                href: '/guides/introduction',
               },
               {
                 label: 'Community',

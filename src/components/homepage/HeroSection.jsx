@@ -40,7 +40,7 @@ export default function HeroSection() {
               </Translate>
             </Link>
             <Link
-              href="/guides"
+              href="/guides/introduction"
               className="rounded-sm border border-solid border-primary bg-primary/10 px-12 py-2.5 text-center font-semibold text-primary hover:text-primary dark:border-primary-100 dark:text-primary-100"
             >
               <Translate id="homepage.heroSection.startLink">
