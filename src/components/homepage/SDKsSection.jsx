@@ -82,10 +82,6 @@ export default function SDKsSection() {
 
   return (
     <section className="bg-secondary-1000 py-20 px-4" id="start-building">
-      <Head>
-        <link rel="prefetch" href="/static/landing-page/plugin-sdk-light.png" />
-        <link rel="prefetch" href="/static/landing-page/plugin-sdk-dark.png" />
-      </Head>
       <div className="mx-auto max-w-7xl">
         <div className="dyte-badge">SDKs</div>
 
