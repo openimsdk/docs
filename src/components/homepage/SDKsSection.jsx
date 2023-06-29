@@ -1,19 +1,16 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
 import clsx from 'clsx';
-import ThemedImage from '@theme/ThemedImage';
 import {
   AngularIcon,
   ElectronIcon,
   FlutterIcon,
   HTMLIcon,
   VueIcon,
-  JSIcon,
   KotlinIcon,
   ReactIcon,
   SwiftIcon,
 } from '../../icons';
-import Head from '@docusaurus/Head';
 import { useState } from 'react';
 import Translate from '@docusaurus/Translate';
 
@@ -127,19 +124,39 @@ export default function SDKsSection() {
             <div>
               <ul className="mb-0 flex list-none flex-wrap gap-2 pl-0">
                 <li className="basis-[48%]">
-                  <SDKLink href="sdks" Icon={ReactIcon} label="React" />
+                  <SDKLink
+                    href="sdks/quickstart/browser"
+                    Icon={ReactIcon}
+                    label="React"
+                  />
                 </li>
                 <li className="basis-[48%]">
-                  <SDKLink href="sdks" Icon={VueIcon} label="Vue" />
+                  <SDKLink
+                    href="sdks/quickstart/browser"
+                    Icon={VueIcon}
+                    label="Vue"
+                  />
                 </li>
                 <li className="basis-[48%]">
-                  <SDKLink href="sdks" Icon={AngularIcon} label="Angular" />
+                  <SDKLink
+                    href="sdks/quickstart/browser"
+                    Icon={AngularIcon}
+                    label="Angular"
+                  />
                 </li>
                 <li className="basis-[48%]">
-                  <SDKLink href="sdks" Icon={HTMLIcon} label="HTML" />
+                  <SDKLink
+                    href="sdks/quickstart/browser"
+                    Icon={HTMLIcon}
+                    label="HTML"
+                  />
                 </li>
                 <li className="basis-[48%]">
-                  <SDKLink href="sdks" Icon={ElectronIcon} label="Electron" />
+                  <SDKLink
+                    href="sdks/quickstart/browser"
+                    Icon={ElectronIcon}
+                    label="Electron"
+                  />
                 </li>
               </ul>
             </div>
@@ -157,8 +174,8 @@ export default function SDKsSection() {
               <Translate id="homepage.sdksSection.nativeDescription">
                 Plan to build a instant messaging solution for Android, React
                 Native, iOS, or Flutter, check the docs here to understand how
-                Dyte can help you deliver best-in-class communication experience
-                for your mobile applications.
+                OpenIM can help you deliver best-in-class communication
+                experience for your mobile applications.
               </Translate>
             </p>
             {/* <Link className="text-sm" href="#">
@@ -175,91 +192,37 @@ export default function SDKsSection() {
             </p>
             <ul className="mb-0 flex list-none flex-wrap gap-2 pl-0">
               <li className="basis-[48%]">
-                <SDKLink href="sdks" Icon={KotlinIcon} label="Android" />
-              </li>
-              <li className="basis-[48%]">
-                <SDKLink href="sdks" Icon={SwiftIcon} label="iOS" />
-              </li>
-              <li className="basis-[48%]">
-                <SDKLink href="sdks" Icon={ReactIcon} label="React Native" />
-              </li>
-              <li className="basis-[48%]">
-                <SDKLink href="sdks" Icon={FlutterIcon} label="Flutter" />
-              </li>
-            </ul>
-            {/* <div className="flex flex-1 flex-col justify-end">
-              <div className="rounded-2xl bg-secondary-700 p-4 dark:bg-secondary-900">
-                <h5 className="text-center text-xs text-text-400">
-                  COMING SOON
-                </h5>
-                <ul className="mb-0 flex list-none flex-col gap-2 pl-0"></ul>
-              </div>
-            </div> */}
-          </div>
-        </div>
-
-        {/* <div
-          className="sdk-section mb-16 flex flex-col rounded-3xl bg-secondary-900 lg:flex-row"
-          data-section="desktop"
-          id="desktop"
-        >
-          <div className="flex flex-[2] flex-col justify-center p-6 text-center lg:pl-16 lg:text-left">
-            <div className="mb-4 text-xs font-semibold">COMING SOON</div>
-            <h3 className="text-4xl font-semibold">Desktop</h3>
-            <p className="text-sm leading-relaxed text-text-400 lg:max-w-sm">
-              Take Dyte for a spin to build real-time communication solutions
-              for Electron. Read the docs to get started with your desktop
-              applications.
-            </p>
-            <Link href="#" className="text-sm">
-              Learn More &rarr;
-            </Link>
-          </div>
-          <div className="flex-1 rounded-3xl bg-secondary-800 p-6 px-8">
-            <h4>Core SDK</h4>
-            <p className="text-sm leading-relaxed text-text-400">
-              Build high-quality custom video and voice calls with real-time
-              communication using fully customizable and easy to integrate Core
-              SDKs.
-            </p>
-            <ul className="flex list-none flex-col gap-2 pl-0">
-              <li>
                 <SDKLink
-                  href="#"
-                  Icon={ElectronIcon}
-                  label="Electron"
-                  disabled
+                  href="sdks/quickstart/android"
+                  Icon={KotlinIcon}
+                  label="Android"
+                />
+              </li>
+              <li className="basis-[48%]">
+                <SDKLink
+                  href="sdks/quickstart/ios"
+                  Icon={SwiftIcon}
+                  label="iOS"
+                />
+              </li>
+              <li className="basis-[48%]">
+                <SDKLink
+                  href="sdks/quickstart/reactNative"
+                  Icon={ReactIcon}
+                  label="React Native"
+                />
+              </li>
+              <li className="basis-[48%]">
+                <SDKLink
+                  href="sdks/quickstart/flutter"
+                  Icon={FlutterIcon}
+                  label="Flutter"
                 />
               </li>
             </ul>
           </div>
-          <div className="flex-1 p-6 px-8">
-            <h4>UI Kit</h4>
-            <p className="text-sm leading-relaxed text-text-400">
-              Integrate video and voice calls to your app or website in minutes
-              using Dyte&apos;s prebuilt design library of UI components.
-            </p>
-            <div>
-              <ul className="mb-0 flex list-none flex-col gap-2 pl-0">
-                <li>
-                  <SDKLink
-                    href="#"
-                    disabled
-                    Icon={ElectronIcon}
-                    label="Electron"
-                  />
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div> */}
+        </div>
       </div>
-      {/* <div className="text-center text-text-400">
-        <p>
-          Don&apos;t see your tech stack here?{' '}
-          <Link href="https://dyte.io/contact">Contact Us</Link>
-        </p>
-      </div> */}
     </section>
   );
 }
