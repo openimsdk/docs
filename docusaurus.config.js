@@ -132,15 +132,15 @@ const config = {
         items: [
           {
             label: 'SDKs',
-            to: 'sdks',
+            to: 'sdks/introduction',
           },
           {
             label: 'Guides',
-            to: 'guides',
+            to: 'guides/introduction',
           },
           {
             label: 'API Reference',
-            to: 'restapi',
+            to: 'restapi/introduction',
           },
           {
             type: 'search',
