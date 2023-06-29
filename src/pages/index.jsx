@@ -30,7 +30,6 @@ export default function Homepage() {
       </div>
 
       <div className="z-0 bg-secondary-800 dark:bg-secondary-900">
-        {/* <ResourcesSection /> */}
         <HelpSection className="-mb-48" />
       </div>
 

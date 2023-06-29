@@ -23,37 +23,17 @@ const meta = {
 
 /** @type {import('@docusaurus/plugin-content-docs').Options[]} */
 const docs = [
-  // {
-  //   id: 'cli',
-  //   path: 'docs/cli',
-  //   routeBasePath: '/cli',
-  // },
-  // {
-  //   id: 'plugin-sdk',
-  //   path: 'docs/plugin-sdk',
-  //   routeBasePath: '/plugin-sdk',
-  //   versions: {
-  //     current: {
-  //       label: '1.x.x',
-  //     },
-  //   },
-  // },
   {
     id: 'sdks',
     path: 'docs/sdks',
     routeBasePath: '/sdks',
-    // versions: {
-    //   current: {
-    //     label: '1.x.x',
-    //   },
-    // },
   },
 ];
 
 /** @type {import('@docusaurus/plugin-content-docs').Options} */
 const defaultSettings = {
   breadcrumbs: false,
-  editUrl: 'https://github.com/dyte-in/docs/tree/main/',
+  editUrl: 'https://github.com/OpenIMSDK/docs/tree/main/',
   showLastUpdateTime: true,
   remarkPlugins: [
     [require('@docusaurus/remark-plugin-npm2yarn'), { sync: true }],
@@ -88,10 +68,6 @@ const docs_plugins = docs.map((doc) => create_doc_plugin(doc));
 
 const plugins = [tailwindPlugin, ...docs_plugins, webpackPlugin];
 
-const fs = require('fs');
-const sdksHTML = fs.readFileSync('./src/snippets/sdks.html', 'utf-8');
-const resourcesHTML = fs.readFileSync('./src/snippets/resources.html', 'utf-8');
-
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   ...meta,
@@ -99,7 +75,6 @@ const config = {
 
   trailingSlash: false,
   // themes: ['@docusaurus/theme-live-codeblock'],
-  clientModules: [require.resolve('./src/client/define-ui-kit.js')],
 
   presets: [
     [
@@ -132,7 +107,6 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // image: '/img/dyte-docs-card.png',
       colorMode: {
         defaultMode: 'dark',
       },
@@ -157,9 +131,9 @@ const config = {
           },
           {
             label: 'Guides',
-            to: 'guides/quickstart',
-            position: 'left',
-            className: 'new-badge',
+            to: 'guides',
+            // position: 'left',
+            // className: 'new-badge',
           },
           {
             label: 'API Reference',
@@ -199,15 +173,11 @@ const config = {
             items: [
               {
                 label: 'Demo',
-                href: 'https://www.rentsoft.cn',
+                href: 'https://www.openim.online/demo',
               },
-              // {
-              //   label: 'Developer Portal',
-              //   href: 'https://dev.dyte.io',
-              // },
               {
                 label: 'Pricing',
-                href: 'https://www.rentsoft.cn',
+                href: 'https://www.openim.online/price',
               },
             ],
           },
@@ -216,16 +186,8 @@ const config = {
             items: [
               {
                 label: 'About Us',
-                href: 'https://www.rentsoft.cn',
+                href: 'https://www.openim.online',
               },
-              // {
-              //   label: 'Join Us',
-              //   href: 'https://dyte.freshteam.com/jobs',
-              // },
-              // {
-              //   label: 'Privacy Policy',
-              //   href: 'https://dyte.io/privacy-policy',
-              // },
               {
                 label: 'Contact Us',
                 href: 'mailto:winxu81@gmail.com',
@@ -237,11 +199,7 @@ const config = {
             items: [
               {
                 label: 'Documentation',
-                href: 'https://docs.rentsoft.cn',
-              },
-              {
-                label: 'Blog',
-                href: 'https://join.slack.com/t/openimsdk/shared_invite/zt-1tmoj26uf-_FDy3dowVHBiGvLk9e5Xkg',
+                href: '/guides',
               },
               {
                 label: 'Community',
@@ -250,7 +208,7 @@ const config = {
             ],
           },
         ],
-        copyright: 'Copyright © OpenIM since 2020. All rights reserved.',
+        copyright: 'Copyright © OpenIM since 2023. All rights reserved.',
       },
       prism: {
         theme: code_themes.light,
