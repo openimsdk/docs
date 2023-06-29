@@ -14,7 +14,7 @@ export default function APIReferenceSection() {
       </Head>
       <div className="relative mx-auto flex w-full max-w-7xl flex-col items-center gap-10 rounded-2xl bg-gradient-to-r from-black to-zinc-800 px-6 py-20 text-center text-white dark:from-zinc-100 dark:to-white dark:text-black lg:flex-row lg:p-20 lg:text-left">
         <Link
-          href="/restapi"
+          href="/restapi/introduction"
           aria-label="API Reference"
           target="_blank"
           className="absolute top-8 right-8 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-600/40 dark:bg-transparent"
@@ -34,7 +34,7 @@ export default function APIReferenceSection() {
             </Translate>
           </p>
           <Link
-            href="/restapi"
+            href="/restapi/introduction"
             className="font-medium text-primary-100 dark:text-primary"
           >
             <Translate id="homepage.apiSection.getStarted">

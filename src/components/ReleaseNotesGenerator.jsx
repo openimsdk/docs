@@ -72,9 +72,13 @@ export default function ReleaseNotesGenerator({ noteKey }) {
                       {m[c.name]?.map((f) => (
                         <tr>
                           <td>
-                              {f.split("\n").map((i,key) => {
-                                return <ReactMarkdown className="changeline" key={key}>{i}</ReactMarkdown>;
-                              })}
+                            {f.split('\n').map((i, key) => {
+                              return (
+                                <ReactMarkdown className="changeline" key={key}>
+                                  {i}
+                                </ReactMarkdown>
+                              );
+                            })}
                           </td>
                         </tr>
                       ))}

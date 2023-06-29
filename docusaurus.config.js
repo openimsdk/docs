@@ -65,8 +65,6 @@ function create_doc_plugin({
   ];
 }
 
-const isDev = process.env.NODE_ENV === 'development';
-
 const { webpackPlugin } = require('./plugins/webpack-plugin.cjs');
 const tailwindPlugin = require('./plugins/tailwind-plugin.cjs');
 const docs_plugins = docs.map((doc) => create_doc_plugin(doc));
@@ -132,15 +130,15 @@ const config = {
         items: [
           {
             label: 'SDKs',
-            to: 'sdks',
+            to: 'sdks/introduction',
           },
           {
             label: 'Guides',
-            to: 'guides',
+            to: 'guides/introduction',
           },
           {
             label: 'API Reference',
-            to: 'restapi',
+            to: 'restapi/introduction',
           },
           {
             type: 'search',
@@ -198,7 +196,7 @@ const config = {
             items: [
               {
                 label: 'Documentation',
-                href: '/guides',
+                href: '/guides/introduction',
               },
               {
                 label: 'Community',
