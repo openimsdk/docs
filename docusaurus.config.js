@@ -146,10 +146,10 @@ const config = {
           //   label: 'Support',
           //   to: 'https://dyte.io/contact',
           // },
-          // {
-          //   type: 'search',
-          //   position: 'right',
-          // },
+          {
+            type: 'search',
+            position: 'right',
+          },
           {
             label: 'Github',
             href: 'https://github.com/OpenIMSDK',
