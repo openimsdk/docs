@@ -14,7 +14,7 @@ export default function APIReferenceSection() {
       </Head>
       <div className="relative mx-auto flex w-full max-w-7xl flex-col items-center gap-10 rounded-2xl bg-gradient-to-r from-black to-zinc-800 px-6 py-20 text-center text-white dark:from-zinc-100 dark:to-white dark:text-black lg:flex-row lg:p-20 lg:text-left">
         <Link
-          href="/api"
+          href="/restapi"
           aria-label="API Reference"
           target="_blank"
           className="absolute top-8 right-8 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-600/40 dark:bg-transparent"
@@ -34,7 +34,7 @@ export default function APIReferenceSection() {
             </Translate>
           </p>
           <Link
-            href="/api"
+            href="/restapi"
             className="font-medium text-primary-100 dark:text-primary"
           >
             <Translate id="homepage.apiSection.getStarted">
@@ -45,7 +45,7 @@ export default function APIReferenceSection() {
           <ul className="mt-10 flex list-none flex-col gap-4 text-left lg:pl-0">
             <li className="flex flex-col gap-1">
               <Link
-                href="/api#/operations/createMeeting"
+                href="/restapi/userManagement/userRegister"
                 className="group font-jakarta font-semibold text-current"
               >
                 <Translate id="homepage.apiSection.registeApi">
@@ -62,34 +62,6 @@ export default function APIReferenceSection() {
                 </Translate>
               </div>
             </li>
-            {/* <li className="flex flex-col gap-1">
-              <Link
-                href="/api/#/operations/addPreset"
-                className="group font-jakarta font-semibold text-current"
-              >
-                Add a preset
-                <span className="ml-2 opacity-0 transition group-hover:translate-x-2 group-hover:opacity-100">
-                  &rarr;
-                </span>
-              </Link>
-              <div className="text-zinc-400">
-                Add a preset for the given organization ID
-              </div>
-            </li>
-            <li className="flex flex-col gap-1">
-              <Link
-                href="/api/#/operations/deleteParticipant"
-                className="group font-jakarta font-semibold text-current"
-              >
-                Delete a participant
-                <span className="ml-2 opacity-0 transition group-hover:translate-x-2 group-hover:opacity-100">
-                  &rarr;
-                </span>
-              </Link>
-              <div className="text-zinc-400">
-                Delete a particpant from the meeting
-              </div>
-            </li> */}
           </ul>
         </div>
         <div className="flex flex-1 justify-end">

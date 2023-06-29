@@ -85,7 +85,11 @@ export default function HelpSection({ className = '' }) {
                 questions.
               </Translate>
             </p>
-            <Link href="/faq" className="text-primary dark:text-primary-100">
+            {/* <Link href="/faq" className="text-primary dark:text-primary-100"> */}
+            <Link
+              href="https://github.com/OpenIMSDK/Open-IM-Server/issues"
+              className="text-primary dark:text-primary-100"
+            >
               <Translate id="homepage.helpSection.faq">View FAQs</Translate>
               &nbsp;&rarr;
             </Link>
