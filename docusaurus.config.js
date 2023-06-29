@@ -28,6 +28,11 @@ const docs = [
     path: 'docs/sdks',
     routeBasePath: '/sdks',
   },
+  {
+    id: 'restapi',
+    path: 'docs/restapi',
+    routeBasePath: '/restapi',
+  },
 ];
 
 /** @type {import('@docusaurus/plugin-content-docs').Options} */
@@ -118,11 +123,11 @@ const config = {
       navbar: {
         logo: {
           href: '/',
-          src: '/logo/light.svg',
-          srcDark: '/logo/dark.svg',
+          src: '/logo/light.png',
+          srcDark: '/logo/dark.png',
           alt: 'OpenIM Docs',
-          height: '40px',
-          width: '101px',
+          width: '107.5px',
+          className: 'logo-icon',
         },
         items: [
           {
@@ -132,17 +137,15 @@ const config = {
           {
             label: 'Guides',
             to: 'guides',
-            // position: 'left',
-            // className: 'new-badge',
           },
           {
             label: 'API Reference',
-            to: '/api/',
+            to: 'restapi',
           },
-          {
-            label: 'Support',
-            to: 'https://dyte.io/contact',
-          },
+          // {
+          //   label: 'Support',
+          //   to: 'https://dyte.io/contact',
+          // },
           {
             type: 'search',
             position: 'right',
@@ -162,10 +165,10 @@ const config = {
       footer: {
         logo: {
           href: '/',
-          src: '/logo/light.svg',
-          srcDark: '/logo/dark.svg',
+          src: '/logo/light.png',
+          srcDark: '/logo/dark.png',
           alt: 'OpenIM Docs',
-          height: '36px',
+          height: '38px',
         },
         links: [
           {

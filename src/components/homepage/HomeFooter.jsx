@@ -16,7 +16,7 @@ export default function HomeFooter({ className }) {
       >
         <div>
           <ThemedImage
-            sources={{ light: '/logo/light.svg', dark: '/logo/dark.svg' }}
+            sources={{ light: '/logo/light.png', dark: '/logo/dark.png' }}
             alt="Logo"
             className="h-10"
           />
