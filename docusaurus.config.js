@@ -142,10 +142,6 @@ const config = {
             label: 'API Reference',
             to: 'restapi',
           },
-          // {
-          //   label: 'Support',
-          //   to: 'https://dyte.io/contact',
-          // },
           {
             type: 'search',
             position: 'right',

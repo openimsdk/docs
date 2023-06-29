@@ -55,7 +55,7 @@ export default function HeroSection() {
               light: '/static/landing-page/hero-light.png',
               dark: '/static/landing-page/hero-dark.png',
             }}
-            alt="Preview of using Dyte SDKs"
+            alt="Preview of using OpenIM SDKs"
             className="max-w-[420px] lg:max-w-[560px]"
           />
         </div>
