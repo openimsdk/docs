@@ -1,0 +1,93 @@
+---
+title: 'docker-compose部署'
+sidebar_position: 4
+---
+## 一、**部署说明 **
+使用docker-compose部署存储组件和Open-IM-Server服务端以及chat业务服务端
+
+| 组件                                                  | 说明                                                 |  
+| ------------------------------------------------------| -----------------------------------------------------| 
+| Mysql/Redis/MongoDB/Kafka/Zookeeper/Minio             | OpenIM需要使用的存储组件                             |
+| Open-IM-Server服务端                                  | Open-IM-Server消息、群组等核心功能                   |
+| chat服务端                                            | Chat登录注册等业务功能                               |
+
+
+## 二、**docker-compose部署**
+
+先准备go/git/docker/docker-compose，具体参考：https://doc.rentsoft.cn/#/component/docker
+
+先选择某个大磁盘目录，然后依次输入如下命令：
+
+```
+git clone https://github.com/OpenIMSDK/Open-IM-Server.git
+```
+
+进入Open-IM-Server项目后
+
+1.修改.env
+
+此处主要修改相关组件密码
+```
+USER=root #不用修改
+PASSWORD=openIM123  #8位以上的数字和字母组合密码，密码对redis mysql mongo生效，以及config/config.yaml中的accessSecret
+ENDPOINT=http://127.0.0.1:10005 #minio对外服务的ip和端口，或用域名storage.xx.xx，app要能访问到此ip和端口或域名，
+DATA_DIR=./  #指定大磁盘目录
+```
+
+2.修改IM配置
+
+config/config.yaml组件密码根据.env自动生成，无需手动修改。
+如需要使用个推离线推送，需修改修改一下配置，否则可以忽略。
+未申请个推可以先略过。
+```
+push:
+  enable: getui                       
+  geTui:                              #选择个推离线推送
+    pushUrl: "https://restapi.getui.com/v2/$appId"
+    masterSecret: ""
+    appKey: ""
+    intent: ""
+    channelID: ""
+    channelName: ""
+```
+
+3.修改Chat配置
+
+如果已申请阿里云短信服务，修改chat/config/config.yaml配置项，如果未申请先略过，默认验证码为666666
+
+```
+verifyCode:
+  validTime: 300 # 验证码有效时间
+  validCount: 5 # 验证码有效次数
+  uintTime: 86400 # 单位时间间隔
+  maxCount: 10 # 单位时间内最大获取次数
+  superCode: 666666 # 默认手机验证码(只有use为空时生效)
+  len: 6 # 验证码长度
+  use:  # 如申请了阿里短信服务，设置为ali使其生效
+  ali:
+    endpoint: "dysmsapi.aliyuncs.com"
+    accessKeyId: ""
+    accessKeySecret: ""
+    signName: ""
+    verificationCodeTemplateCode: ""
+
+```
+
+4.初始化部署并启动
+
+```
+chmod +x install_im_server.sh;
+./install_im_server.sh;
+```
+
+
+可能存在的问题：如果非首次安装，env密码对于组件不生效，如果数据不重要，先docker-compose down ; rm components -rf再执行以上步骤。
+
+5.检查服务
+
+```
+cd script;
+./docker_check_service.sh
+```
+
+## 
