@@ -145,6 +145,11 @@ const config = {
             position: 'right',
           },
           {
+            label: 'v2.x文档',
+            to: 'https://open-im-docs.vercel.app',
+            position: 'right',
+          },
+          {
             label: 'Github',
             href: 'https://github.com/OpenIMSDK',
             position: 'right',
