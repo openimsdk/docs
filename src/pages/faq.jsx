@@ -40,7 +40,7 @@ function Accordion({ title, children, open, onOpen, onClose }) {
     <div
       id={'parent-' + headingId}
       className={clsx(
-        'dyte-accordion cursor-pointer border-0 border-solid last-of-type:border-0',
+        'docs-accordion cursor-pointer border-0 border-solid last-of-type:border-0',
         open
           ? 'mb-4 rounded-2xl bg-secondary-800'
           : 'border-b border-zinc-300 dark:border-zinc-700'
