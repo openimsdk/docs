@@ -1,0 +1,150 @@
+---
+title: 'Open-IM-Server源码部署'
+sidebar_position: 1
+---
+
+# Open-IM-Server 源码部署
+
+Open-IM-Server 系统是即时通讯核心服务端，包括消息、群组、会话、好友等子系统。
+运行时依赖六大组件，在编译部署前需要确保其安装完成（以下为官方使用的组件版本）
+
+```
+1、Zookeeper
+2、MySQL(version:5.7)
+3、MongoDB(version:4.0.28)
+4、Redis(version:redis_version:7.0.0)
+5、Kafka(version:kafka_2.13-2.8.1)
+6、Minio(version:minio version RELEASE.2022-05-26T05-48-41Z)
+```
+
+## 1、服务器环境说明
+
+Linux 系统 8G 及以上内存，
+`go 1.18`或以上版本
+
+## 2、拉取项目源码
+
+```
+git clone https://github.com/OpenIMSDK/Open-IM-Server.git
+```
+
+## 3、修改配置文件参数 config/config.yaml
+
+- 修改 Zookeeper 配置项
+
+```
+zookeeper:
+  schema: openim                          #不建议修改
+  address: [ 127.0.0.1:2181 ]             #地址
+  username:                               #用户名
+  password:                               #密码
+```
+
+- 修改 MySQL 配置项
+
+```
+mysql:
+  address: [ 127.0.0.1:13306 ]            #地址
+  username: root                          #用户名
+  password: openIM123                     #密码
+  database: openIM_v2                     #不建议修改
+  maxOpenConn: 1000                       #最大连接数
+  maxIdleConn: 100                        #最大空闲连接数
+  maxLifeTime: 60                         #连接可以重复使用的最长时间（秒）
+  logLevel: 4                             #日志级别 1=slient 2=error 3=warn 4=info
+  slowThreshold: 500                      #慢语句阈值 （毫秒）
+```
+
+- 修改 MongoDB 配置项
+
+```
+mongo:
+  uri:                                    #不为空则直接使用该值
+  address: [ 127.0.0.1:37017 ]            #地址
+  database: openIM                        #mongo db 默认即可
+  username: root                          #用户名
+  password: openIM123                     #密码
+  maxPoolSize: 100                        #最大连接数
+```
+
+- 修改 Redis 配置项
+
+```
+redis:
+  address: [ 127.0.0.1:16379 ]            #地址
+  username:                               #用户名
+  password: openIM123                     #密码
+```
+
+- 修改 Kafka 配置项
+
+```
+kafka:
+  username:                               #用户名
+  password:                               #密码
+  addr: [ 127.0.0.1:9092 ]                #地址
+  latestMsgToRedis:
+    topic: "latestMsgToRedis"
+  offlineMsgToMongo:
+    topic: "offlineMsgToMongoMysql"
+  msgToPush:
+    topic: "msqToPush"
+  msgToModify:
+    topic: "msgToModify"
+  consumerGroupID:
+    msgToRedis: redis
+    msgToMongo: mongo
+    msgToMySql: mysql
+    msgToPush: push
+    msgToModify: modify
+```
+
+- 修改对象存储(minio)配置项
+
+```
+object:
+  enable: minio                                  #使用minio
+  apiURL: http://127.0.0.1:10002/third/object    #外网访问地址，app要能访问此ip和端口
+  minio:
+    tempBucket: "openim"                         #临时文件存储桶名
+    dataBucket: "openim"                         #数据文件存储桶名
+    location: us-east-1                          #位置或区域
+    endpoint: http://127.0.0.1:10005             #minio对外服务的ip和端口，app要能访问此ip和端口
+    accessKeyID: root                            #ID
+    secretAccessKey: openIM123                   #秘钥
+    isDistributedMod: false                      #是否分布式多硬盘部署，如果是多硬盘部署，需要修改为true
+```
+
+## 4、编译构建
+
+```
+cd Open-IM-server/scripts
+chmod +x *.sh
+./build_all_service.sh
+```
+
+## 5、启动服务
+
+```
+./start_all.sh;
+```
+
+## 6、检查服务
+
+```
+./check_all.sh
+```
+
+## 7、停止服务
+
+```
+./stop_all.sh
+```
+
+## 8、IM 开放端口
+
+| TCP 端口  | 说明                                                  | 操作                                    |
+| --------- | ----------------------------------------------------- | --------------------------------------- |
+| TCP:10001 | ws 协议，消息端口，如消息发送、推送等，用于客户端 SDK | 端口放行或 nginx 反向代理，并关闭防火墙 |
+| TCP:10002 | api 端口，如用户、好友、群组、消息等接口。            | 端口放行或 nginx 反向代理，并关闭防火墙 |
+| TCP:10005 | 选择 minio 存储时需要(openIM 默认使用 minio 存储)     | 端口放行或 nginx 反向代理，并关闭防火墙 |
