@@ -203,7 +203,6 @@ function DocSearch({ contextualSearch, externalUrlRegex, ...props }) {
   );
 }
 export default function SearchBar() {
-  return null;
   const { siteConfig } = useDocusaurusContext();
   return <DocSearch {...siteConfig.themeConfig.algolia} />;
 }

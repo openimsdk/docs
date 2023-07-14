@@ -145,6 +145,11 @@ const config = {
             position: 'right',
           },
           {
+            label: 'v2.x文档',
+            to: 'https://open-im-docs.vercel.app',
+            position: 'right',
+          },
+          {
             label: 'Github',
             href: 'https://github.com/OpenIMSDK',
             position: 'right',
@@ -232,9 +237,9 @@ const config = {
         ],
       },
       algolia: {
-        appId: 'HL0HSV62RK',
-        apiKey: '72ebf02146698733b7114c7b36da0945',
-        indexName: 'docs',
+        appId: 'NRY7H605ZD',
+        apiKey: '0521a959a3cf5eccb1347a65129dc3b4',
+        indexName: 'rentsoft',
         contextualSearch: true,
         searchParameters: {},
       },

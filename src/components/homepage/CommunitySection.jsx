@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
 
-import { Linkedin, Twitter } from 'react-feather';
 import { DiscordIcon } from '@site/src/icons';
 import Translate from '@docusaurus/Translate';
 

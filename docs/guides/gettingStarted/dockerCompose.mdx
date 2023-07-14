@@ -2,19 +2,20 @@
 title: 'docker-compose部署'
 sidebar_position: 4
 ---
+
 ## 一、**部署说明 **
-使用docker-compose部署存储组件和Open-IM-Server服务端以及chat业务服务端
 
-| 组件                                                  | 说明                                                 |  
-| ------------------------------------------------------| -----------------------------------------------------| 
-| Mysql/Redis/MongoDB/Kafka/Zookeeper/Minio             | Open-IM-Server需要使用的存储组件                     |
-| Open-IM-Server服务端                                  | Open-IM-Server消息、群组等核心功能                   |
-| chat服务端                                            | Chat登录注册等业务功能                               |
+使用 docker-compose 部署存储组件和 Open-IM-Server 服务端以及 chat 业务服务端
 
+| 组件                                      | 说明                                |
+| ----------------------------------------- | ----------------------------------- |
+| Mysql/Redis/MongoDB/Kafka/Zookeeper/Minio | Open-IM-Server 需要使用的存储组件   |
+| Open-IM-Server 服务端                     | Open-IM-Server 消息、群组等核心功能 |
+| chat 服务端                               | Chat 登录注册等业务功能             |
 
-## 二、**docker-compose部署**
+## 二、**docker-compose 部署**
 
-先准备docker/docker-compose，具体参考：https://doc.rentsoft.cn/#/component/docker
+先准备 go/git/docker/docker-compose，具体参考：https://doc.rentsoft.cn/#/component/docker
 
 先选择某个大磁盘目录，然后依次输入如下命令：
 
@@ -22,11 +23,12 @@ sidebar_position: 4
 git clone https://github.com/OpenIMSDK/Open-IM-Server.git
 ```
 
-进入Open-IM-Server项目后
+进入 Open-IM-Server 项目后
 
 1.修改.env
 
 此处主要修改相关组件密码
+
 ```
 USER=root #不用修改
 PASSWORD=openIM123  #8位以上的数字和字母组合密码，密码对redis mysql mongo生效，以及config/config.yaml中的accessSecret
@@ -34,14 +36,15 @@ ENDPOINT=http://127.0.0.1:10005 #minio对外服务的ip和端口，或用域名s
 DATA_DIR=./  #指定大磁盘目录
 ```
 
-2.修改IM配置
+2.修改 IM 配置
 
-config/config.yaml组件密码根据.env自动生成，无需手动修改。
+config/config.yaml 组件密码根据.env 自动生成，无需手动修改。
 如需要使用个推离线推送，需修改修改一下配置，否则可以忽略。
 未申请个推可以先略过。
+
 ```
 push:
-  enable: getui                       
+  enable: getui
   geTui:                              #选择个推离线推送
     pushUrl: "https://restapi.getui.com/v2/$appId"
     masterSecret: ""
@@ -51,9 +54,9 @@ push:
     channelName: ""
 ```
 
-3.修改Chat配置
+3.修改 Chat 配置
 
-如果已申请阿里云短信服务，修改chat/config/config.yaml配置项，如果未申请先略过，默认验证码为666666
+如果已申请阿里云短信服务，修改 chat/config/config.yaml 配置项，如果未申请先略过，默认验证码为 666666
 
 ```
 verifyCode:
@@ -74,40 +77,34 @@ verifyCode:
 ```
 
 4.初始化部署并启动
-注意：此命令只能执行一次，它会根据.env中的PASSWORD变量修改docker-compose中组件密码，并修改config/config.yaml中的组件密码
-如果.env中的密码变了，需要先docker-compose down ; rm components -rf后再执行此命令。
+注意：此命令只能执行一次，它会根据.env 中的 PASSWORD 变量修改 docker-compose 中组件密码，并修改 config/config.yaml 中的组件密码
+如果.env 中的密码变了，需要先 docker-compose down ; rm components -rf 后再执行此命令。
+
 ```
 chmod +x install_im_server.sh;
 ./install_im_server.sh;
 ```
 
-
-可能存在的问题：如果非首次安装，env密码对于组件不生效，如果数据不重要，先docker-compose down ; rm components -rf再执行以上步骤。
+可能存在的问题：如果非首次安装，env 密码对于组件不生效，如果数据不重要，先 docker-compose down ; rm components -rf 再执行以上步骤。
 
 5.检查服务
 
 ```
-cd script;
+cd scripts;
 ./docker_check_service.sh
 ```
 
+6.开放 IM 端口
 
-6.开放IM端口
+| TCP 端口  | 说明                                                  | 操作                                    |
+| --------- | ----------------------------------------------------- | --------------------------------------- |
+| TCP:10001 | ws 协议，消息端口，如消息发送、推送等，用于客户端 SDK | 端口放行或 nginx 反向代理，并关闭防火墙 |
+| TCP:10002 | api 端口，如用户、好友、群组、消息等接口。            | 端口放行或 nginx 反向代理，并关闭防火墙 |
+| TCP:10005 | 选择 minio 存储时需要(openIM 默认使用 minio 存储)     | 端口放行或 nginx 反向代理，并关闭防火墙 |
 
-| TCP端口                        | 说明                                                  | 操作                                  |
-| ------------------------------ | ----------------------------------------------------- | ------------------------------------- |
-| TCP:10001 					| ws协议，消息端口，如消息发送、推送等，用于客户端SDK    | 端口放行或 nginx 反向代理，并关闭防火墙 |
-| TCP:10002 					| api端口，如用户、好友、群组、消息等接口。                 | 端口放行或 nginx 反向代理，并关闭防火墙 |
-| TCP:10005  					| 选择 minio 存储时需要(openIM 默认使用 minio 存储)    | 端口放行或 nginx 反向代理，并关闭防火墙 |
+7.开放 Chat 端口
 
-
-
-7.开放Chat端口
-
-| TCP端口                        | 说明                                                  | 操作                                  |
-| ------------------------------ | ----------------------------------------------------- | ------------------------------------- |
-| TCP:10008                      | 业务系统，如注册、登录等       				         | 端口放行或 nginx 反向代理，并关闭防火墙 |
-| TCP:10009                      | 管理后台，如统计、封号等                              | 端口放行或 nginx 反向代理，并关闭防火墙 |
-
-
-
+| TCP 端口  | 说明                     | 操作                                    |
+| --------- | ------------------------ | --------------------------------------- |
+| TCP:10008 | 业务系统，如注册、登录等 | 端口放行或 nginx 反向代理，并关闭防火墙 |
+| TCP:10009 | 管理后台，如统计、封号等 | 端口放行或 nginx 反向代理，并关闭防火墙 |
