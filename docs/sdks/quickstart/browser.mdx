@@ -4,8 +4,109 @@ hide_title: true
 sidebar_position: 6
 ---
 
-:::tip
+## 使用 Demo
 
-Coming soon...
+[仓库地址](https://github.com/OpenIMSDK/Open-IM-PC-Web-Demo)
 
-:::
+## 集成步骤(Webpack5+)
+
+### 1. 添加依赖
+
+```bash
+npm install open-im-sdk-wasm
+```
+
+### 2. 获取 wasm 所需静态资源
+
+> 在项目根目录下的`node_modules`目录下找到`open-im-sdk-wasm`子目录，将其中`assets`文件夹下的所有文件拷贝到项目公共资源目录中（public）。
+
+- 文件清单
+
+```bash
+openIM.wasm
+sql-wasm.wasm
+wasm_exec.js
+```
+
+- 拷贝完成后在您的`index.html`文件中通过 script 标签引入`wasm_exec.js`文件
+
+### 3. 引入 SDK
+
+- 引入 SDK
+
+```ts
+import { getSDK } from 'open-im-sdk-wasm';
+
+const OpenIM = getSDK();
+```
+
+- 可能遇到的问题
+  ![webpack5_error](./assets/webpack5_error.png)
+
+- 解决方案
+  > 在 webpack 配置中新增配置如下
+
+```bash
+resolve: {
+      fallback: {
+        path: false,
+        crypto: false,
+      },
+    },
+```
+
+## 集成步骤(Vite、Webpack4)
+
+> 第一、二步同上 Webpack5+引入步骤。
+
+### 引入 SDK
+
+#### 将 npm 包中的 lib 目录拷贝到项目中，如：src/utils/lib
+
+#### 如果是 Webpack4,还需要引入 woker loader
+
+- 安装`worker-loader`和`worker-plugin`
+
+```bash
+npm install worker-loader worker-plugin -D
+```
+
+- 在 webpack 中新增配置
+
+```js
+const WorkerPlugin = require("worker-plugin");
+
+...
+plugins: [new WorkerPlugin()]
+...
+```
+
+#### 修改 lib/api/index.js 文件中对 web worker 的引入方式。
+
+- Webpack4.x
+
+```js
++ import IMWorker from 'worker-loader!./worker.js';
+
+- worker = new Worker(new URL('./worker.js', import.meta.url));
++ worker = new IMWorker();
+```
+
+- Vite
+
+```js
++ import IMWorker from './worker?worker';
+
+- worker = new Worker(new URL('./worker.js', import.meta.url));
++ worker = new IMWorker();
+```
+
+#### 引入
+
+> 路径为拷贝后放置`lib`的路径
+
+```ts
+import { getSDK } from '@/utils/lib';
+
+const OpenIM = getSDK();
+```
