@@ -1,0 +1,291 @@
+---
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# initSDK
+
+## 功能介绍
+
+:::info 说明
+
+初始化是客户端调用 sdk 的第一步，在应用的生命周期内只能调用一次，重复调用可能会导致未知的问题。
+
+:::
+
+:::caution 注意
+
+（1）初始化成功，只能调用 login，不能调用其他接口；  
+（2）客户端的底层日志会存放在指定目录，供调试查看。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Web', value: 'Web', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+   Future<dynamic> initSDK({
+      required int platform,
+      required String apiAddr,
+      required String wsAddr,
+      required String dataDir,
+      required OnConnectListener listener,
+      int logLevel = 6,
+      String objectStorage = 'cos',
+      bool isLogStandardOutput = true,
+      String? logFilePath,
+      String? operationID,
+    });
+```
+
+### 输入参数
+
+| 参数名称            | 参数类型                                                    | 是否必填 | 描述                   |
+| ------------------- | ----------------------------------------------------------- | -------- | ---------------------- |
+| platform            | [IMPlatform](/docs/sdks/enum/platform.mdx)                  | 是       | 当前平台               |
+| apiAddr             | String                                                      | 是       | SDK api 地址           |
+| wsAddr              | String                                                      | 是       | SDK WebSocket 地址     |
+| dataDir             | String                                                      | 是       | SDK 数据库存储目录     |
+| logLevel            | int                                                         | 是       | 日志打印等级 1 不打印  |
+| objectStorage       | String                                                      | 是       | 存储对象 cos/minio     |
+| listener            | [OnConnectListener](docs/sdks/listener/connectListener.mdx) | 是       | 监听                   |
+| isLogStandardOutput | bool                                                        | 不是     | 是否将日志打印到控制台 |
+| logFilePath         | String                                                      | 不是     | 日志存储位置           |
+| operationID         | String?                                                     | 不是     | 日志关联的 id          |
+
+### 返回结果
+
+| 名称 | 数值类型 | 描述               |
+| ---- | -------- | ------------------ |
+| ~    | dynamic  | 标识是否初始化成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+     OpenIM.iMManager.initSDK(
+          platform: IMPlatform.android,
+          apiAddr: '',
+          wsAddr: '',
+          dataDir: '',
+          listener: OnConnectListener(
+            onConnectFailed: (code, errorMsg) {},
+            onConnecting: () {},
+            onConnectSuccess: () {},
+            onKickedOffline: () {},
+            onUserTokenExpired: () {},
+          ),
+        );
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+- (BOOL)initSDKWithConfig:(OIMInitConfig *)config
+             onConnecting:(nullable OIMVoidCallback)onConnecting
+         onConnectFailure:(nullable OIMFailureCallback)onConnectFailure
+         onConnectSuccess:(nullable OIMVoidCallback)onConnectSuccess
+          onKickedOffline:(nullable OIMVoidCallback)onKickedOffline
+       onUserTokenExpired:(nullable OIMVoidCallback)onUserTokenExpired;
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                         | 是否必填 | 描述       |
+| -------- | ------------------------------------------------ | -------- | ---------- |
+| config   | [OIMInitConfig](docs/sdks/class/init/config.mdx) | 是       | 初始化参数 |
+
+### 返回结果
+
+| 名称               | 数值类型           | 描述               |
+| ------------------ | ------------------ | ------------------ |
+| success            | BOOL               | 标识是否初始化成功 |
+| onConnecting       | OIMVoidCallback    | 连接中的回调       |
+| onConnectFailure   | OIMFailureCallback | 连接失败的回调     |
+| onConnectSuccess   | OIMFailureCallback | 连接成功的回调     |
+| onKickedOffline    | OIMVoidCallback    | 踢下线的回调       |
+| onUserTokenExpired | OIMVoidCallback    | token 过期的回调   |
+
+### 代码示例
+
+```swift showLineNumbers
+OIMInitConfig *config = [OIMInitConfig new];
+config.apiAddr = @"";
+config.wsAddr = @"";
+config.objectStorage = @"";
+
+BOOL success = [OIMManager.manager initSDKWithConfig:config
+                                        onConnecting:^{
+
+} onConnectFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 连接失败的回调函数
+    // code 错误码
+    // error 错误信息
+} onConnectSuccess:^{
+    // SDK 已经成功连接到IM服务器
+} onKickedOffline:^{
+    // SDK 正在连接到IM服务器
+} onUserTokenExpired:^{
+    // 在线时票据过期：此时您需要生成新的 token 并再次调用 的 login() 函数重新登录。
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 参数详解
+
+```java showLineNumbers
+public boolean initSDK(Application application, int platform, String apiUrl, String wsUrl,
+                           String storageDir, int logLevel, boolean isLogStandardOutput,
+                           String logFilePath, boolean isExternalExtensions, @NotNull OnConnListener listener)
+```
+
+| 参数名称             | 参数类型                                                    | 是否必填 | 描述                  |
+| -------------------- | ----------------------------------------------------------- | -------- | --------------------- |
+| application          | Application                                                 | 是       | Application           |
+| platform             | [IMPlatform](/docs/sdks/enum/platform.mdx)                  | 是       | 当前平台              |
+| apiUrl               | String                                                      | 是       | SDK api 地址          |
+| wsUrl                | String                                                      | 是       | SDK WebSocket 地址    |
+| storageDir           | String                                                      | 是       | SDK 数据库存储目录    |
+| logLevel             | int                                                         | 是       | 日志打印等级 1 不打印 |
+| isLogStandardOutput  | boolean                                                     | 不是     | 日志输出到控制台      |
+| logFilePath          | String                                                      | 不是     | 日志输出的目录        |
+| isExternalExtensions | boolean                                                     | 不是     | 日志输出到文件        |
+| listener             | [OnConnectListener](docs/sdks/listener/connectListener.mdx) | 是       | 监听                  |
+
+### 代码示例
+
+```java showLineNumbers
+     OpenIMClient.getInstance().initSDK(application, Platform.ANDROID,
+            Constant.getImApiUrl(),
+            Constant.getImWsUrl(), getStorageDir(), 6,
+            true,
+            Constant.getStorageType(),
+            false, new OnConnListener() {
+                @Override
+                public void onConnectFailed(long code, String error) {
+
+                }
+
+                @Override
+                public void onConnectSuccess() {
+
+                }
+
+                @Override
+                public void onConnecting() {
+
+                }
+
+                @Override
+                public void onKickedOffline() {
+
+                }
+
+                @Override
+                public void onUserTokenExpired() {
+
+
+
+
+                }
+            });
+
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+:::caution 注意
+
+JS SDK 不需要初始化，直接调用 login 即可。
+
+:::
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi("initSDK",operationID: string, config: InitConfig): Promise<boolean>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                      | 是否必填 | 描述                                                    |
+| ----------- | --------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                        | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| config      | [InitConfig](docs/sdks/class/init/config.mdx) | 是       | 初始化参数                                              |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述           |
+| --------------- | ------------------------------------------------------- | -------------- |
+| Promise.then()  | Promise<boolean\>                                       | 是否初始化成功 |
+| Promise.catch() | Promise<[CatchResponse](docs/sdks/class/response.mdx)\> | 调用失败回调   |
+
+### 代码示例
+
+```js showLineNumbers
+// App.vue
+import IMSDK from 'openim-uniapp-polyfill';
+
+const path = await getDbDir();
+const config = {
+  apiAddr: 'http://xxx:10002', // IM的API接口地址。如：http://xxx:10002
+  wsAddr: 'ws://xxx:10001', // IM的websocket地址。如： ws://xxx:10001
+  platformID: uni.$u.os() === 'ios' ? 1 : 2, // 平台，参照Platform类,
+  dataDir: path, // 数据存储路径
+  logLevel: 6, // 日志打印级别
+  logFilePath: path, // 日志存储的目录
+  isLogStandardOutput: true, // 是否输出到控制台
+};
+const flag = await IMSDK.asyncApi('initSDK', IMSDK.uuid(), config);
+
+// utils.js
+export const getDbDir = () =>
+  new Promise((resolve, reject) => {
+    plus.io.requestFileSystem(plus.io.PRIVATE_DOC, (fs) => {
+      fs.root.getDirectory(
+        'user',
+        {
+          create: true,
+        },
+        (entry) => {
+          resolve(entry.fullPath);
+        },
+        (error) => {
+          reject(error);
+        }
+      );
+    });
+  });
+```
+
+</TabItem>
+
+</Tabs>
