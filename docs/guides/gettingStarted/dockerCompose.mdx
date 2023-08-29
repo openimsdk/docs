@@ -3,104 +3,74 @@ title: 'docker-compose部署'
 sidebar_position: 4
 ---
 
-## 一、**部署说明 **
 
-使用 docker-compose 部署存储组件和 Open-IM-Server 服务端以及 chat 业务服务端
+# docker部署
 
-| 组件                                      | 说明                                |
-| ----------------------------------------- | ----------------------------------- |
-| Mysql/Redis/MongoDB/Kafka/Zookeeper/Minio | Open-IM-Server 需要使用的存储组件   |
-| Open-IM-Server 服务端                     | Open-IM-Server 消息、群组等核心功能 |
-| chat 服务端                               | Chat 登录注册等业务功能             |
+## 环境及系统要求
 
-## 二、**docker-compose 部署**
+| 注意事项 | 详细说明                                                     |
+| -------- | ------------------------------------------------------------ |
+| 操作系统 | linux系统即可， Ubuntu 7.5.0-3ubuntu1~18.04最优，root用户    |
+| 硬件资源 | 可用内存2G以上，用户量小于10万，可用单机部署，8C 16G 10Mb 1T普通磁盘即可 |
+| golang   | 1.18及以上                                                   |
+| docker   | 23.0.1及以上                                                 |
+| git      | 2.17.1及以上                                                 |
 
-先准备 docker/docker-compose，具体参考：https://doc.rentsoft.cn/#/component/docker
+## 存储组件
 
-先选择某个大磁盘目录，然后依次输入如下命令：
+| 存储组件  | 建议版本    |
+| --------- | ----------- |
+| mongodb   | 6.0.2及以上 |
+| redis     | 7.0.0及以上 |
+| zookeeper | latest      |
+| kafka     | latest      |
+| mysql     | 5.7及以上   |
+| minio     | latest      |
 
-:::info 注意
-`release-v3.*`代表 github 正式分支，可[前往仓库](https://github.com/OpenIMSDK/Open-IM-Server)查看
-:::
+1.拉镜像启动
 
-```
-git clone https://github.com/OpenIMSDK/Open-IM-Server openim
-cd openim
-git checkout release-v3.*
-```
-
-进入 Open-IM-Server 项目后
-
-1.修改.env
-
-此处主要修改相关组件密码
-
-```
-USER=root #不用修改
-PASSWORD=openIM123  #8位以上的数字和字母组合密码，密码对redis mysql mongo生效，以及config/config.yaml中的accessSecret
-ENDPOINT=http://127.0.0.1:10005 #minio对外服务的ip和端口，或用域名storage.xx.xx，app要能访问到此ip和端口或域名，
-DATA_DIR=./  #指定大磁盘目录
+```bash
+git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && export PASSWORD="YourPassword" && make init && docker compose up -d
 ```
 
-2.修改 IM 配置
+2.常用环境变量
 
-config/config.yaml 组件密码根据.env 自动生成，无需手动修改。
-如需要使用个推离线推送，需修改修改一下配置，否则可以忽略。
-未申请个推可以先略过。
-
-```
-push:
-  enable: getui
-  geTui:                              #选择个推离线推送
-    pushUrl: "https://restapi.getui.com/v2/$appId"
-    masterSecret: ""
-    appKey: ""
-    intent: ""
-    channelID: ""
-    channelName: ""
+```bash
+# 选择 chat 版本 和 server 版本https://github.com/OpenIMSDK/Open-IM-Server/blob/main/docs/conversions/images.md, eg: main, release-v*.* 仅支持3.3/1.3之后的版本
+#export CHAT_BRANCH="main"   # 设置 chat 版本，默认是 main 
+#export SERVER_BRANCH="main" # 设置 server 版本，默认是 main
+# export PASSWORD="openIM123" # 所有组件的密码，至少8位，不能包含特色字符，默认是openIM123 
+# export USER="root" # 设置用户名，目前只支持root
+# API_URL: 内网环境下，需设置 OpenIM Server API 提供服务的地址；外网环境下会自动获取
+# export API_URL="http://127.0.0.1:10002"
+# export DATA_DIR="./" #设置组件挂载的数据卷目录，默认为./
 ```
 
-3.修改 Chat 配置
+3.查看日志
 
-如果已申请阿里云短信服务，修改 chat/config/config.yaml 配置项，如果未申请先略过，默认验证码为 666666
-
-```
-verifyCode:
-  validTime: 300 # 验证码有效时间
-  validCount: 5 # 验证码有效次数
-  uintTime: 86400 # 单位时间间隔
-  maxCount: 10 # 单位时间内最大获取次数
-  superCode: 666666 # 默认手机验证码(只有use为空时生效)
-  len: 6 # 验证码长度
-  use:  # 如申请了阿里短信服务，设置为ali使其生效
-  ali:
-    endpoint: "dysmsapi.aliyuncs.com"
-    accessKeyId: ""
-    accessKeySecret: ""
-    signName: ""
-    verificationCodeTemplateCode: ""
-
+```bash
+docker compose logs openim-server
+docker compose logs openim-chat
 ```
 
-4.初始化部署并启动
-注意：此命令只能执行一次，它会根据.env 中的 PASSWORD 变量修改 docker-compose 中组件密码，并修改 config/config.yaml 中的组件密码
-如果.env 中的密码变了，需要先 docker-compose down ; rm components -rf 后再执行此命令。
+![docker-chat](./assets/docker-chat.png)
 
-```
-chmod +x install_im_server.sh;
-./install_im_server.sh;
-```
+![docker-im](./assets/docker-im.png)
 
-可能存在的问题：如果非首次安装，env 密码对于组件不生效，如果数据不重要，先 docker-compose down ; rm components -rf 再执行以上步骤。
 
-5.检查服务
 
-```
-cd scripts;
-./docker_check_service.sh
+4.查看健康状态-healthy
+
+```bash
+docker ps
 ```
 
-6.开放 IM 端口
+![docker-ps](./assets/docker-ps.png)
+
+
+## 开放端口
+
+开放 IM 端口
 
 | TCP 端口  | 说明                                                  | 操作                                    |
 | --------- | ----------------------------------------------------- | --------------------------------------- |
@@ -108,7 +78,7 @@ cd scripts;
 | TCP:10002 | api 端口，如用户、好友、群组、消息等接口。            | 端口放行或 nginx 反向代理，并关闭防火墙 |
 | TCP:10005 | 选择 minio 存储时需要(openIM 默认使用 minio 存储)     | 端口放行或 nginx 反向代理，并关闭防火墙 |
 
-7.开放 Chat 端口
+开放 Chat 端口
 
 | TCP 端口  | 说明                     | 操作                                    |
 | --------- | ------------------------ | --------------------------------------- |
