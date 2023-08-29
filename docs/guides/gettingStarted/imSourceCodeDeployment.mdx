@@ -3,142 +3,129 @@ title: 'Open-IM-Server源码部署'
 sidebar_position: 1
 ---
 
-# Open-IM-Server 源码部署
+# 源码部署
 
-Open-IM-Server 系统是即时通讯核心服务端，包括消息、群组、会话、好友等子系统。
-运行时依赖六大组件，在编译部署前需要确保其安装完成（以下为官方使用的组件版本）
+## 环境及系统要求
 
-```
-1、Zookeeper
-2、MySQL(version:5.7)
-3、MongoDB(version:4.0.28)
-4、Redis(version:redis_version:7.0.0)
-5、Kafka(version:kafka_2.13-2.8.1)
-6、Minio(version:minio version RELEASE.2022-05-26T05-48-41Z)
-```
+| 注意事项 | 详细说明                                                     |
+| -------- | ------------------------------------------------------------ |
+| 操作系统 | linux系统即可， Ubuntu 7.5.0-3ubuntu1~18.04最优，root用户    |
+| 硬件资源 | 可用内存2G以上，用户量小于10万，可用单机部署，8C 16G 10Mb 1T普通磁盘即可 |
+| golang   | 1.18及以上                                                   |
+| docker   | 23.0.1及以上                                                 |
+| git      | 2.17.1及以上                                                 |
 
-## 1、服务器环境说明
+## 存储组件
 
-Linux 系统 8G 及以上内存，
-`go 1.18`或以上版本
+| 存储组件  | 建议版本    |
+| --------- | ----------- |
+| mongodb   | 6.0.2及以上 |
+| redis     | 7.0.0及以上 |
+| zookeeper | latest      |
+| kafka     | latest      |
+| mysql     | 5.7及以上   |
+| minio     | latest      |
 
-## 2、拉取项目源码
+## 一、先部署组件
 
-```
-git clone https://github.com/OpenIMSDK/Open-IM-Server.git
-```
+1. clone仓库
 
-## 3、修改配置文件参数 config/config.yaml
-
-- 修改 Zookeeper 配置项
-
-```
-zookeeper:
-  schema: openim                          #不建议修改
-  address: [ 127.0.0.1:2181 ]             #地址
-  username:                               #用户名
-  password:                               #密码
+```bash
+git clone https://github.com/OpenIMSDK/Open-IM-Server.git && cd Open-IM-Server
 ```
 
-- 修改 MySQL 配置项
+2. 部署组件
 
-```
-mysql:
-  address: [ 127.0.0.1:13306 ]            #地址
-  username: root                          #用户名
-  password: openIM123                     #密码
-  database: openIM_v2                     #不建议修改
-  maxOpenConn: 1000                       #最大连接数
-  maxIdleConn: 100                        #最大空闲连接数
-  maxLifeTime: 60                         #连接可以重复使用的最长时间（秒）
-  logLevel: 4                             #日志级别 1=slient 2=error 3=warn 4=info
-  slowThreshold: 500                      #慢语句阈值 （毫秒）
+```bash
+curl https://raw.githubusercontent.com/OpenIMSDK/openim-docker/main/example/basic-openim-server-dependency.yml -o basic-openim-server-dependency.yml && export PASSWORD="YourPassword"  USER="root" && make init && docker compose -f basic-openim-server-dependency.yml up -d
 ```
 
-- 修改 MongoDB 配置项
+3. 常用环境变量
 
-```
-mongo:
-  uri:                                    #不为空则直接使用该值
-  address: [ 127.0.0.1:37017 ]            #地址
-  database: openIM                        #mongo db 默认即可
-  username: root                          #用户名
-  password: openIM123                     #密码
-  maxPoolSize: 100                        #最大连接数
+```bash
+# export PASSWORD="openIM123" # 所有组件的密码，至少8位，不能包含特色字符，默认是openIM123 
+# export USER="root" # 设置用户名，目前只支持root
+# API_URL: 内网环境下，需设置 OpenIM Server API 提供服务的地址；外网环境下会自动获取
+# export API_URL="http://127.0.0.1:10002"
+# export DATA_DIR="./" #设置组件挂载的数据卷目录，默认为./
 ```
 
-- 修改 Redis 配置项
+## 二、编译/启动/检测/停止 Open-IM-Server
 
-```
-redis:
-  address: [ 127.0.0.1:16379 ]            #地址
-  username:                               #用户名
-  password: openIM123                     #密码
-```
+1. 编译
 
-- 修改 Kafka 配置项
-
-```
-kafka:
-  username:                               #用户名
-  password:                               #密码
-  addr: [ 127.0.0.1:9092 ]                #地址
-  latestMsgToRedis:
-    topic: "latestMsgToRedis"
-  offlineMsgToMongo:
-    topic: "offlineMsgToMongoMysql"
-  msgToPush:
-    topic: "msqToPush"
-  msgToModify:
-    topic: "msgToModify"
-  consumerGroupID:
-    msgToRedis: redis
-    msgToMongo: mongo
-    msgToMySql: mysql
-    msgToPush: push
-    msgToModify: modify
+```bash
+./scripts/build-all-service.sh
 ```
 
-- 修改对象存储(minio)配置项
+  2.启动
 
-```
-object:
-  enable: minio                                  #使用minio
-  apiURL: http://127.0.0.1:10002/third/object    #外网访问地址，app要能访问此ip和端口
-  minio:
-    tempBucket: "openim"                         #临时文件存储桶名
-    dataBucket: "openim"                         #数据文件存储桶名
-    location: us-east-1                          #位置或区域
-    endpoint: http://127.0.0.1:10005             #minio对外服务的ip和端口，app要能访问此ip和端口
-    accessKeyID: root                            #ID
-    secretAccessKey: openIM123                   #秘钥
-    isDistributedMod: false                      #是否分布式多硬盘部署，如果是多硬盘部署，需要修改为true
+```bash
+./scripts/start-all.sh
 ```
 
-## 4、编译构建
+3. 检测
 
-```
-cd Open-IM-server/scripts
-chmod +x *.sh
-./build_all_service.sh
+```bash
+./scripts/check-all.sh
 ```
 
-## 5、启动服务
+![im](./assets/im.png)
 
-```
-./start_all.sh;
-```
 
-## 6、检查服务
 
-```
-./check_all.sh
+4. 停止
+
+```bash
+./scripts/stop-all.sh
 ```
 
-## 7、停止服务
+### 其它问题
 
+如想使用某些外部组件，该如何修改
+
+```bash
+举例说明，如想使用外部的mysql，操作步骤如下：
+1.编辑basic-openim-server-dependency.ymll 在此文件中注释掉mysql相关配置项
+2.编辑scripts/install/environment.sh 修改mysql的ip port及密码等配置项
+3.make init使配置生效
+4.docker compose -f basic-openim-server-dependency.yml up -d启动组件
 ```
-./stop_all.sh
+
+## 三、编译/启动/检测/停止chat
+
+1. 克隆
+
+```bash
+#先回到上一级目录
+cd .. 
+git clone https://github.com/OpenIMSDK/chat.git && cd chat
+```
+
+2.编译
+
+```bash
+./scripts/build_all_service.sh
+```
+
+3.启动
+
+```bash
+./scripts/start_all.sh
+```
+
+4.检测
+
+```bash
+./scripts/check_all.sh --print-screen
+```
+
+![chat](./assets/chat.png)
+
+5.停止
+
+```bash
+./scripts/stop_all.sh
 ```
 
 ## 8、IM 开放端口
