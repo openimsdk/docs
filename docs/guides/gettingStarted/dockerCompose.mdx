@@ -27,24 +27,26 @@ sidebar_position: 4
 | mysql     | 5.7及以上   |
 | minio     | latest      |
 
-1.拉镜像启动
 
+1.设置环境变量
 ```bash
-git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && export PASSWORD="YourPassword" && make init && docker compose up -d
-```
-
-2.常用环境变量
-
-```bash
-# 选择 chat 版本 和 server 版本https://github.com/OpenIMSDK/Open-IM-Server/blob/main/docs/conversions/images.md, eg: main, release-v*.* 仅支持3.3/1.3之后的版本
-#export CHAT_BRANCH="main"   # 设置 chat 版本，默认是 main 
-#export SERVER_BRANCH="main" # 设置 server 版本，默认是 main
-# export PASSWORD="openIM123" # 所有组件的密码，至少8位，不能包含特色字符，默认是openIM123 
-# export USER="root" # 设置用户名，目前只支持root
-# API_URL: 内网环境下，需设置 OpenIM Server API 提供服务的地址；外网环境下会自动获取
-# export API_URL="http://127.0.0.1:10002"
+# 一般情况下只需要设置mysql/mongodb/redis/minio组件密码PASSWORD，如未设置，则为默认密码openIM123
+# export PASSWORD="openIM123" # 设置mysql/mongodb/redis/minio组件密码，至少8位，不能包含特殊字符，默认是openIM123 
+# 选择 chat 版本 和 server 版本https://github.com/OpenIMSDK/Open-IM-Server/blob/main/docs/conversions/images.md, eg: main, release-v*.* 仅支持3.3/1.3之后的版本，暂时不用设置
+# export CHAT_BRANCH="main"   # 设置 chat 版本，默认是 main 
+# export SERVER_BRANCH="main" # 设置 server 版本，默认是 main
+# export USER="root" # 设置mysql/mongodb/redis/minio用户名，目前只支持root
+# export API_URL="http://127.0.0.1:10002" #内网环境下，需设置 OpenIM Server API 提供服务的地址，外网环境下会自动获取
 # export DATA_DIR="./" #设置组件挂载的数据卷目录，默认为./
 ```
+
+2.拉镜像启动
+
+```bash
+git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker  && make init && docker compose up -d
+```
+
+
 
 3.查看日志
 
@@ -66,6 +68,39 @@ docker ps
 ```
 
 ![docker-ps](./assets/docker-ps.png)
+
+
+
+### 其它问题
+
+1. 如想使用某些外部组件，该如何修改
+
+```bash
+举例说明，如想使用外部的mysql，操作步骤如下：
+1.编辑docker-compose.yaml 在此文件中注释掉mysql相关配置项
+2.编辑scripts/install/environment.sh 修改mysql的ip port及密码等配置项
+3.make init使配置生效
+4.docker compose up -d启动
+```
+
+2. 健康状态starting
+
+```bash
+在第一次健康检查完成之前，Docker 默认会将容器的健康状态设置为 starting。目前是5分钟检测一次，正常情况下5分钟后会变成healthy状态
+```
+
+3. 端口映射
+
+```bash
+目前Docker使用network_mode: "host" ，容器与主机共享完全相同的网络命名空间，因此不能映射
+```
+
+4. docker版本
+
+```bash
+ 新版docker已经整合docker dompose作为其核心功能的一部分，不需单独安装docker-compose
+ 如果您的docker版本过低，建议升级到新版本，官方使用的是23.0.1版本
+```
 
 
 ## 开放端口
