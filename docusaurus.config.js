@@ -129,16 +129,16 @@ const config = {
         },
         items: [
           {
-            label: 'SDKs',
+            label: 'Client SDKs',
             to: 'sdks/introduction',
+          },
+          {
+            label: 'Server APIs',
+            to: 'restapi/introduction',
           },
           {
             label: 'Guides',
             to: 'guides/introduction',
-          },
-          {
-            label: 'API Reference',
-            to: 'restapi/introduction',
           },
           {
             type: 'search',
