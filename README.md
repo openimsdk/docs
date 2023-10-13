@@ -76,22 +76,22 @@ In the `package.json` file, the `scripts` section provides various commands to h
 OpenIMSDK encompasses a variety of open-source projects, each serving different purposes in the realm of instant messaging. Here is an overview of the mentioned projects along with their GitHub repository URLs:
 
 1. **OpenIM Server (open-im-server)**:
-   + GitHub Repository: https://github.com/openimsdk/open-im-server[1](https://github.com/openimsdk/open-im-server).
-   + This is the core server-side component of OpenIM, written in Go. It provides the backend infrastructure necessary for instant messaging. Features include supporting a variety of message types (text, images, voice, video, etc.), one-to-one and group chats, and more. The server is designed to be high-performance, easy to extend, and supports a layered governance architecture in clusters[2](https://www.openim.online/en).
+   + GitHub Repository: [https://github.com/openimsdk/open-im-server](https://github.com/openimsdk/open-im-server).
+   + This is the core server-side component of OpenIM, written in Go. It provides the backend infrastructure necessary for instant messaging. Features include supporting a variety of message types (text, images, voice, video, etc.), one-to-one and group chats, and more. The server is designed to be high-performance, easy to extend, and supports a layered [governance architecture in clusters](https://www.openim.online/en).
 2. **Open IM Flutter Demo (open-im-flutter-demo)**:
-   + GitHub Repository: https://github.com/openimsdk/open-im-flutter-demo[3](https://github.com/openimsdk/open-im-flutter-demo#:~:text=URL%3A https%3A%2F%2Fgithub.com%2Fopenimsdk%2Fopen).
+   + GitHub Repository: [https://github.com/openimsdk/open-im-flutter-demo](https://github.com/openimsdk/open-im-flutter-demo).
    + This project serves as a demonstration of how OpenIM can be implemented in Flutter, providing a practical example for developers interested in integrating OpenIM within a Flutter application.
 3. **OpenIM Electron Demo (openim-electron-demo)**:
-   + GitHub Repository: https://github.com/openimsdk/openim-electron-demo[4](https://github.com/openimsdk/openim-electron-demo#:~:text=URL%3A https%3A%2F%2Fgithub.com%2Fopenimsdk%2Fopenim).
+   + GitHub Repository: [https://github.com/openimsdk/openim-electron-demo](https://github.com/openimsdk/openim-electron-demo).
    + This demo project showcases how OpenIM can be utilized in an Electron-based web application, providing a practical reference for developers.
 4. **OpenIM Android Demo (open-im-android-demo)**:
-   + GitHub Repository: https://github.com/openimsdk/open-im-android-demo[5](https://github.com/openimsdk/open-im-android-demo#:~:text=URL%3A https%3A%2F%2Fgithub.com%2Fopenimsdk%2Fopen).
+   + GitHub Repository: [https://github.com/openimsdk/open-im-android-demo](https://github.com/openimsdk/open-im-android-demo).
    + This project provides a demonstration of OpenIM integration on the Android platform, serving as a useful reference for developers working on Android applications.
 5. **OpenIM UniApp Demo (open-im-uniapp-demo)**:
-   + GitHub Repository: https://github.com/openimsdk/open-im-uniapp-demo[6](https://github.com/openimsdk/open-im-uniapp-demo#:~:text=URL%3A https%3A%2F%2Fgithub.com%2Fopenimsdk%2Fopen).
+   + GitHub Repository: [https://github.com/openimsdk/open-im-uniapp-demo](https://github.com/openimsdk/open-im-uniapp-demo).
    + This demo project showcases the integration of OpenIM in a UniApp application, providing a practical example for developers working with UniApp.
 6. **Community Management for OpenIM (community)**:
-   + GitHub Repository: https://github.com/openimsdk/community[7](https://github.com/openimsdk/community#:~:text=URL%3A https%3A%2F%2Fgithub).
+   + GitHub Repository: [https://github.com/openimsdk/community](https://github.com/openimsdk/community).
    + This repository seems to be dedicated to community management aspects of OpenIM, although the exact details are not provided in the repository.
 
 ## Contributing
@@ -101,8 +101,3 @@ We welcome contributions from the community! Please refer to our [CONTRIBUTING.m
 ## License
 
 This project is licensed under the [MIT License](https://github.com/openimsdk/docs/blob/main/LICENSE).
-
-
-
-
-
