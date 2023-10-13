@@ -2,6 +2,8 @@
 
 # OpenIM Documentation
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/4e054801-f5b6-40c7-826c-3ae5901753f0/deploy-status)](https://app.netlify.com/sites/openim-web/deploys)
+
 Welcome to the official documentation repository for OpenIM, an open-source, free, and universal instant messaging ecosystem. This repository contains the source files for our documentation, which is built with Docusaurus.
 
 The documentation for OpenIM is hosted on GitHub as well as on an official documentation site. Here are the details:
