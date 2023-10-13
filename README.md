@@ -54,6 +54,8 @@ To set up the documentation locally, follow these steps:
    ```bash
    npm run start
    ```
+At this point, you can access the local [http://localhost:3000](http://localhost:3000/) port.
+
 
 In the `package.json` file, the `scripts` section provides various commands to help you work with the documentation:
 
