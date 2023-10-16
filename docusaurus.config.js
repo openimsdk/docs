@@ -132,6 +132,10 @@ const config = {
         },
         items: [
           {
+            label: 'Guides',
+            to: 'guides/introduction',
+          },
+          {
             label: 'Client SDKs',
             to: 'sdks/introduction',
           },
@@ -139,10 +143,7 @@ const config = {
             label: 'Server APIs',
             to: 'restapi/introduction',
           },
-          {
-            label: 'Guides',
-            to: 'guides/introduction',
-          },
+
           {
             type: 'search',
             position: 'right',
