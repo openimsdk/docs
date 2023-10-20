@@ -1,5 +1,3 @@
-# OpenIM Docs
-
 # OpenIM Documentation
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/4e054801-f5b6-40c7-826c-3ae5901753f0/deploy-status)](https://app.netlify.com/sites/openim-web/deploys)

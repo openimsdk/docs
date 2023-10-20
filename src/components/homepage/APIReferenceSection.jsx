@@ -42,27 +42,6 @@ export default function APIReferenceSection() {
             </Translate>
             &nbsp;&rarr;
           </Link>
-          <ul className="mt-10 flex list-none flex-col gap-4 text-left lg:pl-0">
-            <li className="flex flex-col gap-1">
-              <Link
-                href="/restapi/userManagement/userRegister"
-                className="group font-jakarta font-semibold text-current"
-              >
-                <Translate id="homepage.apiSection.registeApi">
-                  Register a user
-                </Translate>
-
-                <span className="ml-2 opacity-0 transition group-hover:translate-x-2 group-hover:opacity-100">
-                  &rarr;
-                </span>
-              </Link>
-              <div className="text-zinc-400">
-                <Translate id="homepage.apiSection.registeApiDescription">
-                  Register a new user with OpenIM
-                </Translate>
-              </div>
-            </li>
-          </ul>
         </div>
         <div className="flex flex-1 justify-end">
           <ThemedImage
