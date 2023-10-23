@@ -1,0 +1,147 @@
+---
+title: 'Docker Deployment'
+sidebar_position: 2
+---
+# 🛠 Docker Deployment
+
+## 🌟 Environment Requirements
+
+| Considerations | Details                                                               |
+| -------------- | ---------------------------------------------------------------------- |
+| Operating System | Linux, ideally Ubuntu 22.04, root user                              |
+| Hardware Resources | At least 2GB RAM, for user volume <100,000, single machine deployment: 8C 16G 10Mb 1T regular disk |
+| golang          | 1.18 and above                                                        |
+| docker          | Docker version 24.0.5, build ced0996 or newer                        |
+| git             | 2.17.1 and above                                                      |
+
+## 📦 Storage Component Requirements
+
+| Storage Component | Recommended Version |
+| ----------------- | ------------------- |
+| mongodb           | 6.0.2 and above     |
+| redis             | 7.0.0 and above     |
+| zookeeper         | latest              |
+| kafka             | latest              |
+| mysql             | 5.7 and above       |
+| minio             | latest              |
+
+## 🛠 1. Set Common Environment Variables
+
+- **CHAT_BRANCH**
+  - **Description**: chat version
+  - **Default**: `release-v1.3`
+  - **Consideration**: Supports version 1.3 and above
+    ```bash
+    export CHAT_BRANCH="release-v1.3"
+    ```
+
+- **SERVER_BRANCH**
+  - **Description**: OpenIMServer version
+  - **Default**: `release-v3.3`
+  - **Consideration**: Supports version 3.3 and above
+    ```bash
+    export SERVER_BRANCH="release-v3.3"
+    ```
+
+- **PASSWORD**
+  - **Description**: Component password (mysql/mongodb/redis/minio)
+  - **Default**: `openIM123`
+  - **Consideration**: Password should be ≥8 characters and without special characters
+    ```bash
+    export PASSWORD="openIM123"
+    ```
+
+- **USER**
+  - **Description**: Component username (mysql/mongodb/redis/minio)
+  - **Default**: `root`
+    ```bash
+    export USER="root"
+    ```
+
+- **API_URL**
+  - **Description**: API address
+  - **Note**: Automatically fetched if there's an external IP; for internal network, set it to the server IP
+    ```bash
+    export API_URL="http://ip:10002"
+    ```
+
+- **DATA_DIR**
+  - **Description**: Data volume directory
+  - **Default**: `./`
+    ```bash
+    export DATA_DIR="./"
+    ```
+
+---
+
+---
+
+### 🛠 More Environment Variables
+
+🟢 For a detailed understanding of various environment variables, please refer to [this document](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/environment.md).
+
+> ⚠️ **Note**: Variables set using `export` have higher priority than the ones in the script.
+
+---
+
+
+## 🚀 2. Pull and Launch Image
+
+```bash
+git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && make init && docker compose up -d
+```
+
+🟢 If your docker doesn't support compose, it's recommended to upgrade following [this guide](https://docs.docker.com/compose/install/linux/).
+
+### 📜 View Logs
+
+```bash
+docker compose logs openim-server
+docker compose logs openim-chat
+```
+
+🟢 More logs can be found at: `openim-server/branch/logs/` and `openim-chat/branch/logs`
+
+### 🩺 Check Health Status
+
+```bash
+docker ps
+```
+![docker-ps](./assets/docker-ps.png)
+
+## 3. Quick Verification
+
+Please refer to the [Quick Verification](./quickTestServer) document.
+
+## ❓ **Frequently Asked Questions** 🧐
+
+---
+
+### 1. How to modify using external components? 🛠️
+
+**Example: Using external mysql🔗:**
+
+- 📝 Edit `docker-compose.yaml` and comment out mysql configuration and its corresponding depends_on.
+- 📝 Edit `scripts/install/environment.sh` and change the mysql configuration.
+- 💻 Run the command: `make init`
+- 🚀 Run the command: `docker compose up -d`
+
+---
+
+### 2. Health status is `starting`? 🟠
+
+Initially, before the health check, Docker's default status is `starting`⏳. Approximately after 1 minute, the status changes to `healthy`✅.
+
+---
+
+### 3. Port Mapping 🌐
+
+Docker networks allow for user-defined settings🔧. You can map ports as usual🔀.
+
+---
+
+### 4. About Docker Version 🐋
+
+The new version of Docker has integrated docker-compose. Older versions of Docker might not support the gateway feature❌. It's recommended to upgrade to a newer version, such as `23.0.1`🔝.
+
+---
