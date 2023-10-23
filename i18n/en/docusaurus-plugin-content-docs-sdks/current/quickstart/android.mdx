@@ -1,0 +1,98 @@
+---
+title: Android
+hide_title: true
+sidebar_position: 2
+---
+
+## 🚀使用 Demo
+我们强烈建议您首先运行我们为您准备的框架相关的示例 [DEMO](https://github.com/OpenIMSDK/Open-IM-Android-Demo) 。这不仅可以让您直观体验 OpenIMSDK 的功能，还将帮助您在实际集成过程中迅速定位和解决问题。
+
+## 集成步骤
+
+### 1. 添加依赖
+
+    implementation 'io.openim:android-sdk:latest@aar'
+    implementation 'io.openim:core-sdk:latest@aar'
+    implementation 'com.google.code.gson:gson:2.9.0'
+
+### 2. 导入包
+
+    import io.openim.android.sdk.OpenIMClient
+
+### 3. 初始化
+
+```java
+InitConfig initConfig=new InitConfig(
+            Constant.getImApiUrl(),//SDK api地址
+            Constant.getImWsUrl(),//SDK WebSocket地址
+            getStorageDir(),//SDK数据库存储目录
+            );
+
+ OpenIMClient.getInstance().initSDK(
+            application, //Application
+            initConfig,//InitConfig
+            new OnConnListener() {
+                @Override
+                public void onConnectFailed(long code, String error) {
+                    //连接服务器失败
+                }
+
+                @Override
+                public void onConnectSuccess() {
+                    //连接服务器成功
+                }
+
+                @Override
+                public void onConnecting() {
+                    //连接服务器中...
+                }
+
+                @Override
+                public void onKickedOffline() {
+                    //当前用户被踢下线
+                }
+
+                @Override
+                public void onUserTokenExpired() {
+                    //登录票据已经过期
+                }
+            });
+```
+
+### 4. 设置监听器
+
+```java
+// Set listener
+// sdk采用的set方式，多次set会替换上次set,建议使用一个中间件使用add方式分发执行回调,参考demo IMEvent这个类
+
+    // 当前登录用户资料变更回调
+   OpenIMClient.getInstance().userInfoManager.setOnUserListener(info -> {});
+   // 收到新消息，已读回执，消息撤回监听。
+   OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() { }
+   // 好关系发生变化监听
+   OpenIMClient.getInstance().friendshipManager.setOnFriendshipListener(new OnFriendshipListener() {}
+   // 会话新增或改变监听
+   OpenIMClient.getInstance().conversationManager.setOnConversationListener(new OnConversationListener() {}
+   // 群组关系发生改变监听
+   OpenIMClient.getInstance().groupManager.setOnGroupListener(new OnGroupListener() {}
+   // 信令监听
+   OpenIMClient.getInstance().signalingManager.setSignalingListener(new OnSignalingListener() {}
+```
+
+### 5. 登录
+
+注意：先设置监听器后登录
+
+```java
+OpenIMClient.getInstance().login(new OnBase<String>() {
+          @Override
+          public void onError(int code, String error) {
+          }
+
+          @Override
+          public void onSuccess(String data) {
+          //其他api调用必须保证登录回调成功后操作
+
+          }
+       }, userID, imToken);
+```
