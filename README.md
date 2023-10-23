@@ -79,7 +79,7 @@ OpenIMSDK encompasses a variety of open-source projects, each serving different 
 
 1. **OpenIM Server (open-im-server)**:
    + GitHub Repository: [https://github.com/openimsdk/open-im-server](https://github.com/openimsdk/open-im-server).
-   + This is the core server-side component of OpenIM, written in Go. It provides the backend infrastructure necessary for instant messaging. Features include supporting a variety of message types (text, images, voice, video, etc.), one-to-one and group chats, and more. The server is designed to be high-performance, easy to extend, and supports a layered [governance architecture in clusters](https://openim.io/en).
+   + This is the core server-side component of OpenIM, written in Go. It provides the backend infrastructure necessary for instant messaging. Features include supporting a variety of message types (text, images, voice, video, etc.), one-to-one and group chats, and more. The server is designed to be high-performance, easy to extend, and supports a layered [governance architecture in clusters](https://openim.io).
 2. **Open IM Flutter Demo (open-im-flutter-demo)**:
    + GitHub Repository: [https://github.com/openimsdk/open-im-flutter-demo](https://github.com/openimsdk/open-im-flutter-demo).
    + This project serves as a demonstration of how OpenIM can be implemented in Flutter, providing a practical example for developers interested in integrating OpenIM within a Flutter application.
