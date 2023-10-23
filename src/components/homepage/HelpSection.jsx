@@ -36,7 +36,7 @@ export default function HelpSection({ className = '' }) {
               </Translate>
             </p>
             <Link
-              href="https://www.openim.online/demo"
+              href="https://openim.io/commercial"
               className="text-primary dark:text-primary-100"
             >
               <Translate id="homepage.helpSection.goNow">Go Now</Translate>

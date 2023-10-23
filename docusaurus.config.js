@@ -173,12 +173,8 @@ const config = {
             title: 'Product',
             items: [
               {
-                label: 'Demo',
-                href: 'https://www.openim.online/demo',
-              },
-              {
-                label: 'Pricing',
-                href: 'https://www.openim.online/price',
+                label: 'Business',
+                href: 'https://openim.io/commercial',
               },
             ],
           },
@@ -187,11 +183,11 @@ const config = {
             items: [
               {
                 label: 'About Us',
-                href: 'https://www.openim.online',
+                href: 'https://openim.io',
               },
               {
                 label: 'Contact Us',
-                href: 'mailto:winxu81@gmail.com',
+                href: 'mailto:service@open-im.com',
               },
             ],
           },
