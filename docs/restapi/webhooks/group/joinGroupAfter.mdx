@@ -1,24 +1,30 @@
 ---
-title: 加入群组之前的回调
+title: 新成员加入群组之后的回调
 hide_title: true
 ---
 
 
-# 在用户加入群组之前回调
+# 在用户加入群组之后回调
 
 ## 功能说明
-App 业务服务端可以通过该回调获取用户加入群组的请求，同时业务服务端可以拒绝用户加入群组的请求。
+App 业务服务端可以通过该回调实时查看群成员加入的消息，包括：通知 App 后台成员入群，App 可以据此进行必要的数据同步。
 
 ## 注意事项
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
-- 回调的方向是OpenIMServer向 App 后台发起 HTTP/HTTPS POST 请求。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求之后，需要校验请求 URL 中的 command 参数是否是自己的 SDK 参数。
 - APP 业务服务端需在超时时间内响应此请求。
 
+
 ## 可能触发该回调的场景
-- App 用户通过客户端发起加入群组的请求
+- App 用户通过客户端申请加入群组并得到通过。
+- App 用户通过客户端成功拉其他人加入群组。
+- App 管理员通过 REST API 添加用户到群组。
 
 ## 回调发生时机
-- OpenIMServer 准备将用户加入群组之前进行回调（如果需要管理员审批，则在通知管理员之前）。
+- 用户主动申请成功加入群组之后。
+- 用户被其他成员邀请并成功加入群组之后。
+- 用户被管理员通过 REST API 添加到群组之后。
 
 ## 接口说明
 
@@ -30,18 +36,18 @@ https://callbackurl?command=$CallbackCommand
 
 ### 请求参数说明
 
-| 参数            | 说明                                                   |
-| --------------- | ------------------------------------------------------ |
-| https          | 请求协议为 HTTPS，请求方式为 POST                      |
-| https://callbackurl | 回调 URL                                               |
-| CallbackCommand | 固定为：callbackBeforeMemberJoinGroupCommand                |
+| 参数                 | 说明                                                   |
+| --------------------| ------------------------------------------------------ |
+| https               | 请求协议为 HTTPS，请求方式为 POST。                      |
+| https://callbackurl | 回调 URL。                                               |
+| CallbackCommand     | 固定为：callbackAfterMemberJoinGroupCommand。                |
 
 
 
 ### 请求包示例
 ```json
 {
-  "callbackCommand": "CallbackBeforeMemberJoinGroupCommand",
+  "callbackCommand": "CallbackAfterMemberJoinGroupCommand",
   "operationID": "1234",
   "groupID": "12345",
   "userID": "user789",
@@ -50,6 +56,8 @@ https://callbackurl?command=$CallbackCommand
 }
 
 ```
+
+
 
 
 ### 请求包字段说明
@@ -64,9 +72,7 @@ https://callbackurl?command=$CallbackCommand
 | groupEx                 | string | 群组额外的数据字段。                                              |
 
 ## 应答包示例
-
-### 允许创建
-允许用户加入群组。
+App 后台同步数据后，发送回调应答包
 
 ```json
 {
@@ -74,13 +80,7 @@ https://callbackurl?command=$CallbackCommand
     "errCode": 0,
     "errMsg": "Success",
     "errDlt": "",
-    "nextCode": 0,
-    "operationID": "1234",
-    "nickName": "nickName",
-    "faceURL": "url",
-    "roleLevel": "1",
-    "muteEndTime": 1670574414123,
-    "ex": "Some extra data"
+    "nextCode": 1
 }
 
 ```
@@ -90,15 +90,9 @@ https://callbackurl?command=$CallbackCommand
 | 字段         | 值                           | 说明                                       |
 |-------------|------------------------------|------------------------------------------|
 | actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
-| errCode     | 20001                        | 表示自定义错误码。在actionCode不等于0时设置；在nextCode不等于1设置；范围在20001-29999之间|
+| errCode     | 0                            | 表示自定义错误码，此处填0代表忽略回调结果。|
 | errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
 | errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
-| nextCode    | 1                            | 下一步执行指令，actionCode等于`0`时设置，`1`表示拒绝继续执行。|
-| operationID          | string | 操作的唯一标识符。                                               |
-| nickName             | string | 加入群组的用户呢称。|
-| faceURL              | string | 加入群组用户的图标或者图片URL。                         |
-| roleLevel            | string | 加入群组用户的权限级别。|
-| muteEndTime          | int64  | 事件触发时间戳，毫秒级别                             |
-| ex                   | string | 额外的数据或信息。                         |
+| nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
 
 

@@ -1,0 +1,112 @@
+---
+title: 发送单聊消息前的回调
+hide_title: true
+---
+
+# 在发送单聊消息前的回调
+
+## 功能说明
+App 业务服务端可以通过该回调获取用户发送单聊消息的请求，同时业务服务端可以拒绝用户发送消息的请求，或对请求做修改和干预。
+
+## 注意事项
+- 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求之后，需要校验请求 URL 中的 command 参数是否是自己的 SDKNAME 参数。
+- APP 业务服务端需在超时时间内响应此请求。
+
+## 可能触发该回调的场景
+- App 用户通过客户端发送单聊消息。
+
+## 回调发生时机
+- OpenIMServer 准备发送单聊消息之前。
+
+## 接口说明
+
+### 请求 URL 示例
+以下示例中 App 配置的回调 URL 为 `https://callbackurl`。
+```plaintext
+https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
+```
+
+### 请求参数说明
+
+| 参数                 | 说明                                                   |
+|-------------------- |------------------------------------------------------ |
+| https               | 请求协议为 HTTPS，请求方式为 POST                      |
+| https://callbackurl | 回调 URL                                               |
+| SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName         |
+| CallbackCommand     | 固定值为：callbackBeforeSendSingleMsgCommand           |
+| contenttype         | 固定值为 JSON                                          |
+
+### 请求包示例
+```json
+{
+  "sendID": "user123",
+  "callbackCommand": "callbackBeforeSendSingleMsgCommand",
+  "serverMsgID": "msg001",
+  "clientMsgID": "clientmsg001",
+  "operationID": "op123",
+  "senderPlatformID": 1,
+  "senderNickname": "User123",
+  "sessionType": 1,
+  "msgFrom": 1,
+  "contentType": 1,
+  "status": 1,
+  "createTime": 1673048592000,
+  "content": "Hello, this is a test message",
+  "seq": 1001,
+  "atUserList": ["user456", "user789"],
+  "faceURL": "http://example.com/path/to/user/image.png",
+  "ex": "Extra data",
+  "recvID": "user456"
+}
+```
+
+### 请求包字段说明
+
+| 对象             | 类型    | 描述                                                       |
+|-----------------|---------|------------------------------------------------------------|
+| sendID          | string  | 发送者的用户ID                                              |
+| callbackCommand | string  | 回调命令，这里是发送单聊消息前的回调                        |
+| serverMsgID     | string  | 服务器分配的消息ID                                          |
+| clientMsgID     | string  | 客户端分配的消息ID                                          |
+| operationID     | string  | 操作的唯一标识符                                            |
+| senderPlatformID| int32   | 发送者的平台ID                                              |
+| senderNickname  | string  | 发送者的昵称                                                |
+| sessionType     | int32   | 会话类型                                                    |
+| msgFrom         | int32   | 消息来源                                                    |
+| contentType     | int32   | 消息内容的类型                                              |
+| status          | int32   | 消息的状态                                                  |
+| createTime      | int64   | 消息创建的时间戳（毫秒）                                    |
+| content         | string  | 消息内容                                                    |
+| seq             | uint32  | 消息序列号                                                  |
+| atUserList      | array   | 被@用户的列表                                              |
+| faceURL         | string  | 发送者头像的URL                                             |
+| ex              | string  | 额外的数据字段                                              |
+| recvID          | string  | 接收者的用户ID                                              |
+
+## 应答包示例
+
+### 允许发送
+允许用户发送消息。
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": 0
+}
+```
+
+## 应答包字段说明
+
+| 字段             | 值       | 说明                                         |
+|-----------------|----------|--------------------------------------------|
+| actionCode      | 0        | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
+| errCode         | 20001    | 自定义错误码，范围在20001-29999之间。在 actionCode 不等于0时设置；在 nextCode 不等于1时设置。|
+| errMsg          | "消息"    | 自定义错误码对应的简单错误信息。                       |
+| errDlt          | "详细信息" | 自定义错误码对应的详细错误信息。                       |
+| nextCode        | 1        | 下一步执行指令，`1`表示拒绝继续执行，actionCode 等于`0`时设置。|
+```
