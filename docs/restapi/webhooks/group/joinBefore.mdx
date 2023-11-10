@@ -1,5 +1,5 @@
 ---
-title: 加入群组
+title: 加入群组之前的回调
 hide_title: true
 ---
 
@@ -15,10 +15,10 @@ App 业务服务端可以通过该回调获取用户加入群组的请求，同�
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
-- App 用户通过客户端加入群组
+- App 用户通过客户端发起加入群组的请求
 
 ## 回调发生时机
-- OpenIMServer准备将用户加入群组之前。
+- OpenIMServer 准备将用户加入群组之前进行回调（如果需要管理员审批，则在通知管理员之前）。
 
 ## 接口说明
 
@@ -34,7 +34,7 @@ https://callbackurl?command=$CallbackCommand
 | --------------- | ------------------------------------------------------ |
 | https          | 请求协议为 HTTPS，请求方式为 POST                      |
 | https://callbackurl | 回调 URL                                               |
-| CallbackCommand | 固定为：callbackBeforeCreateGroupCommand                |
+| CallbackCommand | 固定为：callbackBeforeMemberJoinGroupCommand                |
 
 
 
@@ -44,7 +44,6 @@ https://callbackurl?command=$CallbackCommand
   "callbackCommand": "CallbackBeforeMemberJoinGroupCommand",
   "operationID": "1234",
   "groupID": "12345",
-  "groupName": "MyGroup",
   "userID": "user789",
   "ex": "Extra data",
   "groupEx": "GroupExtra data"
@@ -53,17 +52,14 @@ https://callbackurl?command=$CallbackCommand
 ```
 
 
-
-
 ### 请求包字段说明
 
-| 对象                   | 类型   | 描述                                                    |
+| 对象                     | 类型   | 描述                                                    |
 |-------------------------|--------|----------------------------------------------------------------|
 | callbackCommand         | string | 回调命令，这里是创建群组之前的回调。                             |
 | operationID             | string | 操作的唯一标识符。                                               |
 | userID                  | string | 加入群组的用户ID。                                             |
 | groupID                 | string | 群组的唯一标识符。                                               |
-| groupName               | string | 群组的名称。                                                     |
 | ex                      | string | 额外的数据字段。                                                 |
 | groupEx                 | string | 群组额外的数据字段。                                              |
 
@@ -74,13 +70,16 @@ https://callbackurl?command=$CallbackCommand
 
 ```json
 {
-    "callbackCommand": "CallbackBeforeMemberJoinGroupCommand",
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": 0,
     "operationID": "1234",
-    "groupID": "12345",
-    "userID": "user789",
     "nickName": "nickName",
     "faceURL": "url",
     "roleLevel": "1",
+    "muteEndTime": 1670574414123,
     "ex": "Some extra data"
 }
 
@@ -88,15 +87,18 @@ https://callbackurl?command=$CallbackCommand
 
 ## 应答包字段说明
 
-| 字段        | 值               | 说明                                       |
-|---------------------|---------|------------------------------------------|
-| callbackCommand     | string  | 回调命令，这里是创建群组之前的回调。      |
-| operationID         | string  | 操作的唯一标识符。|
-| groupID             | string  | 群组的唯一标识符。|
-| userID              | string  | 加入群组的用户ID。|
-| nickName            | string  | 加入群组的用户呢称。|
-| faceURL             | string  | 加入群组用户的图标或者图片URL。                         |
-| roleLevel           | string  | 加入群组的用户权限                             |
-| ex                  | string  | 额外的数据或信息。                         |
+| 字段         | 值                           | 说明                                       |
+|-------------|------------------------------|------------------------------------------|
+| actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
+| errCode     | 20001                        | 表示自定义错误码。在actionCode不等于0时设置；在nextCode不等于1设置；范围在20001-29999之间|
+| errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
+| errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
+| nextCode    | 1                            | 下一步执行指令，actionCode等于`0`时设置，`1`表示拒绝继续执行。|
+| operationID          | string | 操作的唯一标识符。                                               |
+| nickName             | string | 加入群组的用户呢称。|
+| faceURL              | string | 加入群组用户的图标或者图片URL。                         |
+| roleLevel            | string | 加入群组用户的权限级别。|
+| muteEndTime          | int64  | 事件触发时间戳，毫秒级别                             |
+| ex                   | string | 额外的数据或信息。                         |
 
 
