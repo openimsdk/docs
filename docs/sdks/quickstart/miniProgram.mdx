@@ -4,8 +4,82 @@ hide_title: true
 sidebar_position: 7
 ---
 
-:::tip
+## 集成步骤
 
-Coming soon...
+### 1. 添加依赖
 
-:::
+```bash
+npm install open-im-sdk
+```
+
+### 2. 引入 SDK
+
+- 引入 SDK
+
+```ts
+import { OpenIMSDK } from 'open-im-sdk';
+
+const OpenIM = new OpenIMSDK();
+```
+
+### 3. 登陆
+
+```typescript
+import { CbEvents } from 'open-im-sdk';
+import type { WsResponse } from 'open-im-sdk';
+
+OpenIM.on(CbEvents.OnConnecting, handleConnecting);
+OpenIM.on(CbEvents.OnConnectFailed, handleConnectFailed);
+OpenIM.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
+
+OpenIM.login({
+  userID: 'IM user ID',
+  token: 'IM user token',
+  platformID: 5,
+  wsAddr: 'ws://your-server-ip:10003',
+  apiAddr: 'http://your-server-ip:10002',
+});
+
+function handleConnecting() {
+  // Connecting...
+}
+
+function handleConnectFailed({ errCode, errMsg }: WsResponse) {
+  // Connection failed ❌
+  console.log(errCode, errMsg);
+}
+
+function handleConnectSuccess() {
+  // Connection successful ✅
+}
+```
+
+### 4. 收发消息
+
+```typescript
+import { CbEvents } from 'open-im-sdk';
+import type { WsResponse, MessageItem } from 'open-im-sdk';
+
+// Listenfor new messages 📩
+OpenIM.on(CbEvents.OnRecvNewMessages, handleNewMessages);
+
+const message = (await OpenIM.createTextMessage('hello openim')).data;
+
+OpenIM.sendMessage({
+  recvID: 'recipient user ID',
+  groupID: '',
+  message,
+})
+  .then(() => {
+    // Message sent successfully ✉️
+  })
+  .catch(err => {
+    // Failed to send message ❌
+    console.log(err);
+  });
+
+function handleNewMessages({ data }: WsResponse<MessageItem[]>) {
+  // New message list 📨
+  console.log(data);
+}
+```
