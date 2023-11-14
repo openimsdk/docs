@@ -1,0 +1,95 @@
+---
+title: 同意添加好友之后的回调
+hide_title: true
+---
+
+
+# 在同意添加好友之后的回调
+
+## 功能说明
+App 后台可以通过该回调实时查看用户的新增好友信息。
+
+## 注意事项
+- 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求之后，需要校验请求 URL 中的 command 参数是否是自己的 SDKNAME 参数。
+- APP 业务服务端需在超时时间内响应此请求。
+
+## 可能触发该回调的场景
+- App 用户收到加好友请求后，同意添加对方为好友。
+- 
+
+## 回调发生时机
+- OpenIMServer 成功添加好友后触发
+
+## 接口说明
+
+### 请求 URL 示例
+以下示例中 App 配置的回调 URL 为 `https://callbackurl`。
+```plaintext
+https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
+```
+
+### 请求参数说明
+
+| 参数                 | 说明                                                   |
+|-------------------- |------------------------------------------------------ |
+| https               | 请求协议为 HTTPS，请求方式为 POST                      |
+| https://callbackurl | 回调 URL                                               |
+| SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName                                               |
+| CallbackCommand     | 固定值为：callbackAfterAddFriendCommand                |
+| contenttype         | 固定值为 JSON                |
+
+
+
+### 请求包示例
+```json
+{
+  "callbackCommand": "callbackAfterAddFriendCommand",
+  "fromUserID": "user123",
+  "toUserID": "user456",
+  "reqMsg": "Let's be friends!",
+  "operationID": "123456"
+}
+
+```
+
+
+
+
+### 请求包字段说明
+
+| 对象            | 类型   | 描述                                      |
+|-----------------|--------|------------------------------------------|
+| callbackCommand | string | 回调命令，这里是同意添加好友之后的回调         |
+| fromUserID      | string | 发起好友同意请求的用户ID                      |
+| toUserID        | string | 接收好友同意请求的用户ID                      |
+| reqMsg          | string | 请求添加好友时的附加消息                       |
+| operationID     | string | 操作的唯一标识符                          |
+
+
+## 应答包示例
+
+### 处理结果
+处理用户同意添加好友的请求的结果。
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": ""
+}
+
+```
+
+
+
+## 应答包字段说明
+
+| 字段         | 值                           | 说明                                       |
+|-------------|------------------------------|------------------------------------------|
+| actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
+| errCode     | 20001                        | 表示自定义错误码，范围在20001-29999之间。在 actionCode 不等于0时设置；在 nextCode 不等于1时设置。|
+| errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
+| errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|

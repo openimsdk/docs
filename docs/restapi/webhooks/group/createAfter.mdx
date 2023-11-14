@@ -1,49 +1,52 @@
 ---
-title: 创建群组
+title: 创建群组之后的回调
 hide_title: true
 ---
 
 
-# 在创建群组之前回调
+# 在创建群组之后的回调
 
 ## 功能说明
-App 业务服务端可以通过该回调获取用户创建群组的请求，同时业务服务端可以拒绝用户创建群组的请求，或对请求做修改和干预。
+App 业务服务端可以通过该回调实时查看用户创建群组的信息，包括：通知 App 后台有群组创建成功，App 后台可以据此进行数据同步等操作。
 
 ## 注意事项
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
-- 回调的方向是OpenIMServer向 App 后台发起 HTTP/HTTPS POST 请求。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求之后，需要校验请求 URL 中的 command 参数是否是自己的 SDK 参数
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
-- App 用户通过客户端创建群组
-- App 管理员通过 REST API 创建群组
+- App 用户通过客户端创建群组成功
+- App 管理员通过 REST API 创建群组成功
 
 ## 回调发生时机
-- OpenIMServer准备创建群组之前。
+- OpenIMServer 成功创建群组之后。
 
 ## 接口说明
 
 ### 请求 URL 示例
 以下示例中 App 配置的回调 URL 为 `https://callbackurl`。
 ```plaintext
-https://callbackurl?command=$CallbackCommand
+https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 ```
 
 ### 请求参数说明
 
-| 参数            | 说明                                                   |
-| --------------- | ------------------------------------------------------ |
-| https          | 请求协议为 HTTPS，请求方式为 POST                      |
+| 参数                 | 说明                                                   |
+|-------------------- |------------------------------------------------------ |
+| https               | 请求协议为 HTTPS，请求方式为 POST                      |
 | https://callbackurl | 回调 URL                                               |
-| CallbackCommand | 固定为：callbackBeforeCreateGroupCommand                |
+| SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName                                               |
+| CallbackCommand     | 固定值为：callbackAfterCreateGroupCommand                |
+| contenttype         | 固定值为 JSON                |
 
 
 
 ### 请求包示例
 ```json
 {
-  "operationID": "1234",
-  "callbackCommand": "callbackBeforeCreateGroupCommand",
+  "operationID": "123456",
+  "callbackCommand": "callbackAfterCreateGroupCommand",
   "groupID": "12345",
   "groupName": "MyGroup",
   "notification": "Welcome to MyGroup!",
@@ -80,7 +83,7 @@ https://callbackurl?command=$CallbackCommand
 
 ### 请求包字段说明
 
-| 对象                   | 类型   | 描述                                                    |
+| 对象                     | 类型   | 描述                                                    |
 |-------------------------|--------|----------------------------------------------------------------|
 | operationID             | string | 操作的唯一标识符                                               |
 | callbackCommand         | string | 回调命令，这里是创建群组之前的回调                             |
@@ -107,9 +110,7 @@ https://callbackurl?command=$CallbackCommand
 
 
 ## 应答包示例
-
-### 允许创建
-允许用户创建群组。
+App 后台同步数据后，发送回调应答包。
 
 ```json
 {
@@ -117,20 +118,7 @@ https://callbackurl?command=$CallbackCommand
     "errCode": 0,
     "errMsg": "Success",
     "errDlt": "",
-    "nextCode": 0,
-    "groupID": "G001",
-    "groupName": "MyGroup",
-    "notification": "Welcome to MyGroup!",
-    "introduction": "A group for discussions",
-    "faceURL": "http://example.com/groupface.png",
-    "ownerUserID": "user01",
-    "ex": "Some extra data",
-    "status": 1,
-    "creatorUserID": "user02",
-    "groupType": 1,
-    "needVerification": 0,
-    "lookMemberInfo": 1,
-    "applyMemberFriend": 1
+    "nextCode": 1
 }
 
 ```
@@ -139,27 +127,12 @@ https://callbackurl?command=$CallbackCommand
 
 ## 应答包字段说明
 
-| 字段        | 值               | 说明                                       |
-|-------------|------------------|------------------------------------------|
-| actionCode  | 0                | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
-| errCode     | 20001            | 表示自定义错误码。在actionCode不等于0时设置；在nextCode不等于0设置；范围在20001-29999之间|
-| errMsg      | "An error message" | 自定义错误码对应的简单错误信息。|
+| 字段         | 值                           | 说明                                       |
+|-------------|------------------------------|------------------------------------------|
+| actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
+| errCode     | 0                            | 表示自定义错误码，此处填0代表忽略回调结果。|
+| errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
 | errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
-| nextCode    | 1                | 下一步执行指令，actionCode等于`0`时设置，`1`表示拒绝继续执行。|
-| groupID             | string  | 群组的唯一标识符。                         |
-| groupName           | string  | 群组的名字。                             |
-| notification        | string  | 群组的通知/公告消息。                       |
-| introduction        | string  | 群组的简介。                             |
-| faceURL             | string  | 群组的图标或者图片的URL。                   |
-| ownerUserID         | string  | 群组拥有者的用户ID。                       |
-| ex                  | string  | 额外的数据或信息。                         |
-| status              | int32   | 群组的状态。                             |
-| creatorUserID       | string  | 创建群组的用户ID。                         |
-| groupType           | int32   | 群组的类型。                             |
-| needVerification    | int32   | 是否需要验证才能加入群组。                   |
-| lookMemberInfo      | int32   | 是否可以查看群组成员信息。                   |
-| applyMemberFriend   | int32   | 是否可以申请成为群组成员的好友。               |
-
-
+| nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
 
 
