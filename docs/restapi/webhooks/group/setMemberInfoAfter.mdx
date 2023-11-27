@@ -1,13 +1,13 @@
 ---
-title: 撤回群消息后回调
+title: 设置群成员信息之后的回调
 hide_title: true
 ---
 
 
-# 撤回消息后回调
+# 设置群成员信息之后的回调
 
 ## 功能说明
-App 后台可以通过该回调实时查看用户的群聊消息的撤回动作。
+App 业务服务端可以通过该回调获取设置群成员信息的请求，App 可以据此进行必要的数据同步。
 
 ## 注意事项
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
@@ -16,12 +16,10 @@ App 后台可以通过该回调实时查看用户的群聊消息的撤回动作�
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
-- App 用户通过客户端撤回群聊消息。
-- App 管理员通过 REST API 撤回群聊消息
-
+- 群管理员通过客户端成功修改群成员相关信息。
 
 ## 回调发生时机
-- 消息撤回成功之后。
+- OpenIMServer 更新群成员信息之后。
 
 ## 接口说明
 
@@ -38,21 +36,24 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 | https               | 请求协议为 HTTPS，请求方式为 POST                      |
 | https://callbackurl | 回调 URL                                               |
 | SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName                                               |
-| CallbackCommand     | 固定值为：callbackAfterRevokeMsgCommand                |
+| CallbackCommand     | 固定值为：callbackAfterSetGroupMemberInfoCommand                |
 | contenttype         | 固定值为 JSON                |
 
-
+### Header
+| header名     | 示例值           | 选填  | 类型     | 说明                  |
+|:------------|:--------------|:----|--------|---------------------|
+| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
 
 ### 请求包示例
 ```json
 {
-  "callbackCommand": "callbackAfterRevokeMsgCommand",
-  "operationID": "123456",
-  "groupID": "G001",
-  "groupType": 1,
-  "userID": "user123",
-  "content": "This message has been revoked.",
-  "muteEndTime": 1673048592000
+  "callbackCommand": "callbackAfterSetGroupMemberInfo",
+  "groupID": "12345",
+  "userID": "user789",
+  "nickName":"user",
+  "faceURL": "http://example.com/path/to/face/image.png",
+  "roleLevel": 20,
+  "ex": "Extra data"
 }
 
 ```
@@ -64,16 +65,17 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 
 | 对象                     | 类型   | 描述                                                    |
 |-------------------------|--------|----------------------------------------------------------------|
-| callbackCommand         | string | 回调命令，这里是群消息撤回后的回调                             |
-| operationID             | string | 操作的唯一标识符                                               |
-| groupID                 | string | 群组ID                                               |
-| groupType               | int32  | 群组的类型                                                     |
-| userID                  | string | 撤回群消息的用户ID                                   |
-| content                 | string | 撤回的消息内容                                               |
-| muteEndTime             | int64  | 消息撤回后的禁言截止时间戳（毫秒），如果未被禁言则为空            |
+| callbackCommand         | string | 回调命令，这里是创建群组之前的回调                             |
+| groupID                 | string | 群组的唯一标识符                                               |
+| userID                  | string | 加入群组的用户ID。                                             |
+| nickName                | string | 加入群组的用户呢称。|                                                     |
+| faceURL                 | string | 群成员图标的URL                                                |
+| roleLevel               | string | 加入群组用户的权限级别。普通成员（20）或管理员（60）|
+| ex                      | string | 额外的数据字段                                                 |
 
 
 ## 应答包示例
+App 后台同步数据后，发送回调应答包
 
 ```json
 {
@@ -86,8 +88,6 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 
 ```
 
-
-
 ## 应答包字段说明
 
 | 字段         | 值                           | 说明                                       |
@@ -97,4 +97,5 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 | errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
 | errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
 | nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
+
 
