@@ -1,12 +1,12 @@
 ---
-title: 修改群资料之后的回调
+title: 设置群组信息之前的回调
 hide_title: true
 ---
 
-# 修改群资料之后的回调
+# 设置群组信息之前的回调
 
 ## 功能说明
-App 业务服务端可以通过该回调实时查看群资料的变更，包括：通知 App 后台成员入群，包括对变动群组资料的实时记录（例如记录日志，或者同步到其他系统）。
+App 业务服务端可以通过该回调在设置群组信息之前进行干预。这使得业务服务端可以在实际修改群组信息前，对请求进行审核或修改。
 
 ## 注意事项
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
@@ -15,11 +15,11 @@ App 业务服务端可以通过该回调实时查看群资料的变更，包括�
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
-- App 用户通过客户端请求修改群组资料。
-- App 管理员通过 REST API 变动群组资料。
+- App 用户通过客户端请求修改群组信息。
+- App 管理员通过 REST API 修改群组信息。
 
 ## 回调发生时机
-- OpenIMServer 完成修改群组信息的操作后。
+- OpenIMServer 收到设置群组信息的请求之后，处理该请求前。
 
 ## 接口说明
 
@@ -36,13 +36,13 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 | https               | 请求协议为 HTTPS，请求方式为 POST                      |
 | https://callbackurl | 回调 URL                                               |
 | SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName        |
-| CallbackCommand     | 固定值为：setGroupInfoAfterCommand                     |
+| CallbackCommand     | 固定值为：setGroupInfoBeforeCommand                    |
 | contenttype         | 固定值为 JSON                                          |
 
 ### 请求包示例
 ```json
 {
-  "callbackCommand": "setGroupInfoAfterCommand",
+  "callbackCommand": "setGroupInfoBeforeCommand",
   "groupInfoForSet": {
     "groupID": "G002",
     "groupName": "NewGroupName",
@@ -69,8 +69,8 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 
 | 字段                   | 类型       | 描述                                        |
 |----------------------|------------|-------------------------------------------|
-| callbackCommand      | string     | 回调命令，这里为设置群组信息之后的回调       |
-| groupInfoForSet      | object     | 包含已设置的群组信息的对象                  |
+| callbackCommand      | string     | 回调命令，这里为设置群组信息之前的回调       |
+| groupInfoForSet      | object     | 包含要设置的群组信息的对象                  |
 | groupID              | string     | 群组的唯一标识符                           |
 | groupName            | string     | 群组的名称                                 |
 | notification         | string     | 群组的通知信息                             |
@@ -83,8 +83,8 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 
 ## 应答包示例
 
-### 操作完成
-确认群组信息修改操作已完成。
+### 允许修改
+允许修改群组信息。
 
 ```json
 {
@@ -92,19 +92,45 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
   "errCode": 0,
   "errMsg": "Success",
   "errDlt": "",
-  "nextCode": "nextCodeValue"
+  "nextCode": "nextCodeValue",
+  "groupInfoForSet": {
+    "groupID": "G002",
+    "groupName": "NewGroupName",
+    "notification": "Updated group notification",
+    "introduction": "Updated group introduction",
+    "faceURL": "http://example.com/new/path/to/face/image.png",
+    "ex": {
+      "value": "Updated extra data"
+    },
+    "needVerification": {
+      "value": 0
+    },
+    "lookMemberInfo": {
+      "value": 1
+    },
+    "applyMemberFriend": {
+      "value": 0
+    }
+  }
 }
 ```
 
-## 应答
+## 应答包字段说明
 
-包字段说明
-
-| 字段         | 值                           | 说明                                       |
-|-------------|------------------------------|------------------------------------------|
+| 字段                  | 类型       | 描述                                        |
+|---------------------|------------|-------------------------------------------|
 | actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
-| errCode     | 0                            | 表示自定义错误码，此处填0代表忽略回调结果。|
+| errCode     | 5001                        | 表示自定义错误码，范围在5000-9999之间。在 actionCode 不等于0时设置；在 nextCode 等于1时设置。|
 | errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
 | errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
-| nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
+| nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode 等于`0`时设置。|
+| groupID              | string     | 群组的唯一标识符                           |
+| groupName            | string     | 群组的名称                                 |
+| notification         | string     | 群组的通知信息                             |
+| introduction         | string     | 群组的简介                                 |
+| faceURL              | string     | 群组的图标的URL                            |
+| ex                   | StringValue| 额外的数据字段                             |
+| needVerification     | Int32Value | 是否需要验证加入群组                       |
+| lookMemberInfo       | Int32Value | 是否可以查看群成员信息                     |
+| applyMemberFriend    | Int32Value | 是否可以申请加群成员为好友                 |
 
