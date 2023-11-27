@@ -1,12 +1,12 @@
 ---
-title: 踢除群组成员的回调
+title: 转让群组之后的回调
 hide_title: true
 ---
 
-# 踢除群组成员的回调
+# 转让群组之后的回调
 
 ## 功能说明
-App 业务服务端可以通过该回调处理群组管理员踢出成员的请求，包括：对用户退群进行实时记录（例如记录日志，或者同步到其他系统）。
+App 业务服务端可以通过该回调获取群组所有权转移的信息，同时业务服务端可以对转移后的群组进行后续处理或记录。
 
 ## 注意事项
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
@@ -15,10 +15,10 @@ App 业务服务端可以通过该回调处理群组管理员踢出成员的请�
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
-- 群组管理员或拥有者通过客户端尝试踢出某个或某些群组成员。
+- App 用户或管理员通过客户端或 API 接口转移群组所有权。
 
 ## 回调发生时机
-- OpenIMServer 收到踢出群组成员的请求之后，处理该请求前。
+- OpenIMServer 在群组所有权成功转移之后。
 
 ## 接口说明
 
@@ -35,8 +35,8 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 | https               | 请求协议为 HTTPS，请求方式为 POST                      |
 | https://callbackurl | 回调 URL                                               |
 | SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName        |
-| CallbackCommand     | 固定值为：kickGroupMemberCommand                      |
-| contenttype         | 固定值为 JSON                                          |
+| CallbackCommand     | 固定值为：transferGroupOwnerAfterCommand              |
+| contenttype         | 固定值为 JSON                                         |
 
 ### Header
 | header名     | 示例值           | 选填  | 类型     | 说明                  |
@@ -46,35 +46,47 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 ### 请求包示例
 ```json
 {
-  "callbackCommand": "kickGroupMemberCommand",
-  "groupID": "G001",
-  "kickedUserIDs": ["user123", "user456"],
-  "reason": "Violation of group rules"
+  "callbackCommand": "transferGroupOwnerAfterCommand",
+  "groupID": "G12345",
+  "oldOwnerUserID": "userOld123",
+  "newOwnerUserID": "userNew456"
 }
 ```
 
 ### 请求包字段说明
 
-| 字段           | 类型     | 描述                                         |
-|--------------|----------|--------------------------------------------|
-| callbackCommand | string   | 回调命令，这里是踢出群组成员的回调              |
-| groupID       | string   | 群组的唯一标识符                            |
-| kickedUserIDs | []string | 被踢出的群组成员的用户ID列表                  |
-| reason        | string   | 踢出成员的原因                               |
+| 字段            | 类型   | 描述                               |
+|---------------|--------|----------------------------------|
+| callbackCommand | string | 回调命令，这里是转移群组所有权之后的回调 |
+| groupID        | string | 群组的唯一标识符                    |
+| oldOwnerUserID | string | 原群主的用户ID                      |
+| newOwnerUserID | string | 新群主的用户ID                      |
 
 ## 应答包示例
 
-### 允许踢出
-允许踢出指定的群组成员。
+### 处理成功
+表示业务系统成功处理了群组所有权转移的回调。
 
 ```json
 {
-  "actionCode": 0,
-  "errCode": 0,
-  "errMsg": "Success",
-  "errDlt": "",
-  "nextCode": "nextCodeValue",
-  "eventTime": 1670574414123
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": "0"
+}
+```
+
+### 处理失败
+表示业务系统无法处理该回调，提供错误信息。
+
+```json
+{
+    "actionCode": 1,
+    "errCode": 5002,
+    "errMsg": "Unable to process the request",
+    "errDlt": "The group ownership transfer cannot be processed due to internal policy",
+    "nextCode": "1"
 }
 ```
 
@@ -87,5 +99,3 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 | errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
 | errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
 | nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
-
-

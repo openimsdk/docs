@@ -1,13 +1,12 @@
 ---
-title: 群组成员退出后回调
+title: 导入好友之后的回调
 hide_title: true
 ---
 
-
-# 群组成员退出后回调
+# 在导入好友之后的回调
 
 ## 功能说明
-App 业务服务端可以通过该回调实时查看用户的退群动态，包括：对用户退群进行实时记录（例如记录日志，或者同步到其他系统）。
+App 业务服务端可以通过该回调获取用户导入好友的请求，同时业务服务端可以拒绝用户导入好友的请求，或对请求做修改和干预。
 
 ## 注意事项
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
@@ -16,12 +15,11 @@ App 业务服务端可以通过该回调实时查看用户的退群动态，包�
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
-- App 用户通过客户端退群。
-- App 用户通过客户端踢人。
-- App 管理员通过 REST API 删除群成员
+- App 用户通过客户端导入好友。
+- App 管理员通过 REST API 导入好友。
 
 ## 回调发生时机
-- 用户主动退群，或者被群主/管理员踢出群之后。
+- OpenIMServer 准备导入好友之前。
 
 ## 接口说明
 
@@ -38,45 +36,36 @@ https://callbackurl?sdkName=$SdkName&command=$CallbackCommand&contenttype=json
 | https               | 请求协议为 HTTPS，请求方式为 POST                      |
 | https://callbackurl | 回调 URL                                               |
 | SdkName             | 创建应用时，在即时通信 IM 控制台分配的 SKDName                                               |
-| CallbackCommand     | 固定值为：callbackAfterGroupMemberExitCommand                |
+| CallbackCommand     | 固定值为：ImportFriendReqBeforeCommand                |
 | contenttype         | 固定值为 JSON                |
 
-
+### Header
+| header名     | 示例值           | 选填  | 类型     | 说明                  |
+|:------------|:--------------|:----|--------|---------------------|
+| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
 
 ### 请求包示例
 ```json
 {
-  "callbackCommand": "callbackAfterGroupMemberExitCommand",
-  "operationID": "123456",
-  "groupID": "G001",
-  "userID": "user123",
-  "groupType": 1,
-  "exitType": "self",
-  "muteEndTime": 1673048592000
+  "callbackCommand": "ImportFriendReqBeforeCommand",
+  "ownerUserID": "user123",
+  "friendUserIDs": ["user456", "user789"]
 }
-
 ```
-
-
-
 
 ### 请求包字段说明
 
-| 对象                     | 类型   | 描述                                                    |
-|-------------------------|--------|----------------------------------------------------------------|
-| callbackCommand         | string | 回调命令，这里是群组成员退出后的回调                             |
-| operationID             | string | 操作的唯一标识符                                               |
-| groupID                 | string | 群组的唯一标识符                                               |
-| userID                  | string | 退出群组的用户的唯一标识符                                       |
-| groupType               | int32  | 群组的类型                                                     |
-| exitType                | string | 退出类型，取值有："self"表示用户主动退出，"kick"表示被踢出群组      |
-| muteEndTime             | int64  | 用户被禁言的截止时间戳（毫秒），如果未被禁言则为空            |
+| 字段           | 类型   | 描述                      |
+|--------------|--------|-------------------------|
+| callbackCommand | string | 回调命令，这里是导入好友之前的回调 |
+| ownerUserID   | string | 发起导入好友请求的用户ID    |
+| friendUserIDs | array  | 要导入为好友的用户ID列表    |
 
 
 ## 应答包示例
 
-### 处理结果
-App 后台同步数据后，返回应答包
+### 允许导入
+允许用户导入好友。
 
 ```json
 {
@@ -84,12 +73,22 @@ App 后台同步数据后，返回应答包
     "errCode": 0,
     "errMsg": "Success",
     "errDlt": "",
-    "nextCode": 1
+    "nextCode": "0"
 }
-
 ```
 
+### 拒绝导入
+拒绝用户导入好友，并提供错误信息。
 
+```json
+{
+    "actionCode": 1,
+    "errCode": 5001,
+    "errMsg": "User not allowed to import friends",
+    "errDlt": "The user does not meet the criteria for importing friends",
+    "nextCode": "1"
+}
+```
 
 ## 应答包字段说明
 
@@ -100,4 +99,3 @@ App 后台同步数据后，返回应答包
 | errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
 | errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
 | nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
-
