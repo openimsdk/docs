@@ -1,0 +1,127 @@
+---
+title: 离线状态下消息推送前的回调
+hide_title: true
+---
+
+# 离线状态下消息推送前的回调
+
+## 功能说明
+在消息发送至客户端前，App 业务服务端可以通过该回调接收到发送消息的请求。业务服务端可以根据需要对消息进行拦截、修改或添加额外的推送信息。
+
+## 注意事项
+- 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求后，需在超时时间内做出响应。
+
+## 可能触发该回调的场景
+- 群成员退出群组。
+- 群成员被踢出群组。
+- 群组解散。
+
+## 回调发生时机
+- OpenIMServer 准备向客户端推送消息前。
+
+## 接口说明
+
+### 请求 URL 示例
+以下示例中 App 配置的回调 URL 为 `https://callbackurl`。
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### 请求参数说明
+
+| 参数             | 说明                                                     |
+|-----------------|--------------------------------------------------------|
+| https           | 请求协议为 HTTPS，请求方式为 POST                        |
+| https://callbackurl | 回调 URL                                             |
+| CallbackCommand | 固定值为：callbackBeforePushCommand                     |
+| contenttype     | 固定值为 JSON                                           |
+
+### Header
+| header名     | 示例值           | 选填  | 类型     | 说明                  |
+|:------------|:--------------|:----|--------|---------------------|
+| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
+
+### 请求包示例
+```json
+{
+  "callbackCommand": "callbackBeforePushCommand",
+  "platformID": 1,
+  "platform": "iOS",
+  "userIDList": ["user123", "user456"],
+  "title": "New Message",
+  "desc": "You have a new message",
+  "ex": "Extra push info",
+  "iOSPushSound": "default",
+  "iOSBadgeCount": true,
+  "signalInfo": "Signal data",
+  "clientMsgID": "msg123",
+  "sendID": "user789",
+  "groupID": "group123",
+  "contentType": 1,
+  "sessionType": 2,
+  "atUserIDList": ["user101", "user102"],
+  "content": "Hello, this is a test message"
+}
+```
+
+### 请求包字段说明
+
+| 字段            | 类型    | 描述                                           |
+|----------------|---------|------------------------------------------------|
+| callbackCommand | string  | 回调命令，这里是消息推送前的回调               |
+| platformID     | int     | 平台ID（如 1 代表 iOS，2 代表 Android）        |
+| platform       | string  | 平台名称（如 iOS、Android）                    |
+| userIDList     | array   | 用户ID列表，表示哪些用户将接收此消息            |
+| title          | string  | 推送消息的标题                                 |
+| desc           | string  | 推送消息的描述                                 |
+| ex             | string  | 额外的推送信息                                 |
+| iOSPushSound   | string  | iOS 推送时的声音设置                           |
+| iOSBadgeCount  | bool    | iOS 推送时是否改变应用角标计数                 |
+| signalInfo     | string  | 推送携带的附加信号信息                         |
+| clientMsgID    | string  | 客户端消息ID                                   |
+| sendID         | string  | 发送者的用户ID                                 |
+| groupID        | string  | 群组ID，如果是群消息的话                       |
+| contentType    | int     | 消息内容的类型                                 |
+| sessionType    | int     | 会话类型（如 1 代表单聊，2 代表群聊）          |
+| atUserIDList   | array   | 被@的用户ID列表                                |
+| content        | string  | 发送的消息内容                                 |
+
+
+
+## 应答包示例
+
+### 允许推送
+允许消息被推送到客户端。
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": "",
+    "userIDList": ["user123", "user456"],
+    "offlinePushInfo": {
+        "title": "New Message",
+        "desc": "You have a new message",
+        "ex": "Extra push info",
+        "iOSPushSound": "default",
+        "iOSBadgeCount": true,
+        "signalInfo": "Signal data"
+    }
+}
+```
+
+## 应答包字段说明
+
+| 字段            | 类型   | 描述                                             |
+|---------------|--------|-------------------------------------------------|
+| actionCode | 0     | 表示业务系统的回调是否正确执行。`0`表示操作成功。 |
+| errCode     | 5001                        | 表示自定义错误码，范围在5000-9999之间。在 actionCode 不等于0时设置；在 nextCode 等于1时设置。|
+| errMsg     | "An error message" | 自定义错误码对应的简单错误信息。|
+| errDlt     | "Detailed error information" | 自定义错误码对应的详细错误信息。|
+| nextCode   | 1     | 下一步执行指令，`1`表示拒绝继续执行，actionCode 等于`0`时设置。|
+| userIDList    | array  | 用户ID列表，表示允许接收消息的用户。             |
+| offlinePushInfo | object | 离线推送信息对象。                               |

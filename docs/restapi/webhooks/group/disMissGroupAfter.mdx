@@ -1,0 +1,100 @@
+---
+title: 解散群组后回调
+hide_title: true
+---
+
+
+# 解散群组后回调
+
+## 功能说明
+App 业务服务端可以通过该回调获取群组解散的信息，包括：对群组的解散实时记录（例如记录日志，或者同步到其他系统）。
+
+## 注意事项
+- 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求之后，需要校验请求 URL 中的 command 参数是否是自己的 SDKNAME 参数。
+- APP 业务服务端需在超时时间内响应此请求。
+
+## 可能触发该回调的场景
+- App 用户通过客户端解散群组。
+- App 管理员通过 REST API 解散群组。
+
+
+## 回调发生时机
+- 群组解散后。
+
+## 接口说明
+
+### 请求 URL 示例
+以下示例中 App 配置的回调 URL 为 `https://callbackurl`。
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### 请求参数说明
+
+| 参数                 | 说明                                                   |
+|-------------------- |------------------------------------------------------ |
+| https               | 请求协议为 HTTPS，请求方式为 POST                      |
+| https://callbackurl | 回调 URL                                               |
+| CallbackCommand     | 固定值为：callbackAfterUngroupCommand                |
+| contenttype         | 固定值为 JSON                |
+
+### Header
+| header名     | 示例值           | 选填  | 类型     | 说明                  |
+|:------------|:--------------|:----|--------|---------------------|
+| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
+
+### 请求包示例
+```json
+{
+  "callbackCommand": "callbackAfterUngroupCommand",
+  "groupID": "G001",
+  "groupType": 1,
+  "ownerID": "user123",
+  "memberList": ["user456", "user789"]
+}
+
+```
+
+
+
+
+### 请求包字段说明
+
+| 对象                     | 类型   | 描述                                                    |
+|-------------------------|--------|----------------------------------------------------------------|
+| callbackCommand         | string | 回调命令，这里是群组解散后的回调                             |
+| groupID                 | string | 群组的唯一标识符                                               |
+| groupType               | int32  | 群组的类型                                                     |
+| ownerID                 | string | 群主ID                                       |
+| memberList              | array  | 群组成员的列表，包括用户ID，表示解散时群组中的成员            |
+| muteEndTime             | int64  | 群组中成员的禁言截止时间戳（毫秒），如果未被禁言则为空            |
+
+
+## 应答包示例
+
+### 处理结果
+App 后台记录群解散信息后，发送回调应答包。
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": 1
+}
+
+```
+
+## 应答包字段说明
+
+| 字段         | 值                           | 说明                                       |
+|-------------|------------------------------|------------------------------------------|
+| actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
+| errCode     | 0                            | 表示自定义错误码，此处填0代表忽略回调结果。|
+| errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
+| errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
+| nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
+

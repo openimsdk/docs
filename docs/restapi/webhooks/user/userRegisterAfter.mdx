@@ -1,0 +1,101 @@
+---
+title: 用户注册请求后的回调
+hide_title: true
+---
+
+# 用户注册请求后的回调
+
+## 功能说明
+App 业务服务端可以通过该回调获取用户注册的请求，App 后台可以据此进行数据同步等操作。
+
+## 注意事项
+- 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- App 业务服务端在收到回调请求之后，需要校验请求 URL 中的 command 参数是否是自己的 SDKNAME 参数。
+- APP 业务服务端需在超时时间内响应此请求。
+
+## 可能触发该回调的场景
+- 新用户通过客户端注册账户后。
+
+## 回调发生时机
+- OpenIMServer 成功处理新用户注册账户后。
+
+## 接口说明
+
+### 请求 URL 示例
+以下示例中 App 配置的回调 URL 为 `https://callbackurl`。
+```plaintext
+https://callbackurl?command=$UserRegisterCommand&contenttype=json
+```
+
+### 请求参数说明
+
+| 参数                 | 说明                                                   |
+|---------------------|------------------------------------------------------ |
+| https               | 请求协议为 HTTPS，请求方式为 POST                      |
+| https://callbackurl | 回调 URL                                               |
+| UserRegisterCommand | 固定值为：userRegisterAfterCommand                         |
+| contenttype         | 固定值为 JSON                                         |
+
+### Header
+| header名     | 示例值           | 选填  | 类型     | 说明                  |
+|:------------|:--------------|:----|--------|---------------------|
+| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
+
+
+### 请求包示例
+```json
+{
+  "callbackCommand": "userRegisterAfterCommand",
+  "secret": "YourSecretKey",
+  "users": {
+    "userID": "user123",
+    "nickname": "John Doe",
+    "faceURL": "http://example.com/path/to/face/image.png",
+    "ex": "Extra data",
+    "createTime": 1673048592000,
+    "appMangerLevel": 1,
+    "globalRecvMsgOpt": 1
+  }
+}
+```
+
+### 请求包字段说明
+
+| 字段             | 类型    | 描述                          |
+|-----------------|---------|------------------------------|
+| callbackCommand         | string | 回调命令，这里是用户用户注册后的回调                             |
+| secret          | string  | 用于验证的密钥                |
+| users           | object  | 用户信息对象                  |
+| userID          | string  | 用户的唯一标识符              |
+| nickname        | string  | 用户的昵称                    |
+| faceURL         | string  | 用户头像的 URL                |
+| ex              | string  | 额外的数据字段                |
+| createTime      | int64   | 用户创建的时间戳（毫秒）      |
+| appMangerLevel  | int32   | 用户的管理等级                |
+| globalRecvMsgOpt| int32   | 用户的全局接收消息选项        |
+
+## 应答包示例
+
+### 操作成功
+App 后台成功同步数据。
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": "0"
+}
+```
+
+## 应答包字段说明
+
+| 字段         | 值                            | 说明                                                                |
+|------------|------------------------------|-------------------------------------------------------------------|
+| actionCode | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。                                        |
+| errCode    | 20001                        | 表示自定义错误码，范围在20001-29999之间。在 actionCode 不等于0时设置；在 nextCode 等于1时设置。 |
+| errMsg     | "An error message"           | 自定义错误码对应的简单错误信息。                                                  |
+| errDlt     | "Detailed error information" | 自定义错误码对应的详细错误信息。                                                  |
+| nextCode   | 1                            | 下一步执行指令，                                                          |
