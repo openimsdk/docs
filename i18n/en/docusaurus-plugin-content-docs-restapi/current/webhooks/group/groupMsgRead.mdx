@@ -1,0 +1,78 @@
+# Callback After Group Chat Message Read Report
+
+## Function Description
+The App business server can use this callback to real-time monitor the read actions of users' group chat messages.
+
+## Precautions
+- To enable the callback, you must configure the callback URL and activate the switch corresponding to this callback protocol. See the [Callback Description](../introduction) document for configuration methods.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- The App business server needs to verify whether the command parameter in the request URL is its own SDKNAME parameter after receiving the callback request.
+- The APP business server is required to respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- A user reads a group message.
+
+## Timing of the Callback
+- After the group chat message read report is successfully submitted.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the configured callback URL of the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                    |
+|----------------------|------------------------------------------------|
+| https                | Request protocol is HTTPS, request method is POST |
+| https://callbackurl  | Callback URL                                   |
+| CallbackCommand      | Fixed value: callbackGroupMsgReadCommand       |
+| contenttype          | Fixed value: JSON                              |
+
+### Header
+| Header Name | Example Value  | Optional | Type   | Description                        |
+|-------------|----------------|----------|--------|------------------------------------|
+| operationID | 1646445464564  | Required | string | operationID used for global tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackGroupMsgReadCommand",
+  "sendID": "user123",
+  "receiveID": "group789",
+  "unreadMsgNum": 5
+}
+```
+
+### Request Packet Field Description
+
+| Object           | Type   | Description                                          |
+|------------------|--------|------------------------------------------------------|
+| callbackCommand  | string | Callback command, here for group message read callback |
+| sendID           | string | User ID of the message sender                        |
+| receiveID        | string | Group ID of the message receiver                     |
+| unreadMsgNum     | int64  | Number of unread messages                            |
+
+## Response Packet Example
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": ""
+}
+```
+
+## Response Packet Field Description
+
+| Field       | Value | Description                                             |
+|-------------|-------|---------------------------------------------------------|
+| actionCode  | 0     | Indicates whether the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode     | 0     | Represents a custom error code, here 0 indicates ignoring the callback result.   |
+| errMsg      | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt      | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode    | 1     | Next execution instruction, `1` means refuse to continue execution, set when actionCode is `0`. |

@@ -1,0 +1,83 @@
+# Callback After Setting Friend Remark
+
+## Function Description
+The App business server can use this callback to obtain the result of the user setting a friend's remark. The backend can use this information for data synchronization and other operations.
+
+## Precautions
+- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
+- The APP business server must respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- App users set a friend's remark through the client.
+- App administrators set a friend's remark through the REST API.
+
+## Timing of the Callback
+- After OpenIMServer processes the request to set a friend's remark.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the callback URL configured by the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                          |
+|----------------------|------------------------------------------------------|
+| https               | Request protocol is HTTPS, method is POST            |
+| https://callbackurl | Callback URL                                         |
+| CallbackCommand     | Fixed value: callbackAfterSetFriendRemarkCommand     |
+| contenttype         | Fixed value: JSON                                    |
+
+### Header
+| Header Name | Example Value | Mandatory | Type   | Description                         |
+|-------------|---------------|-----------|--------|-------------------------------------|
+| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackAfterSetFriendRemarkCommand",
+  "ownerUserID": "user123",
+  "friendUserID": "user456",
+  "remark": "My Best Friend"
+}
+```
+
+### Request Packet Field Explanation
+
+| Field           | Type    | Description                               |
+|-----------------|---------|-------------------------------------------|
+| callbackCommand | string  | Callback command, here for after setting friend remark |
+| ownerUserID     | string  | User ID of the person who initiated the remark setting operation |
+| friendUserID    | string  | User ID of the friend for whom the remark is set |
+| remark          | string  | Content of the set remark                 |
+
+## Response Packet Example
+
+### Operation Successful
+An example of a successful operation response.
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": "0"
+}
+```
+
+## Response Packet Field Explanation
+
+| Field      | Value  | Description                                              |
+|------------|--------|----------------------------------------------------------|
+| actionCode | 0      | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode    | 20001  | Custom error code, ranging between 20001-29999. Set when actionCode is not 0; set when nextCode is not 1. |
+| errMsg     | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt     | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode   | 1      | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |

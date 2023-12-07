@@ -1,0 +1,85 @@
+# Callback Before Users Join a Group
+
+## Function Description
+The App business server can use this callback to real-time monitor group members' requests to add other users to the group, including the ability for the App backend to intercept users' applications to join a group.
+
+## Precautions
+- To enable the callback, you must configure the callback URL and activate the switch corresponding to this callback protocol. See the [Callback Description](../introduction) document for configuration methods.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- The App business server needs to verify whether the command parameter in the request URL is its own SDK parameter after receiving the callback request.
+- The APP business server is required to respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- App users initiate a request through the client to add other users to a group.
+- App administrators add users to a group through the REST API.
+
+## Timing of the Callback
+- The callback occurs before OpenIMServer prepares to add users to a group (if relationship chain hosting exists and the App has configured friend relationship verification in the instant messaging IM, the callback occurs after the verification is passed).
+
+## Interface Description
+
+### Request URL Example
+In the following example, the configured callback URL of the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                    |
+|----------------------|------------------------------------------------|
+| https                | Request protocol is HTTPS, request method is POST. |
+| https://callbackurl  | Callback URL.                                  |
+| CallbackCommand      | Fixed value: callbackBeforeInviteMemberJoinGroupCommand. |
+| contenttype          | Fixed value: JSON                              |
+
+### Header
+| Header Name | Example Value  | Optional | Type   | Description                        |
+|-------------|----------------|----------|--------|------------------------------------|
+| operationID | 1646445464564  | Required | string | operationID used for global tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "CallbackBeforeInviteMemberJoinGroupCommand",
+  "groupID": "12345",
+  "invitedUserIDs": "[user1,user2]"
+}
+
+```
+
+### Request Packet Field Description
+
+| Object           | Type     | Description                                       |
+|------------------|----------|---------------------------------------------------|
+| callbackCommand  | string   | Callback command, here for inviting friends to join the group before callback. |
+| groupID          | string   | Unique identifier of the group.                   |
+| invitedUserIDs   | string[] | User IDs of those being invited to join the group.|
+
+## Response Packet Example
+
+### Allowing Creation
+Allowing users to join the group.
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": 0,
+    "invitedUserIDs": "[user1,user2]"
+}
+
+```
+
+## Response Packet Field Description
+
+| Field         | Value    | Description                                             |
+|---------------|----------|---------------------------------------------------------|
+| actionCode    | 0        | Indicates whether the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode       | 5001     | Represents a custom error code, ranging from 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
+| errMsg        | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt        | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode      | 1        | Next execution instruction, set when actionCode is `0`, `1` means refuse to continue execution. |
+| invitedUserIDs| string[] | User IDs of those allowed to join the group.           |

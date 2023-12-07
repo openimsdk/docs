@@ -1,0 +1,80 @@
+# Callback for Single Chat Message Revocation
+
+## Function Description
+The App business server can use this callback to receive requests for users retracting single chat messages.
+
+## Precautions
+- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
+- The APP business server must respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- App users retract single chat messages through the client.
+- App administrators retract single chat messages through the REST API admin_msgwithdraw interface.
+
+## Timing of the Callback
+- After the single chat message is successfully retracted.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the callback URL configured by the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                          |
+|----------------------|------------------------------------------------------|
+| https               | Request protocol is HTTPS, method is POST            |
+| https://callbackurl | Callback URL                                         |
+| CallbackCommand     | Fixed value: callbackSingleMsgRevokeCommand          |
+| contenttype         | Fixed value: JSON                                    |
+
+### Header
+| Header Name | Example Value | Mandatory | Type   | Description                         |
+|-------------|---------------|-----------|--------|-------------------------------------|
+| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackSingleMsgRevokeCommand",
+  "sendID": "user123",
+  "receiveID": "user456",
+  "content": "Hello, how are you?"
+}
+```
+
+### Request Packet Field Explanation
+
+| Field           | Type    | Description                               |
+|-----------------|---------|-------------------------------------------|
+| callbackCommand | string  | Callback command, here for single chat message revocation callback |
+| sendID          | string  | User ID of the message sender             |
+| receiveID       | string  | User ID of the message receiver           |
+| content         | string  | Content of the retracted message          |
+
+## Response Packet Example
+
+### Successful Response
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": ""
+}
+```
+
+## Response Packet Field Explanation
+| Field      | Value | Description                                              |
+|------------|-------|----------------------------------------------------------|
+| actionCode | 0     | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode    | 0     | Indicates a custom error code, here 0 means ignore the callback result. |
+| errMsg     | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt     | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode   | 1     | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |

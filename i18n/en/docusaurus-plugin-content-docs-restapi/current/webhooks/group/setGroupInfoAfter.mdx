@@ -1,0 +1,106 @@
+# Callback After Modifying Group Information
+
+## Function Description
+The App business server can use this callback to real-time view changes in group information, including: notifying the App backend about member joining and real-time recording of changes in group information (such as logging or syncing with other systems).
+
+## Precautions
+- To enable the callback, you must configure the callback URL and activate the switch corresponding to this callback protocol. See the [Callback Description](../introduction) document for configuration methods.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- The App business server needs to verify whether the command parameter in the request URL is its own SDKNAME parameter after receiving the callback request.
+- The APP business server is required to respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- App users request to modify group information through the client.
+- App administrators change group information through the REST API.
+
+## Timing of the Callback
+- After OpenIMServer completes the operation to modify group information.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the configured callback URL of the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                     |
+|----------------------|-------------------------------------------------|
+| https                | Request protocol is HTTPS, request method is POST. |
+| https://callbackurl  | Callback URL                                    |
+| CallbackCommand      | Fixed value: setGroupInfoAfterCommand           |
+| contenttype          | Fixed value: JSON                               |
+
+### Header
+| Header Name | Example Value  | Optional | Type   | Description                        |
+|-------------|----------------|----------|--------|------------------------------------|
+| operationID | 1646445464564  | Required | string | operationID used for global tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "setGroupInfoAfterCommand",
+  "groupInfoForSet": {
+    "groupID": "G002",
+    "groupName": "NewGroupName",
+    "notification": "Updated group notification",
+    "introduction": "Updated group introduction",
+    "faceURL": "http://example.com/new/path/to/face/image.png",
+    "ex": {
+      "value": "Updated extra data"
+    },
+    "needVerification": {
+      "value": 0
+    },
+    "lookMemberInfo": {
+      "value": 1
+    },
+    "applyMemberFriend": {
+      "value": 0
+    }
+  }
+}
+```
+
+### Request Packet Field Description
+
+| Field              | Type        | Description                                        |
+|--------------------|-------------|----------------------------------------------------|
+| callbackCommand    | string      | Callback command, here for setting group information after changes. |
+| groupInfoForSet    | object      | Object containing set group information            |
+| groupID            | string      | Unique identifier of the group                     |
+| groupName          | string      | Name of the group                                  |
+| notification       | string      | Notification message of the group                 |
+| introduction       | string      | Introduction of the group                          |
+| faceURL            | string      | URL of the group's icon                            |
+| ex                 | StringValue | Additional data field                              |
+| needVerification   | Int32Value  | Whether verification is needed to join the group   |
+| lookMemberInfo     | Int32Value  | Whether group member information can be viewed     |
+| applyMemberFriend  | Int32Value  | Whether group members can apply to be friends      |
+
+## Response Packet Example
+
+### Completion of Operation
+Confirming the completion of the group information modification operation.
+
+```json
+{
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "Success",
+  "errDlt": "",
+  "nextCode": "nextCodeValue"
+}
+```
+
+## Response Packet Field Description
+
+| Field       | Value         | Description                                             |
+|-------------|---------------|---------------------------------------------------------|
+| actionCode  | 0             | Indicates whether the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode     | 0             | Represents a custom error code, here 0 indicates ignoring the callback result.     |
+| errMsg      | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt      | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode    | 1             | Next execution instruction, `1` means refuse to continue execution, set when actionCode is `0`. |
