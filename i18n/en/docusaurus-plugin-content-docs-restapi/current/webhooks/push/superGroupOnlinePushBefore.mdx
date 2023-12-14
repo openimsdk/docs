@@ -1,0 +1,120 @@
+# Callback Before Pushing Messages in Online State
+
+## Function Description
+Before messages are sent to the client, the App business server can receive requests for sending messages through this callback. The business server can intercept, modify, or add extra push information to the messages as needed.
+
+## Precautions
+- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- After receiving the callback request, the App business server needs to respond within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- Group members leave the group.
+- Group members are kicked out of the group.
+- The group is disbanded.
+
+## Timing of the Callback
+- Before OpenIMServer is ready to push the message to the client.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the callback URL configured by the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter        | Description                                       |
+|------------------|---------------------------------------------------|
+| https            | Request protocol is HTTPS, method is POST         |
+| https://callbackurl | Callback URL                                    |
+| CallbackCommand  | Fixed value: callbackBeforePushCommand            |
+| contenttype      | Fixed value: JSON                                 |
+
+### Header
+| Header Name | Example Value | Mandatory | Type   | Description               |
+|-------------|---------------|-----------|--------|---------------------------|
+| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackBeforePushCommand",
+  "platformID": 1,
+  "platform": "iOS",
+  "userIDList": ["user123", "user456"],
+  "title": "New Message",
+  "desc": "You have a new message",
+  "ex": "Extra push info",
+  "iOSPushSound": "default",
+  "iOSBadgeCount": true,
+  "signalInfo": "Signal data",
+  "clientMsgID": "msg123",
+  "sendID": "user789",
+  "groupID": "group123",
+  "contentType": 1,
+  "sessionType": 2,
+  "atUserIDList": ["user101", "user102"],
+  "content": "Hello, this is a test message"
+}
+```
+
+### Request Packet Field Explanation
+
+| Field          | Type    | Description                                         |
+|----------------|---------|-----------------------------------------------------|
+| callbackCommand| string  | Callback command, here for pre-message push callback|
+| platformID     | int     | Platform ID (e.g., 1 for iOS, 2 for Android)        |
+| platform       | string  | Platform name (e.g., iOS, Android)                  |
+| userIDList     | array   | List of user IDs who will receive this message      |
+| title          | string  | Title of the push message                           |
+| desc           | string  | Description or body of the push message             |
+| ex             | string  | Additional push information                         |
+| iOSPushSound   | string  | Sound used for iOS device push notifications        |
+| iOSBadgeCount  | boolean | Whether to show unread message count on iOS app icon|
+| signalInfo     | string  | Additional signal data for conveying extra information |
+| clientMsgID    | string  | Client-generated message ID                         |
+| sendID         | string  | Sender ID                                           |
+| groupID        | string  | Group ID (if the message is sent to a group)        |
+| contentType    | int     | ID of the message content type                      |
+| sessionType    | int     | ID of the session type                              |
+| atUserIDList   | array   | List of user IDs mentioned in the message            |
+| content        | string  | Content of the message being sent                   |
+
+## Response Packet Example
+
+### Allow Push
+Allow the message to be pushed to the client.
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": "",
+    "userIDList": ["user123", "user456"],
+    "offlinePushInfo": {
+        "title": "New Message",
+        "desc": "You have a new message",
+        "ex": "Extra push info",
+        "iOSPushSound": "default",
+        "iOSBadgeCount": true,
+        "signalInfo": "Signal data"
+    }
+}
+```
+
+## Response Packet Field Explanation
+
+| Field            | Type    | Description                                             |
+|------------------|---------|---------------------------------------------------------|
+| actionCode       | 0| Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode          | 5001    | Custom error code, ranging between 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
+| errMsg           | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt           | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode         | 1       | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |
+| userIDList       | array   | List of user IDs allowed to receive the message.        |
+| offlinePushInfo  | object  | Object containing offline push information.             |

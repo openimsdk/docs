@@ -1,0 +1,95 @@
+# Callback Before Setting Group Member Information
+
+## Function Description
+The App business server can use this callback to view the modified group member information.
+
+## Precautions
+- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods are detailed in the [Callback Explanation](../introduction) document.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
+- The APP business server must respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- Group administrators modify group member-related information through the client.
+
+## Timing of the Callback
+- Before OpenIMServer updates the group member information.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the callback URL configured by the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                          |
+|----------------------|------------------------------------------------------|
+| https               | Request protocol is HTTPS, method is POST            |
+| https://callbackurl | Callback URL                                         |
+| CallbackCommand     | Fixed value: callbackBeforeSetGroupMemberInfoCommand |
+| contenttype         | Fixed value: JSON                                    |
+
+### Header
+| Header Name | Example Value | Mandatory | Type   | Description                         |
+|-------------|---------------|-----------|--------|-------------------------------------|
+| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackBeforeSetGroupMemberInfo",
+  "groupID": "12345",
+  "userID": "user789",
+  "nickName": "user",
+  "faceURL": "http://example.com/path/to/face/image.png",
+  "roleLevel": 20,
+  "ex": "Extra data"
+}
+```
+
+### Request Packet Field Explanation
+
+| Field           | Type   | Description                                             |
+|-----------------|--------|---------------------------------------------------------|
+| callbackCommand | string | Callback command, here for the callback before setting group member info |
+| groupID         | string | Unique identifier of the group                          |
+| userID          | string | ID of the user joining the group                        |
+| nickName        | string | Nickname of the user joining the group                  |
+| faceURL         | string | URL of the group member's icon                          |
+| roleLevel       | string | Role level of the user in the group. Normal member (20) or administrator (60) |
+| ex              | string | Additional data field                                   |
+
+## Response Packet Example
+
+### Allow Modification
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": 0,
+    "ex": "Some extra data",
+    "nickName": "user",
+    "faceURL": "http://example.com/path/to/face/image.png",
+    "roleLevel": 20
+}
+```
+
+## Response Packet Field Explanation
+
+| Field      | Value | Description                                              |
+|------------|-------|----------------------------------------------------------|
+| actionCode | 0     | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode    | 5001  | Custom error code, ranging between 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
+| errMsg     | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt     | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode   | 1     | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |
+| ex         | string | Additional data field                                   |
+| nickName   | string | Nickname of the user joining the group                   |
+| faceURL    | string | URL of the group member's icon                           |
+| roleLevel  | string | Role level of the user in the group. Normal member (20) or administrator (60) |

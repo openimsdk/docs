@@ -1,0 +1,153 @@
+# Callback Before Creating a Group
+
+## Function Description
+The App business server can get the request of users creating a group through this callback. Meanwhile, the business server can refuse the user's request to create a group, or modify and intervene in the request.
+
+## Precautions
+- To enable the callback, you must configure the callback URL and turn on the switch corresponding to this callback protocol. See the [Callback Description](../introduction) document for configuration methods.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- The App business server needs to verify whether the command parameter in the request URL is its own SDKNAME parameter after receiving the callback request.
+- The APP business server needs to respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- App users create a group through the client.
+- App administrators create a group through the REST API.
+
+## Timing of the Callback
+- Before OpenIMServer prepares to create a group.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the configured callback URL of the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                    |
+|----------------------|------------------------------------------------|
+| https                | Request protocol is HTTPS, request method is POST |
+| https://callbackurl  | Callback URL                                   |
+| CallbackCommand      | Fixed value: callbackBeforeCreateGroupCommand  |
+| contenttype          | Fixed value: JSON                              |
+
+### Header
+| Header Name | Example Value  | Optional | Type   | Description                        |
+|-------------|----------------|----------|--------|------------------------------------|
+| operationID | 1646445464564  | Required | string | operationID used for global tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackBeforeCreateGroupCommand",
+  "groupID": "12345",
+  "groupName": "MyGroup",
+  "notification": "Welcome to MyGroup!",
+  "introduction": "This is a group for discussing example topics.",
+  "faceURL": "http://example.com/path/to/face/image.png",
+  "ownerUserID": "user123",
+  "createTime": 1673048592000,
+  "memberCount": 10,
+  "ex": "Extra data",
+  "status": 1,
+  "creatorUserID": "user123",
+  "groupType": 1,
+  "needVerification": 1,
+  "lookMemberInfo": 1,
+  "applyMemberFriend": 0,
+  "notificationUpdateTime": 1673048592000,
+  "notificationUserID": "user456",
+  "initMemberList": [
+    {
+      "userID": "user789",
+      "roleLevel": 60
+    },
+    {
+      "userID": "user101112",
+      "roleLevel": 20
+    }
+  ]
+}
+
+```
+
+### Request Packet Field Description
+
+| Object                    | Type   | Description                                            |
+|---------------------------|--------|--------------------------------------------------------|
+| callbackCommand           | string | Callback command, here is the callback before creating a group |
+| groupID                   | string | Unique identifier of the group                         |
+| groupName                 | string | Name of the group                                      |
+| notification              | string | Notification message of the group                      |
+| introduction              | string | Introduction of the group                              |
+| faceURL                   | string | URL of the group icon                                  |
+| ownerUserID               | string | User ID of the group owner                             |
+| createTime                | int64  | Timestamp of group creation (milliseconds)             |
+| memberCount               | uint32 | Number of members in the group                         |
+| ex                        | string | Additional data field                                  |
+| status                    | int32  | Status of the group                                    |
+| creatorUserID             | string | User ID of the group creator                           |
+| groupType                 | int32  | Type of the group                                      |
+| needVerification          | int32  | Whether verification is needed to join the group       |
+| lookMemberInfo            | int32  | Whether group member information can be viewed         |
+| applyMemberFriend         | int32  | Whether group members can apply to be friends          |
+| notificationUpdateTime    | int64  | Timestamp of the last update of the group notification (milliseconds) |
+| notificationUserID        | string | User ID who updated the group notification             |
+| initMemberList            | array  | List of initial members of the group, including userID and roleLevel fields |
+| initMemberList.userID     | string | User ID of the initial member                          |
+| initMemberList.roleLevel  | int32  | Role level of the initial member                       |
+
+## Response Packet Example
+
+### Allowing Creation
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "
+
+Success",
+    "errDlt": "",
+    "nextCode": 0,
+    "groupID": "G001",
+    "groupName": "MyGroup",
+    "notification": "Welcome to MyGroup!",
+    "introduction": "A group for discussions",
+    "faceURL": "http://example.com/groupface.png",
+    "ownerUserID": "user01",
+    "ex": "Some extra data",
+    "status": 1,
+    "creatorUserID": "user02",
+    "groupType": 1,
+    "needVerification": 0,
+    "lookMemberInfo": 1,
+    "applyMemberFriend": 1
+}
+
+```
+
+## Response Packet Field Description
+
+| Field         | Value                         | Description                                       |
+|---------------|-------------------------------|---------------------------------------------------|
+| actionCode    | 0                             | Indicates whether the business system's callback is correctly executed. `0` means the operation was successful. |
+| errCode       | 5001                          | Represents a custom error code, ranging from 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
+| errMsg        | "An error message"            | Simple error message corresponding to the custom error code. |
+| errDlt        | "Detailed error information"  | Detailed error information corresponding to the custom error code. |
+| nextCode      | 1                             | Next execution instruction, `1` means refuse to continue execution, set when actionCode is `0`. |
+| groupID               | string   | Unique identifier of the group.                  |
+| groupName             | string   | Name of the group.                              |
+| notification          | string   | Notification/announcement message of the group. |
+| introduction          | string   | Introduction of the group.                      |
+| faceURL               | string   | URL of the group's icon or image.               |
+| ownerUserID           | string   | User ID of the group owner.                     |
+| ex                    | string   | Additional data or information.                 |
+| status                | int32    | Status of the group.                            |
+| creatorUserID         | string   | User ID of the group creator.                   |
+| groupType             | int32    | Type of the group.                              |
+| needVerification      | int32    | Whether verification is needed to join the group.|
+| lookMemberInfo        | int32    | Whether group member information can be viewed. |
+| applyMemberFriend     | int32    | Whether one can apply to be friends with group members. |

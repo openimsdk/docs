@@ -1,0 +1,84 @@
+# Callback Before Adding a Friend
+
+## Function Description
+The App business server can use this callback to receive user requests for adding friends, including:
+- Real-time monitoring of friend request submissions.
+- Intercepting malicious friend requests.
+
+## Precautions
+- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
+- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIMServer to the App backend.
+- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
+- The APP business server must respond to this request within the timeout period.
+
+## Scenarios That May Trigger This Callback
+- App users send friend requests through the client, asking to add friends.
+
+## Timing of the Callback
+- After OpenIMServer receives a friend request from the APP.
+
+## Interface Description
+
+### Request URL Example
+In the following example, the callback URL configured by the App is `https://callbackurl`.
+```plaintext
+https://callbackurl?command=$CallbackCommand&contenttype=json
+```
+
+### Request Parameter Description
+
+| Parameter            | Description                                          |
+|----------------------|------------------------------------------------------|
+| https               | Request protocol is HTTPS, method is POST            |
+| https://callbackurl | Callback URL                                         |
+| CallbackCommand     | Fixed value: callbackBeforeAddFriendCommand          |
+| contenttype         | Fixed value: JSON                                    |
+
+### Header
+| Header Name | Example Value | Mandatory | Type   | Description                         |
+|-------------|---------------|-----------|--------|-------------------------------------|
+| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
+
+### Request Packet Example
+```json
+{
+  "callbackCommand": "callbackBeforeAddFriendCommand",
+  "fromUserID": "user123",
+  "toUserID": "user456",
+  "reqMsg": "Hi, let's be friends!"
+}
+```
+
+### Request Packet Field Explanation
+
+| Field           | Type    | Description                                 |
+|-----------------|---------|---------------------------------------------|
+| callbackCommand | string  | Callback command, here for before adding a friend |
+| fromUserID      | string  | User ID of the person initiating the friend request |
+| toUserID        | string  | User ID of the person receiving the friend request |
+| reqMsg          | string  | Additional message sent with the friend request |
+
+## Response Packet Example
+
+### Allow Adding
+Allows the user to add a friend.
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "Success",
+    "errDlt": "",
+    "nextCode": "0"
+}
+```
+
+## Response Packet Field Explanation
+
+| Field      | Value  | Description                                              |
+|------------|--------|----------------------------------------------------------|
+| actionCode | 0      | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
+| errCode    | 5001   | Custom error code, ranging between 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
+| errMsg     | "An error message" | Simple error message corresponding to the custom error code. |
+| errDlt     | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode   | 1      | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |
