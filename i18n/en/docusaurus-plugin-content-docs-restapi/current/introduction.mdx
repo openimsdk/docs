@@ -1,29 +1,37 @@
 ---
-title: API Description
 sidebar_position: 1
+title: Callback Explanation
+hide_title: true
 ---
 
-# OpenIMServer APIs
+# 📞 Callback Explanation
 
-## 🚀 REST API
+📢 **OpenIM** provides a powerful callback function. When a specific event occurs, before or after, **OpenIMServer** proactively notifies the APP business server through HTTP/HTTPS requests. Thus, the APP business server can intervene in the subsequent process of the event or perform data synchronization based on these callbacks.
 
-OpenIMServer offers a **REST API** for business systems to use, enhancing their functionalities. Examples include:
+## 📑 Callback Classification
 
-- 🛠 Creating groups
-- 📬 Sending push notifications
+Callbacks are classified into two main categories based on the timing of processing:
 
-For more features, refer to the subsequent API documentation.
+- 🚫 **Callbacks before an event occurs**: These callbacks (before type) aim to let the APP business server intervene in event processing, for example, to filter sensitive words in messages. **OpenIMServer** will determine the subsequent process based on the callback return.
 
-> ⚠️ **Note**: When invoking the **REST API**, you must do so as an **APP Administrator**. This service is provided through port `10002`. An **APP Administrator** refers to users with super privileges. OpenIMServer has three built-in users of this type, their `userID` are as follows:
-> - `openIM123456`
-> - `openIM654321`
-> - `openIMAdmin`
+- 📤 **Notifications after an event occurs**: These callbacks (after type) are mainly used to notify the APP business server to synchronize data, for example, when a user joins a group. At this time, **OpenIMServer** will ignore the callback return and error codes.
 
-Before starting to call the API, you first need to obtain the APP Administrator's token by [getting the token](./apis/authenticationManagement/getUserToken) using a secret. Moreover, the [user registration](./apis/userManagement/userRegister) interface also requires the use of a secret.
+## ⚙️ Configuration Explanation
 
-## 🔗 Webhooks
+```yaml
+callback:
+  url:
+  beforeCreateGroup:
+    enable: true
+    timeout: 5
+    failedContinue: true
 
-OpenIMServer also offers a robust callback feature to meet a broader range of business needs. The concept of **callbacks** is that before or after certain events take place, OpenIMServer will send a request to the business server. These events include, but are not limited to:
+```
+- url: The callback address of the APP business server, supporting HTTP/HTTPS.
+- enable: Whether to enable this callback, true for enabled.
+- timeout: Response timeout time (seconds).
+- failedContinue: Whether to continue the process after timeout or API failure, generally only valid for before type callbacks, true for continuing the process.
 
-- 📤 Callback before sending a message
-- 📥 Callback after sending a message
+## 🔄 Callback Protocol
+
+**OpenIMServer** uses a third-party callback mechanism based on the **HTTP/HTTPS** protocol. When initiating callback requests, **OpenIMServer** uses the **POST** request method to notify the APP business server. The specific content of these requests will be directly included in the request body.
