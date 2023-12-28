@@ -20,8 +20,180 @@ import Image3 from './assets/admin.jpg';
 
 <img src={Image3} width="700" alt="PC Web Interface" />
 
-# Monitoring System
 
-## Deployment
+# Monitoring System
+This document introduces the deployment and use of Prometheus monitoring and alarm functions in Openim using binary and Docker methods,
+Please refer to the link document for the monitoring and alarm usage of Openim deployed in k8s mode: https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
+
+## openim-server source code deployment method
+The following is the steps of deploying Openim server in source code mode:
+step1：Clone the repository and switch to the release branch
+            git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+step2：Set common environment variables.
+step3：Deploy components.
+            make init && docker compose up -d.
+
+To enable the monitoring function, we need to break down step 3 into three small steps: 3.1, 3.2, 3.3
+Step 3.1: Execute the "make init" command, open the generated config/config.yaml file, and modify it as follows: Prometheus. enable: true
+:::tip
+If you need to configure the alarm function, please rewrite alertmanager. yml, email. tmml, and instance down rules. yml in this step.
+Please refer to the (Alarm System>Alarm Configuration File Description).
+For the convenience of the experience, you may not rewrite the three configuration files for now.
+:::
+import Image40 from './assets/config1.png';
+<img src={Image40} width="700" alt="PC Web Interface" />
+```
+Step 3.2: Modify the docker-compose.yml file to make the openim-admin management backend module and
+the components required for monitoring alarms, such as Prometheus, Grafana, Alertmanager, and Node Exporter (optional) available
+Step 3.3: Execute "docker-compose up-d" to install all monitoring components and management backend modules
+:::tip
+Since the openim admin management backend module uses the chat service module, you will need to install our additional chat module,
+Please refer to:Quick Start>Source Code Deployment>AppServer(chat)
+:::
+import Image4 from './assets/docker-compose1.png';
+<img src={Image4} width="700" alt="PC Web Interface" />
+```
+import Image5 from './assets/docker-compose2.png';
+<img src={Image5} width="700" alt="PC Web Interface" />
+```
+
+
+## openim-server docker deployment method
+The following is the step-by-step process for Docker to deploy Openim Server:
+step1：Set Common Environment Variables
+step2：Pull and Launch Image
+            git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && make init && docker compose up -d
+To enable the monitoring function, we need to break down step 2 into three small steps: 2.1, 2.2, 2.3
+Step 2.1: Execute the following command:
+          git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && make init
+          open the generated config/config.yaml file, and modify it as follows: Prometheus. enable: true
+:::tip
+If you need to configure the alarm function, please rewrite alertmanager. yml, email. tmml, and instance down rules. yml in this step.
+Please refer to the (Alarm System>Alarm Configuration File Description).
+For the convenience of the experience, you may not rewrite the three configuration files for now.
+:::
+import Image40 from './assets/config1.png';
+<img src={Image40} width="700" alt="PC Web Interface" />
+```
+Step 2.2: Modify the docker-compose.yml file to make the components required for monitoring alarms, such as Prometheus, Grafana, Alertmanager, and Node Exporter (optional) available
+import Image4 from './assets/docker-compose1.png';
+<img src={Image4} width="700" alt="PC Web Interface" />
+```
+import Image5 from './assets/docker-compose2.png';
+<img src={Image5} width="700" alt="PC Web Interface" />
+```
+Step 2.3: Execute "docker compose up -d" to install all monitoring components.
+
+
+## openim-server helm chart deployment method
+Please refer to the documentation for deploying openim server and enabling monitoring functions in k8s: https://github.com/openimsdk/helm-charts/blob/main/README-zh_CN.md
+
 
 ## Experience
+
+1. visit admin backend web pages through the link addresses: https://ip:11002/
+
+2. he default username and password for the management backend (admin1: admin1), click on the link below to open the Grafana webpage.
+import Image6 from './assets/admin1.png';
+<img src={Image6} width="700" alt="PC Web Interface" />
+```
+
+3. Login to Grafana using default username and password (admin: admin).
+import Image7 from './assets/login.png';
+<img src={Image7} width="700" alt="PC Web Interface" />
+```
+
+4. Add a Prometheus data source, as shown in the following figure.
+Enter the URL of the Prometheus data source: http://172.28.0.1:19090 Click "Save and Test" to save the data source.
+import Image8 from './assets/database.png';
+<img src={Image8} width="700" alt="PC Web Interface" />
+```
+import Image9 from './assets/database2.png';
+<img src={Image9} width="700" alt="PC Web Interface" />
+```
+
+5. Import Docker version Openim to customize dashboard dashboard.
+Click on the import button in the following image
+import Image10 from './assets/dashboard.png';
+<img src={Image10} width="700" alt="PC Web Interface" />
+```
+Copy the content of config/template/prometheus dashboard.yaml to the area shown below, then click the load button:
+import Image11 from './assets/dashboard2.png';
+<img src={Image11} width="700" alt="PC Web Interface" />
+```
+Select your Data Source and job, and you will be able to view custom indicator information, as shown in the following figure
+import Image12 from './assets/dashboard3.png';
+<img src={Image12} width="700" alt="PC Web Interface" />
+```
+
+6.import node-exporter dashboard, such as 1860 (Node Exporter Full).you can find dashboard from website(https://grafana.com/grafana/dashboards/)
+import Image13 from './assets/dashboard4.png';
+<img src={Image13} width="700" alt="PC Web Interface" />
+```
+You are about to view the node exporter indicator information, as shown in the following figure
+import Image14 from './assets/dashboard5.png';
+<img src={Image14} width="700" alt="PC Web Interface" />
+```
+
+
+# Alarm system
+The system has implemented two default alarm rules (instance_down, database_insert_failure-alerts) for email alarms,
+You only need to modify the configuration information of the sending and receiving email addresses in the alertmanager.yml file under the config folder
+to receive system alarm emails based on default rules
+:::tip
+If you want to implement alarm notifications through DingTalk, Enterprise WeChat, and other methods, you need to rewrite alertmanager. yml yourself,
+refer to website：https://prometheus.io/docs/alerting/latest/alertmanager/
+:::
+
+
+## Alarm Configuration File Description
+1，The entire alarm has three configuration files, namely alertmanager.yml, email.tmpl, and instance-down-rules.yml, as shown in the following figure:
+import Image15 from './assets/alert1.png';
+<img src={Image15} width="700" alt="PC Web Interface" />
+```
+2，Email Alert Architecture Description.
+ The Prometheus component loads the alarm rule instance-down-rules.yml file and sends the alarm information to the alertmanager component,
+ The alertmanager component loads alertmanager.yml and email.tmpl files, and sends emails through the configured alert email information and email template
+import Image16 from './assets/alert2.png';
+<img src={Image16} width="700" alt="PC Web Interface" />
+```
+3，instance-down-rules.yml file description.
+You can add your personal rules in instance-down-rules.yml file in bellow:
+import Image17 from './assets/alert3.png';
+<img src={Image17} width="700" alt="PC Web Interface" />
+```
+4，alertmanager.yml file description.
+Please modify to your actual sending and receiving email configuration information to receive alarm messages:
+import Image18 from './assets/alert4.png';
+<img src={Image18} width="700" alt="PC Web Interface" />
+```
+5，email.tmplfile description.
+This file is in HTML format, and the alarm management module will fill in the variable information inside, then render it into an HTML format file for email sending.
+You can rewrite the template file according to your own needs:
+import Image19 from './assets/alert5.png';
+<img src={Image19} width="700" alt="PC Web Interface" />
+```
+
+
+## Alarm deployment
+The alarm module is deployed together with the monitoring module, and there is no separate deployment of alarm modules.
+Please deploy monitoring steps (Monitoring System>Binary Deployment Openim Server Monitoring Deployment>Step 3.1; Monitoring System>Docker Deployment Openim Server Monitoring Deployment>Step 2.1) as needed
+Rewrite the alertmanager. yml, email.tmpl, and instance down rules.yml files to meet your requirements,
+During the experience phase, you only need to modify the configuration information of the sending and receiving email addresses in the alertmanager.yml
+file to receive default system alarm emails, providing a quick experience
+
+
+## Alarm experience
+You can manually trigger the instancedown alarm rule, execute the "make stop" command to stop the openim server service,
+wait for more than 5 minutes, and then receive the alarm email. The content is as follows:
+import Image20 from './assets/alert6.png';
+<img src={Image20} width="700" alt="PC Web Interface" />
+```
+
+
+# Logging system
+If the Openim service is deployed through the help chart method in a k8s environment, the Loki logs can be viewed through Grafana, that is, the log information of all Openim services can be viewed through Grafana.
+
+At present, there is no integrated Loki log collection component for source and Docker deployments. If you want to experience the Loki log collection function, please use the helm chart deployment in k8s system,
+
+For details, please refer to the link https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
