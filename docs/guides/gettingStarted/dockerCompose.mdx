@@ -5,156 +5,106 @@ sidebar_position: 2
 # 🛠 docker部署
 
 
-## 🌟 环境及组件要求
+## 1. 环境及组件要求
 对于服务器环境、系统、以及存储组件可以参考[此文档](./env-comp)
 
+## 2. docker部署
 
-## 🛠 一、设置常用环境变量
+## 2.1 克隆仓库并初始化
 
-> 想要快速体验 OpenIM API，无需设置环境变量。仅在内网环境中需设置 OPENIM_API。
+```jsx
+git clone https://github.com/openimsdk/openim-docker openim-docker && cd openim-docker && make init
 
-- **CHAT_BRANCH**
-  - **描述**：chat版本
-  - **默认值**：`release-v1.4`
-  - **注意事项**：支持1.3及以上版本
-    ```bash
-    export CHAT_BRANCH="release-v1.4"
-    ```
-
-- **SERVER_BRANCH**
-  - **描述**：OpenIMServer版本
-  - **默认值**：`release-v3.4`
-  - **注意事项**：支持3.3及以上版本
-    ```bash
-    export SERVER_BRANCH="release-v3.4"
-    ```
-
-- **PASSWORD**
-  - **描述**：组件密码 (mysql/mongodb/redis/minio)
-  - **默认值**：`openIM123`
-  - **注意事项**：密码≥8字符，无特殊字符
-    ```bash
-    export PASSWORD="openIM123"
-    ```
-
-- **USER**
-  - **描述**：组件用户名 (mysql/mongodb/redis/minio)
-  - **默认值**：`root`
-  - **注意事项**：建议保持root，其他账号未测试
-    ```bash
-    export USER="root"
-    ```
-
-- **OPENIM_IP**
-  - **描述**：API提供服务的IP
-  - **默认值**：有外网IP时会自动设置。
-  - **注意事项**：客户端使用此IP访问，有外网IP时会自动设置，内网环境下需手动设置，替换 ip 为对外服务 IP。
-    ```bash
-    export OPENIM_IP="ip"
-    ```
-
-- **DATA_DIR**
-  - **描述**：数据卷目录
-  - **默认值**：`./`
-  - **注意事项**：所有数据都会存储在此目录下，建议设置大磁盘下的目录。
-    ```bash
-    export DATA_DIR="./"
-    ```
-
-+ **PROMETHEUS_ENABLE**
-
-  + **描述**: 启用 Prometheus 的标志
-  + **默认值**: `false`
-
-  ```bash
-  export PROMETHEUS_ENABLE=true
-  ```
-
-> + + **描述**: 有关部署和配置 Prometheus 以及监控的详细文档和参考资料
-> + + **链接**: [Prometheus 和监控部署指南](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/prometheus-grafana.md)
-
----
-
----
-
-### 🛠 更多环境变量
-
-🟢 详细了解各种环境变量，请参考 [此文档](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/environment.md).
-
-> ⚠️ **注意**：使用 `export` 设置的环境变量优先级高于脚本中的变量。
-
----
-
-
-## 🚀 二、拉取镜像并启动
-
-
-```bash
-git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && make init && docker compose up -d
 ```
 
-🟢 如果您的docker不支持compose，建议按照 [这个](https://docs.docker.com/compose/install/linux/)升级.
+## 2.2 设置OPENIM_IP
 
-
-
-### 📜 查看日志
-
-```bash
-docker compose logs openim-server
-docker compose logs openim-chat
+```jsx
+# 如果服务器有外网IP 
+export OPENIM_IP="外网IP"
+# 如果仅提供内网服务
+export OPENIM_IP="内网IP"
 ```
 
-🟢 更多日志位于：`openim-server/branch/logs/` 和 `openim-chat/branch/logs`
+## 2.3 启动服务及查看日志
 
-### 🩺 查看健康状态
-
-```bash
+```jsx
+docker compose up -d
 docker ps
+docker compose logs -f openim-chat
+docker compose logs -f openim-server
 ```
-![docker-ps](./assets/docker-ps.png)
 
-## 三、快速验证
+
+
+## 3. 快速验证
 
 请参考[快速验证](./quickTestServer)文档
 
 
-## 四、管理后台和监控系统
-
+## 4. 管理后台和监控系统
 请参考 [管理后台和监控系统](./admin) 文档。
 
 
+## 5. 关于配置项的修改
+
+此项目配置项较为复杂，主要是某些配置项涉及到**`.env`**、**`openim-chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`**多个文件，配置项的修改说明分为两个部分，分别是共用配置项的修改和其他配置项的修改。
+
+### 5.1 共用配置项
+
+**`.env`**、**`openim-chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`** 共用的配置项：
+
+1. mysql/mongo/redis/kafka/zookeeper/minio 端口及密码；
+2. SECRET；
+3.  API_OPENIM_PORT；
+4.  OPENIM_IP；
+5. MINIO_PORT;
+6. GRAFANA_PORT
+
+### 5.2 修改方法
+
+对于5.1共用配置项的修改，以下两种方式二选一。
+
+方式一：所有配置重新生成
+
+如果需要全面更新配置，可以采用以下步骤：
+
+1. 删除现有配置文件：删除 **`openim-server/config/config.yaml`** 和 **`openim-chat/config/config.yaml`** 文件。
+2. 修改 `.env` 文件：更新 **`.env`** 文件中的相关配置项。
+3. 重新生成配置并重启服务：执行 **`docker compose down ; docker compose up -d`**，这将基于 **`.env`** 文件中的新设置重新生成配置文件，并重启服务。
+
+方式二：分别修改多个配置文件
+
+如果只需部分更新配置，可以按照以下步骤操作：
+
+1. 修改 `.env` 文件：更新 **`.env`** 文件中的相关配置项。
+2. 手动更新配置文件：根据 **`.env`** 文件的修改，相应地更新 **`openim-server/config/config.yaml`** 和 **`openim-chat/config/config.yaml`** 文件中的配置项。
+3. 特殊变量的额外处理：如果修改了 **`OPENIM_IP`**、**`API_OPENIM_PORT`**、**`MINIO_PORT`**、**`GRAFANA_PORT`**，则需要在 **`openim-server/config/config.yaml`** 中更新以下配置项：
+    
+    ```yaml
+    object:
+      apiURL: "http://$OPENIM_IP:$API_OPENIM_PORT"
+      minio:
+        endpoint: "http://$DOCKER_BRIDGE_GATEWAY:$MINIO_PORT"
+        signEndpoint: "http://$OPENIM_IP:$MINIO_PORT"
+    
+    grafanaUrl: http://$OPENIM_IP:$GRAFANA_PORT
+    ```
+    
+4. 重启服务：执行 **`docker compose down ; docker compose up -d`** 以应用更改并重启服务。
+
+### 5.3 其他配置项的修改
+
+对于 **`.env`**、**`openim-chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`** 中的非共用变量，可以单独修改相应文件中的这些配置项。执行 **`docker compose down ; docker compose up -d`** 以应用更改并重启服务。
 
 
 
 ## ❓ **常见问题** 🧐
 
----
 
-### 1. 使用外部组件如何修改? 🛠️
 
-**例：使用外部mysql🔗：**
-
-- 📝 编辑 `docker-compose.yaml` 并注释掉 mysql 配置 及 对应的depends_on 。
-- 📝 编辑 `scripts/install/environment.sh` 并修改 mysql 配置。
-- 💻 执行命令: `make init`
-- 🚀 执行命令: `docker compose up -d`
-
----
-
-### 2. 健康状态为 `starting`? 🟠
-
-首次健康检查前，Docker 默认状态为 `starting`⏳。约 1 分钟后，状态变更为 `healthy`✅。
-
----
-
-### 3. 端口映射 🌐
-
-Docker networks 允许用户自定义设置🔧，您可以正常地映射端口🔀。
-
----
-
-### 4. 关于 Docker 版本 🐋
+### 1. 关于 Docker 版本 🐋
 
 新版 Docker 已经整合了 docker-compose. 老版本的 Docker 可能不支持 gateway 功能❌。我们建议您升级到较新的版本，例如 `23.0.1`🔝
 
----
+
