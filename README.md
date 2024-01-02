@@ -56,6 +56,9 @@ To set up the documentation locally, follow these steps:
    ```
 At this point, you can access the local [http://localhost:3000](http://localhost:3000/) port.
 
+**Version Requirement:**
++ npm >= '10.2.0'
++ node >= '21.1.0',
 
 In the `package.json` file, the `scripts` section provides various commands to help you work with the documentation:
 
