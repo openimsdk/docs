@@ -4,8 +4,8 @@ sidebar_position: 6
 ---
 
 
-# 管理后台 🖥️
-### 🟢 开放端口
+# 管理后台及监控系统 🖥️
+### 🟢 管理后台开放端口
 
 | TCP 端口  | 说明                    | 操作 ⚙️                                      |
 |:--------:|:-----------------------:|:--------------------------------------------:|
@@ -19,81 +19,40 @@ sidebar_position: 6
 
 ![PC Web Interface](./assets/admin.jpg)
 
-# 监控系统
-本文档介绍二进制&docker方式部署openim的Prometheus监控和告警功能的部署和使用,
-k8s方式部署openim的监控和告警使用请查阅链接文档:https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
+## 监控&告警系统部署
+我们提供两种监控&告警系统的部署，docker-compose方式和k8s helm chart方式。
+本文档介绍docker-compose方式部署openim的Prometheus监控和告警功能的部署和使用,
+k8s方式部署openim的监控&告警使用请查阅链接文档:https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
+源码和docker-compose部署openim的docker-compose.yml文件中各组件说明:
 
-## 二进制部署openim-server方式的监控部署
-如下是二进制方式部署openim-server的步骤流程：
+| 组件名称  | 组件说明                    | 开启监控&告警功能是否必须                       |
+|:--------:|:-----------------------:|:--------------------------------------------:|
+| openim-admin| openim管理后台,通过管理后台页面进入监控页面 | 必须 |
+| prometheus| prometheus组件 | 必须 |
+| alertmanager| 告警管理组件 | 必须 |
+| grafana| grafana组件 | 必须 |
+| node-exporter| node-exporter组件,用于prometheus组件拉取node指标信息 | 可选 |
 
-步骤1：Clone the repository and switch to the release branch
-```
-git clone https://github.com/openimsdk/open-im-server && cd open-im-server
-```
+监控&告警使用的配置文件配置说明:
 
-步骤2：Set common environment variables.
+| 文件名称  | 文件说明                    | 修改项                       |
+|:--------:|:-----------------------:|:--------------------------------------------:|
+| config/config.yaml| openim服务的配置文件 | 需设置prometheus.enable: true,默认无需修改 |
+| config/prometheus.yml| prometheus组件配置文件 | 配置Prometheus组件信息,请查阅Prometheus文档说明按需修改，默认无需修改 |
+| config/instance-down-rules.yml| 告警规则文件 | 默认配置两条规则(instance_down,database_insert_failure_alerts),请查阅Prometheus文档说明按需增加 |
+| config/alertmanager.yml| 告警管理配置文件 | 默认配置了邮件告警方式,需要配置你的发送和接收邮箱信息，如不修改讲不能收到告警信息 |
+| config/email.tmpl| 邮件告警模版 | 默认邮件模版比较简单，请按需配置你的邮件模版 |
+| config/templates/prometheus-dashboard.yaml| openim自定义dashboard | 无需修改 |
 
-步骤3：Deploy components.
-```
-make init && docker compose up -d.
-```
-我们要开启监控功能，需要在将步骤3分解三个小步:3.1，3.2，3.3
+> 在源码和docker-compose方式部署openim时候，请确认使用的docker-compose.yml文件中对应的监控&告警组件可用，
+并确认相应的配置文件按需修改好，体验阶段可无需修改配置文件.
 
-步骤3.1：执行make init命令，将生成出的config/config.yaml文件打开，修改如下prometheus.enable: true
+## 监控体验
+1. 通过openim管理后台网页的链接入口访问,管理后台网页地址:http://ip:11002/
 
-> 如需配置告警功能，请在此步骤改写alertmanager.yml，email.tmpl，instance-down-rules.yml请查阅 告警系统>告警配置文件说明.为体验的方便，可先不改写三配置文件。
+![PC Web Interface](./assets/admin.jpg)
 
-![PC Web Interface](./assets/config1.png)
-
-
-步骤3.2：修改docker-compose.yml文件，把openim-admin管理后台模块和监控告警需要的组件:prometheus,grafana,alertmanager,node-exporter(可选)变成可用，
-               把对应模块的注释去掉，如图
-
-![PC Web Interface](./assets/docker-compose1.png)
-
-![PC Web Interface](./assets/docker-compose2.png)
-
-步骤3.3：执行docker compose up -d安装所有监控组件和管理后台模块
-> 因openim-admin管理后台模块使用到了chat服务模块，所以你还需要安装我们额外的chat模块，
-安装chat模块的文档请查阅Quick Start>Source Code Deployment>AppServer(chat)
-
-## docker部署openim-server方式的监控部署
-如下是docker部署openim-server的步骤流程：
-
-步骤1：Set Common Environment Variables
-
-步骤2：Pull and Launch Image
-```
-git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && make init && docker compose up -d
-```
-我们要开启监控功能，需要将步骤2分解三个小步：2.1，2.2，2.3
-
-步骤2.1：执行如下命令
-```
-git clone https://github.com/openim-sigs/openim-docker openim/openim-docker && export openim=$(pwd)/openim && cd $openim/openim-docker && make init
-```             
-将生成出的config/config.yaml文件打开，修改如下prometheus.enable: true。
-> 如需配置告警功能，请在此步骤改写alertmanager.yml，email.tmpl，instance-down-rules.yml请查阅 告警系统>告警配置文件说明.为体验的方便，可先不改写三配置文件。
-
-
-![PC Web Interface](./assets/config1.png)
-
-
-步骤2.2：修改docker-compose.yml文件，把监控需要的组件：prometheus,grafana,alertmanager,node-exporter(可选)变成可用，
-               把对应模块的注释去掉，如图
-![PC Web Interface](./assets/docker-compose1.png)
-
-
-![PC Web Interface](./assets/docker-compose2.png)
-
-
-步骤2.3：执行docker compose up -d安装所有监控组件。
-## k8s方式部署openim-server
-k8s部署openim-server和开启监控功能请查阅文档：https://github.com/openimsdk/helm-charts/blob/main/README-zh_CN.md
-
-## 体验
-1. 通过openim管理后台网页的链接入口访问,管理后台网页地址:https://ip:11002/
-2. 管理后台默认用户名和密码 (admin1:admin1),点击下图链接，将打开grafana网页.
+2. 管理后台默认用户名和密码 (admin1:admin1),点击如图链接，将打开监控的grafana网页.
 
 ![PC Web Interface](./assets/admin1.png)
 
@@ -127,42 +86,34 @@ k8s部署openim-server和开启监控功能请查阅文档：https://github.com/
 
 你将要查看到node-exporter指标信息，如下图
 ![PC Web Interface](./assets/dashboard5.png)
+> 能查看到node-exporter指标信息，你需要在docker-compose.yml使node-exporter组件可用.
 
-
-# 告警系统
-系统实现了两条默认告警规则(instance_down,database_insert_failure_alerts)邮件告警，
-只需要修改config文件夹下的alertmanager.yml文件里面的发送邮箱和接收邮箱的配置信息，即可接收默认规则的系统告警邮件。
-> 如果想实现钉钉，企业微信等方式的告警通知，需要自行改写alertmanager.yml，
-可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
 
 ## 告警配置文件说明
-1，告警三配置文件说明，整个告警有三个配置文件，分别是alertmanager.yml，email.tmpl，instance-down-rules.yml，如下图:
+1，告警三配置文件说明，整个告警有四个配置文件，分别是prometheus.yml,alertmanager.yml，email.tmpl，instance-down-rules.yml，如下图:
 ![PC Web Interface](./assets/alert1.png)
 
 2，邮件告警架构说明图,Prometheus组件加载告警规则instance-down-rules.yml文件，将符合条件的告警信息发送到alertmanager组件，
 alertmanager组件加载alertmanager.yml和email.tmpl文件，通过配置的告警邮箱信息和邮件模版发送邮件
 ![PC Web Interface](./assets/alert2.png)
 
-3，告警规则instance-down-rules.yaml文件说明，如果增加告警规则可以在instance-down-rules.yml文件中添加规则:
+3，告警规则instance-down-rules.yaml文件说明，默认实现了两条(instance_down,database_insert_failure_alerts)邮件告警规则,
+如果增加告警规则可以在instance-down-rules.yml文件中添加规则:
 ![PC Web Interface](./assets/alert3.png)
 
-4，告警管理alertmanager.yml文件说明,请修改成你真实的发送邮箱和接收邮箱配置信息，即可接收告警信息:
+
+4，告警管理alertmanager.yml文件说明,请修改成你真实的发送邮箱和接收邮箱配置信息，即可接收告警信息,
+如果想实现钉钉，企业微信等方式的告警通知，需要自行改写alertmanager.yml，
+可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
 ![PC Web Interface](./assets/alert4.png)
 
 5，邮件模版文件email.tmpl说明，此文件是html格式，告警管理模块会填充里面的变量信息，然后渲染成html格式文件，进行邮件的发送，
-     你可以跟着自己的需要进行模版文件的改写:
+你可以跟着自己的需要进行模版文件的改写:
 ![PC Web Interface](./assets/alert5.png)
 
-## 告警部署
-告警模块是和监控模块一起部署的，不存在单独部署告警模块。请在部署监控步骤
 
-(监控系统>二进制部署openim-server方式的监控部署>步骤3.1;监控系统>docker部署openim-server方式的监控部署>步骤2.1)
-
-中根据需要改写alertmanager.yml，email.tmpl，instance-down-rules.yml文件成你需求即可，
-
-体验阶段只需要修改alertmanager.yml文件里面的发送邮箱和接收邮箱的配置信息，即可接收默认规则的系统告警邮件，快速体验.
 ## 告警体验
-可手动触发instancedown告警规则，执行make stop命令停止openim-server服务，等待5m分钟以上，即可收到告警邮件，内容如下：
+可手动触发instancedown告警规则，如果是源码部署openim方式，执行 `make stop`命令停止openim-server服务，等待5m分钟以上，即可收到告警邮件，内容如下：
 
 ![PC Web Interface](./assets/alert6.png)
 
