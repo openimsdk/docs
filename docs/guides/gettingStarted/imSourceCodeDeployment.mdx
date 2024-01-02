@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # 🛠 源码部署
 
-## 🌟 环境及组件要求
+##  1. 环境及组件要求
 对于服务器环境、系统、以及存储组件可以参考[此文档](./env-comp)
 
 
@@ -13,239 +13,150 @@ sidebar_position: 1
 ---
 
 
+## 2. 部署 OpenIM Server (IM)
 
+### 2.1 📡 设置 OPENIM_IP
 
-## 🟢 一、部署组件
+```jsx
+# 如果服务器有外网IP
+export OPENIM_IP="外网IP"
+# 如果仅提供内网服务
+export OPENIM_IP="内网IP"
 
-### 📦 1. **克隆仓库并切换到发行分支**
+```
 
-```bash
-git clone https://github.com/openimsdk/open-im-server && cd open-im-server 
+### 2.2 🏗️ 部署组件 (mongodb/redis/zookeeper/kafka/MinIO等)
+
+```
+git clone https://github.com/OpenIMSDK/open-im-server && cd open-im-server && make init && docker compose up -d
+
+```
+
+### 2.3 🛠️ 编译
+
+```
+make build
+
+```
+
+### 2.4 🚀 启动/停止/检测
+
+```jsx
+# 启动
+make start
+# 停止
+make stop
+# 检测
+make check
+
+```
+
+## 3. 部署 App Server (Chat)
+
+### 3.1 🏗️ 部署组件（mysql）
+
+```
+#返回上一级目录
+cd ..
+# clone仓库
+git clone https://github.com/OpenIMSDK/chat chat && cd chat
+# 部署mysql
+docker run -d --name mysql2 -p 13306:3306 -p 33306:33060 -v "$(pwd)/components/mysql/data:/var/lib/mysql" -v "/etc/localtime:/etc/localtime" -e MYSQL_ROOT_PASSWORD="openIM123" --restart always mysql:5.7
+```
+
+### 3.2 🛠️ 编译
+
+```
+make init
+make build
+```
+
+### 3.3 🚀 启动/停止/检测
+
+```jsx
+# 启动
+make start
+# 停止
+make stop
+# 检测
+make check
 ```
 
 
-###  🌐 2. 设置常用环境变量
+## 4. 快速验证
 
----
-
-- **PASSWORD**
-    - **描述**: 用于 mysql, mongodb, redis, minio 的密码
-    - **默认值**: `openIM123`
-    - **注意事项**:
-      - 密码长度至少为 8 个字符
-      - 不能包含特殊字符
-    ```bash
-    export PASSWORD="openIM123"
-    ```
-
-- **USER**
-    - **描述**: 用于 mysql, mongodb, redis, minio 的用户名
-    - **默认值**: `root`
-    ```bash
-    export USER="root"
-    ```
-
-- **OPENIM_IP**
-    - **描述**: API 地址
-    - **说明**: 若服务器有外网 IP，系统会自动获取。若为内网，需设定此环境变量为对内服务的 IP。(一般情况下不需要设置）
-    ```bash
-    export OPENIM_IP="http://ip:10002"
-    ```
-
-- **DATA_DIR**
-    - **描述**: 组件数据挂载目录
-    - **默认值**: `./`
-    ```bash
-    export DATA_DIR="./"
-    ```
-
-+ **PROMETHEUS_ENABLE**
-
-  + **描述**: 启用 Prometheus 的标志
-  + **默认值**: `false`
-
-  ```bash
-  export PROMETHEUS_ENABLE=true
-  ```
-
-> + **描述**: 有关部署和配置 Prometheus 以及监控的详细文档和参考资料
-> + **链接**: [Prometheus 和监控部署指南](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/prometheus-grafana.md)
-
----
-
-### 🔧 更多环境变量
-
-想了解更多关于环境变量的细节，推荐阅读 [此文档](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/environment.md)。
-
-> 🚀 **Tip**: 当你使用 `export` 命令设置环境变量时，它的优先级会高于在脚本中定义的变量。
-
----
+请参考[快速验证](./quickTestServer)文档
 
 
-### 3. 部署组件
+## 5. 管理后台和监控系统
 
-```bash
-make init && docker compose up -d
+请参考 [管理后台和监控系统](./admin) 文档。
+
+
+
+## 6. 关于配置项的修改
+
+### 6.1 🛠️ 共用配置项的修改
+
+| 配置项 | 需要修改的文件 | 操作 |
+| --- | --- | --- |
+| mongo/kafka/minio 相关 | .env, openim-server/config/config.yaml | 需重启组件和 IM |
+| redis/zookeeper 相关 | .env, openim-server/config/config.yaml, chat/config/config.yaml | 需重启组件、IM 和 Chat |
+| SECRET | openim-server/config/config.yaml, chat/config/config.yaml | 需重启 IM 和 Chat |
+
+### 6.2 🔄 共用配置项中特殊配置项的修改
+
+特殊配置项：API_OPENIM_PORT/MINIO_PORT/OPENIM_IP/GRAFANA_PORT
+
+1. 修改 `.env` 文件中的特殊配置项
+2. 在 **`openim-server/config/config.yaml`** 中按照规则修改配置
+
+```jsx
+object:
+  apiURL: "http://$OPENIM_IP:$API_OPENIM_PORT"
+  minio:
+    endpoint: "http://$DOCKER_BRIDGE_GATEWAY:$MINIO_PORT"
+    signEndpoint: "http://$OPENIM_IP:$MINIO_PORT"
+
+grafanaUrl: http://$OPENIM_IP:$GRAFANA_PORT
 ```
 
-### 4. 查看组件状态
+1. 在 **`chat/config/config.yaml`** 中按照规则修改配置
 
-```bash
-docker ps
-```
-![components](./assets/components.png)
-
-## 二、OpenIMServer
-
-1. 编译
-
-```bash
-./scripts/build-all-service.sh
+```jsx
+openIMUrl: "[http://172.28.0.1:](http://127.0.0.1:10002/)$API_OPENIM_PORT"
 ```
 
-2. 启动
+4. 重启 IM 和 Chat
 
-```bash
-./scripts/start-all.sh
-```
+### 6.3 🛠️ 其他配置项的修改
 
-3. 检测
+对于 **`.env`**、**`chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`** 中的其他配置项，可以单独修改相应文件中的这些配置项。
 
-```bash
-./scripts/check-all.sh
-```
+## 7. 常见问题
 
-![im](./assets/im.png)
+### 7.1 📜 日志查看
 
-4. 停止
-
-```bash
-./scripts/stop-all.sh
-```
-
-### 常见问题
-
-#### 1. 如何使用外部组件？
-
-要使用某些外部组件，如外部的 MySQL，请按以下步骤进行：
-
-1. 编辑 `docker-compose.yml` 文件，并注释掉 MySQL 相关的配置。
-2. 编辑 `scripts/install/environment.sh` 文件，然后修改 MySQL 的 IP、端口和密码等配置信息。
-3. 执行 `make init` 命令，应用更改。
-4. 运行 `docker-compose up -d` 命令以启动组件。
-
-#### 2. 启动顺序
-
-启动顺序如下：
-
-- 存储相关的组件
-- open-im-server
-- chat
-
-#### 3. Docker 版本
-
-新版本的 Docker 已经将 `docker-compose` 集成为其核心功能。所以，您不需要单独安装 `docker-compose`。如果您的 Docker 版本过低，请考虑升级。官方推荐的版本是 `23.0.1`。
-
-#### 4. 升级问题
-
-如果组件的账号密码保持不变，您可以直接升级。但在升级之前，请确保已停止所有进程。
-
-#### 5. 修改组件密码
-
-如需在组件启动后修改密码：
-
-1. 停止组件的 docker。
-2. 如数据不重要，您可以删除整个 `components` 目录。
-3. 设置新密码：`export PASSWORD=newpassword`。
-4. 启动组件的 docker 使新密码生效。
-
-#### 6. 更多配置项
-
-请避免直接修改 `config/config.yaml` 文件。推荐阅读 [此文档](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/environment.md)。
-
-#### 7. 日志查看
-
-日志位置如下：
+日志位置：
 
 - 运行时日志：`logs/OpenIM.log.all.*`
 - 启动日志：`_output/logs/openim_*.log`
 
 
 
-## 三、AppServer(chat)
+### 7.2 🚀 启动顺序
+
+启动顺序如下：
+
+- IM 依赖的组件：mongo/redis/kafka/zookeeper/minio
+- **IM**
+- Chat 依赖的组件：mysql
+- **Chat**
+
+### 7.3 🐳 Docker 版本
+
+新版本的 Docker 已将 `docker-compose` 集成为其核心功能，不需单独安装。推荐版本 `23.0.1`。
 
 
 
-> 🔍 **备注**: 
-> 
-> 
-**OpenIMServer** 本身并不包含账号注册和登录服务，为了让开发更为便捷，我们开源了包含登录和注册功能的 **AppServer：chat** 。
-如果您有自己的AppServer，可以忽略此环节。
 
-
-1. clone仓库并切换发行分支（release-v1.3及之后的版本）
-
-```bash
-cd .. 
-git clone https://github.com/openimsdk/chat.git && cd chat
-```
-
-2. 编译
-
-```bash
-./scripts/build_all_service.sh
-```
-
-3. 启动
-
-```bash
-./scripts/start_all.sh
-```
-
-4. 检测
-
-```bash
-./scripts/check_all.sh --print-screen
-```
-
-![chat](./assets/chat.png)
-
-5. 停止
-
-```bash
-./scripts/stop_all.sh
-```
-
-### 常见问题
-
----
-
-#### 1. 如果 zk 连接失败
-
-请确保 `zookeeper` 的 IP 和端口配置正确。如果您在组件部署时更改了 `zookeeper` 的配置，您应该在 `config/config.yaml` 文件中修改对应的 `zookeeper` 配置项。
-
----
-
-#### 2. 如果用户注册失败
-
-首先，确认 `openIMUrl` 的 IP 和端口配置正确。如果您在部署组件时修改了 `OpenIMServer` 的 IP 或端口，那么您需要在 `config/config.yaml` 文件中更改相应的 `openIMUrl` 配置项，这样 `chat` 才能访问 `OpenIMServer`
-
----
-
-#### 3. 日志查看
-
-所有日志文件都存放在 `logs` 目录下：
-
-- `openIM.log`：记录启动日志。
-- `chat.log.*`：记录运行时的日志。
-
----
-
-## 四、快速验证
-
-请参考 [快速验证](./quickTestServer) 文档。
-
-
-## 五、管理后台和监控系统
-
-请参考 [管理后台和监控系统](./admin) 文档。
