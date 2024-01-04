@@ -7,25 +7,66 @@ sidebar_position: 6
 ## 🚀使用 Demo
 我们强烈建议您首先运行我们为您准备的框架相关的示例 [DEMO](https://github.com/openimsdk/open-im-uniapp-demo) 。这不仅可以让您直观体验 OpenIMSDK 的功能，还将帮助您在实际集成过程中迅速定位和解决问题。
 
-## 开发准备
+## 提示
 
-### 1. 仅使用 uniapp 开发 H5 或 小程序 版本
+### 如果仅使用 uniapp 开发 H5 或 小程序 版本
 
 > 使用 uniapp 开发 h5 和 小程序(或原生小程序)只能使用纯 JS 版本 SDK
 
 - 直接使用 [JSSDK](docs/sdks/quickstart/miniProgram.mdx) ，**不需要** 参考下面的集成步骤。
 
-### 2. 仅使用 uniapp 开发 安卓/iOS 版本
 
-- 包含 APP 端开发，**必须** 按照下面的集成步骤，使用云插件导入 SDK ，使用 npm 包调用。因为 APP 端的实现方式都是通过 [App 原生语言插件](https://uniapp.dcloud.net.cn/plugin/native-plugin.html) 实现。
 
-### 3. 使用 uniapp 开发 安卓/iOS + H5/小程序 版本
+## 集成步骤
 
-> 最新的 npm 包在非 APP 端，已经支持兼容 JSSDK ，可以使用兼容写法，也可以直接使用 open-im-sdk 中的方法。npm 包使用方式上与纯 APP 开发会有所差异，开发者开发者可以根据自己项目的实际情况灵活选择。
+包含 APP 端开发，**必须** 按照下面的步骤，使用云插件导入 SDK ，使用 npm 包调用。因为 APP 端的实现方式都是通过 [App 原生语言插件](https://uniapp.dcloud.net.cn/plugin/native-plugin.html) 实现。
+
+### 1. 添加依赖
+
+> 官方插件已上传至 [dcloud 插件市场](https://ext.dcloud.net.cn/plugin?id=6577)
+
+- 选择对应项目和包名引入 SDK
+
+![uni_import](./assets/uni_import.png)
+
+- 打开引入 SDK 项目根目录下 `manifest.json` 文件，选择**App 原生插件配置**，选择云端插件进行导入。
+
+![uni_import_manifest](./assets/uni_import_manifest.png)
+
+- 下载 npm 包，简化对 SDK 的引入和使用，并封装 API 为 Promse 形式。
+
+> openim-uniapp-polyfill >= 1.2.0 以上版本已经支持兼容 JSSDK。
+
+```bash
+npm install openim-uniapp-polyfill open-im-sdk
+```
+
+### 2. 在项目中引入 ( 纯 APP 项目 )
+
+```javascript
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID: '123',
+  token: 'token',
+});
+
+const onConnectSuccess = () => {
+  // 连接成功
+};
+// 设置监听
+IMSDK.subscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
+// 卸载监听
+IMSDK.unsubscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
+```
+
+### 3. 在项目中引入 ( APP + H5/小程序 项目 )
+
+> 最新的 npm 包在非 APP 端，已经支持兼容 JSSDK 。npm 包使用方式上与纯 APP 开发会有所差异，开发者开发者可以根据自己项目的实际情况灵活选择。
 
 > 需要使用云插件导入 SDK , 且 `openim-uniapp-polyfill` 版本需要 >= 1.2.0。
 
-- 注意1：监听器使用 uniapp 的方式调用监听器，传入的是 **必须** `IMSDK.IMEvents` 中的方法，因为 JSSDK 与 APP 的监听器大小写有区别 , npm 包中已经做自动转换。
+- 注意1：监听器使用 uniapp 的方式调用监听器，传入 `IMSDK.IMEvents` 中的方法，因为 JSSDK 与 APP 的监听器大小写有区别 , npm 包中已经做自动转换。
 
 - 注意2：在部分 API 中不同端可能因为平台的支持，用法上会有所区别，使用时查看对应平台 API 的文档，注意差别：
   - 要根据平台去传入正确的 platformID
@@ -34,9 +75,9 @@ sidebar_position: 6
   - 创建图片、文件消息使用的 API 不一致，要使用 **条件编译** 调用不同的方法。
   - ...
 
-#### 3.1 跨平台情况下多种使用方式
+#### 3.1 跨平台情况下使用方式
 
-> 方法一 ：跨平台参数和方法名一致情况下，使用 uniapp 的方式来调用。参数不一致的情况下 **条件编译** 传入对应的参数。
+> 方法一 ：跨平台参数和方法名一致情况下，使用 uniapp 的方式来调用。
 
 - 此为多端兼容式写法，在跨平台情况下，要检查 API 返回内容结构是否一致。
 
@@ -47,14 +88,9 @@ IMSDK.asyncApi('createTextMessage', IMSDK.uuid(), 'text')
   .then((data) => {
     // do something
   })
-
-IMSDK.subscribe(IMSDK.IMEvents.OnConnectSuccess, () => {
-  // do something
-});
-
 ```
 
-> 方法二 ：H5/小程序 端使用 **条件编译** + JSSDK 处理跨平台方法名一致，参数差异较大的方法。
+> 方法二 ：跨平台参数和方法名不一致情况下，使用 **条件编译** 处理参数差异较大的方法。
 
 - APP 端需要调用 [initSDK](docs/sdks/api/initialization/initSDK.mdx) 后才能使用。
 
@@ -79,59 +115,18 @@ IMSDK.asyncApi('login', IMSDK.uuid(), {
 // #endif
 ```
 
+### 4. 云打包自定义调试基座
 
-## 集成步骤
-
-### 1. 添加依赖
-
-> 官方插件已上传至 [dcloud 插件市场](https://ext.dcloud.net.cn/plugin?id=6577)
-
-- 选择对应项目和包名引入 SDK
-
-![uni_import](./assets/uni_import.png)
-
-- 打开引入 SDK 项目根目录下 `manifest.json` 文件，选择**App 原生插件配置**，选择云端插件进行导入。
-
-![uni_import_manifest](./assets/uni_import_manifest.png)
-
-- 下载 npm 包，简化对 SDK 的引入和使用，并封装 API 为 Promse 形式。
-
-> openim-uniapp-polyfill >= 1.2.0 以上版本已经支持兼容 JSSDK 具体使用参考开发准备。
-
-```bash
-npm install openim-uniapp-polyfill open-im-sdk
-```
-
-### 2. 在项目中引入
-
-```js
-import IMSDK from 'openim-uniapp-polyfill';
-
-const userID = '';
-const token = '';
-IMSDK.asyncApi(IMSDK.IMMethods.Login, IMSDK.uuid(), userID, token)
-  .then(() => {
-    // 登录成功
-  })
-  .catch(() => {
-    // 登录失败
-  });
-
-const onConnectSuccess = () => {
-  // 连接成功
-};
-// 设置监听
-IMSDK.subscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
-// 卸载监听
-IMSDK.unsubscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
-```
-
-### 3. 云打包自定义调试基座
-
-> 注意：包名需要与第一步引入云插件时设置的包名一致
+> 注意：包名需要与第一步引入云插件时设置的包名一致，
 
 ![uni_build](./assets/uni_build.png)
 
 ### 4. 已自定义调试基座启动
 
+> 本地进行 APP 端调试时，必须打包自定义基座，在启动自定义基座进行调试。
+
 ![uni_run](./assets/uni_run.png)
+
+### 5. 打包
+
+> APP 端打包发布时，要使用 发行 -> 原生APP云打包。
