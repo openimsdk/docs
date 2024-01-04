@@ -4,30 +4,103 @@ hide_title: true
 sidebar_position: 6
 ---
 
-## 🚀 Using the Demo
-We strongly recommend that you start by running the framework-specific example [DEMO](https://github.com/OpenIMSDK/Open-IM-PC-Web-Demo) we have prepared for you. This not only allows you to experience the features of OpenIMSDK firsthand, but it also helps you quickly identify and address any issues during the actual integration process.
+## 🚀 Usage Demo
+We strongly recommend starting by running the framework-related example we have prepared for you [DEMO](https://github.com/openimsdk/open-im-uniapp-demo). This will not only allow you to intuitively experience the functionality of OpenIMSDK but also help you quickly identify and resolve issues during actual integration.
+
+## Development Preparation
+
+### 1. Using uniapp for H5 or Mini Program Development Only
+
+> When using uniapp for H5 and Mini Program (or native Mini Program) development, you can only use the pure JS version of the SDK.
+
+- Use [JSSDK](/sdks/quickstart/miniProgram) directly, and **do not** refer to the integration steps below.
+
+### 2. Using uniapp for Android/iOS Development Only
+
+- For app development, it is **required** to follow the integration steps below, import the SDK using cloud plugins, and use npm packages for calling. This is because the implementation for app development is done through [App Native Language Plugins](https://uniapp.dcloud.net.cn/plugin/native-plugin.html).
+
+### 3. Using uniapp for Android/iOS + H5/Mini Program Development
+
+> The latest npm package already supports compatibility with JSSDK in non-app environments. You can use compatible writing styles or directly use methods from open-im-sdk. There may be differences in the way npm packages are used compared to pure app development, so developers can flexibly choose based on their project's specific requirements.
+
+> You need to import the SDK using cloud plugins, and the `openim-uniapp-polyfill` version should be >= 1.2.0.
+
+- Note 1: Listeners should be called using the uniapp method, and you must pass methods from `IMSDK.IMEvents` because JSSDK and app listeners have different case sensitivity, which is automatically converted in the npm package.
+
+- Note 2: In some APIs, there may be differences in usage between different platforms due to platform support. When using them, refer to the documentation for the respective platform and be aware of the differences:
+  - You need to pass the correct platformID based on the platform.
+  - Login API parameters may differ.
+  - Android/iOS requires [initSDK](/sdks/api/initialization/initSDK) before use.
+  - Different APIs are used for creating image and file messages; you should use **conditional compilation** to call different methods.
+  - ...
+
+#### 3.1 Multiple Usage Scenarios in Cross-Platform Cases
+
+> Method 1: Use the uniapp approach to call when cross-platform parameters and method names are consistent. For inconsistent parameters, use **conditional compilation** to pass the corresponding parameters.
+
+- This is a multi-platform compatible writing style. In cross-platform situations, check if the API return content structure is consistent.
+
+```javascript
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('createTextMessage', IMSDK.uuid(), 'text')
+  .then((data) => {
+    // do something
+  })
+
+IMSDK.subscribe(IMSDK.IMEvents.OnConnectSuccess, () => {
+  // do something
+});
+```
+
+> Method 2: Use **conditional compilation** + JSSDK to handle methods with consistent method names and significant parameter differences for H5/Mini Program platforms.
+
+- For the app platform, you need to call [initSDK](/sdks/api/initialization/initSDK) before using it.
+
+```javascript
+import IMSDK from 'openim-uniapp-polyfill';
+
+// #ifdef H5 || MP-WEIXIN
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID : '123',
+  token: 'token',
+  platformID: 5,
+  wsAddr: 'ws://your-server-ip:10003',
+  apiAddr: 'http://your-server-ip:10002',
+});
+// #endif
+
+// #ifdef APP-PLUS
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID: '123',
+  token: 'token',
+});
+// #endif
+```
 
 ## Integration Steps
 
-### 1. Add Dependency
+### 1. Add Dependencies
 
-> The official plugin has been uploaded to the [dcloud plugin market](https://ext.dcloud.net.cn/plugin?id=6577).
+> Official plugins have been uploaded to the [dcloud plugin market](https://ext.dcloud.net.cn/plugin?id=6577).
 
-- Select the corresponding project and package name to import the SDK.
+- Choose the appropriate project and package name to import the SDK.
 
 ![uni_import](./assets/uni_import.png)
 
-- Open the `manifest.json` file located in the SDK imported project's root directory, select **App Native Plugin Configuration**, and import the cloud plugin.
+- Open the `manifest.json` file in the root directory of the imported SDK project and select **App Native Plugin Configuration** to import the cloud plugin.
 
 ![uni_import_manifest](./assets/uni_import_manifest.png)
 
-- Download the npm package to simplify the SDK's import and use and encapsulate the API in Promise format.
+- Download the npm package to simplify the import and use of the SDK, and encapsulate the API as Promises.
+
+> openim-uniapp-polyfill >= 1.2.0 supports JSSDK compatibility. Refer to the development preparation for specific usage.
 
 ```bash
-npm install openim-uniapp-polyfill
+npm install openim-uniapp-polyfill open-im-sdk
 ```
 
-### 2. Introduce in the Project
+### 2. Import in the Project
 
 ```js
 import IMSDK from 'openim-uniapp-polyfill';
@@ -36,7 +109,7 @@ const userID = '';
 const token = '';
 IMSDK.asyncApi(IMSDK.IMMethods.Login, IMSDK.uuid(), userID, token)
   .then(() => {
-    // Login successful
+    // Successful login
   })
   .catch(() => {
     // Login failed
@@ -45,18 +118,18 @@ IMSDK.asyncApi(IMSDK.IMMethods.Login, IMSDK.uuid(), userID, token)
 const onConnectSuccess = () => {
   // Connection successful
 };
-// Set listener
+// Set up a listener
 IMSDK.subscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
-// Unsubscribe listener
+// Unsubscribe from the listener
 IMSDK.unsubscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
 ```
 
-### 3. Cloud Pack Custom Debug Base
+### 3. Cloud Build Custom Debug Base
 
-> Note: The package name needs to be consistent with the package name set when importing the cloud plugin in the first step.
+> Note: The package name must match the one set when importing cloud plugins in the first step.
 
 ![uni_build](./assets/uni_build.png)
 
-### 4. Start with Custom Debug Base
+### 4. Start the Custom Debug Base
 
 ![uni_run](./assets/uni_run.png)
