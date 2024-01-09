@@ -5,247 +5,149 @@ sidebar_position: 1
 
 # 🛠 Source Code Deployment
 
-## 🌟 System Requirements
-
-| **Consideration** | **Details**                                                |
-|------------------|----------------------------------------------------------|
-| Operating System | Linux system, preferably Ubuntu 22.04, root user         |
-| Hardware         | At least 4G of available memory, for user base <100,000 recommend single machine deployment (8C 16G 10Mb 1T) |
-| Golang           | v1.19 or higher                                           |
-| Docker           | v24.0.5 or higher                                         |
-| Git              | v2.17.1 or higher                                         |
-
-## 📦 Storage Component Requirements
-
-| **Storage Component** | **Recommended Version**  |
-|:---------------------:|:------------------------:|
-| MongoDB               | v6.0.2+                  |
-| Redis                 | v7.0.0+                  |
-| Zookeeper             | v3.8                     |
-| Kafka                 | 3.5.1                    |
-| MySQL                 | v5.7+                    |
-| MinIO                 | Latest version            |
+## 1. Environment and Component Requirements
+For server environment, system, and storage components, refer to [this document](./env-comp).
 
 ---
 
-> 🔍 **Note**: 
-> 
-> **OpenIMServer** itself does not include account registration and login services. To make development more convenient, we've open-sourced **AppServer (chat)**, which includes login and registration functionalities. Simply deploy **OpenIMServer** and **AppServer (chat)** to set up a complete chat product.
+## 2. Deploying OpenIM Server (IM)
 
----
+### 2.1 📡 Setting OPENIM_IP
 
-## 🟢 I. Component Deployment
-
-### 📦 1. **Clone the repository and switch to the release branch**
-
-```bash
-git clone https://github.com/openimsdk/open-im-server && cd open-im-server 
+```jsx
+# If the server has an external IP
+export OPENIM_IP="external IP"
+# If only providing internal network service
+export OPENIM_IP="internal IP"
 ```
 
-### 🌐 2. Set common environment variables
+### 2.2 🏗️ Deploying Components (mongodb/redis/zookeeper/kafka/MinIO, etc.)
 
----
-
-- **PASSWORD**
-    - **Description**: Password for mysql, mongodb, redis, and minio.
-    - **Default**: `openIM123`
-    - **Considerations**:
-      - Password length should be at least 8 characters.
-      - Special characters are not allowed.
-    ```bash
-    export PASSWORD="openIM123"
-    ```
-
-- **USER**
-    - **Description**: Username for mysql, mongodb, redis, and minio.
-    - **Default**: `root`
-    ```bash
-    export USER="root"
-    ```
-
-- **OPENIM_IP**
-  - **Description**: The IP address at which the API provides its services.
-  - **Default Value**: Automatically set when an external IP is available.
-  - **Notes**: Clients use this IP for access. It is automatically set when an external IP is available, but in an internal network environment, it needs to be set manually by replacing "ip" with the external service IP.
-    ```bash
-    export OPENIM_IP="ip"
-    ```
-- **DATA_DIR**
-    - **Description**: Directory for mounting component data.
-    - **Default**: `./`
-    ```bash
-    export DATA_DIR="./"
-    ```
-- **PROMETHEUS_ENABLE**
-
-  - **Description**: Flag to enable Prometheus
-  - **Default Value**: `false`
-
-  ```bash
-  export PROMETHEUS_ENABLE=true
-  ```
-> + **Description**: Detailed documentation and reference for deploying and configuring Prometheus and monitoring
-> + **Link**: [Prometheus and Monitoring Deployment Guide](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/prometheus-grafana.md)
-
----
-
-### 🔧 More environment variables
-
-To understand more about environment variables, we recommend reading [this document](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/environment.md).
-
-> 🚀 **Tip**: When you use the `export` command to set an environment variable, it will have higher priority than variables defined in scripts.
-
----
-
-### 3. Deploy components
-
-```bash
+```
+git clone https://github.com/OpenIMSDK/open-im-server && cd open-im-server
+# It's recommended to switch to the release-v3.5 or later release branches
 make init && docker compose up -d
 ```
 
-### 4. Check component status
+### 2.3 🛠️ Compiling
 
-```bash
-docker ps
+```
+make build
 ```
 
-![components](./assets/components.png)
+### 2.4 🚀 Starting/Stopping/Checking
 
-## II. OpenIMServer
-
-1. Compile
-
-```bash
-./scripts/build-all-service.sh
+```jsx
+# Start
+make start
+# Stop
+make stop
+# Check
+make check
 ```
 
-2. Start
+## 3. Deploying App Server (Chat)
 
-```bash
-./scripts/start-all.sh
+### 3.1 🏗️ Deploying Components (mysql)
+
+```
+# Return to the previous directory
+cd ..
+# Clone the repository. It's recommended to switch to the release-v1.5 or later release branches
+git clone https://github.com/OpenIMSDK/chat chat && cd chat
+# Deploy mysql
+docker run -d --name mysql2 -p 13306:3306 -p 33306:33060 -v "$(pwd)/components/mysql/data:/var/lib/mysql" -v "/etc/localtime:/etc/localtime" -e MYSQL_ROOT_PASSWORD="openIM123" --restart always mysql:5.7
 ```
 
-3. Check
+### 3.2 🛠️ Compiling
 
-```bash
-./scripts/check-all.sh
+```
+make init
+make build
 ```
 
-![im](./assets/im.png)
+### 3.3 🚀 Starting/Stopping/Checking
 
-4. Stop
-
-```bash
-./scripts/stop-all.sh
+```jsx
+# Start
+make start
+# Stop
+make stop
+# Check
+make check
 ```
 
-### Frequently Asked Questions
+## 4. Quick Verification
 
-#### 1. How to use external components?
+Please refer to the [Quick Verification](./quickTestServer) document.
 
-To use certain external components, such as an external MySQL, follow these steps:
+## 5. Admin Panel and Monitoring System
 
-1. Edit the `docker-compose.yml` file and comment out MySQL-related configurations.
-2. Edit the `scripts/install/environment.sh` file, then modify the IP, port, and password configurations for MySQL.
-3. Run the `make init` command to apply changes.
-4. Execute the `docker-compose up -d` command to start components.
+Please refer to the [Admin Panel and Monitoring System](./admin) document.
 
-#### 2. Start order
+## 6. About Modifying Configuration Items
 
-The startup order is as follows:
+### 6.1 🛠️ Modifying Shared Configuration Items
 
-- Storage-related components
-- open-im-server
-- chat
+| Configuration Item | Files to Modify | Operation |
+| --- | --- | --- |
+| mongo/kafka/minio related | .env, openim-server/config/config.yaml | Need to restart components and IM |
+| redis/zookeeper related | .env, openim-server/config/config.yaml, chat/config/config.yaml | Need to restart components, IM, and Chat |
+| SECRET | openim-server/config/config.yaml, chat/config/config.yaml | Need to restart IM and Chat |
 
-#### 3. Docker version
+### 6.2 🔄 Modifying Special Shared Configuration Items
 
-The newer versions of Docker have integrated `docker-compose` as a core feature. Thus, there's no need for separate `docker-compose` installation. If your Docker version is outdated, consider upgrading. The recommended version is `23.0.1`.
+Special configuration items: API_OPENIM_PORT/MINIO_PORT/OPENIM_IP/GRAFANA_PORT
 
-#### 4. Upgrade issues
+1. Modify the special configuration items in the `.env` file.
+2. Modify configurations in **`openim-server/config/config.yaml`** as per rules:
 
-If the component credentials remain the same, you can upgrade directly. However, ensure all processes are stopped before upgrading.
+```jsx
+object:
+  apiURL: "http://$OPENIM_IP:$API_OPENIM_PORT"
+  minio:
+    endpoint: "http://$DOCKER_BRIDGE_GATEWAY:$MINIO_PORT"
+    signEndpoint: "http://$OPENIM_IP:$MINIO_PORT"
 
-#### 5. Modifying component passwords
+grafanaUrl: http://$OPENIM_IP:$GRAFANA_PORT
+```
 
-To modify passwords after component launch:
+3. Modify configurations in **`chat/config/config.yaml`** as per rules:
 
-1. Stop the component's docker.
-2. If data isn't crucial, you can delete the entire `components` directory.
-3. Set a new password: `export PASSWORD=newpassword`.
-4. Start the component's docker to apply the new password.
+```jsx
+openIMUrl: "http://172.28.0.1:$API_OPENIM_PORT"
+```
 
-#### 6. Additional configurations
+4. Restart IM and Chat
 
-Avoid directly editing the `config/config.yaml` file. For more details, we recommend reading [this document](https://github.com/openimsdk/open-im-server/blob/main/docs/contrib/environment.md).
+### 6.3 🛠️ Modifying Other Configuration Items
 
-#### 7. Viewing logs
+For other configuration items in **`.env`**, **`chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**, these can be modified individually in the respective files.
 
-The location for logs:
+### 6.4 Modifying Ports
+Especially note that any modification of IM-related ports needs to be synchronized with the ports in open-im-server/scripts/install/environment.sh.
+
+## 7. Common Issues
+
+### 7.1 📜 Viewing Logs
+
+Log Locations:
 
 - Runtime logs: `logs/OpenIM.log.all.*`
 - Startup logs: `_output/logs/openim_*.log`
 
-## III. AppServer(chat)
+### 7.2 🚀 Startup Sequence
 
-1. Clone the repository and switch to the release branch (release-v1.3 and later versions)
+The startup sequence is as follows:
 
-```bash
-cd .. 
-git clone https://github.com/openimsdk/chat.git && cd chat
-```
+- Components IM depends on: mongo/redis/kafka/zookeeper/minio, etc.
+- **IM**
+- Components Chat depends on: mysql
+- **Chat**
 
-2. Compile
+### 7.3 🐳
 
-```bash
-./scripts/build_all_service.sh
-```
+ Docker Version
 
-3. Start
+The newer version of Docker has integrated docker-compose. Older versions of Docker may not support the gateway feature❌. We recommend upgrading to a newer version, such as `23.0.1`🔝.
 
-```bash
-./scripts/start_all.sh
-```
-
-4. Check
-
-```bash
-./scripts/check_all.sh --print-screen
-```
-
-![chat](./assets/chat.png)
-
-5. Stop
-
-```bash
-./scripts/stop_all.sh
-```
-
-### Frequently Asked Questions
-
----
-
-#### 1. If zk connection fails
-
-Ensure the `zookeeper` IP and port are configured correctly. If you changed the `zookeeper` configuration during component deployment, modify the corresponding `zookeeper` configuration in the `config/config.yaml` file.
-
----
-
-#### 2. If user registration fails
-
-First, confirm that the `openIMUrl` IP and port are configured correctly. If you changed the IP or port of `OpenIMServer` during component deployment, then you should modify the `openIMUrl` configuration in the `config/config.yaml` file to ensure `chat` can access `OpenIMServer`.
-
----
-
-#### 3. Viewing logs
-
-All log files are stored in the `logs` directory:
-
-- `openIM.log`: Logs startup details.
-- `chat.log.*`: Logs runtime details.
-
----
-
-## IV. Quick Verification
-
-For a quick test, please refer to the [Quick Verification](./quickTestServer) documentation.

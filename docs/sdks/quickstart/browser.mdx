@@ -11,7 +11,7 @@ sidebar_position: 5
 
 
 
-## 集成步骤(Webpack5+)
+## 集成步骤(Vite/Webpack5+)
 
 ### 1. 添加依赖
 
@@ -40,7 +40,7 @@ wasm_exec.js
 ```ts
 import { getSDK } from 'open-im-sdk-wasm';
 
-const OpenIM = getSDK();
+const IMSDK = getSDK();
 ```
 
 - 可能遇到的问题
@@ -49,67 +49,73 @@ const OpenIM = getSDK();
 - 解决方案
   > 在 webpack 配置中新增配置如下
 
-```bash
-resolve: {
-      fallback: {
-        path: false,
-        crypto: false,
+  ```bash
+  resolve: {
+        fallback: {
+          fs: false,
+          path: false,
+          crypto: false,
+        },
       },
-    },
-```
+  ```
 
-## 集成步骤(Vite、Webpack4)
-
-> 第一、二步同上 Webpack5+引入步骤。
-
-### 引入 SDK
-
-#### 将 npm 包中的 lib 目录拷贝到项目中，如：src/utils/lib
-
-#### 如果是 Webpack4,还需要引入 woker loader
-
-- 安装`worker-loader`和`worker-plugin`
-
-```bash
-npm install worker-loader worker-plugin -D
-```
-
-- 在 webpack 中新增配置
-
-```js
-const WorkerPlugin = require("worker-plugin");
-
-...
-plugins: [new WorkerPlugin()]
-...
-```
-
-#### 修改 lib/api/index.js 文件中对 web worker 的引入方式。
-
-- Webpack4.x
-
-```js
-+ import IMWorker from 'worker-loader!./worker.js';
-
-- worker = new Worker(new URL('./worker.js', import.meta.url));
-+ worker = new IMWorker();
-```
-
-- Vite
-
-```js
-+ import IMWorker from './worker?worker';
-
-- worker = new Worker(new URL('./worker.js', import.meta.url));
-+ worker = new IMWorker();
-```
-
-#### 引入
-
-> 路径为拷贝后放置`lib`的路径
+### 4. 登录、设置监听
 
 ```ts
-import { getSDK } from '@/utils/lib';
+import { getSDK, CbEvents } from 'open-im-sdk-wasm';
 
-const OpenIM = getSDK();
+const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnConnecting, () => {
+  // 连接中
+})
+IMSDK.on(CbEvents.OnConnectSuccess, () => {
+  // 连接成功
+})
+IMSDK.on(CbEvents.OnConnectFailed, () => {
+  // 连接失败
+})
+IMSDK.on(CbEvents.OnUserTokenExpired, () => {
+  // token无效
+})
+
+IMSDK.login({
+    userID: string;       // IM 用户 userID
+    token: string;        // IM 用户令牌
+    platformID: number;   // 当前登录平台号，web端为5
+    apiAddr: string;   // IM api 地址，一般为`http://your-server-ip:10002`
+    wsAddr: string;    // IM ws 地址，一般为`ws://your-server-ip:10001`
+})
+  .then(() => {
+    // 登录完成
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 登录失败
+  });
+```
+
+### 5. 收发消息
+
+```ts
+import { getSDK, CbEvents } from 'open-im-sdk-wasm';
+
+const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnRecvNewMessages, ({ data: messages }) => {
+  // 收到新消息
+})
+
+const { data: message } = await IMSDK.createTexeMessage('hello openim')
+
+IMSDK.sendMessage({
+  recvID: string; // 接收方ID
+  groupID: string; // 群聊ID
+  message: message; // 要发送的消息体
+}).then(({data:succeedMessage}) => {
+  // 发送成功 succeedMessage为发送成功后完整的消息体
+}).catch(({ errCode, errMsg }) => {
+  // 发送失败
+})
+```
+
 ```
