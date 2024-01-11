@@ -5,45 +5,53 @@ sidebar_position: 6
 ---
 
 ## 🚀使用 Demo
-我们强烈建议您首先运行我们为您准备的框架相关的示例 [DEMO](https://github.com/OpenIMSDK/Open-IM-PC-Web-Demo) 。这不仅可以让您直观体验 OpenIMSDK 的功能，还将帮助您在实际集成过程中迅速定位和解决问题。
+我们强烈建议您首先运行我们为您准备的框架相关的示例 [DEMO](https://github.com/openimsdk/open-im-uniapp-demo) 。这不仅可以让您直观体验 OpenIMSDK 的功能，还将帮助您在实际集成过程中迅速定位和解决问题。
 
+## 提示
 
+### 1. 服务端准备
 
+- 如果使用到 [纯 JS 版本 SDK](docs/sdks/quickstart/miniProgram.mdx) ，服务端除了部署 `OpenIM Server` 还需要额外部署 [OIMWS](https://github.com/openim-sigs/oimws)。
+
+### 2. 仅开发 H5/小程序
+
+- 使用 uniapp 开发 h5 和 小程序 (或原生小程序) 直接使用 [纯 JS 版本 SDK](docs/sdks/quickstart/miniProgram.mdx) ，***不需要*** 参考下面步骤。
+
+---
 
 ## 集成步骤
 
+包含 APP 端开发，**必须** 按照下面的步骤，使用云插件导入 SDK ，使用 npm 包调用。因为 APP 端的实现方式都是通过 [App 原生语言插件](https://uniapp.dcloud.net.cn/plugin/native-plugin.html) 实现。
+
 ### 1. 添加依赖
 
-> 官方插件已上传至[dcloud 插件市场](https://ext.dcloud.net.cn/plugin?id=6577)
+> 官方插件已上传至 [dcloud 插件市场](https://ext.dcloud.net.cn/plugin?id=6577)
 
 - 选择对应项目和包名引入 SDK
 
 ![uni_import](./assets/uni_import.png)
 
-- 打开引入 SDK 项目根目录下`manifest.json`文件，选择**App 原生插件配置**，选择云端插件进行导入。
+- 打开引入 SDK 项目根目录下 `manifest.json` 文件，选择 **App 原生插件配置**，选择云端插件进行导入。
 
 ![uni_import_manifest](./assets/uni_import_manifest.png)
 
 - 下载 npm 包，简化对 SDK 的引入和使用，并封装 API 为 Promse 形式。
 
+> openim-uniapp-polyfill >= 1.2.0 以上版本在非 APP 端情况下使用 [纯 JS 版本 SDK](docs/sdks/quickstart/miniProgram.mdx) 。
+
 ```bash
-npm install openim-uniapp-polyfill
+npm install openim-uniapp-polyfill open-im-sdk
 ```
 
-### 2. 在项目中引入
+### 2. 在项目中引入 ( 纯 APP 项目 )
 
-```js
+```javascript
 import IMSDK from 'openim-uniapp-polyfill';
 
-const userID = '';
-const token = '';
-IMSDK.asyncApi(IMSDK.IMMethods.Login, IMSDK.uuid(), userID, token)
-  .then(() => {
-    // 登录成功
-  })
-  .catch(() => {
-    // 登录失败
-  });
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID: '123',
+  token: 'token',
+});
 
 const onConnectSuccess = () => {
   // 连接成功
@@ -54,12 +62,75 @@ IMSDK.subscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
 IMSDK.unsubscribe(IMSDK.IMEvents.OnConnectSuccess, onConnectSuccess);
 ```
 
-### 3. 云打包自定义调试基座
+### 3. 在项目中引入 ( APP + H5/小程序 项目 )
 
-> 注意：包名需要与第一步引入云插件时设置的包名一致
+> 需要使用云插件导入 SDK ，新版 npm 包在非 APP 端，使用 [纯 JS 版本 SDK](docs/sdks/quickstart/miniProgram.mdx) 。
+
+- 注意1： `openim-uniapp-polyfill` 版本需要 >= 1.2.0
+
+- 注意2：监听器使用 uniapp 的方式调用监听器，传入 `IMSDK.IMEvents` 中的方法，因为 JSSDK 与 APP 的监听器大小写有区别 , npm 包中已经做自动转换。
+
+- 注意3：在部分 API 中不同端可能因为平台的支持，用法上会有所区别，使用时查看对应平台 API 的文档，注意差别：
+  - 要根据平台去传入正确的 platformID
+  - Login API 参数不一致
+  - 安卓/iOS 需要 [initSDK](docs/sdks/api/initialization/initSDK.mdx) 后才能使用
+  - 创建图片、文件消息使用的 API 不一致，要使用 **条件编译** 调用不同的方法。
+  - 其他...
+
+#### 3.1 跨平台情况下使用方式
+
+> 方法一 ：跨平台参数和方法名一致情况下，使用 uniapp 的方式来调用。
+
+- 此为多端兼容式写法，在跨平台情况下，要检查 API 返回内容结构是否一致。
+
+```javascript
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('createTextMessage', IMSDK.uuid(), 'text')
+  .then((data) => {
+    // do something
+  })
+```
+
+> 方法二 ：跨平台参数和方法名不一致情况下，使用 [条件编译](https://uniapp.dcloud.net.cn/tutorial/platform.html) 处理参数差异较大的方法。
+
+- APP 端需要调用 [initSDK](docs/sdks/api/initialization/initSDK.mdx) 后才能使用。
+
+```javascript
+import IMSDK from 'openim-uniapp-polyfill';
+
+// #ifdef H5 || MP-WEIXIN
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID : '123',
+  token: 'token',
+  platformID: 5,
+  wsAddr: 'ws://your-server-ip:10003',
+  apiAddr: 'http://your-server-ip:10002',
+});
+// #endif
+
+// #ifdef APP-PLUS
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID: '123',
+  token: 'token',
+});
+// #endif
+```
+
+### 4. 🛠️ 本地开发
+
+#### 4.1 制作自定义调试基座
+
+> 注意：包名需要与第一步引入云插件时设置的包名一致。
 
 ![uni_build](./assets/uni_build.png)
 
-### 4. 已自定义调试基座启动
+#### 4.2. 运行到自定义调试基座启动
+
+> 本地进行 APP 端调试时，必须打包自定义基座，在启动自定义基座进行调试。
 
 ![uni_run](./assets/uni_run.png)
+
+### 5. 🚀 打包发布
+
+> APP 端打包发布时，使用 发行 -> 原生APP云打包。

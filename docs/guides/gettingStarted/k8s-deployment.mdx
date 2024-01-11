@@ -37,52 +37,7 @@ CPU: 4
 
 此时，配置文件将在`deployments/openim/config`下生成，您可以根据需要进行修改。
 
-## 集群设置
 
-如果你已经有一个`kubernetes`集群，或者你希望从头开始构建一个`kubernetes`集群，你可以跳过这一步。
-
-为了快速启动，我使用[sealos](https://github.com/labring/sealos)迅速建立集群，sealos在其核心也是kubeadm的封装：
-
-```bash$ SEALOS_VERSION=`curl -s https://api.github.com/repos/labring/sealos/releases/latest | grep -oE '"tag_name": "[^"]+"' | head -n1 | cut -d'"' -f4` && \
-  curl -sfL https://raw.githubusercontent.com/labring/sealos/${SEALOS_VERSION}/scripts/install.sh |
-  sh -s ${SEALOS_VERSION} labring/sealos
-```
-
-**支持的版本:**
-
-+ docker: `labring/kubernetes-docker`:(v1.24.0~v1.27.0)
-+ containerd: `labring/kubernetes`:(v1.24.0~v1.27.0)
-
-#### 集群安装：
-
-集群的详细信息如下：
-
-| 主机名   | IP地址    | 系统信息                                                     |
-| -------- | --------- | ------------------------------------------------------------ |
-| master01 | 10.0.0.9  | `Linux VM-0-9-ubuntu 5.15.0-76-generic #83-Ubuntu SMP Thu Jun 15 19:16:32 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux` |
-| node01   | 10.0.0.4  | 与master01相似                                               |
-| node02   | 10.0.0.10 | 与master01相似                                               |
-
-```bash$ export CLUSTER_USERNAME=ubuntu
-$ export CLUSTER_PASSWORD=123456
-$ sudo sealos run labring/kubernetes:v1.25.0 labring/helm:v3.8.2 labring/calico:v3.24.1 \
-    --masters 10.0.0.9 \
-    --nodes 10.0.0.4,10.0.0.10 \
-    -u "$CLUSTER_USERNAME" \
-    -p "$CLUSTER_PASSWORD"
-```
-
-> **注意** 卸载方法：使用`kubeadm`进行卸载并不会删除`etcd`和`cni`相关的配置。需要手动清除或使用`sealos`进行卸载。
->
-> ```bash
-> $ sealos reset
-> ```
-
-如果您在本地，您还可以使用Kind和Minikube进行测试，例如使用Kind：
-
-```bash$ GO111MODULE="on" go get sigs.k8s.io/kind@v0.11.1
-$ kind create cluster
-```
 
 ### 安装helm
 
@@ -138,5 +93,53 @@ mkdir ./charts/generated-configs
 ../scripts/genconfig.sh ../scripts/install/environment.sh ./templates/openim.yaml > ./charts/generated-configs/config.yaml
 cp ../config/notification.yaml ./charts/generated-configs/notification.yaml
 ../scripts/genconfig
+```
+
+
+## 集群设置参考
+
+如果你已经有一个`kubernetes`集群，或者你希望从头开始构建一个`kubernetes`集群，你可以跳过这一步。
+
+为了快速启动，我使用[sealos](https://github.com/labring/sealos)迅速建立集群，sealos在其核心也是kubeadm的封装：
+
+```bash$ SEALOS_VERSION=`curl -s https://api.github.com/repos/labring/sealos/releases/latest | grep -oE '"tag_name": "[^"]+"' | head -n1 | cut -d'"' -f4` && \
+  curl -sfL https://raw.githubusercontent.com/labring/sealos/${SEALOS_VERSION}/scripts/install.sh |
+  sh -s ${SEALOS_VERSION} labring/sealos
+```
+
+**支持的版本:**
+
++ docker: `labring/kubernetes-docker`:(v1.24.0~v1.27.0)
++ containerd: `labring/kubernetes`:(v1.24.0~v1.27.0)
+
+#### 集群安装：
+
+集群的详细信息如下：
+
+| 主机名   | IP地址    | 系统信息                                                     |
+| -------- | --------- | ------------------------------------------------------------ |
+| master01 | 10.0.0.9  | `Linux VM-0-9-ubuntu 5.15.0-76-generic #83-Ubuntu SMP Thu Jun 15 19:16:32 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux` |
+| node01   | 10.0.0.4  | 与master01相似                                               |
+| node02   | 10.0.0.10 | 与master01相似                                               |
+
+```bash$ export CLUSTER_USERNAME=ubuntu
+$ export CLUSTER_PASSWORD=123456
+$ sudo sealos run labring/kubernetes:v1.25.0 labring/helm:v3.8.2 labring/calico:v3.24.1 \
+    --masters 10.0.0.9 \
+    --nodes 10.0.0.4,10.0.0.10 \
+    -u "$CLUSTER_USERNAME" \
+    -p "$CLUSTER_PASSWORD"
+```
+
+> **注意** 卸载方法：使用`kubeadm`进行卸载并不会删除`etcd`和`cni`相关的配置。需要手动清除或使用`sealos`进行卸载。
+>
+> ```bash
+> $ sealos reset
+> ```
+
+如果您在本地，您还可以使用Kind和Minikube进行测试，例如使用Kind：
+
+```bash$ GO111MODULE="on" go get sigs.k8s.io/kind@v0.11.1
+$ kind create cluster
 ```
 

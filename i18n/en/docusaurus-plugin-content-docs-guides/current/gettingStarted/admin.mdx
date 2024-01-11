@@ -1,27 +1,182 @@
 ---
-title: 'Admin Panel and Monitoring System'
+title: 'Monitoring and Alert System'
 sidebar_position: 6
 ---
 
-# Admin Panel 🖥️
-### 🟢 Open Ports
+## Component Description
+When deploying with Docker Compose, the following components will be automatically deployed. For source code deployment, these components must be manually enabled in docker-compose.yaml.
 
-| TCP Port | Description                | Actions ⚙️                                  |
-|:--------:|:--------------------------:|:-------------------------------------------:|
-| TCP:11002| Access admin panel at `http://ip:11002` | Open the port or use nginx for reverse proxy, and disable the firewall |
+| Component Name | Description | Deployment Instructions |
+| -------------- | ----------- | ----------------------- |
+| openim-admin   | Admin backend providing a monitoring page entry. | Automatically enabled in Docker and source code deployments. |
+| prometheus     | Monitoring system component for collecting and storing metric data. | Automatically enabled in Docker deployments; manual enablement required for source code deployments. |
+| alertmanager   | Component for managing and sending alerts. | Automatically enabled in Docker deployments; manual enablement required for source code deployments. |
+| grafana        | Dashboard component for displaying monitoring data. | Automatically enabled in Docker deployments; manual enablement required for source code deployments. |
+| node-exporter  | Collects node (e.g., server) metric information. | Automatically enabled in Docker deployments; manual enablement required for source code deployments. |
 
-## 📌 Accessing the Admin Panel
+## Configuration File Description
 
-:::tip
-Enter `http://ip:11002` in your browser to access the admin panel. This IP should be the server's IP, and ensure your browser can access it. The default username and password are both admin1.
-:::
+| File Name                      | File Description | Modification Items |
+| ------------------------------ | ---------------- | ------------------ |
+| config/config.yaml             | OpenIM service configuration | prometheus.enable: true indicates enabling |
+| config/prometheus.yml          | Prometheus configuration | No modifications required |
+| config/instance-down-rules.yml | Alert rules | Two default rules configured (instance_down, database_insert_failure_alerts) |
+| config/alertmanager.yml        | Alert management configuration | Sender and recipient email information must be configured |
+| config/email.tmpl              | Email alert template | Default email template, modifiable |
+| config/templates/prometheus-dashboard.yaml | Custom dashboard | No modifications required |
 
-import Image3 from './assets/admin.jpg';
+## Logging into the Admin Backend
 
-<img src={Image3} width="700" alt="PC Web Interface" />
+Enter `http://ip:11002` in the browser to access the admin backend. This IP is the server OPENIM_IP; ensure your browser can access it. The default username and password are both chatAdmin.
 
-# Monitoring System
+import Image4 from './assets/admin.jpg';
 
-## Deployment
+<img src={Image4} width="700" alt="admin" />
 
-## Experience
+## Logging into Grafana
+
+First, log into the admin backend, then click the data monitoring menu on the left, enter the default username (admin) and password (admin) to log into Grafana.
+
+![PC Web Interface](./assets/login1.png)
+
+## Adding Prometheus Data Source
+
+As shown below, enter the URL of the Prometheus data source: http://172.28.0.1:19090 (19090 is the default Prometheus port) and click "Save and Test" to save.
+
+![PC Web Interface](./assets/database.png)
+
+![PC Web Interface](./assets/database2.png)
+
+## Importing a Custom Dashboard
+
+Click the import button as shown below to import the dashboard.
+
+![PC Web Interface](./assets/dashboard.png)
+
+Copy the content from https://github.com/openimsdk/open-im-server/tree/main/config/templates/prometheus-dashboard.yaml into the area shown below, then click the load button.
+
+![PC Web Interface](./assets/dashboard2.png)
+
+Select your Data Source and job, customize metric information as shown below.
+
+![PC Web Interface](./assets/dashboard3.png)
+
+## Importing node-exporter's Dashboard
+
+Enter 1860 to import, or find other node-exporter dashboard views on the official website (https://grafana.com/grafana/dashboards/).
+
+![PC Web Interface](./assets/dashboard4.png)
+
+node-exporter metric information, as shown below.
+
+![PC Web Interface](./assets/dashboard5.png)
+
+
+## Alert Configuration File Explanation
+
+1. **Email Alert Architecture Diagram**: The Prometheus component loads the `instance-down-rules.yml` file for alert rules, sending qualifying alert information to the Alertmanager component. Alertmanager loads the `alertmanager.yml` and `email.tmpl` files, sending emails using configured alert email information and templates.
+   ![PC Web Interface](./assets/alert2.png)
+
+2. **prometheus.yml File Explanation**: Mainly used to configure the path of the alert rules file, alert management service address, and IP addresses for monitoring data capture. Default settings usually require no modification.
+   ```
+   # Alertmanager configuration
+   alerting:
+   alertmanagers:
+   - static_configs:
+   - targets: ['172.28.0.1:19093']
+
+   # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+   rule_files:
+     - "instance-down-rules.yml"
+   ```
+
+3. **instance-down-rules.yaml File Explanation**: By default, two email alert rules are implemented (instance_down, database_insert_failure_alerts). To add more alert rules, they can be included in the `instance-down-rules.yml` file:
+   ```
+   groups:
+   - name: instance_down  # Alert Rule One: Triggers if a monitoring module crashes for over a minute
+     rules:
+       - alert: InstanceDown
+         expr: up == 0
+         for: 1m
+         labels:
+           severity: critical
+         annotations:
+           summary: "Instance {{ $labels.instance }} down"
+           description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes."
+
+   - name: database_insert_failure_alerts # Alert Rule Two: Triggers if there's an increase in msg_insert_redis_failed_total and msg_insert_mongo_failed_total
+     rules:
+       - alert: DatabaseInsertFailed
+         expr: (increase(msg_insert_redis_failed_total[5m]) > 0) or (increase(msg_insert_mongo_failed_total[5m]) > 0)
+         for: 1m
+         labels:
+           severity: critical
+         annotations:
+           summary: "Increase in MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter detected"
+           description: "Either MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter has increased in the last 5 minutes, indicating failures in message insert operations to Redis or MongoDB, maybe the redis or mongodb is crash."
+   ```
+
+4. **alertmanager.yml File Explanation**: Modify the sender and receiver email configuration information to receive alert messages. To implement alerts through DingTalk, WeChat Work, or other means, you need to rewrite `alertmanager.yml`. Official documentation for the alert management module can be referred to here: https://prometheus.io/docs/alerting/latest/alertmanager/
+   ```
+   global:
+     resolve_timeout: 5m
+     smtp_from: alert@openim.io # Alert sending email
+     smtp_smarthost: smtp.163.com:465 # SMTP address for sending email
+     smtp_auth_username: alert@openim.io # Email authorization username, usually same as smtp_from
+     smtp_auth_password: YOURAUTHPASSWORD # Email authorization code
+     smtp_require_tls: false
+     smtp_hello: openim alert
+
+   templates:
+     - /etc/alertmanager/email.tmpl # Email template
+
+   route:
+     group_by: ['alertname']
+     group_wait: 5s
+     group_interval: 5s
+     repeat_interval: 5m
+     receiver: email
+   receivers:
+     - name: email
+       email_configs:
+         - to: 'alert@example.com' # Receiving alert email
+           html: '{{ template "email.to.html" . }}'
+           headers: { Subject: "[OPENIM-SERVER]Alarm" }# Email title
+           send_resolved: true
+   ```
+
+
+
+
+
+5. Email Template File email.tmpl Explanation: This file is in HTML format. The alarm management module will fill in the variable information inside it, and then render it into an HTML format file for email sending. It can be rewritten according to your needs:
+
+```
+{{ define "email.to.html" }}
+{{ range .Alerts }}
+<!-- Begin of OpenIM Alert -->
+<div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+    <h3>OpenIM Alert</h3>
+    <p><strong>Alert Program:</strong> Prometheus Alert</p>
+    <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
+    <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
+    <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
+    <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
+    <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
+    <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+</div>
+<!-- End of OpenIM Alert -->
+{{ end }}
+{{ end }}
+```
+
+## Alarm Experience
+You can manually trigger the instancedown alarm rule. If you have deployed OpenIM from source code, execute the `make stop` command to stop the openim-server service. Wait for more than 5 minutes, and you will receive an alarm email as shown below:
+
+![PC Web Interface](./assets/alert6.png)
+
+## Logging System
+If OpenIM service is deployed in a k8s environment using the helm chart method, you can view the logs of all OpenIM services through Grafana. Currently, binary and Docker deployments do not integrate the Loki logging collection component. To experience the Loki logging collection function, please use the helm chart deployment.
+For more details, please visit https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
+
+

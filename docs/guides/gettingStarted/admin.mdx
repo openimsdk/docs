@@ -1,43 +1,185 @@
 ---
-title: '管理后台及监控系统'
+title: '监控及告警系统'
 sidebar_position: 6
 ---
 
 
 
+## 组件说明
+docker compose部署时，会自动部署如下组件，如使用源码部署，需手动开启docker-compose.yaml中的相关组件。
 
-# 管理后台 🖥️
-### 🟢 开放端口
+| 组件名称       | 组件说明                                      | 部署说明                                    |
+|-------------|-----------------------------------------|--------------------------------------|
+| openim-admin | 管理后台，提供监控页面入口                           | Docker和源码部署均自动开启                     |
+| prometheus  | 用于收集和存储指标数据的监控系统组件                     | Docker部署自动开启；源码部署需手动启用         |
+| alertmanager | 管理和发送告警的组件                               | Docker部署自动开启；源码部署需手动启用         |
+| grafana     | 用于展示监控数据的仪表板组件                         | Docker部署自动开启；源码部署需手动启用         |
+| node-exporter | 用于采集节点（如服务器）指标信息 | Docker部署自动开启；源码部署需手动启用         |
 
-| TCP 端口  | 说明                    | 操作 ⚙️                                      |
-|:--------:|:-----------------------:|:--------------------------------------------:|
-| TCP:11002| `http://ip:11002` 访问管理后台 | 端口放行或 nginx 反向代理，并关闭防火墙 |
 
-## 📌 访问管理后台
 
-:::tip
-在浏览器中输入 `http://ip:11002` 来访问管理后台。此 ip 为服务端 ip ，且确保您的浏览器能访问。默认账号和密码均为admin1
-:::
 
-import Image3 from './assets/admin.jpg';
 
-<img src={Image3} width="700" alt="PC Web Interface" />
+
+## 配置文件说明
+
+
+| 文件名称  | 文件说明                    | 修改项                       |
+|--------|-----------------------|--------------------------------------------|
+| config/config.yaml| openIM服务配置 | prometheus.enable: true表示启用|
+| config/prometheus.yml| prometheus配置  | 无需修改 |
+| config/instance-down-rules.yml| 告警规则  | 默认配置两条规则(instance_down, database_insert_failure_alerts)|
+| config/alertmanager.yml| 告警管理配置  |  需配置发送者和接收者邮箱信息 |
+| config/email.tmpl| 邮件告警模版 | 默认邮件模版，可自行修改 |
+| config/templates/prometheus-dashboard.yaml| 自定义dashboard | 无需修改 |
+
+
+## 登录管理后台
+
+在浏览器中输入 `http://ip:11002` 来访问管理后台。此 IP 为服务端 OPENIM_IP，确保您的浏览器能访问。默认账号和密码均为 chatAdmin
+
+
+import Image4 from './assets/admin.jpg';
+
+<img src={Image4} width="700" alt="admin " />
+
+
+
+## 登录grafana
+先登录管理后台，再点击左侧数据监控菜单，输入默认用户名(admin)和密码(admin)登入grafana.
+![PC Web Interface](./assets/login1.png)
+
+## 添加Prometheus数据源
+如下图，输入Prometheus数据源的URL: http://172.28.0.1:19090 (19090为Prometheus默认端口)  点击"Save and Test"保存.
+![PC Web Interface](./assets/database.png)
+
+
+![PC Web Interface](./assets/database2.png)
+
+
+## 导入自定义dashboard
+点击下图的import按钮，导入仪表盘
+![PC Web Interface](./assets/dashboard.png)
+
+
+拷贝 https://github.com/openimsdk/open-im-server/tree/main/config/templates/prometheus-dashboard.yaml 内容到下图区域，接着点击load按钮
+![PC Web Interface](./assets/dashboard2.png)
+
+
+选择你的 Data Source和job , 自定义指标信息，如下图
+![PC Web Interface](./assets/dashboard3.png)
+
+## 导入node-export的dashboard
+填入1860再导入，或在官网( https://grafana.com/grafana/dashboards/ )寻找其他的node-exporter dashboard视图
+
+
+![PC Web Interface](./assets/dashboard4.png)
+
+node-exporter指标信息，如下图
+![PC Web Interface](./assets/dashboard5.png)
+
+
+
+## 告警配置文件说明
+
+1,邮件告警架构说明图：Prometheus组件加载告警规则instance-down-rules.yml文件，将符合条件的告警信息发送到alertmanager组件，alertmanager组件加载alertmanager.yml和email.tmpl文件，通过配置的告警邮箱信息和邮件模版发送邮件
+![PC Web Interface](./assets/alert2.png)
+
+2,prometheus.yml 文件说明：主要用来配置告警规则文件路径，告警管理服务地址，抓取监控数据ip地址。默认不需要修改。
+```
+
+# Alertmanager configuration
+alerting:
+alertmanagers:
+- static_configs:
+- targets: ['172.28.0.1:19093']
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "instance-down-rules.yml"
+
+```
+3，告警规则instance-down-rules.yaml文件说明：默认实现了两条(instance_down,database_insert_failure_alerts)邮件告警规则，如果增加告警规则可以在instance-down-rules.yml文件中添加规则:
+```
+groups:
+  - name: instance_down  #报警规则一:监控模块宕机超过一分钟就触发告警
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes."
+
+  - name: database_insert_failure_alerts #报警规则二:监控指标msg_insert_redis_failed_total和msg_insert_mongo_failed_total有增长就触发报警
+    rules:
+      - alert: DatabaseInsertFailed
+        expr: (increase(msg_insert_redis_failed_total[5m]) > 0) or (increase(msg_insert_mongo_failed_total[5m]) > 0)
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Increase in MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter detected"
+          description: "Either MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter has increased in the last 5 minutes, indicating failures in message insert operations to Redis or MongoDB,maybe the redis or mongodb is crash."
+```
+
+4，告警管理alertmanager.yml文件说明：修改发送者和接收者邮箱配置信息，即可接收告警信息，如果想实现钉钉，企业微信等方式的告警通知，需要自行改写alertmanager.yml，可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
+```
+global:
+  resolve_timeout: 5m
+  smtp_from: alert@openim.io #告警信息发送邮箱
+  smtp_smarthost: smtp.163.com:465 #发送邮箱smtp地址
+  smtp_auth_username: alert@openim.io #发送邮箱授权用户名，一般和smtp_from邮箱相同
+  smtp_auth_password: YOURAUTHPASSWORD #发送邮箱授权码
+  smtp_require_tls: false
+  smtp_hello: openim alert
+
+templates:
+  - /etc/alertmanager/email.tmpl #邮件模版
+
+route:
+  group_by: ['alertname']
+  group_wait: 5s
+  group_interval: 5s
+  repeat_interval: 5m
+  receiver: email
+receivers:
+  - name: email
+    email_configs:
+      - to: 'alert@example.com' #接收告警邮箱
+        html: '{{ template "email.to.html" . }}'
+        headers: { Subject: "[OPENIM-SERVER]Alarm" }#邮件标题
+        send_resolved: true
+```
+5，邮件模版文件email.tmpl说明：此文件是html格式，告警管理模块会填充里面的变量信息，然后渲染成html格式文件，进行邮件的发送，可根据需求自行改写:
+```
+{{ define "email.to.html" }}
+{{ range .Alerts }}
+<!-- Begin of OpenIM Alert -->
+<div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+    <h3>OpenIM Alert</h3>
+    <p><strong>Alert Program:</strong> Prometheus Alert</p>
+    <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
+    <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
+    <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
+    <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
+    <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
+    <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+</div>
+<!-- End of OpenIM Alert -->
+{{ end }}
+{{ end }}
 ```
 
 
+## 告警体验
+可手动触发instancedown告警规则，如果是源码部署openim方式，执行 `make stop`命令停止openim-server服务，等待5m分钟以上，即可收到告警邮件，内容如下：
 
+![PC Web Interface](./assets/alert6.png)
 
-
-# 监控系统
-
-
-
-## 部署
-
-
-
-
-## 体验
-
-
-
+## 日志系统
+如果是在k8s环境通过helm chart方式部署的OpenIM服务，即通过grafana查看OpenIM所有服务的日志信息。
+目前二进制和docker部署没有集成loki日志收集组件，想体验loki日志收集功能，请采用helm chart部署，
+详情请查阅链接https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
