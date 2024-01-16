@@ -1,194 +1,197 @@
 # Nginx Domain Configuration
 ### 1. Prerequisites
->(1) Successful startup of open-im-server and chat (the configuration of minio in open-im-server needs to be changed, see: Step 3 for details)
+>(1) Successful startup of open-im-server and chat (configuration of minio in open-im-server needs to be changed, refer to Step 3)
 
->(2) Successful installation of Nginx (SSL module also installed)
+>(2) Successful installation of Nginx (including SSL module)
 
->(3) Successful application for two SSL certificates
+>(3) Successful application for two SSL certificates: test-web.rentsoft.cn, test-admin.rentsoft.cn
 
-### 2. Configuring the nginx.conf File
-Assuming Nginx is installed in the **/usr/local** directory
+>(4) Ports 443 and 80 are open
 
-Modify the **/usr/local/nginx/conf/nginx.conf** file according to the following template:
+### 2. Domain Configuration Reference
+Taking the Nginx installation directory **/usr/local** as an example,
+create a **config.conf** file in the **/usr/local/nginx** directory, paste the following template into the **/usr/local/nginx/config.conf** file,
+and import the newly created config.conf file into the general configuration file **/usr/local/nginx/nginx.conf**
+>tips: Pay attention to replacing the domain names, SSL certificate paths, and SSL keys in the domain configuration template
 
 ```
-worker_processes  1;
-
-events {
-    worker_connections  1024;
+#open-im-server chat Corresponding deployment address and port
+upstream msg_gateway{
+    #IM Message server address Multiple can be specified according to the deployment
+    server 127.0.0.1:10001;
+}
+upstream im_api{
+    #IM Group user api server address Multiple can be specified according to the deployment
+    server 127.0.0.1:10002;
+}
+upstream im_chat_api{
+    #IM Business version login registration server address Multiple can be specified according to the deployment
+    server 127.0.0.1:10008;
+}
+upstream im_admin_api{
+    #IM The admin address of the commercial version can specify multiple units according to the deployment situation
+    server 127.0.0.1:10009;
+}
+upstream minio_s3_2{
+    #Minio address can be assigned to multiple modules depending on deployment
+    server 127.0.0.1:10005;
+}
+upstream pc_web{
+    #PC web address can be validate
+    server 127.0.0.1:11001;
+}
+upstream openim_admin{
+    #Admin backend address can be used for validation
+    server 127.0.0.1:11002;
 }
 
-http {
-    include       mime.types;
-    default_type  application/octet-stream;
-    sendfile        on;
-    keepalive_timeout  65;
+# Take the domain name "test-web.rentsoft.cn" for example
+server {
+    listen       443; #Listening on port 443
+    server_name  test-web.rentsoft.cn;  #Your domain name
+    ssl on;
+    #Path of pem file for ssl certificate
+    ssl_certificate /usr/local/nginx/conf/ssh/test-web.rentsoft.cn_bundle.pem;
+    #Key file path of ssl certificate
+    ssl_certificate_key /usr/local/nginx/conf/ssh/test-web.rentsoft.cn.key;
 
-    # open-im-server chat Corresponding deployment address and port
-    upstream msg_gateway{
-        server 127.0.0.1:10001;    #IM Message server address Multiple can be specified according to the deployment
-    }
-    upstream im_api{
-        server 127.0.0.1:10002;    #IM Group user api server address Multiple can be specified according to the deployment
-    }
-    upstream im_chat_api{
-        server 127.0.0.1:10008;    #IM Business version login registration server address Multiple can be specified according to the deployment
-    }
-    upstream im_admin_api{
-        server 127.0.0.1:10009;    #IM The admin address of the commercial version can specify multiple units according to the deployment situation
-    }
-    upstream minio_s3_2{
-        server 127.0.0.1:10005;    #Minio address can be assigned to multiple modules depending on deployment
-    }
-    upstream pc_web{
-        server 127.0.0.1:11001;    #PC web address can be validate
-    }
-    upstream openim_admin{
-        server 127.0.0.1:11002;    #Admin backend address can be used for validation
-    }
+    gzip on;
+    gzip_min_length 1k;
+    gzip_buffers 4 16k;
+    gzip_comp_level 2;
+    gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
+    gzip_vary off;
+    gzip_disable "MSIE [1-6]\.";
 
-    server {
-            listen       443; #Listening on port 443
-            server_name  test-web.rentsoft.cn;  #Your domain name
-            ssl on;
-            ssl_certificate /usr/local/nginx/conf/ssh/test-web.rentsoft.cn_bundle.pem;  #Path of pem file for ssl certificate
-            ssl_certificate_key /usr/local/nginx/conf/ssh/test-web.rentsoft.cn.key;   #Key file path of ssl certificate
+    default_type application/wasm;
 
-            gzip on;
-            gzip_min_length 1k;
-            gzip_buffers 4 16k;
-            gzip_comp_level 2;
-            gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
-            gzip_vary off;
-            gzip_disable "MSIE [1-6]\.";
-
-            default_type application/wasm;
-
-            location / {
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "Upgrade";
-                proxy_set_header X-real-ip $remote_addr;
-                proxy_set_header X-Forwarded-For $remote_addr;
-                proxy_pass http://pc_web/;
-            }
-
-            location /msg_gateway{
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "Upgrade";
-                proxy_set_header X-real-ip $remote_addr;
-                proxy_set_header X-Forwarded-For $remote_addr;
-                proxy_pass http://msg_gateway/;
-            }
-
-            location ^~/api/{
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "Upgrade";
-                proxy_set_header X-real-ip $remote_addr;
-                proxy_set_header X-Forwarded-For $remote_addr;
-                proxy_pass http://im_api/;
-            }
-
-            location ^~/chat/{
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "Upgrade";
-                proxy_set_header X-real-ip $remote_addr;
-                proxy_set_header X-Forwarded-For $remote_addr;
-                proxy_pass http://im_chat_api/;
-            }
-
-            location ^~/im-minio-api/ {
-                proxy_set_header Host $http_host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_connect_timeout 300;
-
-                proxy_http_version 1.1;
-                proxy_set_header Connection "";
-                chunked_transfer_encoding off;
-                proxy_pass http://minio_s3_2/;
-            }
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://pc_web/;
     }
 
-    # openim-admin
-    server {
-            listen       443; #listening port
-            server_name  test-admin.rentsoft.cn; #Your domain server_name
-            ssl on;
-            ssl_certificate /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn_bundle.pem;  #Path of pem file for ssl certificate
-            ssl_certificate_key /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn.key;   #Key file path of ssl certificate
-
-            gzip on;
-            gzip_min_length 1k;
-            gzip_buffers 4 16k;
-            gzip_comp_level 2;
-            gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
-            gzip_vary off;
-            gzip_disable "MSIE [1-6]\.";
-
-            default_type application/wasm;
-
-            location / {
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "Upgrade";
-                    proxy_set_header X-real-ip $remote_addr;
-                    proxy_set_header X-Forwarded-For $remote_addr;
-                    proxy_pass http://openim_admin/;
-            }
-
-            location /msg_gateway{
-            proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "Upgrade";
-                    proxy_set_header X-real-ip $remote_addr;
-                    proxy_set_header X-Forwarded-For $remote_addr;
-                    proxy_pass http://msg_gateway/;
-            }
-
-            location ^~/api/{
-            proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "Upgrade";
-                    proxy_set_header X-real-ip $remote_addr;
-                    proxy_set_header X-Forwarded-For $remote_addr;
-                    proxy_pass http://im_api/;
-            }
-
-            location ^~/chat/{
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "Upgrade";
-                    proxy_set_header X-real-ip $remote_addr;
-                    proxy_set_header X-Forwarded-For $remote_addr;
-                    proxy_pass http://im_chat_api/;
-            }
-
-            location ^~/complete_admin/{
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "Upgrade";
-                    proxy_set_header X-real-ip $remote_addr;
-                    proxy_set_header X-Forwarded-For $remote_addr;
-                    proxy_pass http://im_admin_api/;
-            }
+    location /msg_gateway{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://msg_gateway/;
     }
 
-    #Redirection from HTTP to HTTPS
-    server {
-            listen 80;
-            server_name test-web.rentsoft.cn;
-            rewrite ^(.*)$ https://$host$1 permanent;
+    location ^~/api/{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_api/;
+    }
+
+    location ^~/chat/{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_chat_api/;
+    }
+
+    location ^~/im-minio-api/ {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 300;
+
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        chunked_transfer_encoding off;
+        proxy_pass http://minio_s3_2/;
     }
 }
-``
+
+# Take the domain name "test-admin.rentsoft.cn" for example
+server {
+    listen       443; #listening port
+    server_name  test-admin.rentsoft.cn; #Your domain server_name
+    ssl on;
+    #Path of pem file for ssl certificate
+    ssl_certificate /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn_bundle.pem;
+    #Key file path of ssl certificate
+    ssl_certificate_key /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn.key;
+
+    gzip on;
+    gzip_min_length 1k;
+    gzip_buffers 4 16k;
+    gzip_comp_level 2;
+    gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
+    gzip_vary off;
+    gzip_disable "MSIE [1-6]\.";
+
+    default_type application/wasm;
+
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://openim_admin/;
+
+    }
+
+    location /msg_gateway{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://msg_gateway/;
+    }
+
+    location ^~/api/{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_api/;
+    }
+
+    location ^~/chat/{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_chat_api/;
+    }
+
+    location ^~/complete_admin/{
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_admin_api/;
+    }
+}
+
+# Redirection from HTTP to HTTPS
+server {
+    listen 80;
+    server_name test-web.rentsoft.cn;
+    rewrite ^(.*)$ https://$host$1 permanent;
+}
+```
 
 ### 3. Minio Configuration
-Open **open-im-server/config/config.yaml** and modify the Minio related content, then restart open-im-server.
+Open **open-im-server/config/config.yaml**, modify the corresponding Minio content, and restart open-im-server.
 
 ```yaml
 object:
@@ -204,7 +207,10 @@ signEndpoint: "https://test-web.rentsoft.cn/im-minio-api" //10005
 ```
 
 ### 4. Starting Nginx
-Enter the **usr/local/nginx/sbin** directory and execute the following command:
+Navigate to the **/usr/local/nginx/sbin** directory and execute the following command:
 > ./nginx -s reload
 
-### 5. Using the Corresponding Domain Name for Login Validation
+### 5. Using the Corresponding Domain Names for Login Verification
+>IM: test-web.rentsoft.cn
+
+>Admin Backend: test-admin.rentsoft.cn
