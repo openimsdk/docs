@@ -1,18 +1,18 @@
-# Nginx 域名配置
-### 1. 前置条件
->(1)open-im-server 和 chat 成功启动（open-im-server 中 minio 的配置需要改变，参考步骤3）
+# Nginx Domain Configuration
+### 1. Prerequisites
+>(1) Successful startup of open-im-server and chat (configuration of minio in open-im-server needs to be changed, refer to Step 3)
 
->(2)Nginx 成功安装（包括 ssl 模块）
+>(2) Successful installation of Nginx (including SSL module)
 
->(3)成功申请两个 ssl 证书, test-web.rentsoft.cn, test-admin.rentsoft.cn
+>(3) Successful application for two SSL certificates: test-web.rentsoft.cn, test-admin.rentsoft.cn
 
->(4)开放 443, 80 端口
+>(4) Ports 443 and 80 are open
 
-### 2. 域名配置参考
-以 nginx 安装目录 **/usr/local** 为例，
-在 **/usr/local/nginx** 目录下新建 **config.conf** 文件，将如下模板粘贴进 **/usr/local/nginx/config.conf** 文件中，
-并将新建的 config.conf 文件导入到 **/usr/local/nginx/ngixn.conf** 通用配置文件中
->tips: 注意更换域名配置模板中的域名、ssl 证书路径和 ssl 密钥
+### 2. Domain Configuration Reference
+Taking the Nginx installation directory **/usr/local** as an example,
+create a **config.conf** file in the **/usr/local/nginx** directory, paste the following template into the **/usr/local/nginx/config.conf** file,
+and import the newly created config.conf file into the general configuration file **/usr/local/nginx/nginx.conf**
+>tips: Pay attention to replacing the domain names, SSL certificate paths, and SSL keys in the domain configuration template
 
 ```
 #open-im-server chat Corresponding deployment address and port
@@ -33,7 +33,7 @@ upstream im_admin_api{
     server 127.0.0.1:10009;
 }
 upstream minio_s3_2{
-    #Minio address can be assigned to multiple modules dependingon deployment
+    #Minio address can be assigned to multiple modules depending on deployment
     server 127.0.0.1:10005;
 }
 upstream pc_web{
@@ -44,7 +44,6 @@ upstream openim_admin{
     #Admin backend address can be used for validation
     server 127.0.0.1:11002;
 }
-
 
 # Take the domain name "test-web.rentsoft.cn" for example
 server {
@@ -116,7 +115,7 @@ server {
     }
 }
 
-#Take the domain name "test-admin.rentsoft.cn" for example
+# Take the domain name "test-admin.rentsoft.cn" for example
 server {
     listen       443; #listening port
     server_name  test-admin.rentsoft.cn; #Your domain server_name
@@ -125,7 +124,6 @@ server {
     ssl_certificate /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn_bundle.pem;
     #Key file path of ssl certificate
     ssl_certificate_key /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn.key;
-
 
     gzip on;
     gzip_min_length 1k;
@@ -148,7 +146,7 @@ server {
     }
 
     location /msg_gateway{
-    proxy_http_version 1.1;
+        proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
         proxy_set_header X-real-ip $remote_addr;
@@ -157,7 +155,7 @@ server {
     }
 
     location ^~/api/{
-    proxy_http_version 1.1;
+        proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
         proxy_set_header X-real-ip $remote_addr;
@@ -184,7 +182,7 @@ server {
     }
 }
 
-#Redirection from HTTP to HTTPS redirection
+# Redirection from HTTP to HTTPS
 server {
     listen 80;
     server_name test-web.rentsoft.cn;
@@ -192,8 +190,8 @@ server {
 }
 ```
 
-### 3.Minio 的配置
-打开 **open-im-server/config/config.yaml** 修改 Minio 对应的内容，并重启 open-im-server
+### 3. Minio Configuration
+Open **open-im-server/config/config.yaml**, modify the corresponding Minio content, and restart open-im-server.
 
 ```yaml
 object:
@@ -208,17 +206,11 @@ sessionToken: ''
 signEndpoint: "https://test-web.rentsoft.cn/im-minio-api" //10005
 ```
 
-### 4.启动 Nginx
-进入 **/usr/local/nginx/sbin** 文件，执行以下命令
+### 4. Starting Nginx
+Navigate to the **/usr/local/nginx/sbin** directory and execute the following command:
 > ./nginx -s reload
 
-### 5.使用对应的域名进行登录验证
->IM ：test-web.rentsoft.cn
+### 5. Using the Corresponding Domain Names for Login Verification
+>IM: test-web.rentsoft.cn
 
->管理后台：test-admin.rentsoft.cn
-
-
-
-
-
-
+>Admin Backend: test-admin.rentsoft.cn
