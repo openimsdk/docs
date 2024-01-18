@@ -103,7 +103,7 @@ OpenIMSDK encompasses a variety of open-source projects, each serving different 
 
 ## Contributing
 
-We welcome contributions from the community! Please refer to our [CONTRIBUTING.md](https://github.com/openimsdk/community/tree/main/CONTRIBUTING.md) file for detailed information on how to contribute.
+We welcome contributions from the community! Please refer to our [CONTRIBUTING.md](https://github.com/openimsdk/community/tree/main/CONTRIBUTING.md) file for detailed information on how to CONTRIBUTING.md](https://github.com/openimsdk/docs/tree/main/CONTRIBUTING.md) file for detailed information on how to contribute.
 
 To sign the CLA, please follow the instructions provided in the [CONTRIBUTING.md](https://github.com/openimsdk/community/tree/main/CONTRIBUTING.md) file.
 
