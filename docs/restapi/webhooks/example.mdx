@@ -6,7 +6,7 @@ hide_title: true
 
 ### **简要描述**
 
-使用 callback 实现客服机器人问答功能，以给该客服机器人发送一条消息（支持发送文本消息和图片消息），客服机器人把这条消息返回为例。
+使用 callback 实现客服机器人问答功能，给客服机器人发送一条消息后（支持发送文本消息和图片消息），客服机器人把这条消息返回。
 
 
 ### 步骤一 修改配置文件
@@ -19,17 +19,24 @@ tips
 
 > afterSendSingleMsg.enable 为 true 时，开启该回调
  
-### 步骤二 创建客服账号获取管理员 token
-成功部署 **openIM** 后，注册一个 openIM 账号，指定该账号为客服机器人账号，记录其 **userID** 为 **robotics**
-通过 **Postman** 或其他接口测试工具，调用 **http://xx.xx.xx.xx:10009/account/login** 接口，记录返回的 **imToken**
+### 步骤二 创建客服机器人账号并指定其为默认好友
+1. 创建客服机器人账号，记录该账号的 **userID**
+
+2. 登录管理后台，将客服机器人账号添加为默认好友
+![PC Web Interface](./assets/defaultFriend.png)
 
 ### 步骤三 编写 **afterSendSingleMsg** 接口
 参考例子如下
 
+tips:
+>1、将例子中的 **robotics** 替换成步骤二中获取的 userID
+
+
 ```Go
-func (m *MessageApi) CallbackExample(c *gin.Context) {
+func (m *ChatApi) CallbackExample(c *gin.Context) {
+
 	// 1. Callback after sending a single chat message
-	var req callbackstruct.CallbackAfterSendSingleMsgReq
+	var req apistruct.CallbackAfterSendSingleMsgReq
 
 	if err := c.BindJSON(&req); err != nil {
 		log.ZError(c, "CallbackExample BindJSON failed", err)
@@ -37,8 +44,8 @@ func (m *MessageApi) CallbackExample(c *gin.Context) {
 		return
 	}
 
-	resp := callbackstruct.CallbackAfterSendSingleMsgResp{
-		CommonCallbackResp: callbackstruct.CommonCallbackResp{
+	resp := apistruct.CallbackAfterSendSingleMsgResp{
+		CommonCallbackResp: apistruct.CommonCallbackResp{
 			ActionCode: 0,
 			ErrCode:    200,
 			ErrMsg:     "success",
@@ -51,130 +58,204 @@ func (m *MessageApi) CallbackExample(c *gin.Context) {
 	// 2. If the user receiving the message is a customer service bot, return the message.
 
 	// UserID of the robot account
-	robotics := "5078764102"
-	// Administrator token
-	imtoken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySUQiOiJpbUFkbWluIiwiUGxhdGZvcm1JRCI6MTAsImV4cCI6MTcxMzI1MjI0OSwibmJmIjoxNzA1NDc1OTQ5LCJpYXQiOjE3MDU0NzYyNDl9.Zi-uFre8zq6msT3mFOumgcfNKBJ92kTw9ewsKeRVbZ4"
-	if req.SendID == robotics {
+	robotics:="robotics"
+
+	if req.SendID == robotics || req.RecvID != robotics {
 		return
 	}
+
+	if req.ContentType != constant.Picture && req.ContentType != constant.Text {
+		return
+	}
+
+	// Administrator token
+	url := "http://127.0.0.1:10009/account/login"
+	adminID := config.Config.ChatAdmin[0].AdminID
+	paswd := md5.Sum([]byte(adminID))
+
+	admin_input := admin.LoginReq{
+		Account:  config.Config.ChatAdmin[0].AdminID,
+		Password: hex.EncodeToString(paswd[:]),
+	}
+
+	header := make(map[string]string, 2)
+	header["operationID"] = "111"
+
+	b, err := Post(c, url, header, admin_input, 10)
+	if err != nil {
+		log.ZError(c, "CallbackExample send message failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+
+	type TokenInfo struct {
+		ErrCode int                      `json:"errCode"`
+		ErrMsg  string                   `json:"errMsg"`
+		ErrDlt  string                   `json:"errDlt"`
+		Data    apistruct.AdminLoginResp `json:"data,omitempty"`
+	}
+
+	admin_output := &TokenInfo{}
+
+	if err = json.Unmarshal(b, admin_output); err != nil {
+		log.ZError(c, "CallbackExample unmarshal failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+
+	header["token"] = admin_output.Data.AdminToken
+
+	url = "http://127.0.0.1:10008/user/find/public"
+
+	search_input := chat.FindUserFullInfoReq{
+		UserIDs: []string{robotics},
+	}
+
+	b, err = Post(c, url, header, search_input, 10)
+	if err != nil {
+		log.ZError(c, "CallbackExample unmarshal failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+
+	type UserInfo struct {
+		ErrCode int                       `json:"errCode"`
+		ErrMsg  string                    `json:"errMsg"`
+		ErrDlt  string                    `json:"errDlt"`
+		Data    chat.FindUserFullInfoResp `json:"data,omitempty"`
+	}
+
+	search_output := &UserInfo{}
+
+	if err = json.Unmarshal(b, search_output); err != nil {
+		log.ZError(c, "search_output unmarshal failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+
+	if len(search_output.Data.Users) == 0 {
+		apiresp.GinError(c, errs.ErrRecordNotFound.Wrap("the robotics not found"))
+		return
+	}
+
+	log.ZDebug(c, "callback", "searchUserAccount", search_output)
+
+	text := apistruct.TextElem{}
+	picture := apistruct.PictureElem{}
+	mapStruct := make(map[string]any)
 	// Processing text messages
-	if req.ContentType == constant.Picture || req.ContentType == constant.Text {
-		user, err := m.userRpcClient.GetUserInfo(c, robotics)
+
+	if err != nil {
+		log.ZError(c, "CallbackExample get Sender failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+
+	// Handle message structures
+	if req.ContentType == constant.Text {
+		err = json.Unmarshal([]byte(req.Content), &text)
 		if err != nil {
-			log.ZError(c, "CallbackExample get Sender failed", err)
-			apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-			return
-		}
-
-		// Handle message structures
-		text := apistruct.TextElem{}
-		picture := apistruct.PictureElem{}
-		mapStruct := make(map[string]any)
-		if req.ContentType == constant.Text {
-			err = json.Unmarshal([]byte(req.Content), &text)
-			if err != nil {
-				log.ZError(c, "CallbackExample unmarshal failed", err)
-				apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-				return
-			}
-			log.ZDebug(c, "callback", "text", text)
-			mapStruct["content"] = text.Content
-		} else {
-			err = json.Unmarshal([]byte(req.Content), &picture)
-			if err != nil {
-				log.ZError(c, "CallbackExample unmarshal failed", err)
-				apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-				return
-			}
-			log.ZDebug(c, "callback", "text", picture)
-			if strings.Contains(picture.SourcePicture.Type, "/") {
-				arr := strings.Split(picture.SourcePicture.Type, "/")
-				picture.SourcePicture.Type = arr[1]
-			}
-
-			if strings.Contains(picture.BigPicture.Type, "/") {
-				arr := strings.Split(picture.BigPicture.Type, "/")
-				picture.BigPicture.Type = arr[1]
-			}
-
-			if len(picture.SnapshotPicture.Type) == 0 {
-				picture.SnapshotPicture.Type = picture.SourcePicture.Type
-			}
-
-			mapStructSnap, err := convertStructToMap(picture.SnapshotPicture)
-			if err != nil {
-				log.ZError(c, "CallbackExample struct to map failed", err)
-				apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-				return
-			}
-			mapStruct["snapshotPicture"] = mapStructSnap
-
-			mapStructBig, err := convertStructToMap(picture.BigPicture)
-			if err != nil {
-				log.ZError(c, "CallbackExample struct to map failed", err)
-				apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-				return
-			}
-			mapStruct["bigPicture"] = mapStructBig
-
-			mapStructSource, err := convertStructToMap(picture.SourcePicture)
-			if err != nil {
-				log.ZError(c, "CallbackExample struct to map failed", err)
-				apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-				return
-			}
-			mapStruct["sourcePicture"] = mapStructSource
-			mapStruct["sourcePath"] = picture.SourcePath
-		}
-
-		log.ZDebug(c, "callback", "mapStruct", mapStruct)
-
-		input := &apistruct.SendMsgReq{
-			RecvID: req.SendID,
-			SendMsg: apistruct.SendMsg{
-				SendID:           user.UserID,
-				SenderNickname:   user.Nickname,
-				SenderFaceURL:    user.FaceURL,
-				SenderPlatformID: req.SenderPlatformID,
-				Content:          mapStruct,
-				ContentType:      req.ContentType,
-				SessionType:      req.SessionType,
-				SendTime:         utils.GetCurrentTimestampByMill(), // millisecond
-			},
-		}
-
-		url := "http://127.0.0.1:10002/msg/send_msg"
-		header := make(map[string]string, 2)
-		header["token"] = imtoken
-		type sendResp struct {
-			ErrCode int               `json:"errCode"`
-			ErrMsg  string            `json:"errMsg"`
-			ErrDlt  string            `json:"errDlt"`
-			Data    pbmsg.SendMsgResp `json:"data,omitempty"`
-		}
-
-		output := &sendResp{}
-
-		// Initiate a post request that calls the interface that sends the message (the bot sends a message to user)
-		b, err := http2.Post(c, url, header, input, 10)
-		if err != nil {
-			log.ZError(c, "CallbackExample send message failed", err)
-			apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
-			return
-		}
-		if err = json.Unmarshal(b, output); err != nil {
 			log.ZError(c, "CallbackExample unmarshal failed", err)
 			apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
 			return
 		}
-		res := &msg.SendMsgResp{
-			ServerMsgID: output.Data.ServerMsgID,
-			ClientMsgID: output.Data.ClientMsgID,
-			SendTime:    output.Data.SendTime,
+		log.ZDebug(c, "callback", "text", text)
+		mapStruct["content"] = text.Content
+	} else {
+		err = json.Unmarshal([]byte(req.Content), &picture)
+		if err != nil {
+			log.ZError(c, "CallbackExample unmarshal failed", err)
+			apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+			return
+		}
+		log.ZDebug(c, "callback", "text", picture)
+		if strings.Contains(picture.SourcePicture.Type, "/") {
+			arr := strings.Split(picture.SourcePicture.Type, "/")
+			picture.SourcePicture.Type = arr[1]
 		}
 
-		apiresp.GinSuccess(c, res)
+		if strings.Contains(picture.BigPicture.Type, "/") {
+			arr := strings.Split(picture.BigPicture.Type, "/")
+			picture.BigPicture.Type = arr[1]
+		}
+
+		if len(picture.SnapshotPicture.Type) == 0 {
+			picture.SnapshotPicture.Type = picture.SourcePicture.Type
+		}
+
+		mapStructSnap := make(map[string]interface{})
+		if mapStructSnap, err = convertStructToMap(picture.SnapshotPicture); err != nil {
+			log.ZError(c, "CallbackExample struct to map failed", err)
+			apiresp.GinError(c, err)
+			return
+		}
+		mapStruct["snapshotPicture"] = mapStructSnap
+
+		mapStructBig := make(map[string]interface{})
+		if mapStructBig, err = convertStructToMap(picture.BigPicture); err != nil {
+			log.ZError(c, "CallbackExample struct to map failed", err)
+			apiresp.GinError(c, err)
+			return
+		}
+		mapStruct["bigPicture"] = mapStructBig
+
+		mapStructSource := make(map[string]interface{})
+		if mapStructSource, err = convertStructToMap(picture.SourcePicture); err != nil {
+			log.ZError(c, "CallbackExample struct to map failed", err)
+			apiresp.GinError(c, err)
+			return
+		}
+		mapStruct["sourcePicture"] = mapStructSource
+		mapStruct["sourcePath"] = picture.SourcePath
 	}
+
+	log.ZDebug(c, "callback", "mapStruct", mapStruct, "mapStructSnap")
+	header["token"] = admin_output.Data.ImToken
+
+	input := &apistruct.SendMsgReq{
+		RecvID: req.SendID,
+		SendMsg: apistruct.SendMsg{
+			SendID:           search_output.Data.Users[0].UserID,
+			SenderNickname:   search_output.Data.Users[0].Nickname,
+			SenderFaceURL:    search_output.Data.Users[0].FaceURL,
+			SenderPlatformID: req.SenderPlatformID,
+			Content:          mapStruct,
+			ContentType:      req.ContentType,
+			SessionType:      req.SessionType,
+			SendTime:         utils.GetCurrentTimestampByMill(), // millisecond
+		},
+	}
+
+	url = "http://127.0.0.1:10002/msg/send_msg"
+
+	type sendResp struct {
+		ErrCode int             `json:"errCode"`
+		ErrMsg  string          `json:"errMsg"`
+		ErrDlt  string          `json:"errDlt"`
+		Data    msg.SendMsgResp `json:"data,omitempty"`
+	}
+
+	output := &sendResp{}
+
+	// Initiate a post request that calls the interface that sends the message (the bot sends a message to user)
+	b, err = Post(c, url, header, input, 10)
+	if err != nil {
+		log.ZError(c, "CallbackExample send message failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+	if err = json.Unmarshal(b, output); err != nil {
+		log.ZError(c, "CallbackExample unmarshal failed", err)
+		apiresp.GinError(c, errs.ErrInternalServer.WithDetail(err.Error()).Wrap())
+		return
+	}
+	res := &msg.SendMsgResp{
+		ServerMsgID: output.Data.ServerMsgID,
+		ClientMsgID: output.Data.ClientMsgID,
+		SendTime:    output.Data.SendTime,
+	}
+
+	apiresp.GinSuccess(c, res)
 }
 
 // struct to map
@@ -185,7 +266,7 @@ func convertStructToMap(input interface{}) (map[string]interface{}, error) {
 	inputValue := reflect.ValueOf(input)
 
 	if inputType.Kind() != reflect.Struct {
-		return nil, errs.ErrArgs.Wrap("Input is not a struct")
+		return nil, errs.ErrArgs.Wrap("input is not a struct")
 	}
 
 	for i := 0; i < inputType.NumField(); i++ {
@@ -207,19 +288,58 @@ func convertStructToMap(input interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
+// Send a POST request
+func Post(ctx context.Context, url string, header map[string]string, data any, timeout int) (content []byte, err error) {
+	var (
+		// define http client.
+		client = &http.Client{
+			Timeout: 15 * time.Second, // max timeout is 15s
+		}
+	)
+
+	if timeout > 0 {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(timeout))
+		defer cancel()
+	}
+
+	jsonStr, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return nil, err
+	}
+
+	if operationID, _ := ctx.Value(constant.OperationID).(string); operationID != "" {
+		req.Header.Set(constant.OperationID, operationID)
+	}
+	for k, v := range header {
+		req.Header.Set(k, v)
+	}
+	req.Header.Add("content-type", "application/json; charset=utf-8")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	result, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+
 ```
-tips:
->1、将例子中的 **robotics** 替换成步骤二中获取的 **robotics**
-
->2、将例子中的 **imToken** 替换成步骤二中获取的 **imToken**
-
->3、将例子中的 **url** 替换成真实的 **url**
 
 ### 步骤四 体验该功能
-1、直接通过 userID 搜索客服机器人账号，然后给客服机器人发送消息
-
-![PC Web Interface](./assets/sendMessage.png)
-
-2、客服机器人收到消息后，将该消息返回
+1、登录成功可以给客服机器人账号发送消息和图片
 
 ![PC Web Interface](./assets/result.png)
+
