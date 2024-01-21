@@ -34,7 +34,9 @@ OpenIM provides both server-side and client-side SDKs, delivering high performan
 
 ## Getting Started
 
-To set up the documentation locally, follow these steps:
+## Contributor License Agreement (CLA)
+
+The Contributor License Agreement (CLA) is a document that clarifies and verifies the rights of a contributor. Before contributing to OpenIM, committers must sign the CLA. To sign the CLA:
 
 1. Clone this repository:
 
@@ -101,7 +103,9 @@ OpenIMSDK encompasses a variety of open-source projects, each serving different 
 
 ## Contributing
 
-We welcome contributions from the community! Please refer to our [CONTRIBUTING.md](https://github.com/openimsdk/community/tree/main/CONTRIBUTING.md) file for detailed information on how to contribute.
+We welcome contributions from the community! Please refer to our [CONTRIBUTING.md](https://github.com/openimsdk/community/tree/main/CONTRIBUTING.md) file for detailed information on how to CONTRIBUTING.md](https://github.com/openimsdk/docs/tree/main/CONTRIBUTING.md) file for detailed information on how to contribute.
+
+To sign the CLA, please follow the instructions provided in the [CONTRIBUTING.md](https://github.com/openimsdk/community/tree/main/CONTRIBUTING.md) file.
 
 ## License
 
