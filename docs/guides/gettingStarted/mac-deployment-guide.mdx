@@ -1,0 +1,117 @@
+# OpenIM Mac 部署指南
+
+本指南提供了在 Mac 上部署 OpenIM 的详细步骤，包括源代码和 Docker 部署方法。
+
+## 预备环境设置
+
+在开始部署过程之前，请确保一个干净的工作环境：
+
+1. **新目录**：建议在一个全新的目录开始，以避免冲突。
+2. **进程检查**：运行以下命令以确保没有冲突的进程运行：
+   - `ps -ef | grep openim`
+   - `ps -ef | grep chat`
+3. **Docker 容器检查**：使用 `docker ps` 来确认没有相关的容器。
+
+## 源代码部署
+
+### 部署 openim-server
+
+从源代码部署可能因 Mac 和 Linux 在 Docker 网络配置上的差异而略显复杂。
+
+1. **克隆并准备仓库**：
+   ```jsx
+   git clone https://github.com/openimsdk/open-im-server
+   cd open-im-server
+   export OPENIM_IP="Your IP" # 对于云服务器可选
+   make init # 生成配置文件
+   ```
+
+2. **配置 Kafka 逻辑**：修改 `docker-compose.yml` 文件中的 Kafka 设置：
+   - 原始内容：
+     ```jsx
+     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://${DOCKER_BRIDGE_GATEWAY:-172.28.0.1}:${KAFKA_PORT:-19094}
+     ```
+   - 更新后：
+     ```jsx
+     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://127.0.0.1:${KAFKA_PORT:-19094}
+     ```
+
+3. **启动服务**：
+   ```jsx
+   docker compose up -d
+   ```
+
+4. **最终配置**：修改 `config/config.yaml`，将所有 `172.28.0.1` 替换为 `127.0.0.1`：
+   ```jsx
+   vim config/config.yaml -c "%s/172\.28\.0\.1/127.0.0.1/g" -c "wq"
+   ```
+
+5. **启动 openim-server**：
+   ```jsx
+   make start
+   ```
+
+6. **验证**：检查服务状态：
+   ```jsx
+   make check
+   ```
+   ⚠️ **注意**：为避免误判，最好等待五分钟后再进行检查。
+
+### 部署 openim-chat
+
+部署 openim-chat 有几种方法，包括源代码和 Docker。
+
+1. **返回上级目录**：
+   ```jsx
+   cd ..
+   ```
+
+2. **源代码部署**：
+   ```jsx
+   git clone https://github.com/openimsdk/chat
+   cd chat
+   make init # 生成配置文件
+   ```
+
+3. **设置 MySQL**：如果尚未部署 MySQL，请按以下步骤操作：
+   ```jsx
+   docker run -d \
+     --name mysql \
+     -p 13306:3306 \
+     -p 3306:33060 \
+     -v "$(pwd)/components/mysql/data:/var/lib/mysql" \
+     -v "/etc/localtime:/etc/localtime" \
+     -e MYSQL_ROOT_PASSWORD="openIM123" \
+     --restart always \
+     mariadb:10.6
+   ```
+
+4. **配置 openim-chat**：如之前所述，修改 `config/config.yaml`，将 `172.28.0.1` 替换为 `127.0.0.1`。
+
+5. **启动 openim-chat**：
+   ```jsx
+   make start
+   ```
+
+6. **验证**：检查以下进程以确认成功启动：
+   ```jsx
+   ➜  chat git:(main) ✗ ps -ef | grep chat
+   ```
+
+7. **访问 Web 界面**：在浏览器中导航至 `http://ip:11001`。
+
+## Docker 部署
+
+对于使用 Docker 部署 OpenIM，请参考 [OpenIM Docker GitHub 仓库](https://github.com/openimsdk/openim-docker) 提供的指南。按照那
+
+里的步骤操作可以实现无缝的 Docker 部署。
+
+```bash
+git clone https://github.com/openimsdk/openim-docker
+cd openim-docker
+export OPENIM_IP="Your IP"
+make init
+docker compose up -d 
+docker compose logs -f openim-server
+docker compose logs -f openim-chat
+```
