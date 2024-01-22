@@ -1,0 +1,115 @@
+# OpenIM Mac Deployment Guide
+
+This comprehensive guide provides detailed instructions for deploying OpenIM on Mac, including both source code and Docker deployment methods.
+
+## Preliminary Environment Setup
+
+Before initiating the deployment process, ensure a clean working environment:
+
+1. **New Directory**: It's recommended to start in a fresh directory to avoid conflicts.
+2. **Process Check**: Run the following commands to ensure no conflicting processes are running:
+   - `ps -ef | grep openim`
+   - `ps -ef | grep chat`
+3. **Docker Container Check**: Use `docker ps` to verify the absence of any related containers.
+
+## Source Code Deployment
+
+### Deploying openim-server
+
+Deploying from source can be slightly more complex due to differences in Docker's network configurations between Mac and Linux.
+
+1. **Cloning and Preparing the Repository**:
+   ```jsx
+   git clone https://github.com/openimsdk/open-im-server
+   cd open-im-server
+   export OPENIM_IP="Your IP" # Optional for cloud servers
+   make init # Generate configuration files
+   ```
+
+2. **Configuring Kafka Logic**: Modify the `docker-compose.yml` file, specifically the Kafka settings:
+   - Original:
+     ```jsx
+     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://${DOCKER_BRIDGE_GATEWAY:-172.28.0.1}:${KAFKA_PORT:-19094}
+     ```
+   - Updated:
+     ```jsx
+     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://127.0.0.1:${KAFKA_PORT:-19094}
+     ```
+
+3. **Starting the Service**:
+   ```jsx
+   docker compose up -d
+   ```
+
+4. **Final Configurations**: Modify `config/config.yaml` to replace all instances of `172.28.0.1` with `127.0.0.1`:
+   ```jsx
+   vim config/config.yaml -c "%s/172\.28\.0\.1/127.0.0.1/g" -c "wq"
+   ```
+
+5. **Launching openim-server**:
+   ```jsx
+   make start
+   ```
+
+6. **Verification**: Check the service status:
+   ```jsx
+   make check
+   ```
+   ⚠️ **Note**: It's best to wait five minutes before performing the check to avoid any false negatives.
+
+### Deploying openim-chat
+
+There are several methods to deploy openim-chat, including source code and Docker.
+
+1. **Returning to the Parent Directory**:
+   ```jsx
+   cd ..
+   ```
+
+2. **Source Code Deployment**:
+   ```jsx
+   git clone https://github.com/openimsdk/chat
+   cd chat
+   make init # Generate configuration files
+   ```
+
+3. **Setting Up MySQL**: If MySQL is not already deployed, follow these steps:
+   ```jsx
+   docker run -d \
+     --name mysql \
+     -p 13306:3306 \
+     -p 3306:33060 \
+     -v "$(pwd)/components/mysql/data:/var/lib/mysql" \
+     -v "/etc/localtime:/etc/localtime" \
+     -e MYSQL_ROOT_PASSWORD="openIM123" \
+     --restart always \
+     mariadb:10.6
+   ```
+
+4. **Configuring openim-chat**: Modify `config/config.yaml` as before, replacing `172.28.0.1` with `127.0.0.1`.
+
+5. **Starting openim-chat**:
+   ```jsx
+   make start
+   ```
+
+6. **Verification**: Check for the following processes to confirm successful launch:
+   ```jsx
+   ➜  chat git:(main) ✗ ps -ef | grep chat
+   ```
+
+7. **Accessing the Web Interface**: Navigate to `http://ip:11001` in your browser.
+
+## Docker Deployment
+
+For deploying OpenIM using Docker, refer to the instructions provided at [OpenIM Docker GitHub Repository](https://github.com/openimsdk/openim-docker). Follow the steps outlined there for a seamless Docker-based deployment.
+
+```bash
+git clone https://github.com/openimsdk/openim-docker
+cd openim-docker
+export OPENIM_IP="Your IP"
+make init
+docker compose up -d 
+docker compose logs -f openim-server
+docker compose logs -f openim-chat
+```
