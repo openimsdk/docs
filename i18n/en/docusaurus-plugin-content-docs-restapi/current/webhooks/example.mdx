@@ -1,101 +1,91 @@
 ---
-
 sidebar_position: 2
 title: Callback Example
 hide_title: true
 ---
 
-# 🛠 Implementing Chatbot Q&A Functionality with OpenIM
+# Implementing Chatbot Functionality with OpenIM
 
-### **Brief Description**
+### Brief Description
 
-Implement a chatbot Q&A functionality using the callback mechanism in OpenIM. After sending a message to the chatbot (supporting text and image messages), the chatbot returns the message.
-
+Implement chatbot functionality using the Webhook mechanism in OpenIM. After sending a text message or an image message to the chatbot, the bot will return the same message. Developers can replace this logic by calling the LLM interface to enable intelligent question-answering.
 
 ## 1. Modify the Configuration File
-Modify the config/config.yaml file in open-im-server as per the following template
+
+Refer to the template below to modify the `config/config.yaml` configuration in open-im-server.
 
 ![PC Web Interface](./assets/config.png)
 
-Tips
-> url is the callback url
+> **Tips**:
+> - `url` is the callback URL.
+> - Set `afterSendSingleMsg.enable` to `true` to enable this callback.
 
-> Enable this callback by setting afterSendSingleMsg.enable to true
- 
-## 2. Create a Chatbot Account and Set It as a Default Friend
-1. Log in to the admin console and create a chatbot account in the user management of the admin console system. Note the **userID** of the account.
+## 2. Create a Chatbot Account
 
-2. In the registration management of the admin console system, add the created chatbot account as a default friend.
-
-Tips:
-> Login credentials for the admin console: 
-
-> Username: chatAdmin 
-
-> Password: chatAdmin
+1. Log in to the admin console, refer to [this document](../../guides/gettingStarted/quickTestServer).
+2. Create a chatbot account in user management and note the **userID** of the account.
+3. For convenience, set this **userID** as a default friend.
 
 ## 3. Write the **afterSendSingleMsg** Interface
-Refer to the following example
 
-Tips:
->1. Replace **robotics** in the example with the **userID** obtained in step **2**
+Refer to the example code below.
 
+> **Tips**:
+> 1. Replace **robotics** in the example with the **userID** obtained in step **2**.
 
 ```Go
 func (m *ChatApi) CallbackExample(c *gin.Context) {
-	// 1. Handling callbacks after sending a single chat message
-	msgInfo, err := handlingCallbackAfterSendMsg(c)
-	if err != nil {
-		apiresp.GinError(c, err)
-		return
-	}
+    // 1. Handling callbacks after sending a single chat message
+    msgInfo, err := handlingCallbackAfterSendMsg(c)
+    if err != nil {
+        apiresp.GinError(c, err)
+        return
+    }
 
-	// 2. If the user receiving the message is a customer service bot, return the message.
-	// 2.1 UserID of the robot account
-	robotics := "robotics"
+    // 2. If the user receiving the message is a customer service bot, return the message.
+    // 2.1 UserID of the robot account
+    robotics := "robotics"
 
-	// 2.2 ChatRobot account validation and determining if messages are text and images
-	if msgInfo.SendID == robotics || msgInfo.RecvID != robotics {
-		return
-	}
-	if msgInfo.ContentType != constant.Picture && msgInfo.ContentType != constant.Text {
-		return
-	}
+    // 2.2 ChatRobot account validation and determining if messages are text and images
+    if msgInfo.SendID == robotics || msgInfo.RecvID != robotics {
+        return
+    }
+    if msgInfo.ContentType != constant.Picture && msgInfo.ContentType != constant.Text {
+        return
+    }
 
-	// 2.3 Get administrator token
-	adminToken, err := getAdminToken(c)
-	if err != nil {
-		apiresp.GinError(c, err)
-		return
-	}
+    // 2.3 Get administrator token
+    adminToken, err := getAdminToken(c)
+    if err != nil {
+        apiresp.GinError(c, err)
+        return
+    }
 
-	// 2.4 Get RobotAccount info
-	robUser, err := getRobotAccountInfo(c, adminToken.AdminToken, robotics)
-	if err != nil {
-		apiresp.GinError(c, err)
-		return
-	}
+    // 2.4 Get RobotAccount info
+    robUser, err := getRobotAccountInfo(c, adminToken.AdminToken, robotics)
+    if err != nil {
+        apiresp.GinError(c, err)
+        return
+    }
 
-	// 2.5 Constructing Message Field Contents
-	mapStruct, err := contextToMap(c, msgInfo)
-	if err != nil {
-		apiresp.GinError(c, err)
-		return
-	}
+    // 2.5 Constructing the contents of the message field or invoking an LLM to implement AI-driven question answering.
+    mapStruct, err := contextToMap(c, msgInfo)
+    if err != nil {
+        apiresp.GinError(c, err)
+        return
+    }
 
-	// 2.6 Send Message
-	err = sendMessage(c, adminToken.ImToken, robotics, msgInfo, robUser, mapStruct)
-	if err != nil {
-		apiresp.GinError(c, err)
-		return
-	}
+    // 2.6 Send Message
+    err = sendMessage(c, adminToken.ImToken, robotics, msgInfo, robUser, mapStruct)
+    if err != nil {
+        apiresp.GinError(c, err)
+        return
+    }
 }
-
 ```
-For detailed code, refer to
-[Link](https://github.com/openimsdk/chat/blob/logs/example/callback/callback.go)
 
-## 4. Experience the Functionality
-1. The implemented effect is as follows
+For detailed code, refer to [this link](https://github.com/openimsdk/chat/blob/main/example/callback/callback.go)
+
+## 4. Demonstration of Results
 
 ![PC Web Interface](./assets/result.png)
