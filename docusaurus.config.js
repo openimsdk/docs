@@ -75,6 +75,9 @@ const plugins = [tailwindPlugin, ...docs_plugins, webpackPlugin];
 const config = {
   ...meta,
   plugins,
+  scripts: [
+    '/embed.js'
+  ],
 
   trailingSlash: false,
   // themes: ['@docusaurus/theme-live-codeblock'],
