@@ -4,92 +4,122 @@ hide_title: true
 sidebar_position: 4
 ---
 
-## 🚀Using Demo
-We strongly recommend that you first run the framework-related example  [DEMO](https://github.com/OpenIMSDK/Open-IM-PC-Web-Demo)  we prepared for you. This will not only give you an intuitive experience of OpenIMSDK's capabilities, but will also help you quickly locate and solve problems during the actual integration process.
+## Using Demo 🚀
+We strongly recommend that you first run the framework-related example  [DEMO](https://github.com/openimsdk/openim-reactnative-demo)  we prepared for you. This will not only give you an intuitive experience of OpenIMSDK's capabilities, but will also help you quickly locate and solve problems during the actual integration process.
 
-:::tip
-The project has just started and is still being updated, those in urgent need of functionality will need to add it themselves.
-:::
+## Tips ❗️
 
+- The `open-im-sdk-rn@3.5.1` has contains ***significant disruptive updates***. If you need to upgrade, please check the incoming data and the returned data.
 
-### 2.  Import Package
+- Unlike other SDKS, `React Native SDK` operationID is not optional, but required.(operationID is used for back-end log query)
 
-      import OpenIMSDKRN from "open-im-sdk-rn";
+## Integration Steps ( React Native CLI )
 
-### 3. Initialization
-```js
-    const Init = async () => {
-      await RNFS.mkdir(RNFS.DocumentDirectoryPath + '/tmp');
-      const config = {
-        platformID: platform,
-        apiAddr: API_URL,
-        wsAddr: WS_URL,
+### 1. Add Dependencies
 
-        dataDir: RNFS.DocumentDirectoryPath + '/tmp',
-        logLevel: 6,
-        isLogStandardOutput: true,
-      };
-      try {
-        const opid = "123456";
-        const result = await OpenIMSDKRN.initSDK(config, opid);
-
-      } catch (error) {
-        console.error('Error initializing SDK:', error); // Log the error
-      }
-    };
-    const checkLogin = async () => {
-      const status = (await GetLoginStatus()).status;
-      if (status == 3){
-        setIsLoggedIn(true)
-        initStore()
-      }
-        
-    }
+```sh
+yarn add open-im-sdk-rn
 ```
-### 4. Setting Listeners
-```js
-    const setIMListener = () => {
-        
-        // account
-        OpenIMEmitter.addListener('onSelfInfoUpdated', (v) => { selfUpdateHandler });
-        OpenIMEmitter.addListener('onConnecting', connectingHandler);
-        OpenIMEmitter.addListener('onConnectFailed', connectFailedHandler);
-        OpenIMEmitter.addListener('onConnectSuccess', connectSuccessHandler);
-        OpenIMEmitter.addListener('onKickedOffline', (v) => { kickHandler });
-        OpenIMEmitter.addListener('onUserTokenExpired', (v) => { expiredHandler });
-        // sync
-        OpenIMEmitter.addListener('onSyncServerStart', syncStartHandler );
-        OpenIMEmitter.addListener('onSyncServerFinish', syncFinishHandler );
-        OpenIMEmitter.addListener('onSyncServerFailed',  syncFailedHandler );
-        // message
-        OpenIMEmitter.addListener('onRecvNewMessage',  newMessageHandler );
-        OpenIMEmitter.addListener('onRecvNewMessages',  newMessageHandler );
-        OpenIMEmitter.addListener('onNewRecvMessageRevoked',revokedMessageHandler );
-        // // conversation
-        OpenIMEmitter.addListener('onConversationChanged', (v) => { conversationChnageHandler });
-        OpenIMEmitter.addListener('onNewConversation', (v) => { newConversationHandler });
-        OpenIMEmitter.addListener('onTotalUnreadMessageCountChanged', (v) => { totalUnreadChangeHandler });
-        // // friend
-        OpenIMEmitter.addListener('onFriendInfoChanged',  friendInfoChangeHandler );
-        OpenIMEmitter.addListener('onFriendAdded', friendAddedHandler );
-        OpenIMEmitter.addListener('onFriendDeleted', (v) => { friendDeletedHandler });
-        // // blacklist
-        OpenIMEmitter.addListener('onBlackAdded', (v) => { blackAddedHandler });
-        OpenIMEmitter.addListener('onBlackDeleted', (v) => { blackDeletedHandler });
-        // // group
-        OpenIMEmitter.addListener('onJoinedGroupAdded', (v) => { joinedGroupAddedHandler });
-        OpenIMEmitter.addListener('onJoinedGroupDeleted', (v) => { joinedGroupDeletedHandler });
-        OpenIMEmitter.addListener('onGroupInfoChanged', (v) => { groupInfoChangedHandler });
-        OpenIMEmitter.addListener('onGroupMemberAdded', (v) => { groupMemberAddedHandler });
-        OpenIMEmitter.addListener('onGroupMemberDeleted', (v) => { groupMemberDeletedHandler });
-        OpenIMEmitter.addListener('onGroupMemberInfoChanged', (v) => { groupMemberInfoChangedHandler });
-        // // application
-        OpenIMEmitter.addListener('onFriendApplicationAdded',  friendApplicationProcessedHandler );
-        OpenIMEmitter.addListener('onFriendApplicationAccepted',  friendApplicationProcessedHandler );
-        OpenIMEmitter.addListener('onFriendApplicationRejected', friendApplicationProcessedHandler );
-        OpenIMEmitter.addListener('onGroupApplicationAdded', (v) => { groupApplicationProcessedHandler });
-        OpenIMEmitter.addListener('onGroupApplicationAccepted', (v) => { groupApplicationProcessedHandler });
-        OpenIMEmitter.addListener('onGroupApplicationRejected', (v) => { groupApplicationProcessedHandler });
-    };
 
+For android add following urls to build gradle :
+```gradle
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+buildscript {
+    ext {
+        buildToolsVersion = "33.0.0"
+        minSdkVersion = 21
+        compileSdkVersion = 33
+        targetSdkVersion = 33
+
+        // We use NDK 23 which has both M1 support and is the side-by-side NDK version from AGP.
+        ndkVersion = "23.1.7779620"
+    }
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            allowInsecureProtocol = true
+            url 'https://open-im-online.rentsoft.cn:51000/repository/maven2/'
+        }
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+    }
+}
+allprojects {
+    repositories {
+        maven {
+            allowInsecureProtocol = true
+            url 'https://open-im-online.rentsoft.cn:51000/repository/maven2/'
+        }
+    }
+}
+```
+
+### 2. Init SDK
+
+```ts
+import OpenIMSDKRN from 'open-im-sdk-rn';
+import RNFS from 'react-native-fs';
+
+RNFS.mkdir(RNFS.DocumentDirectoryPath + '/tmp');
+
+OpenIMSDKRN.initSDK({
+  platformID: 2,  // 1: ios, 2: android
+  apiAddr: 'http://your-server-ip:10002',
+  wsAddr: 'ws://your-server-ip:10001',
+  dataDir: RNFS.DocumentDirectoryPath + '/tmp',
+  logLevel: 5,
+  isLogStandardOutput: true,
+}, 'opid');
+```
+
+### 3. Log in and set listening
+
+```ts
+import OpenIMSDKRN, { OpenIMEmitter } from 'open-im-sdk-rn';
+
+OpenIMSDKRN.login({
+  userID: 'IM user ID',
+  token: 'IM user token',
+}, 'opid');
+
+OpenIMEmitter.addListener('onConnecting', () => {
+  console.log('onConnecting');
+});
+
+OpenIMEmitter.addListener('onConnectSuccess', () => {
+  console.log('onConnectSuccess');
+});
+
+OpenIMEmitter.addListener('onConnectFailed', ({ errCode, errMsg }) => {
+  console.log('onConnectFailed', errCode, errMsg);
+});
+```
+
+### 4. Send and receive messages
+
+```ts
+import OpenIMSDKRN, { OpenIMEmitter } from 'open-im-sdk-rn';
+import type { MessageItem } from 'open-im-sdk-rn';
+
+OpenIMEmitter.addListener('onRecvNewMessages', (data: MessageItem[]) => {
+  console.log('onRecvNewMessages', data);
+});
+
+const message = await OpenIMSDKRN.createTextMessage('hello openim', 'opid');
+
+OpenIMSDKRN.sendMessage({
+  recvID: 'recipient user ID',
+  groupID: '',
+  message,
+}, 'opid')
+  .then(() => {
+    // Message sent successfully ✉️
+  })
+  .catch(err => {
+    // Failed to send message ❌
+    console.log(err);
+  });
 ```
