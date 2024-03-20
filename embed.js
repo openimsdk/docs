@@ -57,7 +57,7 @@
             }
         }
         if (event.data === 'toogleSize') {
-            iframe.style.width = isMinMode ? "640px" : "320px";
+            iframe.style.width = isMinMode ? "720px" : "440px";
             iframe.style.height = isMinMode ? "80vh" : "60vh";
             isMinMode = !isMinMode;
         }
