@@ -106,9 +106,6 @@ const config = {
           filename: 'sitemap.xml',
           ignorePatterns: ['/tags/**'],
         },
-        googleTagManager: {
-          containerId: 'GTM-5FDFFSS',
-        },
       }),
     ],
   ],
