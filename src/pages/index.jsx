@@ -17,6 +17,7 @@ export default function Homepage() {
       noFooter
     >
       <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <link rel="prefetch" href="/assets/css/elements.min.css" />
       </Head>
       <HeroSection />

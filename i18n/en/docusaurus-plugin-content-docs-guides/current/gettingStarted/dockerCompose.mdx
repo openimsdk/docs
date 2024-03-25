@@ -99,16 +99,43 @@ If only partial updates are needed, follow these steps:
 
 For non-shared variables in **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**, these configuration items can be modified individually in the respective files. Execute **`docker compose down ; docker compose up -d`** to apply changes and restart services.
 
-## ❓ 6. Frequently Asked Questions
+## ❓ 6. Common Issues
 
-### 6.1 About Docker Version 🐋
+### 6.1 Can send text messages normally, but sending images fails 😕
 
-The newer version of Docker has integrated docker-compose. Older versions of Docker may not support the gateway feature❌. We recommend upgrading to a newer version, such as `23.0.1`🔝
+This issue might occur if the `OPENIM_IP` environment variable was not set before executing the `docker compose up -d` command. You can confirm this by checking the startup logs or using the following command to search for the "127.0.0.1" address in the logs:
+
+```bash
+grep "127.0.0.1" openim-server/_output/logs/openim-docker.log
+```
+
+#### Solution:
+
+1. Set the `OPENIM_IP` environment variable to your public IP address, or to your internal IP address if you are providing services within a LAN:
+
+   ```bash
+   export OPENIM_IP="<Public-IP>"
+   ```
+
+2. Use the `sed` command to update the `apiURL` and `signEndpoint` configuration items in the `config.yaml` file, changing the address to use the `OPENIM_IP` environment variable specified IP address:
+
+   ```bash
+   sed -i -e "s/apiURL: \"http:\/\/127\.0\.0\.1/apiURL: \"http:\/\/${OPENIM_IP}/" \
+          -e "s/signEndpoint: \"http:\/\/127\.0\.0\.1/signEndpoint: \"http:\/\/${OPENIM_IP}/" \
+          openim-server/config/config.yaml
+   ```
+
+After modifying the configuration and restarting the service with the above steps, sending images should work normally.
+
+### 6.3. Regarding Docker Version 🐋
+It is strongly recommended to use the docker compose command instead of docker-compose, as older Docker versions might not support the gateway feature❌. We advise upgrading to a newer version, such as `23.0.1`🔝.
 
 
 ### 6.2 📜 Viewing Logs
 
 Log locations:
 
-- Runtime logs, for troubleshooting after successful startup: `{openim-server, openim-chat}/logs/OpenIM.log.all.*`
-- Startup logs, for checking in case of errors during startup: `{openim-server, openim-chat}/_output/logs/openim_*.log`
+- Runtime logs: `{openim-server, openim-chat}/_output/logs/openim-all.*`
+- Startup logs: `{openim-server, openim-chat}/_output/logs/openim-docker.log`
+
+---

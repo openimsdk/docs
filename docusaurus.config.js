@@ -75,6 +75,9 @@ const plugins = [tailwindPlugin, ...docs_plugins, webpackPlugin];
 const config = {
   ...meta,
   plugins,
+  scripts: [
+    '/embed.js'
+  ],
 
   trailingSlash: false,
   // themes: ['@docusaurus/theme-live-codeblock'],
@@ -102,9 +105,6 @@ const config = {
           priority: 0.5,
           filename: 'sitemap.xml',
           ignorePatterns: ['/tags/**'],
-        },
-        googleTagManager: {
-          containerId: 'GTM-5FDFFSS',
         },
       }),
     ],
