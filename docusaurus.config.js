@@ -76,7 +76,7 @@ const config = {
   ...meta,
   plugins,
   scripts: [
-    'https://knowledge.rentsoft.cn/embed.js'
+    '/embed.js'
   ],
 
   trailingSlash: false,
