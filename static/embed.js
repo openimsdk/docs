@@ -24,7 +24,7 @@
             cursor: "pointer",
         });
 
-        iframe.src = "https://knowledge.rentsoft.cn";
+        iframe.src = "https://knowledge.rentsoft.cn/open-kf-chatbot";
         Object.assign(iframe.style, {
             position: "fixed",
             zIndex: "10000",
