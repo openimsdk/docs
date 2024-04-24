@@ -1,4 +1,5 @@
 
+
 # Docker Deployment for OpenIM
 
 
@@ -14,10 +15,10 @@ git clone https://github.com/openimsdk/openim-docker
 
 ## 🔧 Configuration Modification
 
-- Modify the `.env` file to set up the external IP. If using a domain name, Nginx configuration is required.
+- Modify the `.env` file to set up the external IP. If using a domain name, [Nginx](./nginxDomainConfig.mdx) configuration is required.
 
   ```plaintext
-  # Set the external access address for MinIO service (IP or domain)
+  # Set the external access address for MinIO service (external IP or domain)
   MINIO_EXTERNAL_ADDRESS="http://external_ip:10005" 
   ```
 
@@ -142,3 +143,63 @@ If only a partial update is needed, follow these steps:
 
 1. Modify the `.env` file: Update relevant settings in the **`.env`** file.
 2. Manually update configuration files: According to modifications in the **`.env`** file, update corresponding settings in **`openim-server/config/config.yaml`** and **`openim-chat/config/config.yaml`** files
+
+.
+3. Special variable additional handling: If you modified **`OPENIM_IP`**, **`API_OPENIM_PORT`**, **`MINIO_PORT`**, **`GRAFANA_PORT`**, then you need to update the following configuration items in **`openim-server/config/config.yaml`**:
+
+    ```yaml
+    object:
+      apiURL: "http://$OPENIM_IP:$API_OPENIM_PORT"
+      minio:
+        endpoint: "http://$DOCKER_BRIDGE_GATEWAY:$MINIO_PORT"
+        signEndpoint: "http://$OPENIM_IP:$MINIO_PORT"
+    
+    grafanaUrl: http://$OPENIM_IP:$GRAFANA_PORT
+    ```
+    
+4. Restart the service: Execute **`docker compose down ; docker compose up -d`** to apply changes and restart the service.
+
+### 5.3 Other Configuration Item Modification
+
+For non-shared variables in **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**, you can individually modify these configuration items in the respective files. Execute **`docker compose down ; docker compose up -d`** to apply changes and restart the service.
+
+---
+
+## ❓ 6. Common Issues
+
+### 6.1 Text messages are sent normally, but sending pictures fails 😕
+
+This may be because the `OPENIM_IP` environment variable was not set before executing the `docker compose up -d` command. You can confirm this by checking the startup logs or by using the following command to search for "127.0.0.1" in the logs:
+
+```bash
+grep "127.0.0.1" openim-server/_output/logs/openim-docker.log
+```
+
+#### Solution:
+
+1. Set the `OPENIM_IP` environment variable to your public IP address, or to your internal IP address if only providing internal network service:
+
+   ```bash
+   export OPENIM_IP="<Public-IP>"
+   ```
+
+2. Use the `sed` command to update the `apiURL` and `signEndpoint` configuration items in the `config.yaml` file, changing the address to use the `OPENIM_IP` environment variable specified IP address:
+
+   ```bash
+   sed -i -e "s/apiURL: \"http:\/\/127\.0\.0\.1/apiURL: \"http:\/\/${OPENIM_IP}/" \
+          -e "s/signEndpoint: \"http:\/\/127\.0\.0\.1/signEndpoint: \"http:\/\/${OPENIM_IP}/" \
+          openim-server/config/config.yaml
+   ```
+
+After making these configuration changes and restarting the service, you should be able to send picture messages normally.
+
+### 6.2 About Docker Versions 🐋
+
+It is strongly recommended to use the `docker compose` command instead of `docker-compose`, as older versions of Docker may not support the gateway feature❌. We advise upgrading to a newer version, such as `23.0.1`🔝.
+
+### 6.3 Viewing Logs 📜
+
+Log locations:
+
+- Runtime logs: `{openim-server, openim-chat}/_output/logs/openim-all.*`
+- Startup logs: `{openim-server, openim-chat}/_output/logs/openim-docker.log`
