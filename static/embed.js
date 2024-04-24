@@ -5,6 +5,7 @@
     const iframe = document.createElement('iframe');
 
     let isMinMode = true;
+    let isInit = false;
 
     function initUI() {
         Object.assign(button.style, {
@@ -37,12 +38,13 @@
         });
 
         document.body.appendChild(iframe);
+        isInit = true;
 
         adjustIframeStyleForSmallScreens();
     }
 
     const fireToIframe = (event, data) => {
-        iframe.contentWindow.postMessage({ event, data }, '*');
+        iframe.contentWindow?.postMessage({ event, data }, '*');
     };
 
     button.onclick = function () {
@@ -90,7 +92,10 @@
     window.onload = initUI;
 
     function adjustIframeStyleForSmallScreens() {
+        if (!isInit) return;
         const isMinWidth = window.matchMedia("(max-width: 768px)").matches || isMobile;
+        const isHidden = iframe.style.transform === "scale(0)";
+
         if (isMinWidth) {
             Object.assign(iframe.style, {
                 width: "100%",
@@ -102,9 +107,11 @@
                 borderRadius: "0",
                 boxShadow: "none",
             });
-            document.body.style.overflow = 'hidden';
-            document.documentElement.style.overflow = 'hidden';
-            fireToIframe('resizeIframe', true);
+            if (!isHidden) {
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
+                fireToIframe('resizeIframe', true);
+            }
         } else {
             Object.assign(iframe.style, {
                 width: isMinMode ? "420px" : "720px",
