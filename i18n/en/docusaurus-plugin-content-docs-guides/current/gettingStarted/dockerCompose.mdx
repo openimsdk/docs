@@ -1,37 +1,95 @@
+
+# Docker Deployment for OpenIM
+
+> **Documentation Resources**
+
++ [Official Deployment Guide](https://docs.openim.io/guides/gettingstarted/dockercompose)
+
+## 🌍 Environment Preparation
+
+- Install Docker with the Compose plugin or docker-compose on your server. For installation details, visit the [Docker Compose Installation Guide](https://docs.docker.com/compose/install/linux/).
+
+## 🗂️ Repository Cloning
+
+```bash
+git clone https://github.com/openimsdk/openim-docker
+```
+
+## 🔧 Configuration Modification
+
+- Modify the `.env` file to set up the external IP. If using a domain name, Nginx configuration is required.
+
+  ```plaintext
+  # Set the external access address for MinIO service (IP or domain)
+  MINIO_EXTERNAL_ADDRESS="http://external_ip:10005" 
+  ```
+
+- Please refer to the comments in the .env file for other configurations.
+
+## 🚀 Service Launch
+
+- To start the service:
+
+```bash
+docker compose up -d
+```
+
+- To stop the service:
+
+```bash
+docker compose down
+```
+
+- To view logs:
+
+```bash
+docker logs -f openim-server
+docker logs -f openim-chat
+```
+
+## ⚡ Quick Experience
+
+For a quick experience with OpenIM services, please visit the [Quick Test Server Guide](https://docs.openim.io/guides/gettingStarted/quickTestServer).
+
 ---
-title: 'Docker Deployment'
-sidebar_position: 2
+
+## Below are the deployment processes for versions release-v3.6 and earlier:
+
 ---
+
 # 🛠 Docker Deployment
 
 ## 1. Environment and Component Requirements
-For server environment, system, and storage components, refer to [this document](./env-comp)
+For server environment, system, and storage components, refer to [this document](./env-comp).
+
+---
 
 ## 2. Docker Deployment
 
-### 2.1 Clone the Repository and Initialize
+## 2.1 Clone Repository and Initialize
 
 ```jsx
 git clone https://github.com/openimsdk/openim-docker openim-docker && cd openim-docker && make init
 ```
+
 💡 **Tips**
-> If you didn't clone directly on your machine, but instead downloaded the **openim-docker** as a compressed package, run the command **find ./ -name "*.sh" | xargs chmod +x** to grant execution permissions to the scripts.
+> If you obtained **openim-docker** not by cloning but by downloading a zip file, run the command **find ./ -name "*.sh" | xargs chmod +x** to grant script execution permissions.
 
+---
 
-## 2.2 Setting OPENIM_IP
+## 2.2 Set OPENIM_IP
 
-🔔 **It is mandatory to set OPENIM_IP, and it cannot be 127.0.0.1**
+🔔 **You must set OPENIM_IP, and it cannot be 127.0.0.1**
 
 ```jsx
-# If the server has a public IP
-export OPENIM_IP="Public IP"
+# If the server has an external IP
+export OPENIM_IP="external IP"
 
 # If only providing internal network service
-export OPENIM_IP="Internal IP"
+export OPENIM_IP="internal IP"
 ```
 
-
-### 2.3 Start Services and View Logs
+## 2.3 Start Service and View Logs
 
 ```jsx
 docker compose up -d
@@ -40,102 +98,50 @@ docker compose logs -f openim-chat
 docker compose logs -f openim-server
 ```
 
+---
+
 ## 3. Quick Verification
 
 Please refer to the [Quick Verification](./quickTestServer) document.
+
+---
 
 ## 4. Admin Panel and Monitoring System
 
 Please refer to the [Admin Panel and Monitoring System](./admin) document.
 
-## 5. About Modifying Configuration Items
+---
 
-This project's configuration items are quite complex, primarily because some configurations involve multiple files such as **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**. The modification instructions are divided into two parts: shared configuration items and other configuration items.
+## 5. About Configuration Modification
+
+This project has complex configuration items, primarily because some settings involve **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`** multiple files. The explanation for modifying configuration items is divided into two parts: shared configuration items and other configuration items.
 
 ### 5.1 Shared Configuration Items
 
-Shared configuration items for **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**:
+Shared configuration items across **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**:
 
-1. mysql/mongo/redis/kafka/zookeeper/minio ports and passwords;
+1. MySQL/Mongo/Redis/Kafka/Zookeeper/MinIO ports and passwords;
 2. SECRET;
 3. API_OPENIM_PORT;
 4. OPENIM_IP;
 5. MINIO_PORT;
-6. GRAFANA_PORT.
+6. GRAFANA_PORT
 
 ### 5.2 Modification Methods
 
-For modifying shared configuration items in section 5.1, choose one of the two methods below.
+For modifying shared configuration items, choose one of the following methods:
 
-Method One: Regenerate All Configurations
+Method One: Regenerate all configurations
 
 If a comprehensive update of configurations is needed, follow these steps:
 
-1. Delete existing configuration files: delete **`openim-server/config/config.yaml`** and **`openim-chat/config/config.yaml`** files.
-2. Modify `.env` file: update the related configuration items in the **`.env`** file.
-3. Regenerate configurations and restart services: execute **`docker compose down ; docker compose up -d`**. This will regenerate configuration files based on new settings in the **`.env`** file and restart the services.
+1. Delete existing configuration files: Remove **`openim-server/config/config.yaml`** and **`openim-chat/config/config.yaml`** files.
+2. Modify the `.env` file: Update relevant settings in the **`.env`** file.
+3. Regenerate configurations and restart service: Execute **`docker compose down ; docker compose up -d`**, which will regenerate configuration files based on the new settings in the **`.env`** file and restart the service.
 
-Method Two: Modify Multiple Configuration Files Separately
+Method Two: Modify multiple configuration files separately
 
-If only partial updates are needed, follow these steps:
+If only a partial update is needed, follow these steps:
 
-1. Modify `.env` file: update the related configuration items in the **`.env`** file.
-2. Manually update configuration files: according to the changes in the **`.env`** file, correspondingly update the configuration items in **`openim-server/config/config.yaml`** and **`openim-chat/config/config.yaml`**.
-3. Special handling for specific variables: if **`OPENIM_IP`**, **`API_OPENIM_PORT`**, **`MINIO_PORT`**, **`GRAFANA_PORT`** are modified, update the following configuration items in **`openim-server/config/config.yaml`**:
-
-    ```yaml
-    object:
-      apiURL: "http://$OPENIM_IP:$API_OPENIM_PORT"
-      minio:
-        endpoint: "http://$DOCKER_BRIDGE_GATEWAY:$MINIO_PORT"
-        signEndpoint: "http://$OPENIM_IP:$MINIO_PORT"
-    
-    grafanaUrl: http://$OPENIM_IP:$GRAFANA_PORT
-    ```
-    
-4. Restart services: execute **`docker compose down ; docker compose up -d`** to apply changes and restart services.
-
-### 5.3 Modifying Other Configuration Items
-
-For non-shared variables in **`.env`**, **`openim-chat/config/config.yaml`**, and **`openim-server/config/config.yaml`**, these configuration items can be modified individually in the respective files. Execute **`docker compose down ; docker compose up -d`** to apply changes and restart services.
-
-## ❓ 6. Common Issues
-
-### 6.1 Can send text messages normally, but sending images fails 😕
-
-This issue might occur if the `OPENIM_IP` environment variable was not set before executing the `docker compose up -d` command. You can confirm this by checking the startup logs or using the following command to search for the "127.0.0.1" address in the logs:
-
-```bash
-grep "127.0.0.1" openim-server/_output/logs/openim-docker.log
-```
-
-#### Solution:
-
-1. Set the `OPENIM_IP` environment variable to your public IP address, or to your internal IP address if you are providing services within a LAN:
-
-   ```bash
-   export OPENIM_IP="<Public-IP>"
-   ```
-
-2. Use the `sed` command to update the `apiURL` and `signEndpoint` configuration items in the `config.yaml` file, changing the address to use the `OPENIM_IP` environment variable specified IP address:
-
-   ```bash
-   sed -i -e "s/apiURL: \"http:\/\/127\.0\.0\.1/apiURL: \"http:\/\/${OPENIM_IP}/" \
-          -e "s/signEndpoint: \"http:\/\/127\.0\.0\.1/signEndpoint: \"http:\/\/${OPENIM_IP}/" \
-          openim-server/config/config.yaml
-   ```
-
-After modifying the configuration and restarting the service with the above steps, sending images should work normally.
-
-### 6.3. Regarding Docker Version 🐋
-It is strongly recommended to use the docker compose command instead of docker-compose, as older Docker versions might not support the gateway feature❌. We advise upgrading to a newer version, such as `23.0.1`🔝.
-
-
-### 6.2 📜 Viewing Logs
-
-Log locations:
-
-- Runtime logs: `{openim-server, openim-chat}/_output/logs/openim-all.*`
-- Startup logs: `{openim-server, openim-chat}/_output/logs/openim-docker.log`
-
----
+1. Modify the `.env` file: Update relevant settings in the **`.env`** file.
+2. Manually update configuration files: According to modifications in the **`.env`** file, update corresponding settings in **`openim-server/config/config.yaml`** and **`openim-chat/config/config.yaml`** files
