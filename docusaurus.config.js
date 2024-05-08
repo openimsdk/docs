@@ -200,7 +200,7 @@ const config = {
               },
               {
                 label: 'Community',
-                href: 'https://join.slack.com/t/openimsdk/shared_invite/zt-1tmoj26uf-_FDy3dowVHBiGvLk9e5Xkg',
+                href: 'https://join.slack.com/t/openimsdk/shared_invite/zt-2hljfom5u-9ZuzP3NfEKW~BJKbpLm0Hw',
               },
             ],
           },
