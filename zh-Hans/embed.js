@@ -25,7 +25,7 @@
             cursor: "pointer",
         });
 
-        iframe.src = "https://knowledge.rentsoft.cn/open-kf-chatbot";
+        iframe.src = "https://openim-bot.open-sora.ai/open-kf-chatbot";
         Object.assign(iframe.style, {
             position: "fixed",
             zIndex: "10000",
