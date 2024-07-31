@@ -1,0 +1,131 @@
+---
+title: 群成员进群之前的回调
+hide_title: true
+---
+
+# 群成员进群之前的回调
+
+## 功能说明
+
+App 业务服务端可以通过该回调实时查看群成员进群的信息, 包括:App 后台可以拦截用户进群前的头像、昵称、用户权限和额外信息。
+
+## 注意事项
+
+- 为启用回调，必须配置回调 URL, 并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- APP 业务服务端需在超时时间内响应此请求。
+
+## 可能触发该回调的场景
+
+- App 群主通过客户端发起创建群聊。
+- App 管理员通过 REST API 邀请用户到群组。
+- App 管理员通过 REST API 处理群申请响应。
+- App 用户加入群组。
+
+## 回调发生时机
+
+- OpenIMServer 准备创建群聊之前进行回调。
+- OpenIMServer 准备同意用户进群之前进行回调。
+
+## 接口说明
+
+### 请求 URL 示例
+
+以下示例中 App 配置的回调 URL 为 `http://www.example.com/callbackCommand?contenttype=json`。
+
+```plaintext
+http://www.example.com/CallbackBeforeMembersJoinGroupCommand?contenttype=json
+```
+
+### 请求参数说明
+
+| 参数            | 说明                                              |
+| --------------- | ------------------------------------------------- |
+| http            | 请求协议为 HTTP，请求方式为 POST                  |
+| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名 |
+| CallbackCommand | 此处为：CallbackBeforeMembersJoinGroupCommand     |
+| contenttype     | 固定值为：JSON                                    |
+
+### Header
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | operationID 用于全局链路追踪 |
+
+### 请求包示例
+
+```json
+{
+  "callbackCommand": "CallbackBeforeMembersJoinGroupCommand",
+  "groupID": "12345",
+  "memberList": [
+    {
+      "userID": "666",
+      "ex": "337845818, 3q"
+    },
+    {
+      "userID": "1028",
+      "ex": "Are U OK"
+    }
+  ],
+  "groupEx": "test Group"
+}
+```
+
+### 请求包字段说明
+
+| 对象              | 类型   | 描述                                                             |
+| ----------------- | ------ | ---------------------------------------------------------------- |
+| callbackCommand   | string | 回调命令，这里是成员进群之前的回调。                             |
+| groupID           | string | 群组的唯一标识符。                                               |
+| memberList        | array  | 即将加入群成员的信息列表，包括用户 ID 和用户额外信息两个子字段。 |
+| memberList.userID | string | 成员的用户 ID                                                    |
+| memberList.ex     | string | 成员的用户额外信息                                               |
+| groupEx           | string | 群组的额外信息。                                                 |
+
+## 应答包示例
+
+```json
+{
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "Success",
+  "errDlt": "",
+  "nextCode": 0,
+  "memberCallbackList": [
+    {
+      "userID": "3034068043",
+      "nickname": "3q",
+      "faceURL": "http://203.56.175.233:10002/third/object?name=%2Fdata%2Fuser%2F0%2Fcn.rentsoft.flutter.openim.consumer%2Fcache%2Fimage_cropper_1687330588901.jpg",
+      "roleLevel": 20,
+      "muteEndTime": 0,
+      "ex": "Some extra data"
+    },
+    {
+      "userID": "3034068043",
+      "nickname": "President Lei",
+      "faceURL": "http://203.56.175.233:10002/third/object?name=%2Fdata%2Fuser%2F0%2Fcn.rentsoft.flutter.openim.consumer%2Fcache%2Fimage_cropper_1687330588901.jpg",
+      "roleLevel": 100,
+      "muteEndTime": 0,
+      "ex": "Some extra data"
+    }
+  ]
+}
+```
+
+## 应答包字段说明
+
+| 字段                           | 值                           | 说明                                                                                                |
+| ------------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| actionCode                     | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。                                                   |
+| errCode                        | 5001                         | 表示自定义错误码，范围在 5000-9999 之间。在 actionCode 不等于 0 时设置；在 nextCode 等于 1 时设置。 |
+| errMsg                         | "An error message"           | 自定义错误码对应的简单错误信息。                                                                    |
+| errDlt                         | "Detailed error information" | 自定义错误码对应的详细错误信息。                                                                    |
+| nextCode                       | 1                            | 下一步执行指令，actionCode 等于`0`时设置，`1`表示拒绝继续执行。                                     |
+| memberCallbackList             | array                        | webhook 出来后的 Callback 的列表                                                                    |
+| memberCallbackList.userID      | string                       | 用户 ID                                                                                             |
+| memberCallbackList.nickname    | string                       | 用户昵称                                                                                            |
+| memberCallbackList.faceURL     | string                       | 用户头像 URL                                                                                        |
+| memberCallbackList.roleLevel   | int32                        | 用户权限级别                                                                                        |
+| memberCallbackList.muteEndTime | int64                        | 用户禁言结束时间                                                                                    |
+| memberCallbackList.ex          | string                       | 用户额外信息                                                                                        |
