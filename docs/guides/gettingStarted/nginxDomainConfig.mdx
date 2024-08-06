@@ -1,20 +1,18 @@
-# Nginx 域名配置
-### 1. 前置条件
->(1)open-im-server 和 chat 成功启动（open-im-server 中 minio 的配置需要改变，参考步骤3）
+# Nginx 域名配置指南 
 
->(2)Nginx 成功安装（包括 ssl 模块）
+## 1. 前置条件 🛠️
 
->(3)成功申请两个 ssl 证书, test-web.rentsoft.cn, test-admin.rentsoft.cn
+- **open-im-server** 和 **chat** 成功启动。
+- **Nginx** 已成功安装，包括 SSL 模块。
+- 成功申请两个域名及其 SSL 证书，例如：`web.xx.xx` (用于 IM 服务端及 Web 端), `admin.xx.xx`（用于管理后台）。
+- 开放 443 和 80 端口。
 
->(4)开放 443, 80 端口
+## 2. 域名配置模板 📝
 
-### 2. 域名配置参考
-以 nginx 安装目录 **/usr/local** 为例，
-在 **/usr/local/nginx** 目录下新建 **config.conf** 文件，将如下模板粘贴进 **/usr/local/nginx/config.conf** 文件中，
-并将新建的 config.conf 文件导入到 **/usr/local/nginx/ngixn.conf** 通用配置文件中
->tips: 注意更换域名配置模板中的域名、ssl 证书路径和 ssl 密钥
+> 🚀 **提示**: 确保替换成您的实际域名、SSL 证书路径和 SSL 密钥。
 
-```
+```nginx
+
 #open-im-server chat Corresponding deployment address and port
 upstream msg_gateway{
     #IM Message server address Multiple can be specified according to the deployment
@@ -46,15 +44,15 @@ upstream openim_admin{
 }
 
 
-# Take the domain name "test-web.rentsoft.cn" for example
+# Take the domain name "web.xx.xx" for example
 server {
     listen       443; #Listening on port 443
-    server_name  test-web.rentsoft.cn;  #Your domain name
+    server_name  web.xx.xx;  #Your domain name
     ssl on;
     #Path of pem file for ssl certificate
-    ssl_certificate /usr/local/nginx/conf/ssh/test-web.rentsoft.cn_bundle.pem;
+    ssl_certificate /usr/local/nginx/conf/ssh/web.xx.xx_bundle.pem;
     #Key file path of ssl certificate
-    ssl_certificate_key /usr/local/nginx/conf/ssh/test-web.rentsoft.cn.key;
+    ssl_certificate_key /usr/local/nginx/conf/ssh/web.xx.xx.key;
 
     gzip on;
     gzip_min_length 1k;
@@ -117,15 +115,15 @@ server {
     }
 }
 
-#Take the domain name "test-admin.rentsoft.cn" for example
+#Take the domain name "admin.xx.xx" for example
 server {
     listen       443; #listening port
-    server_name  test-admin.rentsoft.cn; #Your domain server_name
+    server_name  admin.xx.xx; #Your domain server_name
     ssl on;
     #Path of pem file for ssl certificate
-    ssl_certificate /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn_bundle.pem;
+    ssl_certificate /usr/local/nginx/conf/ssh/admin.xx.xx_bundle.pem;
     #Key file path of ssl certificate
-    ssl_certificate_key /usr/local/nginx/conf/ssh/test-admin.rentsoft.cn.key;
+    ssl_certificate_key /usr/local/nginx/conf/ssh/admin.xx.xx.key;
 
 
     gzip on;
@@ -189,38 +187,22 @@ server {
 #Redirection from HTTP to HTTPS redirection
 server {
     listen 80;
-    server_name test-web.rentsoft.cn;
+    server_name web.xx.xx;
     rewrite ^(.*)$ https://$host$1 permanent;
 }
 ```
 
-### 3.Minio 的配置
-打开 **open-im-server/config/config.yaml** 修改 Minio 对应的内容，并重启 open-im-server
+## 3. Minio 配置 🗄️
 
-```yaml
-object:
-enable: "minio"
-apiURL: "https://test-web.rentsoft.cn/api" //10002
-minio:
-bucket: "openim"
-endpoint: "http://172.28.0.1:10005"
-accessKeyID: "root"
-secretAccessKey: "openIM123"
-sessionToken: ''
-signEndpoint: "https://test-web.rentsoft.cn/im-minio-api" //10005
-```
+- **源码部署**: 修改 `config/minio.yml` 文件中的 `externalAddress` 为 `"https://web.xx.xx/minio_s3_2"`.
+- **Docker 部署**: 修改 `.env` 文件中的 `MINIO_EXTERNAL_ADDRESS` 为 `"https://web.xx.xx/minio_s3_2"`.
 
-### 4.启动 Nginx
-进入 **/usr/local/nginx/sbin** 文件，执行以下命令
-> ./nginx -s reload
+## 4. 启动 Nginx 🚀
 
-### 5.使用对应的域名进行登录验证
->IM ：test-web.rentsoft.cn
+执行命令 `nginx -s reload` 以重载 Nginx 配置，启用新的域名设置。
 
->管理后台：test-admin.rentsoft.cn
+## 5. 登录验证 🔍
 
-
-
-
-
+- 访问IM web端：`web.xx.xx`
+- 访问管理后台：`admin.xx.xx`
 
