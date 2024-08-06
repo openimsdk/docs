@@ -1,0 +1,144 @@
+---
+title: Electron
+hide_title: true
+sidebar_position: 6
+---
+
+## 🚀 Using Demo
+We strongly recommend that you first run the framework-related sample [DEMO](https://github.com/openimsdk/openim-electron-demo) we have prepared for you. This will not only allow you to intuitively experience the functionalities of the OpenIMSDK, but it will also help you quickly identify and resolve issues during the actual integration process.
+
+## Quick Integration
+
+### 1. Add Dependencies
+
+```shell
+npm install open-im-sdk-wasm @openim/electron-client-sdk --save
+```
+
+### 2. Obtain Static Resources Required by wasm
+
+> In the `node_modules` directory at the root of your project, find the `open-im-sdk-wasm` subdirectory, and copy all files from the `assets` folder to your project's public resource directory (public).
+
+- File List
+
+```bash
+openIM.wasm
+sql-wasm.wasm
+wasm_exec.js
+```
+
+- After copying, include the `wasm_exec.js` file in your `index.html` file via a script tag
+
+- Potential Issues
+  > If you are using webpack4, you might need to refer to this issue for configuration [How to import open-im-sdk-wasm in webpack4.x](https://github.com/openimsdk/open-im-sdk-web-wasm/issues/73)
+
+### 3. Import SDK
+
+- Main Process
+
+```typescript
+import OpenIMSDKMain from '@openim/electron-client-sdk';
+
+...
+new OpenIMSDKMain(libPath, mainWindow.webContents);
+...
+```
+
+- Preload Script
+
+```typescript
+import '@openim/electron-client-sdk/lib/preload';
+
+...
+```
+
+- Renderer Process
+
+```typescript
+import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+
+const { instance } = getWithRenderProcess();
+
+export const IMSDK = instance;
+```
+
+### 4. Login and Set Listeners
+> Note: The initialization of the SDK differs between the electron and web environments. If you need to support both, pay attention to handling them separately.
+
+```typescript
+import { CbEvents, LogLevel } from 'open-im-sdk-wasm';
+import type { WSEvent } from 'open-im-sdk-wasm/lib/types/entity';
+
+IMSDK.on(CbEvents.OnConnecting, handleConnecting);
+IMSDK.on(CbEvents.OnConnectFailed, handleConnectFailed);
+IMSDK.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
+
+// Electron
+await IMSDK.initSDK({
+  platformID: 'your-platform-id',
+  apiAddr: 'http://your-server-ip:10002',
+  wsAddr: 'ws://your-server-ip:10001',
+  dataDir: 'your-db-dir',
+  logFilePath: 'your-log-file-path',
+  logLevel: LogLevel.Debug,
+  isLogStandardOutput: true,
+});
+
+await IMSDK.login({
+  userID: 'your-user-id',
+  token: 'your-token',
+});
+
+// Web
+await IMSDK.login({
+  userID: 'your-user-id',
+  token: 'your-token',
+  platformID: 5,
+  apiAddr: 'http://your-server-ip:10002',
+  wsAddr: 'ws://your-server-ip:10001',
+  logLevel: LogLevel.Debug,
+});
+
+function handleConnecting() {
+  // Connecting...
+}
+
+function handleConnectFailed({ errCode, errMsg }: WSEvent) {
+  // Connection failed ❌
+  console.log(errCode, errMsg);
+}
+
+function handleConnectSuccess() {
+  // Connection successful ✅
+}
+```
+
+### 5. Sending and Receiving Messages
+
+```typescript
+import { CbEvents } from 'open-im-sdk-wasm';
+import type { WSEvent, MessageItem } from 'open-im-sdk-wasm/lib/types/entity';
+
+// Listen for new messages 📩
+IMSDK.on(CbEvents.OnRecvNewMessages, handleNewMessages);
+
+const message = (await IMSDK.createTextMessage('hello openim')).data;
+
+IMSDK.sendMessage({
+  recvID: 'recv user id',
+  groupID: '',
+  message,
+})
+  .then(() => {
+    // Message sent successfully ✉️
+  })
+  .catch(err => {
+    // Failed to send message ❌
+    console.log(err);
+  });
+
+function handleNewMessages({ data }: WSEvent<MessageItem[]>) {
+  // New message list 📨
+  console.log(data);
+}
+```

@@ -57,7 +57,7 @@ import Image4 from './assets/admin.jpg';
 ![PC Web Interface](./assets/database2.png)
 
 
-## 导入自定义dashboard
+## 导入dashboard
 点击下图的import按钮，导入仪表盘
 ![PC Web Interface](./assets/dashboard.png)
 
@@ -77,6 +77,26 @@ import Image4 from './assets/admin.jpg';
 
 node-exporter指标信息，如下图
 ![PC Web Interface](./assets/dashboard5.png)
+
+## **自定义dashboard**
+
+如下图创建一个新的dashboard（或者修改已经导入的dashboard），点击`Add visualization`创建新的panel。
+
+![image-20240718104421411](./assets/dashboard6.png)
+
+选择指定的数据源，输入`promQL`语句，点击`Run queries`，选择相应的时间范围，即可查询到相关的数据。
+
+![image-20240718104701595](./assets/dashboard7.png)
+
+若要修改指标名称，可点击`Options`，点击`Legend`选择`Custom`，输入对应的表达式
+
+![image-20240718105008942](./assets/dashboard8.png)
+
+右侧可以修改panel的标题、描述、图标类型等信息，可根据需要自行选择。
+
+修改完毕后，点击右上角**Apply**，即可保存panel。dashboard编辑完毕后，点击保存即可。
+
+![image-20240718105207437](./assets/dashboard9.png)
 
 
 
@@ -140,37 +160,58 @@ templates:
   - /etc/alertmanager/email.tmpl #邮件模版
 
 route:
-  group_by: ['alertname']
-  group_wait: 5s
-  group_interval: 5s
-  repeat_interval: 5m
-  receiver: email
+  group_by: ['alertname']  # 告警分组的标签，具有相同标签值的告警会被合并到同一个通知中
+  group_wait: 5s  # 在发送第一个告警通知之前的等待时间
+  group_interval: 5s  # 在发送分组通知之间的间隔时间
+  repeat_interval: 5m  # 重复发送相同告警的通知之间的间隔时间。用于定期提醒接收者仍然存在的告警。
+  receiver: email  # 默认的接收器名称
 receivers:
-  - name: email
+  - name: email  # # 接收器名称
     email_configs:
       - to: 'alert@example.com' #接收告警邮箱
         html: '{{ template "email.to.html" . }}'
         headers: { Subject: "[OPENIM-SERVER]Alarm" }#邮件标题
-        send_resolved: true
+        send_resolved: true  # 告警解决时是否发送通知
 ```
 5，邮件模版文件email.tmpl说明：此文件是html格式，告警管理模块会填充里面的变量信息，然后渲染成html格式文件，进行邮件的发送，可根据需求自行改写:
 ```
 {{ define "email.to.html" }}
-{{ range .Alerts }}
-<!-- Begin of OpenIM Alert -->
-<div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-    <h3>OpenIM Alert</h3>
-    <p><strong>Alert Program:</strong> Prometheus Alert</p>
-    <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
-    <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
-    <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
-    <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
-    <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
-    <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
-</div>
+{{ if eq .Status "firing" }}
+    {{ range .Alerts }}
+    <!-- Begin of OpenIM Alert -->
+    <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+        <h3>OpenIM Alert</h3>
+        <p><strong>Alert Status:</strong> firing</p>
+        <p><strong>Alert Program:</strong> Prometheus Alert</p>
+        <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
+        <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
+        <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
+        <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
+        <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
+        <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+    </div>
+    {{ end }}
+
+
+{{ else if eq .Status "resolved" }}
+    {{ range .Alerts }}
+    <!-- Begin of OpenIM Alert -->
+    <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+        <h3>OpenIM Alert</h3>
+        <p><strong>Alert Status:</strong> resolved</p>
+        <p><strong>Alert Program:</strong> Prometheus Alert</p>
+        <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
+        <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
+        <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
+        <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
+        <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
+        <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+    </div>
+    {{ end }}
 <!-- End of OpenIM Alert -->
 {{ end }}
 {{ end }}
+
 ```
 
 
@@ -183,3 +224,43 @@ receivers:
 如果是在k8s环境通过helm chart方式部署的OpenIM服务，即通过grafana查看OpenIM所有服务的日志信息。
 目前二进制和docker部署没有集成loki日志收集组件，想体验loki日志收集功能，请采用helm chart部署，
 详情请查阅链接https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
+
+## **自定义prometheus指标配置**
+
+在源码中`pkg/common/prommetrics`中初始化相应类型指标，调用`Init()`函数进行注册。
+
+```go
+const commonPath = "/metrics"
+var rpcCounter = prometheus.NewCounterVec(
+    prometheus.CounterOpts{
+        Name: "rpc_count",
+        Help: "Total number of RPC calls",
+    },
+    []string{"name", "path", "code"},
+)
+
+func RpcInit(cs []prometheus.Collector, prometheusPort int) error {
+	reg := prometheus.NewRegistry()
+	cs = append(append(
+		baseCollector,
+		rpcCounter,
+	), cs...)
+	return Init(reg, prometheusPort, commonPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}), cs...)
+}
+```
+
+在程序启动过程中需要在**一个独立的协程**中启动初始化，初始化后会运行服务暴露数据采集端口。
+
+在代码中相应的位置对指标进行维护：
+
+```go
+rpcCounter.With(prometheus.Labels{"name": name, "path": path, "code": strconv.Itoa(code)}).Inc()
+```
+
+在`prometheus`或者`grafana`中，输入`promQL`语句进行查询：
+
+```promQL
+rpc_count
+```
+
+即可查询到指标信息。

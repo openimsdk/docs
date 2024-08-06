@@ -21,7 +21,7 @@ values={[
 { label: 'Android', value: 'Android', },
 { label: 'Flutter', value: 'Flutter', },
 { label: 'uni-app', value: 'uni-app', },
-{ label: 'Browser/MiniProgram', value: 'Web', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
 { label: 'React-Native', value: 'React-Native', },
 ]
 }>
@@ -203,7 +203,9 @@ IMSDK.uploadFile({
   name: string;
   contentType: string;
   uuid: string;
-  file: File;
+  file?: File;
+  filepath?: string; // 仅在electron中使用ffi方式调用时有效
+  cause?: string
 },operationID?: string): Promise<WsResponse<{url:string}>>
 ```
 
@@ -214,7 +216,9 @@ IMSDK.uploadFile({
 | name        | string   | 是       | 文件名      |
 | contentType | string   | 是       | 文件类型    |
 | uuid        | string   | 是       | 文件唯一 ID |
-| file        | string   | 是       | 文件对象    |
+| file        | string   | 否       | 文件对象    |
+| filepath    | string   | 否       | 文件绝对路径, 仅在electron中使用ffi方式调用时有效    |
+| cause        | string   | 否       | 文件分类    |
 
 ### 返回结果
 
@@ -228,7 +232,12 @@ IMSDK.uploadFile({
 ```js showLineNumbers
 import { getSDK } from 'open-im-sdk-wasm';
 const IMSDK = getSDK();
-// or
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
 // import { OpenIMSDK } from 'open-im-sdk';
 // const IMSDK = new OpenIMSDK();
 
@@ -236,7 +245,9 @@ IMSDK.uploadFile({
   name: 'fileName.zip',
   contentType: 'zip',
   uuid: 'uuid',
-  file: File,
+  cause: '',
+  file: File, // web端传入文件对象
+  // filepath: 'path://...' // 仅在electron中使用ffi方式调用时有效, 此时file不传
 })
   .then(({ data: { url } }) => {
     // url: 文件远程链接
