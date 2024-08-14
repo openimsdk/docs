@@ -43,7 +43,124 @@ import Image4 from './assets/admin.jpg';
 
 <img src={Image4} width="700" alt="admin " />
 
+## 配置文件和告警说明
 
+1. prometheus.yml 文件说明：主要用来配置告警规则文件路径，告警管理服务地址，抓取监控数据ip地址。需要把其中所有的`internal_ip`替换为自己的私网ip地址。如下：
+
+   ```yaml
+   # Alertmanager configuration
+   alerting:
+     alertmanagers:
+       - static_configs:
+           - targets: ['192.168.0.1:19093']
+   
+   ...
+   ```
+
+   如果需要添加告警文件，需要在`rule_files`下添加。默认告警文件为`instance-down-rules.yml`。
+
+2. 邮件告警架构说明图：Prometheus组件加载告警规则instance-down-rules.yml文件，将符合条件的告警信息发送到alertmanager组件，alertmanager组件加载alertmanager.yml和email.tmpl文件，通过配置的告警邮箱信息和邮件模版发送邮件
+
+   ![PC Web Interface](./assets/alert2.png)
+
+3. 告警规则instance-down-rules.yaml文件说明：默认实现了两条(instance_down,database_insert_failure_alerts)邮件告警规则，如果增加告警规则可以在instance-down-rules.yml文件中添加规则。
+
+   ```yaml
+   groups:
+     - name: instance_down  #报警规则一:监控模块宕机超过一分钟就触发告警
+       rules:
+         - alert: InstanceDown
+           expr: up == 0
+           for: 1m
+           labels:
+             severity: critical
+           annotations:
+             summary: "Instance {{ $labels.instance }} down"
+             description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes."
+   
+     - name: database_insert_failure_alerts #报警规则二:监控指标msg_insert_redis_failed_total和msg_insert_mongo_failed_total有增长就触发报警
+       rules:
+         - alert: DatabaseInsertFailed
+           expr: (increase(msg_insert_redis_failed_total[5m]) > 0) or (increase(msg_insert_mongo_failed_total[5m]) > 0)
+           for: 1m
+           labels:
+             severity: critical
+           annotations:
+             summary: "Increase in MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter detected"
+             description: "Either MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter has increased in the last 5 minutes, indicating failures in message insert operations to Redis or MongoDB,maybe the redis or mongodb is crash."
+   ```
+
+4. 告警管理alertmanager.yml文件说明：修改发送者和接收者邮箱配置信息，即可接收告警信息，如果想实现钉钉，企业微信等方式的告警通知，需要自行改写alertmanager.yml，可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
+
+   ```yaml
+   global:
+     resolve_timeout: 5m
+     smtp_from: alert@openim.io #告警信息发送邮箱
+     smtp_smarthost: smtp.163.com:465 #发送邮箱smtp地址
+     smtp_auth_username: alert@openim.io #发送邮箱授权用户名，一般和smtp_from邮箱相同
+     smtp_auth_password: YOURAUTHPASSWORD #发送邮箱授权码
+     smtp_require_tls: false
+     smtp_hello: openim alert
+   
+   templates:
+     - /etc/alertmanager/email.tmpl #邮件模版
+   
+   route:
+     group_by: ['alertname']  # 告警分组的标签，具有相同标签值的告警会被合并到同一个通知中
+     group_wait: 5s  # 在发送第一个告警通知之前的等待时间
+     group_interval: 5s  # 在发送分组通知之间的间隔时间
+     repeat_interval: 5m  # 重复发送相同告警的通知之间的间隔时间。用于定期提醒接收者仍然存在的告警。
+     receiver: email  # 默认的接收器名称
+   receivers:
+     - name: email  # # 接收器名称
+       email_configs:
+         - to: 'alert@example.com' #接收告警邮箱
+           html: '{{ template "email.to.html" . }}'
+           headers: { Subject: "[OPENIM-SERVER]Alarm" }#邮件标题
+           send_resolved: true  # 告警解决时是否发送通知
+   ```
+
+5. 邮件模版文件email.tmpl说明：此文件是html格式，告警管理模块会填充里面的变量信息，然后渲染成html格式文件，进行邮件的发送，可根据需求自行改写:
+
+   ```tmpl
+   {{ define "email.to.html" }}
+   {{ if eq .Status "firing" }}
+       {{ range .Alerts }}
+       <!-- Begin of OpenIM Alert -->
+       <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+           <h3>OpenIM Alert</h3>
+           <p><strong>Alert Status:</strong> firing</p>
+           <p><strong>Alert Program:</strong> Prometheus Alert</p>
+           <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
+           <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
+           <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
+           <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
+           <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
+           <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+       </div>
+       {{ end }}
+   
+   
+   {{ else if eq .Status "resolved" }}
+       {{ range .Alerts }}
+       <!-- Begin of OpenIM Alert -->
+       <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+           <h3>OpenIM Alert</h3>
+           <p><strong>Alert Status:</strong> resolved</p>
+           <p><strong>Alert Program:</strong> Prometheus Alert</p>
+           <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
+           <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
+           <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
+           <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
+           <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
+           <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+       </div>
+       {{ end }}
+   <!-- End of OpenIM Alert -->
+   {{ end }}
+   {{ end }}
+   
+   ```
 
 ## 登录grafana
 先登录管理后台，再点击左侧数据监控菜单，输入默认用户名(admin)和密码(admin)登入grafana.
@@ -103,120 +220,6 @@ node-exporter指标信息，如下图
 
 
 
-
-## 告警配置文件说明
-
-1,邮件告警架构说明图：Prometheus组件加载告警规则instance-down-rules.yml文件，将符合条件的告警信息发送到alertmanager组件，alertmanager组件加载alertmanager.yml和email.tmpl文件，通过配置的告警邮箱信息和邮件模版发送邮件
-![PC Web Interface](./assets/alert2.png)
-
-2,prometheus.yml 文件说明：主要用来配置告警规则文件路径，告警管理服务地址，抓取监控数据ip地址。默认不需要修改。
-```
-
-# Alertmanager configuration
-alerting:
-alertmanagers:
-- static_configs:
-- targets: ['172.28.0.1:19093']
-
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
-rule_files:
-  - "instance-down-rules.yml"
-
-```
-3，告警规则instance-down-rules.yaml文件说明：默认实现了两条(instance_down,database_insert_failure_alerts)邮件告警规则，如果增加告警规则可以在instance-down-rules.yml文件中添加规则:
-```
-groups:
-  - name: instance_down  #报警规则一:监控模块宕机超过一分钟就触发告警
-    rules:
-      - alert: InstanceDown
-        expr: up == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Instance {{ $labels.instance }} down"
-          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes."
-
-  - name: database_insert_failure_alerts #报警规则二:监控指标msg_insert_redis_failed_total和msg_insert_mongo_failed_total有增长就触发报警
-    rules:
-      - alert: DatabaseInsertFailed
-        expr: (increase(msg_insert_redis_failed_total[5m]) > 0) or (increase(msg_insert_mongo_failed_total[5m]) > 0)
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Increase in MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter detected"
-          description: "Either MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter has increased in the last 5 minutes, indicating failures in message insert operations to Redis or MongoDB,maybe the redis or mongodb is crash."
-```
-
-4，告警管理alertmanager.yml文件说明：修改发送者和接收者邮箱配置信息，即可接收告警信息，如果想实现钉钉，企业微信等方式的告警通知，需要自行改写alertmanager.yml，可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
-```
-global:
-  resolve_timeout: 5m
-  smtp_from: alert@openim.io #告警信息发送邮箱
-  smtp_smarthost: smtp.163.com:465 #发送邮箱smtp地址
-  smtp_auth_username: alert@openim.io #发送邮箱授权用户名，一般和smtp_from邮箱相同
-  smtp_auth_password: YOURAUTHPASSWORD #发送邮箱授权码
-  smtp_require_tls: false
-  smtp_hello: openim alert
-
-templates:
-  - /etc/alertmanager/email.tmpl #邮件模版
-
-route:
-  group_by: ['alertname']  # 告警分组的标签，具有相同标签值的告警会被合并到同一个通知中
-  group_wait: 5s  # 在发送第一个告警通知之前的等待时间
-  group_interval: 5s  # 在发送分组通知之间的间隔时间
-  repeat_interval: 5m  # 重复发送相同告警的通知之间的间隔时间。用于定期提醒接收者仍然存在的告警。
-  receiver: email  # 默认的接收器名称
-receivers:
-  - name: email  # # 接收器名称
-    email_configs:
-      - to: 'alert@example.com' #接收告警邮箱
-        html: '{{ template "email.to.html" . }}'
-        headers: { Subject: "[OPENIM-SERVER]Alarm" }#邮件标题
-        send_resolved: true  # 告警解决时是否发送通知
-```
-5，邮件模版文件email.tmpl说明：此文件是html格式，告警管理模块会填充里面的变量信息，然后渲染成html格式文件，进行邮件的发送，可根据需求自行改写:
-```
-{{ define "email.to.html" }}
-{{ if eq .Status "firing" }}
-    {{ range .Alerts }}
-    <!-- Begin of OpenIM Alert -->
-    <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-        <h3>OpenIM Alert</h3>
-        <p><strong>Alert Status:</strong> firing</p>
-        <p><strong>Alert Program:</strong> Prometheus Alert</p>
-        <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
-        <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
-        <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
-        <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
-        <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
-        <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
-    </div>
-    {{ end }}
-
-
-{{ else if eq .Status "resolved" }}
-    {{ range .Alerts }}
-    <!-- Begin of OpenIM Alert -->
-    <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-        <h3>OpenIM Alert</h3>
-        <p><strong>Alert Status:</strong> resolved</p>
-        <p><strong>Alert Program:</strong> Prometheus Alert</p>
-        <p><strong>Severity Level:</strong> {{ .Labels.severity }}</p>
-        <p><strong>Alert Type:</strong> {{ .Labels.alertname }}</p>
-        <p><strong>Affected Host:</strong> {{ .Labels.instance }}</p>
-        <p><strong>Affected Service:</strong> {{ .Labels.job }}</p>
-        <p><strong>Alert Subject:</strong> {{ .Annotations.summary }}</p>
-        <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
-    </div>
-    {{ end }}
-<!-- End of OpenIM Alert -->
-{{ end }}
-{{ end }}
-
-```
 
 
 ## 告警体验
