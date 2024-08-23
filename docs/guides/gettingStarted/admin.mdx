@@ -3,40 +3,32 @@ title: '监控及告警'
 sidebar_position: 5
 ---
 
-
-
 ## 组件说明
-docker compose部署时，会自动部署如下组件，如使用源码部署，需手动开启docker-compose.yaml中的相关组件。
 
-| 组件名称       | 组件说明                                      | 部署说明                                    |
-|-------------|-----------------------------------------|--------------------------------------|
-| openim-admin | 管理后台，提供监控页面入口                           | Docker和源码部署均自动开启                     |
-| prometheus  | 用于收集和存储指标数据的监控系统组件                     | Docker部署自动开启；源码部署需手动启用         |
-| alertmanager | 管理和发送告警的组件                               | Docker部署自动开启；源码部署需手动启用         |
-| grafana     | 用于展示监控数据的仪表板组件                         | Docker部署自动开启；源码部署需手动启用         |
-| node-exporter | 用于采集节点（如服务器）指标信息 | Docker部署自动开启；源码部署需手动启用         |
+docker compose 部署时，会自动部署如下组件，如使用源码部署，需手动开启 docker-compose.yaml 中的相关组件。
 
-
-
-
-
+| 组件名称      | 组件说明                             | 部署说明                                |
+| ------------- | ------------------------------------ | --------------------------------------- |
+| openim-admin  | 管理后台，提供监控页面入口           | Docker 和源码部署均自动开启             |
+| prometheus    | 用于收集和存储指标数据的监控系统组件 | Docker 部署自动开启；源码部署需手动启用 |
+| alertmanager  | 管理和发送告警的组件                 | Docker 部署自动开启；源码部署需手动启用 |
+| grafana       | 用于展示监控数据的仪表板组件         | Docker 部署自动开启；源码部署需手动启用 |
+| node-exporter | 用于采集节点（如服务器）指标信息     | Docker 部署自动开启；源码部署需手动启用 |
 
 ## 配置文件说明
 
-
-| 文件名称  | 文件说明                    | 修改项                       |
-|--------|-----------------------|--------------------------------------------|
-| config/config.yaml| openIM服务配置 | prometheus.enable: true表示启用|
-| config/prometheus.yml| prometheus配置  | 无需修改 |
-| config/instance-down-rules.yml| 告警规则  | 默认配置两条规则(instance_down, database_insert_failure_alerts)|
-| config/alertmanager.yml| 告警管理配置  |  需配置发送者和接收者邮箱信息 |
-| config/email.tmpl| 邮件告警模版 | 默认邮件模版，可自行修改 |
-| config/templates/prometheus-dashboard.yaml| 自定义dashboard | 无需修改 |
-
+| 文件名称                                   | 文件说明         | 修改项                                                          |
+| ------------------------------------------ | ---------------- | --------------------------------------------------------------- |
+| `config/config.yaml`                       | openIM 服务配置  | prometheus.enable: true 表示启用                                |
+| `config/prometheus.yml`                      | prometheus 配置  | 无需修改                                                        |
+| `config/instance-down-rules.yml`             | 告警规则         | 默认配置两条规则(instance_down, database_insert_failure_alerts) |
+| `config/alertmanager.yml`                    | 告警管理配置     | 需配置发送者和接收者邮箱信息                                    |
+| `config/email.tmpl`                          | 邮件告警模版     | 默认邮件模版，可自行修改                                        |
+| `config/templates/prometheus-dashboard.yaml` | 自定义 dashboard | 无需修改                                                        |
 
 ## 配置文件和告警说明
 
-1. prometheus.yml 文件说明：主要用来配置告警规则文件路径，告警管理服务地址，抓取监控数据ip地址。需要把其中所有的`internal_ip`替换为自己的私网ip地址。如下：
+1. prometheus.yml 文件说明：主要用来配置告警规则文件路径，告警管理服务地址，抓取监控数据 ip 地址。需要把其中所有的`internal_ip`替换为自己的私网 ip 地址。如下：
 
    ```yaml
    # Alertmanager configuration
@@ -44,21 +36,19 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
      alertmanagers:
        - static_configs:
            - targets: ['192.168.0.1:19093']
-   
-   ...
    ```
 
    如果需要添加告警文件，需要在`rule_files`下添加。默认告警文件为`instance-down-rules.yml`。
 
-2. 邮件告警架构说明图：Prometheus组件加载告警规则instance-down-rules.yml文件，将符合条件的告警信息发送到alertmanager组件，alertmanager组件加载alertmanager.yml和email.tmpl文件，通过配置的告警邮箱信息和邮件模版发送邮件
+2. 邮件告警架构说明图：Prometheus 组件加载告警规则 instance-down-rules.yml 文件，将符合条件的告警信息发送到 alertmanager 组件，alertmanager 组件加载 alertmanager.yml 和 email.tmpl 文件，通过配置的告警邮箱信息和邮件模版发送邮件
 
    ![PC Web Interface](./assets/alert2.png)
 
-3. 告警规则instance-down-rules.yaml文件说明：默认实现了两条(instance_down,database_insert_failure_alerts)邮件告警规则，如果增加告警规则可以在instance-down-rules.yml文件中添加规则。
+3. 告警规则 instance-down-rules.yaml 文件说明：默认实现了两条(instance_down,database_insert_failure_alerts)邮件告警规则，如果增加告警规则可以在 instance-down-rules.yml 文件中添加规则。
 
    ```yaml
    groups:
-     - name: instance_down  #报警规则一:监控模块宕机超过一分钟就触发告警
+     - name: instance_down #报警规则一:监控模块宕机超过一分钟就触发告警
        rules:
          - alert: InstanceDown
            expr: up == 0
@@ -66,9 +56,9 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
            labels:
              severity: critical
            annotations:
-             summary: "Instance {{ $labels.instance }} down"
-             description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes."
-   
+             summary: 'Instance {{ $labels.instance }} down'
+             description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minutes.'
+
      - name: database_insert_failure_alerts #报警规则二:监控指标msg_insert_redis_failed_total和msg_insert_mongo_failed_total有增长就触发报警
        rules:
          - alert: DatabaseInsertFailed
@@ -77,11 +67,11 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
            labels:
              severity: critical
            annotations:
-             summary: "Increase in MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter detected"
-             description: "Either MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter has increased in the last 5 minutes, indicating failures in message insert operations to Redis or MongoDB,maybe the redis or mongodb is crash."
+             summary: 'Increase in MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter detected'
+             description: 'Either MsgInsertRedisFailedCounter or MsgInsertMongoFailedCounter has increased in the last 5 minutes, indicating failures in message insert operations to Redis or MongoDB,maybe the redis or mongodb is crash.'
    ```
 
-4. 告警管理alertmanager.yml文件说明：修改发送者和接收者邮箱配置信息，即可接收告警信息，如果想实现钉钉，企业微信等方式的告警通知，需要自行改写alertmanager.yml，可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
+4. 告警管理 alertmanager.yml 文件说明：修改发送者和接收者邮箱配置信息，即可接收告警信息，如果想实现钉钉，企业微信等方式的告警通知，需要自行改写 alertmanager.yml，可以参阅告警管理模块官方文档：https://prometheus.io/docs/alerting/latest/alertmanager/
 
    ```yaml
    global:
@@ -92,10 +82,10 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
      smtp_auth_password: YOURAUTHPASSWORD #发送邮箱授权码
      smtp_require_tls: false
      smtp_hello: openim alert
-   
+
    templates:
      - /etc/alertmanager/email.tmpl #邮件模版
-   
+
    route:
      group_by: ['alertname']  # 告警分组的标签，具有相同标签值的告警会被合并到同一个通知中
      group_wait: 5s  # 在发送第一个告警通知之前的等待时间
@@ -111,7 +101,7 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
            send_resolved: true  # 告警解决时是否发送通知
    ```
 
-5. 邮件模版文件email.tmpl说明：此文件是html格式，告警管理模块会填充里面的变量信息，然后渲染成html格式文件，进行邮件的发送，可根据需求自行改写:
+5. 邮件模版文件 email.tmpl 说明：此文件是 html 格式，告警管理模块会填充里面的变量信息，然后渲染成 html 格式文件，进行邮件的发送，可根据需求自行改写:
 
    ```tmpl
    {{ define "email.to.html" }}
@@ -130,8 +120,6 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
            <p><strong>Trigger Time:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
        </div>
        {{ end }}
-   
-   
    {{ else if eq .Status "resolved" }}
        {{ range .Alerts }}
        <!-- Begin of OpenIM Alert -->
@@ -150,48 +138,45 @@ docker compose部署时，会自动部署如下组件，如使用源码部署，
    <!-- End of OpenIM Alert -->
    {{ end }}
    {{ end }}
-   
    ```
-
 
 ## 登录管理后台
 
 在浏览器中输入 `http://ip:11002` 来访问管理后台。此 IP 为服务端 OPENIM_IP，确保您的浏览器能访问。默认账号和密码均为 chatAdmin
 
-
 import Image4 from './assets/admin.jpg';
 
 <img src={Image4} width="700" alt="admin " />
 
+## 登录 grafana
 
-## 登录grafana
-先登录管理后台，再点击左侧数据监控菜单，输入默认用户名(admin)和密码(admin)登入grafana.
+先登录管理后台，再点击左侧数据监控菜单，输入默认用户名(admin)和密码(admin)登入 grafana.
 ![PC Web Interface](./assets/login1.png)
 
-## 添加Prometheus数据源
-如下图，输入Prometheus数据源的URL: http://172.28.0.1:19090 (19090为Prometheus默认端口)  点击"Save and Test"保存.
-![PC Web Interface](./assets/database.png)
+## 添加 Prometheus 数据源
 
+如下图，输入 Prometheus 数据源的 URL: http://172.28.0.1:19090 (19090 为 Prometheus 默认端口) 点击"Save and Test"保存.
+![PC Web Interface](./assets/database.png)
 
 ![PC Web Interface](./assets/database2.png)
 
-## **导入dashboard**
+## **导入 dashboard**
 
-点击下图的import按钮，导入仪表盘 
+点击下图的 import 按钮，导入仪表盘
 
 ![dashboard.png](./assets/dashboard.png)
 
-拷贝 https://github.com/openimsdk/open-im-server/tree/main/config/grafana-template/Demo.json 内容到下图区域，接着点击load按钮
+拷贝 https://github.com/openimsdk/open-im-server/tree/main/config/grafana-template/Demo.json 内容到下图区域，接着点击 load 按钮
 
 ![dashboard2](./assets/dashboard2.png)
 
-选择你的 Data Source和job , 即可导入指标信息，如下图 
+选择你的 Data Source 和 job , 即可导入指标信息，如下图
 
 ![dashboard3](./assets/dashboard3.png)
 
-## **自定义dashboard**
+## **自定义 dashboard**
 
-如下图创建一个新的dashboard（或者修改已经导入的dashboard），点击`Add visualization`创建新的panel。
+如下图创建一个新的 dashboard（或者修改已经导入的 dashboard），点击`Add visualization`创建新的 panel。
 
 ![image-20240718104421411](./assets/dashboard6.png)
 
@@ -203,38 +188,34 @@ import Image4 from './assets/admin.jpg';
 
 ![image-20240718105008942](./assets/dashboard8.png)
 
-右侧可以修改panel的标题、描述、图标类型等信息，可根据需要自行选择。
+右侧可以修改 panel 的标题、描述、图标类型等信息，可根据需要自行选择。
 
-修改完毕后，点击右上角**Apply**，即可保存panel。dashboard编辑完毕后，点击保存即可。
+修改完毕后，点击右上角**Apply**，即可保存 panel。dashboard 编辑完毕后，点击保存即可。
 
 ![image-20240718105207437](./assets/dashboard9.png)
 
-## 导入node-export的dashboard
+## 导入 node-export 的 dashboard
 
-填入1860再导入，或在官网( https://grafana.com/grafana/dashboards/ )寻找其他的node-exporter dashboard视图
-
+填入 1860 再导入，或在官网( https://grafana.com/grafana/dashboards/ )寻找其他的 node-exporter dashboard 视图
 
 ![PC Web Interface](./assets/dashboard4.png)
 
-node-exporter指标信息，如下图
+node-exporter 指标信息，如下图
 ![PC Web Interface](./assets/dashboard5.png)
 
-
-
-
-
-
 ## 告警体验
-可手动触发instancedown告警规则，如果是源码部署openim方式，执行 `make stop`命令停止openim-server服务，等待5m分钟以上，即可收到告警邮件，内容如下：
+
+可手动触发 instancedown 告警规则，如果是源码部署 openim 方式，执行 `make stop`命令停止 openim-server 服务，等待 5m 分钟以上，即可收到告警邮件，内容如下：
 
 ![PC Web Interface](./assets/alert6.png)
 
 ## 日志系统
-如果是在k8s环境通过helm chart方式部署的OpenIM服务，即通过grafana查看OpenIM所有服务的日志信息。
-目前二进制和docker部署没有集成loki日志收集组件，想体验loki日志收集功能，请采用helm chart部署，
+
+如果是在 k8s 环境通过 helm chart 方式部署的 OpenIM 服务，即通过 grafana 查看 OpenIM 所有服务的日志信息。
+目前二进制和 docker 部署没有集成 loki 日志收集组件，想体验 loki 日志收集功能，请采用 helm chart 部署，
 详情请查阅链接https://github.com/openimsdk/helm-charts/blob/main/docs/user-guide-zh.md
 
-## **自定义prometheus指标配置**
+## **自定义 prometheus 指标配置**
 
 在源码中`pkg/common/prommetrics`中初始化相应类型指标，调用`Init()`函数进行注册。
 
@@ -274,12 +255,11 @@ rpc_count
 
 即可查询到指标信息。
 
-
 ## 常见问题
 
 1. `docker compose up -d`启动后，`prometheus`容器一直重启。
 
-   prometheus容器没启动成功一般是两个原因：
+   prometheus 容器没启动成功一般是两个原因：
 
-   1. 没有在`prometheus.yml`中配置内网ip。
+   1. 没有在`prometheus.yml`中配置内网 ip。
    2. 第一次启动`prometheus`容器时可能会遇到权限问题，在`open-im-server`项目下运行`chmod -R 777 components`后重新启动容器即可。
