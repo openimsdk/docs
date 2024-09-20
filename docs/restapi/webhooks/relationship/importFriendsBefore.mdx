@@ -6,46 +6,54 @@ hide_title: true
 # 导入好友之前的回调
 
 ## 功能说明
+
 App 业务服务端可以通过该回调获取用户导入好友的请求，同时业务服务端可以拒绝用户导入好友的请求，或对请求做修改和干预。
 
 ## 注意事项
+
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
 - 回调的方向是 OpenIM Server 向 App 后台发起 HTTP/HTTPS POST 请求。
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
+
 - App 用户通过客户端导入好友。
 - App 管理员通过 REST API 导入好友。
 
 ## 回调发生时机
+
 - OpenIM Server 准备导入好友之前。
 
 ## 接口说明
 
 ### 请求 URL 示例
+
 以下示例中 App 配置的回调 URL 为 `http://www.example.com/callbackCommand?contenttype=json`。
+
 ```plaintext
-http://www.example.com/ImportFriendReqBeforeCommand?contenttype=json
+http://www.example.com/callbackAfterImportFriendsCommand?contenttype=json
 ```
 
 ### 请求参数说明
 
-| 参数              | 说明                                            |
-|-----------------|-----------------------------------------------|
-| http            | 请求协议为 HTTP，请求方式为 POST                         |
-| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名                                        |
-| CallbackCommand | 此处为：ImportFriendReqBeforeCommand |
-| contenttype     | 固定值为：JSON                                     |
+| 参数            | 说明                                              |
+| --------------- | ------------------------------------------------- |
+| http            | 请求协议为 HTTP，请求方式为 POST                  |
+| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名 |
+| CallbackCommand | 此处为：callbackAfterImportFriendsCommand         |
+| contenttype     | 固定值为：JSON                                    |
 
 ### Header
-| header名     | 示例值           | 选填  | 类型     | 说明                  |
-|:------------|:--------------|:----|--------|---------------------|
-| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | operationID 用于全局链路追踪 |
 
 ### 请求包示例
+
 ```json
 {
-  "callbackCommand": "ImportFriendReqBeforeCommand",
+  "callbackCommand": "callbackAfterImportFriendsCommand",
   "ownerUserID": "user123",
   "friendUserIDs": ["user456", "user789"]
 }
@@ -53,50 +61,52 @@ http://www.example.com/ImportFriendReqBeforeCommand?contenttype=json
 
 ### 请求包字段说明
 
-| 字段           | 类型   | 描述                      |
-|--------------|--------|-------------------------|
+| 字段            | 类型   | 描述                               |
+| --------------- | ------ | ---------------------------------- |
 | callbackCommand | string | 回调命令，这里是导入好友之前的回调 |
-| ownerUserID   | string | 发起导入好友请求的用户ID    |
-| friendUserIDs | array  | 要导入为好友的用户ID列表    |
+| ownerUserID     | string | 发起导入好友请求的用户 ID          |
+| friendUserIDs   | array  | 要导入为好友的用户 ID 列表         |
 
 ## 应答包示例
 
 ### 允许导入
+
 允许用户导入好友。
 
 ```json
 {
-    "actionCode": 0,
-    "errCode": 0,
-    "errMsg": "Success",
-    "errDlt": "",
-    "nextCode": "0"
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "Success",
+  "errDlt": "",
+  "nextCode": "0"
 }
 ```
 
 ### 拒绝导入
+
 拒绝用户导入好友，并提供错误信息。
 
 ```json
 {
-    "actionCode": 1,
-    "errCode": 5001,
-    "errMsg": "User not allowed to import friends",
-    "errDlt": "The user does not meet the criteria for importing friends",
-    "nextCode": "1",
-    "ownerUserID": "user123",
-    "friendUserIDs": ["user456", "user789"]
+  "actionCode": 1,
+  "errCode": 5001,
+  "errMsg": "User not allowed to import friends",
+  "errDlt": "The user does not meet the criteria for importing friends",
+  "nextCode": "1",
+  "ownerUserID": "user123",
+  "friendUserIDs": ["user456", "user789"]
 }
 ```
 
 ## 应答包字段说明
 
-| 字段       | 类型   | 描述                                          |
-|-----------|--------|---------------------------------------------|
-| actionCode| int    | 表示业务系统的回调是否正确执行。`0`表示操作成功，`1`表示操作失败。 |
-| errCode   | int32  | 自定义错误码，范围在5000-9999之间。在 actionCode 不等于0时设置。 |
-| errMsg    | string | 自定义错误码对应的简单错误信息。                      |
-| errDlt    | string | 自定义错误码对应的详细错误信息。                      |
-| nextCode  | string | 下一步执行指令，`0`表示允许继续执行，`1`表示拒绝继续执行。|
-| ownerUserID   | string | 发起导入好友请求的用户ID    |
-| friendUserIDs | array  | 要导入为好友的用户ID列表    |
+| 字段          | 类型   | 描述                                                                 |
+| ------------- | ------ | -------------------------------------------------------------------- |
+| actionCode    | int    | 表示业务系统的回调是否正确执行。`0`表示操作成功，`1`表示操作失败。   |
+| errCode       | int32  | 自定义错误码，范围在 5000-9999 之间。在 actionCode 不等于 0 时设置。 |
+| errMsg        | string | 自定义错误码对应的简单错误信息。                                     |
+| errDlt        | string | 自定义错误码对应的详细错误信息。                                     |
+| nextCode      | string | 下一步执行指令，`0`表示允许继续执行，`1`表示拒绝继续执行。           |
+| ownerUserID   | string | 发起导入好友请求的用户 ID                                            |
+| friendUserIDs | array  | 要导入为好友的用户 ID 列表                                           |
