@@ -32,12 +32,12 @@ http://www.example.com/callbackMsgModifyCommandCommand?contenttype=json
 
 ### 请求参数说明
 
-| 参数              | 说明                                            |
-|-----------------|-----------------------------------------------|
-| http            | 请求协议为 HTTP，请求方式为 POST                         |
-| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名                                        |
-| CallbackCommand | 此处为：callbackMsgModifyCommandCommand |
-| contenttype     | 固定值为：JSON                                     |
+| 参数            | 说明                                              |
+| --------------- | ------------------------------------------------- |
+| http            | 请求协议为 HTTP，请求方式为 POST                  |
+| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名 |
+| CallbackCommand | 此处为：`callbackBeforeMsgModifyCommand`          |
+| contenttype     | 固定值为：JSON                                    |
 
 ### Header
 | header名     | 示例值           | 选填  | 类型     | 说明                  |
@@ -48,15 +48,17 @@ http://www.example.com/callbackMsgModifyCommandCommand?contenttype=json
 ```json
 {
   "sendID": "sender123",
-  "callbackCommand": "callbackMsgModifyCommandCommand",
+  "callbackCommand": "callbackBeforeMsgModifyCommand",
   "serverMsgID": "serverMsg123",
   "clientMsgID": "clientMsg123",
+  "operationID": "1646445464564",
   "senderPlatformID": 1,
   "senderNickname": "Sender",
   "sessionType": 1,
   "msgFrom": 1,
   "contentType": 1,
   "status": 1,
+  "sendTime": 1673048592000,
   "createTime": 1673048592000,
   "content": "Hello, World!",
   "seq": 123,
@@ -77,12 +79,14 @@ http://www.example.com/callbackMsgModifyCommandCommand?contenttype=json
 | callbackCommand     | string   | 回调命令，这里是消息修改命令回调         |
 | serverMsgID         | string   | 服务端生成的消息ID                      |
 | clientMsgID         | string   | 客户端生成的消息ID                      |
+| operationID | string | operationID用于全局链路追踪 |
 | senderPlatformID    | int32    | 发送者的平台ID                          |
 | senderNickname      | string   | 发送者的昵称                            |
 | sessionType         | int32    | 会话类型，表示单聊或群聊                |
 | msgFrom             | int32    | 消息来源，表示消息是发送还是接收         |
 | contentType         | int32    | 消息的内容类型                          |
 | status              | int32    | 消息的状态                              |
+| sendTime | int64 | 消息发送的时间戳（毫秒） |
 | createTime          | int64    | 消息创建的时间戳（毫秒）                 |
 | content             | string   | 消息的内容                              |
 | seq                 | uint32   | 消息的序号                              |
@@ -142,21 +146,21 @@ http://www.example.com/callbackMsgModifyCommandCommand?contenttype=json
 | errMsg           | "An error message"           | 自定义错误码对应的简单错误信息。                                                   |
 | errDlt           | "Detailed error information" | 自定义错误码对应的详细错误信息。                                                   |
 | nextCode         | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode 等于`0`时设置。                           |
-| content          | string                       | 修改后的消息内容。                                                          |
-| recvID           | string                       | 接收消息的用户ID。                                                         |
-| groupID          | string                       | 群组的唯一标识符。                                                          |
-| clientMsgID      | string                       | 客户端生成的消息ID。                                                        |
-| serverMsgID      | string                       | 服务端生成的消息ID。                                                        |
-| senderPlatformID | int32                        | 发送者的平台ID。                                                          |
-| senderNickname   | string                       | 发送者的昵称。                                                            |
-| senderFaceURL    | string                       | 发送者的头像URL。                                                         |
-| sessionType      | int32                        | 会话类型。                                                              |
-| msgFrom          | int32                        | 消息来源。                                                              |
-| contentType      | int32                        | 消息的内容类型。                                                           |
-| status           | int32                        | 消息的状态。                                                             |
-| options          | map[string]bool              | 修改后的消息选项。                                                          |
-| offlinePushInfo  | OfflinePushInfo              | 修改后的离线推送信息。                                                        |
-| atUserIDList     | []string                     | 群成员ID列表。                                                       |
-| msgDataList      | []byte                       | 修改后的消息数据列表。                                                        |
-| attachedInfo     | string                       | 修改后的附加信息。                                                          |
-| ex               | string                       | 修改后的额外的数据字段。                                                       |
+| content          | *string                      | 修改后的消息内容。                                                          |
+| recvID           | *string                      | 接收消息的用户ID。                                                         |
+| groupID          | *string                      | 群组的唯一标识符。                                                          |
+| clientMsgID      | *string                      | 客户端生成的消息ID。                                                        |
+| serverMsgID      | *string                      | 服务端生成的消息ID。                                                        |
+| senderPlatformID | *int32                       | 发送者的平台ID。                                                          |
+| senderNickname   | *string                      | 发送者的昵称。                                                            |
+| senderFaceURL    | *string                      | 发送者的头像URL。                                                         |
+| sessionType      | *int32                       | 会话类型。                                                              |
+| msgFrom          | *int32                       | 消息来源。                                                              |
+| contentType      | *int32                       | 消息的内容类型。                                                           |
+| status           | *int32                       | 消息的状态。                                                             |
+| options          | *map[string]bool             | 修改后的消息选项。                                                          |
+| offlinePushInfo  | *OfflinePushInfo             | 修改后的离线推送信息。                                                        |
+| atUserIDList     | *[]string                    | 群成员ID列表。                                                       |
+| msgDataList      | *[]byte                      | 修改后的消息数据列表。                                                        |
+| attachedInfo     | *string                      | 修改后的附加信息。                                                          |
+| ex               | *string                      | 修改后的额外的数据字段。                                                       |
