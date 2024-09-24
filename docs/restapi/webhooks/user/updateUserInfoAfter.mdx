@@ -6,46 +6,44 @@ hide_title: true
 # 更新用户信息之后的回调
 
 ## 功能说明
+
 App 业务服务端可以通过该回调获取用户更新个人信息后的结果，App 后台可以据此进行数据同步等操作。
 
 ## 注意事项
+
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
-- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- 回调的方向是 OpenIM Server 向 App 后台发起 HTTP/HTTPS POST 请求。
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
+
 - App 用户通过客户端更新个人信息。
 - App 管理员通过 REST API 更新用户信息。
 
 ## 回调发生时机
-- OpenIMServer 处理完用户信息更新请求之后。
+
+- OpenIM Server 处理完用户信息更新请求之后。
 
 ## 接口说明
 
 ### 请求 URL 示例
-以下示例中 App 配置的回调 URL 为 `http://www.example.com/callbackCommand?contenttype=json`。
+
+此处`CallbackCommand`为：`callbackAfterUpdateUserInfoCommand`
 ```plaintext
-http://www.example.com/callbackAfterUpdateUserInfoCommand?contenttype=json
+http://{WEBHOOK_ADDRESS}/callbackAfterUpdateUserInfoExCommand?contenttype=json
 ```
 
 ### 请求参数说明
 
-| 参数              | 说明                                            |
-|-----------------|-----------------------------------------------|
-| http            | 请求协议为 HTTP，请求方式为 POST                         |
-| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名                                        |
-| CallbackCommand | 此处为：callbackAfterUpdateUserInfoCommand |
-| contenttype     | 固定值为：JSON                                     |
-
 ### Header
-| header名     | 示例值           | 选填  | 类型     | 说明                  |
-|:------------|:--------------|:----|--------|---------------------|
-| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
+
+
 
 ### 请求包示例
+
 ```json
 {
-  "callbackCommand": "callbackAfterUpdateUserInfoCommand",
+  "callbackCommand": "callbackAfterUpdateUserInfoExCommand",
   "userID": "user123",
   "nickName": "John Doe",
   "faceURL": "http://example.com/path/to/face/image.png",
@@ -55,36 +53,34 @@ http://www.example.com/callbackAfterUpdateUserInfoCommand?contenttype=json
 
 ### 请求包字段说明
 
-| 字段            | 类型    | 描述                            |
-|----------------|---------|---------------------------------|
-| callbackCommand | string  | 回调命令，这里是更新用户信息之后的回调 |
-| userID          | string  | 用户的唯一标识符                |
-| nickName        | string  | 用户的昵称                      |
-| faceURL         | string  | 用户头像的URL                   |
-| ex              | string  | 额外的数据字段                  |
+| 字段            | 类型        | 描述                                   |
+| --------------- | ----------- | -------------------------------------- |
+| callbackCommand | string      | 回调命令，这里是更新用户信息之后的回调 |
+| userID          | string      | 用户的唯一标识符                       |
+| nickName        | StringValue | 用户的昵称                             |
+| faceURL         | StringValue | 用户头像的 URL                         |
+| ex              | StringValue | 额外的数据字段                         |
 
 ## 应答包示例
+
 App 后台同步数据后，发送回调应答包。
 
 ```json
 {
-    "actionCode": 0,
-    "errCode": 0,
-    "errMsg": "Success",
-    "errDlt": "",
-    "nextCode": 1
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "Success",
+  "errDlt": "",
+  "nextCode": 1
 }
-
 ```
-
-
 
 ## 应答包字段说明
 
-| 字段         | 值                           | 说明                                       |
-|-------------|------------------------------|------------------------------------------|
-| actionCode  | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。     |
-| errCode     | 0                            | 表示自定义错误码，此处填0代表忽略回调结果。|
-| errMsg      | "An error message"           | 自定义错误码对应的简单错误信息。|
-| errDlt      | "Detailed error information" | 自定义错误码对应的详细错误信息。|
-| nextCode    | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode等于`0`时设置。|
+| 字段       | 值                           | 说明                                                            |
+| ---------- | ---------------------------- | --------------------------------------------------------------- |
+| actionCode | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。               |
+| errCode    | 0                            | 表示自定义错误码，此处填 0 代表忽略回调结果。                   |
+| errMsg     | "An error message"           | 自定义错误码对应的简单错误信息。                                |
+| errDlt     | "Detailed error information" | 自定义错误码对应的详细错误信息。                                |
+| nextCode   | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode 等于`0`时设置。 |

@@ -6,42 +6,37 @@ hide_title: true
 # 用户注册请求前的回调
 
 ## 功能说明
+
 App 业务服务端可以通过该回调获取用户注册的请求，同时业务服务端可以拒绝用户注册的请求，或对请求做修改和干预
 
 ## 注意事项
+
 - 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
-- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- 回调的方向是 OpenIM Server 向 App 后台发起 HTTP/HTTPS POST 请求。
 - APP 业务服务端需在超时时间内响应此请求。
 
 ## 可能触发该回调的场景
+
 - 新用户通过客户端注册账户。
 
 ## 回调发生时机
-- OpenIMServer 收到用户注册请求时，处理用户请求前。
+
+- OpenIM Server 收到用户注册请求时，处理用户请求前。
 
 ## 接口说明
 
 ### 请求 URL 示例
-以下示例中 App 配置的回调 URL 为 `http://www.example.com/callbackCommand?contenttype=json`。
+
+此处`CallbackCommand`为：`callbackBeforeUserRegisterCommand`
 ```plaintext
-http://www.example.com/userRegisterBeforeCommand?contenttype=json
+http://{WEBHOOK_ADDRESS}/callbackBeforeUserRegisterCommand?contenttype=json
 ```
 
-### 请求参数说明
-
-| 参数              | 说明                                            |
-|-----------------|-----------------------------------------------|
-| http            | 请求协议为 HTTP，请求方式为 POST                         |
-| www.example.com | configy.yaml 中的 callback.url 字段，域名或主机名                                        |
-| CallbackCommand | 此处为：userRegisterBeforeCommand |
-| contenttype     | 固定值为：JSON                                     |
-
-
 ### 请求包示例
+
 ```json
 {
-  "callbackCommand": "userRegisterBeforeCommand",
-  "secret": "YourSecretKey",
+  "callbackCommand": "callbackBeforeUserRegisterCommand",
   "users": {
     "userID": "user123",
     "nickname": "John Doe",
@@ -56,63 +51,63 @@ http://www.example.com/userRegisterBeforeCommand?contenttype=json
 
 ### 请求包字段说明
 
-| 字段             | 类型    | 描述                          |
-|-----------------|---------|------------------------------|
-| callbackCommand         | string | 回调命令，这里是用户注册前的回调                             |
-| secret          | string  | 邀请码                |
-| users           | object  | 用户信息对象                  |
-| userID          | string  | 用户的唯一标识符              |
-| nickname        | string  | 用户的昵称                    |
-| faceURL         | string  | 用户头像的 URL                |
-| ex              | string  | 额外的数据字段                |
-| createTime      | int64   | 用户创建的时间戳（毫秒）      |
-| appMangerLevel  | int32   | 用户的管理等级                |
-| globalRecvMsgOpt| int32   | 用户的全局接收消息选项        |
+| 字段             | 类型   | 描述                             |
+| ---------------- | ------ | -------------------------------- |
+| callbackCommand  | string | 回调命令，这里是用户注册前的回调 |
+| users            | object | 用户信息对象                     |
+| userID           | string | 用户的唯一标识符                 |
+| nickname         | string | 用户的昵称                       |
+| faceURL          | string | 用户头像的 URL                   |
+| ex               | string | 额外的数据字段                   |
+| createTime       | int64  | 用户创建的时间戳（毫秒）         |
+| appMangerLevel   | int32  | 用户的管理等级                   |
+| globalRecvMsgOpt | int32  | 用户的全局接收消息选项           |
 
 ### Header
-| header名     | 示例值           | 选填  | 类型     | 说明                  |
-|:------------|:--------------|:----|--------|---------------------|
-| operationID | 1646445464564 | 必填  | string | operationID用于全局链路追踪 |
 
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | 用于全局链路追踪，建议使用时间戳，在每个请求中独立 |
 
 ## 应答包示例
 
 ### 操作成功
+
 操作成功的应答示例。
 
 ```json
 {
-    "actionCode": 0,
-    "errCode": 0,
-    "errMsg": "Success",
-    "errDlt": "",
-    "nextCode": "0",
-    "users": {
-      "userID": "user123",
-      "nickname": "John Doe",
-      "faceURL": "http://example.com/path/to/face/image.png",
-      "ex": "Extra data",
-      "createTime": 1673048592000,
-      "appMangerLevel": 1,
-      "globalRecvMsgOpt": 1
-    }
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "Success",
+  "errDlt": "",
+  "nextCode": "0",
+  "users": {
+    "userID": "user123",
+    "nickname": "John Doe",
+    "faceURL": "http://example.com/path/to/face/image.png",
+    "ex": "Extra data",
+    "createTime": 1673048592000,
+    "appMangerLevel": 1,
+    "globalRecvMsgOpt": 1
+  }
 }
 ```
 
 ## 应答包字段说明
 
-| 字段               | 值                            | 说明                                                                |
-|------------------|------------------------------|-------------------------------------------------------------------|
-| actionCode       | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。                                        |
-| errCode     | 5001                        | 表示自定义错误码，范围在5000-9999之间。在 actionCode 不等于0时设置；在 nextCode 等于1时设置。|
-| errMsg           | "An error message"           | 自定义错误码对应的简单错误信息。                                                  |
-| errDlt           | "Detailed error information" | 自定义错误码对应的详细错误信息。                                                  |
-| nextCode         | 1                            | 下一步执行指令，                                                          |
-| users            | object                       | 用户信息对象                                                            |
-| userID           | string                       | 用户的唯一标识符                                                          |
-| nickname         | string                       | 用户的昵称                                                             |
-| faceURL          | string                       | 用户头像的 URL                                                         |
-| ex               | string                       | 额外的数据字段                                                           |
-| createTime       | int64                        | 用户创建的时间戳（毫秒）                                                      |
-| appMangerLevel   | int32                        | 用户的管理等级                                                           |
-| globalRecvMsgOpt | int32                        | 用户的全局接收消息选项                                                       |
+| 字段             | 值                           | 说明                                                                                                |
+| ---------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| actionCode       | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。                                                   |
+| errCode          | 5001                         | 表示自定义错误码，范围在 5000-9999 之间。在 actionCode 不等于 0 时设置；在 nextCode 等于 1 时设置。 |
+| errMsg           | "An error message"           | 自定义错误码对应的简单错误信息。                                                                    |
+| errDlt           | "Detailed error information" | 自定义错误码对应的详细错误信息。                                                                    |
+| nextCode         | 1                            | 下一步执行指令，                                                                                    |
+| users            | object                       | 用户信息对象                                                                                        |
+| userID           | string                       | 用户的唯一标识符                                                                                    |
+| nickname         | string                       | 用户的昵称                                                                                          |
+| faceURL          | string                       | 用户头像的 URL                                                                                      |
+| ex               | string                       | 额外的数据字段                                                                                      |
+| createTime       | int64                        | 用户创建的时间戳（毫秒）                                                                            |
+| appMangerLevel   | int32                        | 用户的管理等级                                                                                      |
+| globalRecvMsgOpt | int32                        | 用户的全局接收消息选项                                                                              |
