@@ -27,7 +27,7 @@ Message latency refers to the time elapsed from when client A creates and sends 
 ### **Testing Resources**
 
 - **Server 1**: Ubuntu 22.04.2, 16 Core, 64GB RAM, 150GB HDD: Deploys components and IMServer; concurrently deploys Test Program B, and possibly Test Program A on shared memory `/dev/shm`.
-  
+
 - **Server 2**: Ubuntu 18.04.5, 4 Core, 8GB RAM, 40GB HDD: Deploys Test Program A on shared memory `/dev/shm`.
 
 In the server's `start-config.yml`, adjust the service instances to `openim-push: 8`, `openim-msgtransfer: 8`, and keep other instances at 1.
@@ -37,13 +37,13 @@ In the server's `start-config.yml`, adjust the service instances to `openim-push
 #### Test 1: 200 Users
 
 - **Test Program A** simulates 200 users, with 100 logging in immediately and sending messages to small groups and friends.
-  
+
 - **Test Program A** collects message integrity and latency statistics using:
-  
+
   ```bash
   go run main.go -lgr 0.5 -imf -crg -ckgn -ckcon -sem -ckmsn -u 200 -su 10 -lg 2 -cg 2 -cgm 5 -sm 5 -gm 5 -reg
   ```
-  
+
 - At this time, Test Program A is deployed on Server 1's shared memory `/dev/shm`.
 
 | Parameter/Result        | Description                                   |
@@ -60,27 +60,27 @@ In the server's `start-config.yml`, adjust the service instances to `openim-push
 #### Test 2: 50,000 Online Users + Small Groups
 
 - **Test Program B**: Simulates 50,000 online users, randomly sending messages.
-  
+
 - **Test Program A**: Simulates 100 users, with 80 logging in immediately and sending messages to small groups and friends.
-  
+
 - **Test Program A** registers 100,000 users:
-  
+
   ```bash
   go run main.go -reg -u 100000
   ```
-  
+
 - **Test Program B** starts 50,000 online users:
-  
+
   ```bash
   go run main.go -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000
   ```
-  
+
 - **Test Program A** collects message integrity and latency statistics:
-  
+
   ```bash
   go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 100 -su 3 -lg 0 -cg 4 -cgm 5 -sm 100 -gm 100
   ```
-  
+
 - At this time, Test Program A is deployed on Server 2's shared memory `/dev/shm`, and Test Program B is deployed on Server 1.
 
 | Parameter/Result                      | Description                                    |
@@ -97,27 +97,27 @@ In the server's `start-config.yml`, adjust the service instances to `openim-push
 #### Test 3: 50,000 Online Users + 50,000 Large Groups
 
 - **Test Program B**: Simulates 50,000 online users, randomly sending messages.
-  
+
 - **Test Program A**: Simulates 20 users, with 16 logging in immediately and sending messages to 10 large groups of 50,000 users and friends.
-  
+
 - **Test Program A** registers 100,000 users:
-  
+
   ```bash
   go run main.go -reg -u 100000
   ```
-  
+
 - **Test Program B** starts 50,000 online users:
-  
+
   ```bash
   go run main.go -o 50000 -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000
   ```
-  
+
 - **Test Program A** collects message integrity and latency statistics:
-  
+
   ```bash
   go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 3 -lg 10 -cg 0 -cgm 5 -sm 0 -gm 10
   ```
-  
+
 - At this time, Test Program A is deployed on Server 2's shared memory `/dev/shm`, and Test Program B is deployed on Server 1.
 
 | Parameter/Result                      | Description                                  |
@@ -135,15 +135,21 @@ In the server's `start-config.yml`, adjust the service instances to `openim-push
 
 **Number of Logged-in Users:**
 
-![image-20240923164028334](.\assets\br-login.png)
+import online from './assets/br-login.png'
+
+<img src={online} alt="br-login"/>
 
 **Message Stress:** (The following graph shows the number of messages received by the server per minute)
 
-![image-20240923164056715](.\assets\br-msg.png)
+import msg from './assets/br-msg.png'
+
+<img src={msg} alt="br-msg"/>
 
 **CPU Usage:**
 
-![image-20240911154731346](.\assets\br-cpu.png)
+import cpu from './assets/br-cpu.png'
+
+<img src={cpu} alt="br-cpu"/>
 
 | Process                          | CPU Usage |
 | -------------------------------- | --------- |
@@ -159,7 +165,9 @@ In the server's `start-config.yml`, adjust the service instances to `openim-push
 
 **Physical Memory Usage:**
 
-![image-20240911162850004](.\assets\br-mem.png)
+import mem from './assets/br-mem.png'
+
+<img src={mem} alt="br-mem"/>
 
 | Process                             | Memory Usage |
 | ----------------------------------- | ------------ |
@@ -196,7 +204,7 @@ Based on 100,000 registered users, with 10% online daily, supporting super group
 This test utilized two testing programs:
 
 - **Stress Test Program**: Path: `openim-sdk-core/msgtest/`
-  
+
 - **Reliability Test Program**: Path: `openim-sdk-core/integration_test/`
 
 Below are the usage instructions for the reliability test program and explanations of the detection logic.
@@ -264,7 +272,7 @@ The configuration file is located in the `internal/config/` directory. The basic
 	LogLevel           = 3  // Log level
 	DataDir            = "./data/"  // Data file path
 	LogFilePath        = "./logs/"  // Log file path
-	IsLogStandardOutput = false    // Whether to output logs to the console, recommended false  
+	IsLogStandardOutput = false    // Whether to output logs to the console, recommended false
 ```
 
 #### **Implementation Plan**
@@ -329,11 +337,11 @@ It is important to note that only the initiator of a friend request will receive
   1. **Modify Request Timeout**
      - **Location**: `openim-sdk-core/pkg/network/http_client.go`
      - **Adjustment**: Appropriately extend the default request timeout to reduce request timeout issues under large data volumes. It is recommended to configure reasonably based on the test scale and actual network conditions.
-  
+
   2. **Set Notification Messages to Unread Status**
      - **Location**: `open-im-server/config/notification.yml`
      - **Adjustment**: Set the `unreadCount` parameter for `groupCreated` and `friendApplicationApproved` to `true`. This configuration ensures that when online users receive group creation and friend request approval notification messages, they are still marked as unread messages, facilitating subsequent unread message count calculations.
-  
+
   3. **Increase Maximum File Descriptor Count**
      - **Location**: `open-im-server/start-config.yml`
      - **Adjustment**: Appropriately increase the `maxFileDescriptors` value based on the number of users that need to log in during testing.
