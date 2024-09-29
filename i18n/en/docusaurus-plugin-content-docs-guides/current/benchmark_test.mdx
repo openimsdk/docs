@@ -1,0 +1,348 @@
+---
+title: 'Stress and Reliability Test Report'
+hide_title: true
+sidebar_position: 4
+---
+
+# OpenIM Stress and Reliability Testing
+
+## Background
+
+To comprehensively test OpenIM, it is first necessary to clarify its core functions and architecture. OpenIM is not a standalone chat application like WeChat or Slack; instead, it is an open-source instant messaging solution that includes IMSDK (for client integration) and IMServer (for private deployment). This allows developers to easily integrate instant messaging features into their own applications, providing an alternative to cloud-based instant messaging services like Twilio or Sendbird. Since IMSDK is built on the openim-sdk-core written in Go, simulating large-scale user scenarios on mobile devices presents certain challenges. In reality, testing with thousands of mobile phones is impractical. Therefore, we have designed two sets of testing programs:
+
+1. **Test Program A - Reliability**:
+   - This program loads and runs openim-sdk-core on a server to simulate IMSDK instances. Each instance uses SQLite for message storage. This approach can comprehensively simulate client behavior, including sending, receiving, storing messages, and callbacks, effectively verifying the reliability and latency of message transmission. However, running too many SDK instances on a single server may degrade IMSDK performance.
+
+2. **Test Program B - Stress**:
+   - This program streamlines IMSDK functionality, retaining only login and message sending/receiving features. It aims to simulate high-concurrency scenarios by launching a large number of instances to evaluate server performance and stability under heavy load. Although this method cannot fully verify all client SDK processes, it is crucial for assessing the server's capacity and resource management strategies. Its downside is that it cannot fully simulate IMSDK functionality, thus unable to verify the reliability of message transmission.
+
+By combining these two testing programs, Program B is primarily used to simulate a large number of users online simultaneously and engaging in message interactions to increase server load; Program A is used to load IMSDK and assess message reliability and latency through sampling statistics. The combined use of both programs better simulates real user scenarios and provides an objective test report for IMSDK. This dual testing strategy ensures a comprehensive evaluation and verification of the system from different perspectives.
+
+## Reliability and Latency
+
+Message reliability typically refers to the reliability of message delivery, known as "message guaranteed delivery." This means that once a message is sent, it must be successfully received by the recipient. Considering the complexity of network environments and the uncertainty of user online statuses, message reliability undoubtedly becomes a core performance metric of an IM system and a significant implementation challenge. When we talk about the "reliability" of an IM system, it mainly refers to the reliability of chat message delivery. It should be noted that "messages" here are broad, including various invisible commands and notifications to users, such as group join/leave notifications, friend addition notifications, etc.
+
+Message latency refers to the time elapsed from when client A creates and sends a message to when client B successfully receives and stores it in the database. Some IM systems only count the time from when the message is sent from the client to when the server receives it, which is not comprehensive. The correct approach should include the overall time from client A sending to client B receiving.
+
+### **Testing Resources**
+
+- **Server 1**: Ubuntu 22.04.2, 16 Core, 64GB RAM, 150GB HDD: Deploys components and IMServer; concurrently deploys Test Program B, and possibly Test Program A on shared memory `/dev/shm`.
+
+- **Server 2**: Ubuntu 18.04.5, 4 Core, 8GB RAM, 40GB HDD: Deploys Test Program A on shared memory `/dev/shm`.
+
+In the server's `start-config.yml`, adjust the service instances to `openim-push: 8`, `openim-msgtransfer: 8`, and keep other instances at 1.
+
+### **Test Scenarios and Results**
+
+#### Test 1: 200 Users
+
+- **Test Program A** simulates 200 users, with 100 logging in immediately and sending messages to small groups and friends.
+
+- **Test Program A** collects message integrity and latency statistics using:
+
+  ```bash
+  go run main.go -lgr 0.5 -imf -crg -ckgn -ckcon -sem -ckmsn -u 200 -su 10 -lg 2 -cg 2 -cgm 5 -sm 5 -gm 5 -reg
+  ```
+
+- At this time, Test Program A is deployed on Server 1's shared memory `/dev/shm`.
+
+| Parameter/Result        | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| **Test Purpose**        | Test message reliability and latency with a small number of users |
+| **Number of Users**     | 200 users, with 100 logging in immediately and 100 logging in with delay |
+| **Number and Size of Groups** | Each user joins 0-10 regular groups, each group has 5 members |
+| **Message Sending Frequency** | Peak of 150 messages/s                    |
+| **Total Number of Messages** | 112,350                                 |
+| **Message Integrity**   | 100% (All messages accurately delivered)      |
+| **Average Message Latency** | 0.231 seconds                          |
+| **Maximum Message Latency** | 1.703 seconds                         |
+
+#### Test 2: 50,000 Online Users + Small Groups
+
+- **Test Program B**: Simulates 50,000 online users, randomly sending messages.
+
+- **Test Program A**: Simulates 100 users, with 80 logging in immediately and sending messages to small groups and friends.
+
+- **Test Program A** registers 100,000 users:
+
+  ```bash
+  go run main.go -reg -u 100000
+  ```
+
+- **Test Program B** starts 50,000 online users:
+
+  ```bash
+  go run main.go -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000
+  ```
+
+- **Test Program A** collects message integrity and latency statistics:
+
+  ```bash
+  go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 100 -su 3 -lg 0 -cg 4 -cgm 5 -sm 100 -gm 100
+  ```
+
+- At this time, Test Program A is deployed on Server 2's shared memory `/dev/shm`, and Test Program B is deployed on Server 1.
+
+| Parameter/Result                      | Description                                    |
+| ------------------------------------- | ---------------------------------------------- |
+| **Stress Scenario**                   | 50,000 users online, sending approximately 1,700 messages per second |
+| **Sampled User Count**                | 100 users, with 80 logging in immediately and 20 logging in with delay |
+| **Number and Size of Groups for Sampled Users** | Each user joins 0-20 regular groups, each group has 5 members |
+| **Message Sending Frequency for Sampled Users** | Peak of 160 messages/s                     |
+| **Number of Messages in Sample Statistics** | 170,800                                 |
+| **Message Integrity in Sample Statistics** | 100% (All messages accurately delivered)    |
+| **Average Message Latency in Sample Statistics** | 0.202 seconds                          |
+| **Maximum Message Latency in Sample Statistics** | 3.641 seconds                         |
+
+#### Test 3: 50,000 Online Users + 50,000 Large Groups
+
+- **Test Program B**: Simulates 50,000 online users, randomly sending messages.
+
+- **Test Program A**: Simulates 20 users, with 16 logging in immediately and sending messages to 10 large groups of 50,000 users and friends.
+
+- **Test Program A** registers 100,000 users:
+
+  ```bash
+  go run main.go -reg -u 100000
+  ```
+
+- **Test Program B** starts 50,000 online users:
+
+  ```bash
+  go run main.go -o 50000 -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000
+  ```
+
+- **Test Program A** collects message integrity and latency statistics:
+
+  ```bash
+  go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 3 -lg 10 -cg 0 -cgm 5 -sm 0 -gm 10
+  ```
+
+- At this time, Test Program A is deployed on Server 2's shared memory `/dev/shm`, and Test Program B is deployed on Server 1.
+
+| Parameter/Result                      | Description                                  |
+| ------------------------------------- | -------------------------------------------- |
+| **Stress Scenario**                   | 50,000 users online, sending approximately 1,700 messages per second |
+| **Sampled User Count**                | 20 users, with 16 logging in immediately and 4 logging in with delay |
+| **Number and Size of Groups for Sampled Users** | 10 large groups, each with 50,000 members, 500 online |
+| **Message Sending Frequency for Sampled Users** | Peak of 32 messages/s                    |
+| **Number of Messages in Sample Statistics** | 24,000                                 |
+| **Message Integrity in Sample Statistics** | 100% (All messages accurately delivered)  |
+| **Average Message Latency in Sample Statistics** | 0.022 seconds                        |
+| **Maximum Message Latency in Sample Statistics** | 1.664 seconds                       |
+
+#### Test 2 Server Resource Consumption
+
+**Number of Logged-in Users:**
+
+import online from './assets/br-login.png'
+
+<img src={online} alt="br-login"/>
+
+**Message Stress:** (The following graph shows the number of messages received by the server per minute)
+
+import msg from './assets/br-msg.png'
+
+<img src={msg} alt="br-msg"/>
+
+**CPU Usage:**
+
+import cpu from './assets/br-cpu.png'
+
+<img src={cpu} alt="br-cpu"/>
+
+| Process                          | CPU Usage |
+| -------------------------------- | --------- |
+| openim-msggateway                | 210%      |
+| mongo                            | 100%      |
+| kafka                            | 84%       |
+| redis                            | 67%       |
+| openim-rpc-msg                   | 56%       |
+| openim-msgtransfer               | 27%*8     |
+| openim-push                      | 13%*8     |
+| Other `OpenIM` services and components | 65% |
+| **Total**                        | **902%**  |
+
+**Physical Memory Usage:**
+
+import mem from './assets/br-mem.png'
+
+<img src={mem} alt="br-mem"/>
+
+| Process                             | Memory Usage |
+| ----------------------------------- | ------------ |
+| openim-msggateway                   | 2.1 GiB       |
+| mongo                               | 717 MiB       |
+| kafka                               | 1.1 GiB       |
+| redis                               | 85 MiB        |
+| openim-rpc-msg                      | 162 MiB       |
+| openim-msgtransfer                  | 74 MiB*8      |
+| openim-push                         | 126 MiB*8     |
+| Other `OpenIM` services and components | 457 MiB   |
+| **Total (All `OpenIM` Services and Components)** | **6.986 GiB** |
+
+*Note: The table contents are rough estimates and do not include the resource consumption of Docker forwarding data to containers in the total. For reference only.*
+
+### **Result Analysis**
+
+OpenIM supports 50,000 concurrent online users and can handle multiple super groups of 50,000 users each. Under the pressure of approximately 1,700 messages per second, the message delivery rate reaches 100%. The average message latency is below 1 second, and the maximum latency does not exceed 3 seconds, demonstrating excellent performance and reliability.
+
+#### **Configuration Recommendations**
+
+Based on 100,000 registered users, with 10% online daily, supporting super groups of 50,000 users, and handling 600 messages per second, the recommended configuration is:
+
+| Name          | Configuration |
+| ------------- | ------------- |
+| Memory        | 16 GB         |
+| CPU           | 8 cores       |
+| Network Bandwidth | 10 Mbps    |
+
+*Note: The message packet size is calculated at 2KB. The actual message packet size varies based on the content sent. A typical text message is approximately 700 bytes.*
+
+### **Additional Information**
+
+This test utilized two testing programs:
+
+- **Stress Test Program**: Path: `openim-sdk-core/msgtest/`
+
+- **Reliability Test Program**: Path: `openim-sdk-core/integration_test/`
+
+Below are the usage instructions for the reliability test program and explanations of the detection logic.
+
+#### **Parameter Descriptions**
+
+The testing program supports specifying different test scenarios through configuration parameters. By flexibly setting parameters, users can freely simulate various complex scenarios, covering different network states and operation processes, thereby more accurately assessing the reliability of the message channel.
+
+| Parameter | Meaning                                | Type  |
+| --------- | -------------------------------------- | ----- |
+| u         | Number of users                        | int   |
+| su        | Number of users with all friends       | int   |
+| lg        | Number of large groups                  | int   |
+| lgm       | Number of members in large groups       | int   |
+| cg        | Number of regular groups each user creates | int   |
+| cgm       | Number of members in regular groups     | int   |
+| sm        | Number of private messages each user sends | int   |
+| gm        | Number of group messages each user sends | int   |
+| reg       | Whether to register users               | bool  |
+| imf       | Whether to import friends                | bool  |
+| crg       | Whether to create groups                 | bool  |
+| sem       | Whether to send messages                 | bool  |
+| ckgn      | Whether to check the number of groups    | bool  |
+| ckcon     | Whether to check the number of conversations | bool  |
+| ckmsn     | Whether to check the number of messages  | bool  |
+| ckuni     | Whether to simulate uninstall and reinstall and check again | bool  |
+| lgr       | User login ratio/login rate              | float |
+
+Below is an example of a run command:
+
+```bash
+go run main.go -u 10 -su 3 -gl 2 -gs 4 -gsm 5 -sm 6 -gm 7 -reg -lgr 0.7 -imf -crg -ckgn -ckcon -sem -ckmsn -ckuni
+```
+
+The meanings of the command parameters are as follows:
+
+- `-u 10`: Create a total of 10 users
+- `-su 3`: Create 3 super users
+- `-gl 2`: Create 2 large group chats
+- `-gs 4`: Each logged-in user creates 4 small group chats
+- `-gsm 5`: Each small group chat contains 5 members
+- `-sm 6`: Send 6 private messages
+- `-gm 7`: Send 7 group messages
+- `-reg`: Execute user registration
+- `-lgr 0.7`: 70% of users log in
+- `-imf`: Import friends
+- `-crg`: Create group chats
+- `-ckgn`: Check the number of group chats
+- `-ckcon`: Check the number of conversations
+- `-sem`: Send messages
+- `-ckmsn`: Check the number of messages
+- `-ckuni`: Simulate uninstall and reinstall operations
+
+#### **Configuration File Description**
+
+The configuration file is located in the `internal/config/` directory. The basic configuration file is `config.go`, configured as follows:
+
+```go
+	TestIP              = "127.0.0.1"  // IP address
+	APIAddr            = "http://" + TestIP + ":10002"
+	WsAddr             = "ws://" + TestIP + ":10001"
+	AdminUserID        = "imAdmin"    // Server administrator ID
+	Secret             = "openIM123"  // Server administrator password
+	PlatformID         = constant.WindowsPlatformID // Simulated login platform type
+	LogLevel           = 3  // Log level
+	DataDir            = "./data/"  // Data file path
+	LogFilePath        = "./logs/"  // Log file path
+	IsLogStandardOutput = false    // Whether to output logs to the console, recommended false
+```
+
+#### **Implementation Plan**
+
+The core operations of the testing program can be divided into two categories: **simulation operations** and **detection operations**. Simulation operations are used to mimic user behaviors in real scenarios, such as registration, login, and message sending. Since simulation operations involve asynchronous execution, detection operations are performed to ensure that all operations complete successfully and verify the correctness of the results. For example, during the login process, it is essential to ensure that each client successfully connects to the server before proceeding to subsequent operations. At this point, detecting the number of logged-in users is particularly important.
+
+The detection operations serve two main purposes:
+
+1. **Block the main process**: Ensure that all asynchronous simulation operations have completed.
+2. **Verify result accuracy**: Use a series of correctness checks to verify whether the simulation operations achieved the expected results.
+
+Currently, the following detection operations are included:
+
+##### **User Login Detection**
+
+User login detection occurs after **initialization or registration**, as well as before each **correctness detection operation**. It involves calculating the actual number of users successfully connected to the server and comparing it to the expected number of logged-in users.
+
+Expected number of users logged in:
+
+1. `Total number of users * login rate`, rounded down.
+2. Total number of users.
+
+##### **Friend Count Detection**
+
+Friend count detection is performed after the friend import operation completes. Since offline users cannot synchronize data, this detection only verifies the number of friends for online users.
+
+The actual number of friends is obtained by calling the corresponding SDK. The expected number of friends is as follows:
+
+- **Super Users**: Should have all users as friends.
+- **Regular Users**: Should have all super users as friends.
+
+##### **Group Chat Count Detection**
+
+Group chat count detection is part of correctness detection operations and involves calling the SDK to obtain the actual number of group chats.
+
+Expected number of group chats:
+
+- Number of large groups + number of regular groups (the number of regular groups may vary depending on user login status).
+
+##### **Conversation Count Detection**
+
+Conversation count detection is also part of correctness detection and involves calling the SDK to obtain the actual number of conversations.
+
+Expected number of conversations:
+
+- Number of all group chat conversations + number of all friend conversations.
+
+##### **Unread Message Count Detection**
+
+Unread message count detection is also part of correctness detection. It involves calling the SDK to obtain the actual number of unread messages and comparing it with the expected value.
+
+The expected number of unread messages is calculated as follows:
+
+- All group notification messages + all group messages - (group notification messages created by oneself + group messages sent by oneself) + friend request approval notification messages + friend messages.
+
+It is important to note that only the initiator of a friend request will receive unread notification messages for approved friend requests. Additionally, based on the **friend import** operation logic, only super users will have a different number of notification messages.
+
+#### **Modification of Limits**
+
+- During simulation operations, multiple SDK instances run simultaneously, which may put significant pressure on the server, potentially causing timeouts or other issues. To ensure the system runs smoothly during large-scale data testing, the following key parameters need to be adjusted:
+
+  1. **Modify Request Timeout**
+     - **Location**: `openim-sdk-core/pkg/network/http_client.go`
+     - **Adjustment**: Appropriately extend the default request timeout to reduce request timeout issues under large data volumes. It is recommended to configure reasonably based on the test scale and actual network conditions.
+
+  2. **Set Notification Messages to Unread Status**
+     - **Location**: `open-im-server/config/notification.yml`
+     - **Adjustment**: Set the `unreadCount` parameter for `groupCreated` and `friendApplicationApproved` to `true`. This configuration ensures that when online users receive group creation and friend request approval notification messages, they are still marked as unread messages, facilitating subsequent unread message count calculations.
+
+  3. **Increase Maximum File Descriptor Count**
+     - **Location**: `open-im-server/start-config.yml`
+     - **Adjustment**: Appropriately increase the `maxFileDescriptors` value based on the number of users that need to log in during testing.
+
