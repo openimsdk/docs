@@ -1,60 +1,57 @@
-# Callback for User Exiting a Group
+---
+title: Callback for User Exiting Group
+hide_title: true
+---
 
-## Function Description
-The App business server can use this callback to view requests of users exiting a group. The App backend can then perform operations like data synchronization based on this information.
+# Callback for User Exiting Group
 
-## Precautions
-- To enable the callback, you must configure the callback URL and activate the switch corresponding to this callback protocol. See the [Callback Description](../introduction) document for configuration methods.
-- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIM Server to the App backend.
-- The App business server needs to verify whether the command parameter in the request URL is its own SDKNAME parameter after receiving the callback request.
-- The APP business server is required to respond to this request within the timeout period.
+## Description
 
-## Scenarios That May Trigger This Callback
-- App users exit a group through the client.
+The App business server can use this callback to view requests when a user exits a group, enabling the App backend to perform data synchronization or other necessary actions.
 
-## Timing of the Callback
-- After a user exits a group in OpenIM Server.
+## Important Notes
+
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. Refer to the [Callback Introduction](../introduction) document for configuration details.
+- The callback direction is from OpenIM Server to the App backend as an HTTP/HTTPS POST request.
+- The App business server must respond within the specified timeout period.
+
+## Scenarios that Trigger This Callback
+
+- A user exits a group via the App client.
+
+## Timing of Callback
+
+- After the user successfully exits the group in OpenIM Server.
 
 ## Interface Description
 
-### Request URL Example
-In the following example, the configured callback URL of the App is `https://callbackurl`.
+### Example Request URL
+
+The `CallbackCommand` here is: `callbackAfterQuitGroupCommand`
+
 ```plaintext
-https://callbackurl?command=$CallbackCommand&contenttype=json
+{WEBHOOK_ADDRESS}/callbackAfterQuitGroupCommand?contenttype=json
 ```
 
-### Request Parameter Description
+### Example Request Package
 
-| Parameter            | Description                                     |
-|----------------------|-------------------------------------------------|
-| https                | Request protocol is HTTPS, request method is POST. |
-| https://callbackurl  | Callback URL                                    |
-| CallbackCommand      | Fixed value: quitGroupCommand                   |
-| contenttype          | Fixed value: JSON                               |
-
-### Header
-| Header Name | Example Value  | Optional | Type   | Description                        |
-|-------------|----------------|----------|--------|------------------------------------|
-| operationID | 1646445464564  | Required | string | operationID used for global tracing |
-
-### Request Packet Example
 ```json
 {
-  "callbackCommand": "quitGroupCommand",
+  "callbackCommand": "callbackAfterQuitGroupCommand",
   "groupID": "G001",
   "userID": "user123"
 }
 ```
 
-### Request Packet Field Description
+### Request Package Field Descriptions
 
-| Field           | Type   | Description                               |
-|-----------------|--------|-------------------------------------------|
-| callbackCommand | string | Callback command, here for user exiting the group. |
-| groupID         | string | Unique identifier of the group being exited. |
-| userID          | string | User ID of the member attempting to exit the group. |
+| Field            | Type   | Description                         |
+|------------------|--------|-------------------------------------|
+| callbackCommand  | string | Callback command for user exiting the group. |
+| groupID          | string | Unique identifier of the group the user is exiting. |
+| userID           | string | ID of the user attempting to exit the group. |
 
-## Response Packet Example
+## Example Response Package
 
 ```json
 {
@@ -62,16 +59,16 @@ https://callbackurl?command=$CallbackCommand&contenttype=json
   "errCode": 0,
   "errMsg": "",
   "errDlt": "",
-  "nextCode": "nextCodeValue"
+  "nextCode": 0
 }
 ```
 
-## Response Packet Field Description
+## Response Package Field Descriptions
 
-| Field       | Value         | Description                                             |
-|-------------|---------------|---------------------------------------------------------|
-| actionCode  | 0             | Indicates whether the business system's callback was executed correctly. `0` means the operation was successful. |
-| errCode     | 0             | Represents a custom error code, here 0 indicates ignoring the callback result.     |
-| errMsg      | "An error message" | Simple error message corresponding to the custom error code. |
-| errDlt      | "Detailed error information" | Detailed error information corresponding to the custom error code. |
-| nextCode    | 1             | Next execution instruction, `1` means refuse to continue execution, set when actionCode is `0`. |
+| Field         | Value                        | Description                                                   |
+|---------------|------------------------------|---------------------------------------------------------------|
+| actionCode    | 0                            | Indicates whether the callback executed successfully. `0` means success. |
+| errCode       | 0                            | Custom error code; `0` here indicates the callback result is ignored. |
+| errMsg        | "An error message"           | Simple error message corresponding to the custom error code. |
+| errDlt        | "Detailed error information" | Detailed error information corresponding to the custom error code. |
+| nextCode      | 1                            | Next execution directive. Set to `1` to stop further action when `actionCode` = `0`. |

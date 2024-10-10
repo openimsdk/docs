@@ -1,39 +1,74 @@
 ---
-
-sidebar_position: 1
-title: Callback Description
+title: Callback After Single Chat Message Recall
 hide_title: true
-
 ---
 
-# 📞 Callback Description
+# Callback After Single Chat Message Recall
 
-📢 **OpenIM** offers a robust callback functionality. When a specific event occurs, either before or after it happens, **OpenIM Server** proactively notifies the APP's business server via HTTP/HTTPS requests. This way, the APP's business server can intervene in the subsequent process of the event or synchronize data based on these callbacks.
+## Description
+The App backend can use this callback to receive requests for recalling a user's single chat message.
 
-## 📑 Callback Categories
+## Important Notes
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, see the [Callback Introduction](../introduction) document.
+- The callback direction is from OpenIMServer to the App backend as an HTTP/HTTPS POST request.
+- The App backend must respond to this request within the specified timeout.
 
-Based on the timing of processing, callbacks are divided into two main categories:
+## Scenarios that Trigger This Callback
+- An App user recalls a single chat message through the client.
+- An administrator recalls a single chat message through the `admin_msgwithdraw` REST API.
 
-- 🚫 **Callbacks before the event is sent**: This type of callback (before type) aims to let the APP's business server intervene in event processing, such as filtering sensitive words in a message. **OpenIM Server** will determine the subsequent process based on the callback's return.
+## Timing of Callback
+- After the single chat message has been successfully recalled.
 
-- 📤 **Notifications after the event is sent**: This type of callback (after type) is primarily used to notify the APP's business server to synchronize data, for example, when a user joins a group. At this point, **OpenIM Server** will ignore the callback's return and error codes.
+## Interface Description
 
-## ⚙️ Configuration Description
+### Example Request URL
+The `CallbackCommand` here is: `callbackBeforeAfterMsgCommand`
 
-```yaml
-callback:
-  url:
-  beforeCreateGroup:
-    enable: false
-    timeout: 5
-    failedContinue: true
+```plaintext
+{WEBHOOK_ADDRESS}/callbackBeforeAfterMsgCommand?contenttype=json
 ```
 
-- url: Callback address of the APP's business server, supporting HTTP/HTTPS
-- enable: Whether to enable this callback
-- timeout: Response timeout duration (in seconds)
-- failedContinue: Whether to continue the process after timeout or API failure, generally effective only for the "before" type of callback.
+### Example Request Package
+```json
+{
+  "callbackCommand": "callbackBeforeAfterMsgCommand",
+  "conversationID": "si_u1_u2:0",
+  "seq": 10,
+  "userID": "user456"
+}
+```
 
-## 🔄 Callback Protocol
+### Request Package Field Descriptions
 
-**OpenIM Server** utilizes third-party callback mechanisms based on the **HTTP/HTTPS** protocol. When initiating a callback request, **OpenIM Server** uses the **POST** request method to notify the APP's business server. The specific content of these requests will be directly included in the request body.
+| Field            | Type   | Description                                   |
+|------------------|--------|-----------------------------------------------|
+| callbackCommand  | string | Callback command for recalling a single chat message |
+| conversationID   | string | Conversation ID                               |
+| seq              | string | Message sequence number                       |
+| userID           | string | User ID of the message sender                |
+
+## Example Response Package
+
+### Success Response
+The backend confirms successful processing of the recall request.
+
+```json
+{
+    "actionCode": 0,
+    "errCode": 0,
+    "errMsg": "",
+    "errDlt": "",
+    "nextCode": 0
+}
+```
+
+## Response Package Field Descriptions
+
+| Field         | Value                         | Description                                           |
+|---------------|-------------------------------|-------------------------------------------------------|
+| actionCode    | 0                             | Indicates whether the callback was successfully executed. `0` means success. |
+| errCode       | 0                             | Custom error code; `0` to ignore the callback result. |
+| errMsg        | "An error message"            | Simple error message for the custom error code        |
+| errDlt        | "Detailed error information"  | Detailed error message                                |
+| nextCode      | 1                             | Next step directive, `1` to halt further action if `actionCode` is `0` |

@@ -1,0 +1,74 @@
+---
+title: Callback After Kicking Group Members
+hide_title: true
+---
+
+# Callback After Kicking Group Members
+
+## Description
+The App business server can use this callback to handle group administrator requests to remove members from a group. This enables real-time tracking of users being removed (e.g., logging the action or syncing to other systems).
+
+## Important Notes
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, refer to the [Callback Introduction](../introduction) document.
+- The callback is initiated from the OpenIM Server to the App backend as an HTTP/HTTPS POST request.
+- The App business server must respond within the timeout period.
+
+## Scenarios that Trigger This Callback
+- A group administrator or owner attempts to remove one or more members from the group via the client.
+
+## Timing of Callback
+- The callback is triggered after OpenIM Server receives the request to remove members from the group and before it processes the request.
+
+## Interface Description
+
+### Example Request URL
+The `CallbackCommand` here is: `callbackAfterKickGroupCommand`
+
+```plaintext
+{WEBHOOK_ADDRESS}/callbackAfterKickGroupCommand?contenttype=json
+```
+
+### Example Request Package
+
+```json
+{
+  "callbackCommand": "callbackAfterKickGroupCommand",
+  "groupID": "G001",
+  "kickedUserIDs": ["user123", "user456"],
+  "reason": "Violation of group rules"
+}
+```
+
+### Request Package Field Descriptions
+
+| Field           | Type     | Description                                          |
+|-----------------|----------|------------------------------------------------------|
+| callbackCommand | string   | Callback command, here indicating a post-kick action.|
+| groupID         | string   | Unique identifier of the group.                      |
+| kickedUserIDs   | []string | List of user IDs for members being removed.          |
+| reason          | string   | Reason for removing members.                         |
+
+## Example Response Package
+
+### Approval to Kick
+Approves the request to remove specified group members.
+
+```json
+{
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "nextCode": 0
+}
+```
+
+## Response Package Field Descriptions
+
+| Field         | Value                          | Description                                                        |
+|---------------|--------------------------------|--------------------------------------------------------------------|
+| actionCode    | 0                              | Indicates if the callback executed correctly. `0` means success.   |
+| errCode       | 0                              | Custom error code, set to 0 to ignore callback result.             |
+| errMsg        | "An error message"             | Simple error message corresponding to the custom error code.       |
+| errDlt        | "Detailed error information"   | Detailed error information for the custom error code.              |
+| nextCode      | 1                              | Next action instruction, set to `1` to stop further action when `actionCode` = `0`. |
