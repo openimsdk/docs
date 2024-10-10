@@ -1,65 +1,56 @@
+---
+title: Callback After Transferring Group Ownership
+hide_title: true
+---
+
 # Callback After Transferring Group Ownership
 
-## Function Description
-The App business server can use this callback to receive information about the transfer of group ownership. The business server can then perform subsequent processing or recordkeeping for the transferred group.
+## Description
+The App backend can use this callback to receive information about group ownership transfers and, if needed, to carry out follow-up processing or logging of the transferred group.
 
-## Precautions
-- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
-- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIM Server to the App backend.
-- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
-- The APP business server must respond to this request within the timeout period.
+## Important Notes
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, see the [Callback Introduction](../introduction) document.
+- The callback direction is from OpenIMServer to the App backend as an HTTP/HTTPS POST request.
+- The App backend must respond to this request within the specified timeout.
 
-## Scenarios That May Trigger This Callback
-- App users or administrators transfer group ownership through the client or API interface.
+## Scenarios that Trigger This Callback
+- A user or administrator transfers group ownership via the client or API interface.
 
-## Timing of the Callback
-- After OpenIM Server successfully transfers the ownership of the group.
+## Timing of Callback
+- After OpenIMServer successfully transfers group ownership.
 
 ## Interface Description
 
-### Request URL Example
-In the following example, the callback URL configured by the App is `https://callbackurl`.
+### Example Request URL
+The `CallbackCommand` here is: `callbackAfterTransferGroupOwnerCommand`
+
 ```plaintext
-https://callbackurl?command=$CallbackCommand&contenttype=json
+{WEBHOOK_ADDRESS}/callbackAfterTransferGroupOwnerCommand?contenttype=json
 ```
 
-### Request Parameter Description
-
-| Parameter            | Description                                          |
-|----------------------|------------------------------------------------------|
-| https               | Request protocol is HTTPS, method is POST            |
-| https://callbackurl | Callback URL                                         |
-| CallbackCommand     | Fixed value: transferGroupOwnerAfterCommand          |
-| contenttype         | Fixed value: JSON                                    |
-
-### Header
-| Header Name | Example Value | Mandatory | Type   | Description                         |
-|-------------|---------------|-----------|--------|-------------------------------------|
-| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
-
-### Request Packet Example
+### Example Request Package
 ```json
 {
-  "callbackCommand": "transferGroupOwnerAfterCommand",
+  "callbackCommand": "callbackAfterTransferGroupOwnerCommand",
   "groupID": "G12345",
   "oldOwnerUserID": "userOld123",
   "newOwnerUserID": "userNew456"
 }
 ```
 
-### Request Packet Field Explanation
+### Request Package Field Descriptions
 
-| Field            | Type   | Description                                  |
-|------------------|--------|----------------------------------------------|
-| callbackCommand  | string | Callback command, here for the callback after transferring group ownership |
-| groupID          | string | Unique identifier of the group               |
-| oldOwnerUserID   | string | User ID of the former group owner            |
-| newOwnerUserID   | string | User ID of the new group owner               |
+| Field            | Type   | Description                                      |
+|------------------|--------|--------------------------------------------------|
+| callbackCommand  | string | Callback command; here, it's the callback after transferring group ownership |
+| groupID          | string | Unique identifier of the group                   |
+| oldOwnerUserID   | string | User ID of the previous group owner              |
+| newOwnerUserID   | string | User ID of the new group owner                   |
 
-## Response Packet Example
+## Example Response Package
 
-### Successful Handling
-Indicates that the business system has successfully processed the callback for group ownership transfer.
+### Success Response
+Indicates that the business system successfully processed the group ownership transfer callback.
 
 ```json
 {
@@ -67,12 +58,12 @@ Indicates that the business system has successfully processed the callback for g
     "errCode": 0,
     "errMsg": "",
     "errDlt": "",
-    "nextCode": "0"
+    "nextCode": 0
 }
 ```
 
-### Unsuccessful Handling
-Indicates that the business system was unable to process the callback, providing error information.
+### Failure Response
+Indicates that the business system could not process the callback, with error details.
 
 ```json
 {
@@ -80,16 +71,16 @@ Indicates that the business system was unable to process the callback, providing
     "errCode": 5002,
     "errMsg": "Unable to process the request",
     "errDlt": "The group ownership transfer cannot be processed due to internal policy",
-    "nextCode": "1"
+    "nextCode": 1
 }
 ```
 
-## Response Packet Field Explanation
+## Response Package Field Descriptions
 
-| Field      | Value | Description                                              |
-|------------|-------|----------------------------------------------------------|
-| actionCode | 0     | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
-| errCode    | 0     | Indicates a custom error code, here 0 means ignore the callback result. |
-| errMsg     | "An error message" | Simple error message corresponding to the custom error code. |
-| errDlt     | "Detailed error information" | Detailed error information corresponding to the custom error code. |
-| nextCode   | 1     | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |
+| Field          | Type        | Description                                                     |
+|----------------|-------------|-----------------------------------------------------------------|
+| actionCode     | int         | Indicates if the callback was successfully executed. `0` for success. |
+| errCode        | int         | Custom error code; use `0` to ignore the callback result        |
+| errMsg         | string      | Simple error message for the custom error code                  |
+| errDlt         | string      | Detailed error information for the custom error code            |
+| nextCode       | int         | Next step directive; set to `1` to stop further action if `actionCode` = `0` |

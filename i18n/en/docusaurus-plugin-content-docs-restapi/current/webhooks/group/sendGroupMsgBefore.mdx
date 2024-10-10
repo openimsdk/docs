@@ -1,58 +1,57 @@
-# Callback Before Sending Group Messages
+---
+title: Callback Before Sending Group Message
+hide_title: true
+---
 
-## Function Description
-The App backend can use this callback to real-time view users' group messages, including:
-- Real-time recording of group messages (for example, logging or syncing with other systems).
-- Intercepting users' requests to speak in the group.
+# Callback Before Sending Group Message
 
-## Precautions
-- To enable the callback, you must configure the callback URL and activate the switch corresponding to this callback protocol. See the [Callback Description](../introduction) document for configuration methods.
-- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIM Server to the App backend.
-- The App business server needs to verify whether the command parameter in the request URL is its own SDKNAME parameter after receiving the callback request.
-- The APP business server is required to respond to this request within the timeout period.
+## Description
 
-## Scenarios That May Trigger This Callback
-- App users send group messages through the client.
-- App administrators send group messages through the REST API.
+The App backend can use this callback to view group messages sent by users in real-time. This includes:
+- Logging group messages in real-time (e.g., for logging or synchronization with other systems).
+- Intercepting user requests to send messages within the group.
 
-## Timing of the Callback
-- Before OpenIM Server delivers the group message to group members.
+## Important Notes
+
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, see the [Callback Introduction](../introduction) document.
+- The callback direction is from OpenIMServer to the App backend as an HTTP/HTTPS POST request.
+- The App business server must respond within the specified timeout period.
+
+## Scenarios that Trigger This Callback
+
+- A user sends a group message via the App client.
+- An App administrator sends a group message through the REST API.
+
+## Timing of Callback
+
+- Before OpenIMServer delivers the group message to group members.
 
 ## Interface Description
 
-### Request URL Example
-In the following example, the configured callback URL of the App is `https://callbackurl`.
+### Example Request URL
+
+The `CallbackCommand` here is: `callbackBeforeSendGroupMsgCommand`
+
 ```plaintext
-https://callbackurl?command=$CallbackCommand&contenttype=json
+{WEBHOOK_ADDRESS}/callbackBeforeSendGroupMsgCommand?contenttype=json
 ```
 
-### Request Parameter Description
+### Example Request Package
 
-| Parameter            | Description                                     |
-|----------------------|-------------------------------------------------|
-| https                | Request protocol is HTTPS, request method is POST. |
-| https://callbackurl  | Callback URL                                    |
-| CallbackCommand      | Fixed value: callbackBeforeSendGroupMsgCommand  |
-| contenttype          | Fixed value: JSON                               |
-
-### Header
-| Header Name | Example Value  | Optional | Type   | Description                        |
-|-------------|----------------|----------|--------|------------------------------------|
-| operationID | 1646445464564  | Required | string | operationID used for global tracing |
-
-### Request Packet Example
 ```json
 {
   "sendID": "123456",
   "callbackCommand": "callbackBeforeSendGroupMsgCommand",
   "serverMsgID": "msg123",
   "clientMsgID": "client123",
+  "operationID": "1646445464564",
   "senderPlatformID": 1,
   "senderNickname": "John",
   "sessionType": 2,
   "msgFrom": 1,
   "contentType": 1,
   "status": 0,
+  "sendTime": 1673048592000,
   "createTime": 1673048592000,
   "content": "Hello, this is a group message!",
   "seq": 1,
@@ -61,35 +60,37 @@ https://callbackurl?command=$CallbackCommand&contenttype=json
   "ex": "Extra data",
   "groupID": "group567"
 }
-
 ```
 
-### Request Packet Field Description
+### Request Package Field Descriptions
 
-| Field             | Type    | Description                                          |
-|-------------------|---------|------------------------------------------------------|
-| sendID            | string  | Unique identifier of the sender                       |
-| callbackCommand   | string  | Callback command, here for before sending group messages |
-| serverMsgID       | string  | Server-generated message ID                          |
-| clientMsgID       | string  | Client-generated message ID                          |
-| senderPlatformID  | int32   | Platform ID of the sender                            |
-| senderNickname    | string  | Nickname of the sender                               |
-| sessionType       | int32   | Type of session                                      |
-| msgFrom           | int32   | Origin of the message, 1 for user, 2 for group       |
-| contentType       | int32   | Type of message content                              |
-| status            | int32   | Status of the message                                |
-| createTime        | int64   | Timestamp of message creation (milliseconds)         |
-| content           | string  | Content of the message                               |
-| seq               | uint32  | Sequence number of the message                       |
-| atUserList        | string  | List of user IDs mentioned in the group              |
-| faceURL           | string  | URL of the sender's face image                       |
-| ex                | string  | Additional data field                                |
-| groupID           | string  | Group ID                                             |
+| Field              | Type   | Description                                    |
+|--------------------|--------|------------------------------------------------|
+| sendID             | string | Unique identifier of the sender                |
+| callbackCommand    | string | Callback command for pre-group message send    |
+| serverMsgID        | string | Message ID generated by the server             |
+| clientMsgID        | string | Message ID generated by the client             |
+| operationID        | string | Unique identifier for global traceability      |
+| senderPlatformID   | int32  | Platform ID of the sender                      |
+| senderNickname     | string | Nickname of the sender                         |
+| sessionType        | int32  | Type of session                                |
+| msgFrom            | int32  | Message source: 1 for user, 2 for group        |
+| contentType        | int32  | Type of message content (1 indicates text)     |
+| status             | int32  | Message status                                 |
+| sendTime           | int64  | Timestamp of when the message was sent (ms)    |
+| createTime         | int64  | Timestamp of when the message was created (ms) |
+| content            | string | Message content                                |
+| seq                | uint32 | Sequence number of the message                 |
+| atUserList         | string | List of group member IDs                       |
+| faceURL            | string | URL of the sender's profile picture            |
+| ex                 | string | Additional data field                          |
+| groupID            | string | Unique identifier of the group                 |
 
-## Response Packet Example
+## Example Response Package
 
-### Allowing Sending
-Allowing the user to send the group message.
+### Approval to Send
+
+This allows the user to send the group message.
 
 ```json
 {
@@ -99,17 +100,14 @@ Allowing the user to send the group message.
     "errDlt": "",
     "nextCode": 0
 }
-
 ```
 
-## Response Packet Field Description
+## Response Package Field Descriptions
 
-| Field       | Value         | Description                                             |
-|-------------|---------------|---------------------------------------------------------|
-| actionCode  | 0             | Indicates whether the business system's callback was executed correctly. `0` means the operation was successful. |
-| errCode     | 5001          | Represents a custom error code, set when actionCode is not 0; set when nextCode is 1. |
-| errMsg      | "An error message" |
-
-Simple error message corresponding to the custom error code. |
-| errDlt      | "Detailed error information" | Detailed error information corresponding to the custom error code. |
-| nextCode    | 1             | Next execution instruction, `1` means refuse to continue execution, set when actionCode is `0`. |
+| Field         | Value                       | Description                                                      |
+|---------------|-----------------------------|------------------------------------------------------------------|
+| actionCode    | 0                           | Indicates whether the callback was successful. `0` means success.|
+| errCode       | 5001                        | Custom error code in the range 5000-9999. Set if `actionCode` ≠ 0 or `nextCode` = 1. |
+| errMsg        | "An error message"          | Simple error message for the custom error code.                  |
+| errDlt        | "Detailed error information"| Detailed error information for the custom error code.            |
+| nextCode      | 1                           | Next step directive. Set to `1` to stop further action if `actionCode` = `0`. |

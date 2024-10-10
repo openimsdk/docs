@@ -1,58 +1,51 @@
+---
+title: Callback for Modifying Message Content
+hide_title: true
+---
+
 # Callback for Modifying Message Content
 
-## Function Description
-The App business server can use this callback to modify message content, such as replacing non-compliant content or sensitive words.
+## Description
+The App backend can use this callback to alter message content, such as removing non-compliant content or replacing sensitive words.
 
-## Precautions
-- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
-- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIM Server to the App backend.
-- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
-- The APP business server must respond to this request within the timeout period.
+## Important Notes
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, see the [Callback Introduction](../introduction) document.
+- The callback direction is from OpenIMServer to the App backend as an HTTP/HTTPS POST request.
+- The App backend must respond to this request within the specified timeout.
 
-## Scenarios That May Trigger This Callback
-- App users send messages through the client.
-- App users send messages through the REST API.
-- App users send group messages through the client.
-- App administrators send group messages through the REST API.
+## Scenarios that Trigger This Callback
+- A user sends a message through the client.
+- A user sends a message through the REST API.
+- A user sends a group message via the client.
+- An administrator sends a group message via the REST API.
 
-## Timing of the Callback
-- Before OpenIM Server delivers the group message to group members.
+## Timing of Callback
+- Before OpenIMServer distributes the group message to group members.
 
 ## Interface Description
 
-### Request URL Example
-In the following example, the callback URL configured by the App is `https://callbackurl`.
+### Example Request URL
+The `CallbackCommand` here is: `callbackBeforeMsgModifyCommand`
+
 ```plaintext
-https://callbackurl?command=$CallbackCommand&contenttype=json
+{WEBHOOK_ADDRESS}/callbackBeforeMsgModifyCommand?contenttype=json
 ```
 
-### Request Parameter Description
-
-| Parameter            | Description                                          |
-|----------------------|------------------------------------------------------|
-| https               | Request protocol is HTTPS, method is POST            |
-| https://callbackurl | Callback URL                                         |
-| CallbackCommand     | Fixed value: callbackMsgModifyCommandCommand         |
-| contenttype         | Fixed value: JSON                                    |
-
-### Header
-| Header Name | Example Value | Mandatory | Type   | Description                         |
-|-------------|---------------|-----------|--------|-------------------------------------|
-| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
-
-### Request Packet Example
+### Example Request Package
 ```json
 {
   "sendID": "sender123",
-  "callbackCommand": "callbackMsgModifyCommandCommand",
+  "callbackCommand": "callbackBeforeMsgModifyCommand",
   "serverMsgID": "serverMsg123",
   "clientMsgID": "clientMsg123",
+  "operationID": "1646445464564",
   "senderPlatformID": 1,
   "senderNickname": "Sender",
   "sessionType": 1,
   "msgFrom": 1,
   "contentType": 1,
   "status": 1,
+  "sendTime": 1673048592000,
   "createTime": 1673048592000,
   "content": "Hello, World!",
   "seq": 123,
@@ -62,28 +55,30 @@ https://callbackurl?command=$CallbackCommand&contenttype=json
 }
 ```
 
-### Request Packet Field Explanation
+### Request Package Field Descriptions
 
-| Field             | Type     | Description                           |
-|-------------------|----------|---------------------------------------|
-| sendID            | string   | Unique identifier of the sender       |
-| callbackCommand   | string   | Callback command, here for message modification callback |
-| serverMsgID       | string   | Server-generated message ID          |
-| clientMsgID       | string   | Client-generated message ID          |
-| senderPlatformID  | int32    | Sender's platform ID                  |
-| senderNickname    | string   | Sender's nickname                     |
-| sessionType       | int32    | Session type, indicating one-on-one or group chat |
-| msgFrom           | int32    | Message origin, indicating sent or received |
-| contentType       | int32    | Content type of the message           |
-| status            | int32    | Status of the message                 |
-| createTime        | int64    | Message creation timestamp (milliseconds) |
-| content           | string   | Content of the message                |
-| seq               | uint32   | Message sequence number               |
-| atUserList        | []string | List of group member IDs mentioned   |
-| faceURL           | string   | Sender's avatar URL                   |
-| ex                | string   | Additional data field                 |
+| Field               | Type     | Description                                          |
+|---------------------|----------|------------------------------------------------------|
+| sendID              | string   | Unique identifier for the sender                     |
+| callbackCommand     | string   | Callback command, here used for message modification |
+| serverMsgID         | string   | Server-generated message ID                          |
+| clientMsgID         | string   | Client-generated message ID                          |
+| operationID         | string   | Used for global tracking                             |
+| senderPlatformID    | int32    | Sender's platform ID                                 |
+| senderNickname      | string   | Sender's nickname                                   |
+| sessionType         | int32    | Session type, indicating single or group chat        |
+| msgFrom             | int32    | Source of the message, indicating sent or received   |
+| contentType         | int32    | Type of message content                              |
+| status              | int32    | Status of the message                                |
+| sendTime            | int64    | Timestamp when the message was sent (milliseconds)   |
+| createTime          | int64    | Timestamp when the message was created (milliseconds)|
+| content             | string   | Message content                                      |
+| seq                 | uint32   | Message sequence number                              |
+| atUserList          | []string | List of group member IDs                             |
+| faceURL             | string   | Sender's avatar URL                                  |
+| ex                  | string   | Extra data                                           |
 
-## Response Packet Example
+## Example Response Package
 
 ### Allow Modification
 Allows modification of the message.
@@ -125,30 +120,30 @@ Allows modification of the message.
 }
 ```
 
-## Response Packet Field Explanation
+### Response Package Field Descriptions
 
-| Field            | Type                  | Description                                         |
-|------------------|-----------------------|-----------------------------------------------------|
-| actionCode       | 0                     | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
-| errCode          | 5001                  | Custom error code, ranging between 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
-| errMsg           | "An error message"    | Simple error message corresponding to the custom error code. |
-| errDlt           | "Detailed error information" | Detailed error information corresponding to the custom error code. |
-| nextCode         | 1                     | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |
-| content          | string                | Modified message content.                            |
-| recvID           | string                | Receiver's user ID.                                 |
-| groupID          | string                | Unique identifier of the group.                      |
-| clientMsgID      | string                | Client-generated message ID.                        |
-| serverMsgID      | string                | Server-generated message ID.                        |
-| senderPlatformID | int32                 | Sender's platform ID.                               |
-| senderNickname   | string                | Modified sender's nickname.                         |
-| senderFaceURL    | string                | Modified sender's avatar URL.                       |
-| sessionType      | int32                 | Session type.                                       |
-| msgFrom          | int32                 | Message origin.                                     |
-| contentType      | int32                 | Content type of the message.                        |
-| status           | int32                 | Status of the message.                              |
-| options          | map[string]bool       | Modified message options.                           |
-| offlinePushInfo  | OfflinePushInfo       | Modified offline push information.                  |
-| atUserIDList     | []string              | List of mentioned group member IDs.                 |
-| msgDataList      | []byte                | Modified message data list.                         |
-| attachedInfo     | string                | Modified additional information.                    |
-| ex               | string                | Modified additional data field.                     |
+| Field               | Type              | Description                                              |
+|---------------------|-------------------|----------------------------------------------------------|
+| actionCode          | int               | Indicates if the callback was successfully executed. `0` for success. |
+| errCode             | int               | Custom error code, range between 5000-9999; set when `actionCode` ≠ 0 or `nextCode` = 1 |
+| errMsg              | string            | Simple error message for the custom error code           |
+| errDlt              | string            | Detailed error information                               |
+| nextCode            | int               | Next action directive; `1` to halt further action if `actionCode` = `0` |
+| content             | *string           | Modified message content                                 |
+| recvID              | *string           | User ID of the message receiver                          |
+| groupID             | *string           | Unique identifier for the group                          |
+| clientMsgID         | *string           | Client-generated message ID                              |
+| serverMsgID         | *string           | Server-generated message ID                              |
+| senderPlatformID    | *int32            | Sender's platform ID                                     |
+| senderNickname      | *string           | Modified sender nickname                                 |
+| senderFaceURL       | *string           | Modified sender avatar URL                               |
+| sessionType         | *int32            | Session type                                             |
+| msgFrom             | *int32            | Source of the message                                    |
+| contentType         | *int32            | Content type of the message                              |
+| status              | *int32            | Message status                                           |
+| options             | *map[string]bool  | Modified message options                                 |
+| offlinePushInfo     | *OfflinePushInfo  | Modified offline push information                        |
+| atUserIDList        | *[]string         | List of group member IDs                                 |
+| msgDataList         | *[]byte           | Modified message data list                               |
+| attachedInfo        | *string           | Modified additional information                          |
+| ex                  | *string           | Modified extra data field                                |
