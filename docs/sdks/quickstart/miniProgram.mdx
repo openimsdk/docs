@@ -9,7 +9,7 @@ sidebar_position: 7
 ### 1. 添加依赖
 
 ```bash
-npm install open-im-sdk
+npm install @openim/client-sdk --save
 ```
 
 ### 2. 引入 SDK
@@ -17,26 +17,27 @@ npm install open-im-sdk
 - 引入 SDK
 
 ```ts
-import { OpenIMSDK } from 'open-im-sdk';
+import { getSDK } from '@openim/client-sdk';
 
-const OpenIM = new OpenIMSDK();
+const IMSDK = getSDK();
 ```
 
 ### 3. 登陆
 
 ```typescript
-import { CbEvents } from 'open-im-sdk';
-import type { WsResponse } from 'open-im-sdk';
+import { getSDK, CbEvents, CallbackEvent } from '@openim/client-sdk';
 
-OpenIM.on(CbEvents.OnConnecting, handleConnecting);
-OpenIM.on(CbEvents.OnConnectFailed, handleConnectFailed);
-OpenIM.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
+const IMSDK = getSDK();
 
-OpenIM.login({
+IMSDK.on(CbEvents.OnConnecting, handleConnecting);
+IMSDK.on(CbEvents.OnConnectFailed, handleConnectFailed);
+IMSDK.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
+
+IMSDK.login({
   userID: 'IM user ID',
   token: 'IM user token',
   platformID: 5,
-  wsAddr: 'ws://your-server-ip:10003',
+  wsAddr: 'ws://your-server-ip:10001',
   apiAddr: 'http://your-server-ip:10002',
 });
 
@@ -44,7 +45,7 @@ function handleConnecting() {
   // Connecting...
 }
 
-function handleConnectFailed({ errCode, errMsg }: WsResponse) {
+function handleConnectFailed({ errCode, errMsg }: CallbackEvent) {
   // Connection failed ❌
   console.log(errCode, errMsg);
 }
@@ -57,15 +58,14 @@ function handleConnectSuccess() {
 ### 4. 收发消息
 
 ```typescript
-import { CbEvents } from 'open-im-sdk';
-import type { WsResponse, MessageItem } from 'open-im-sdk';
+import { CbEvents, CallbackEvent, MessageItem } from '@openim/client-sdk';
 
 // Listenfor new messages 📩
-OpenIM.on(CbEvents.OnRecvNewMessages, handleNewMessages);
+IMSDK.on(CbEvents.OnRecvNewMessages, handleNewMessages);
 
-const message = (await OpenIM.createTextMessage('hello openim')).data;
+const message = (await IMSDK.createTextMessage('hello openim')).data;
 
-OpenIM.sendMessage({
+IMSDK.sendMessage({
   recvID: 'recipient user ID',
   groupID: '',
   message,
@@ -78,7 +78,7 @@ OpenIM.sendMessage({
     console.log(err);
   });
 
-function handleNewMessages({ data }: WsResponse<MessageItem[]>) {
+function handleNewMessages({ data }: CallbackEvent<MessageItem[]>) {
   // New message list 📨
   console.log(data);
 }
