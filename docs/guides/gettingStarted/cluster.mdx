@@ -1,0 +1,34 @@
+---
+title: '集群部署说明'
+sidebar_position: 6
+---
+
+
+
+## 集群部署说明
+
+`open-im-server`支持集群部署。以下是集群部署的步骤：
+
+1. 修改`kafka`、`minio`、`mongodb`、`etcd(discovery.yml)`、`redis`中的地址，将其配置到正确的组件地址中。**保证连接组件的各个端口可访问。**
+
+2. 修改各个`rpc`组件的`registerIP`为设置部署`etcd`的服务器可访问的`ip`地址，**并保证各个端口可被访问**。如需启用`prometheus`，还需要保证各个组件的`prometheus.port`端口可被访问。
+
+3. ![image-20241203155731369](./cluster.assets/rpc0.png)
+
+   部署`promtheus`的机器需要修改`prometheus.yml`中的`targets`。
+
+   <img src="./cluster.assets/prometheus0.png" style="zoom: 67%;" />
+
+4. 可在`open-im-server/start-config.yml`中修改各个组件数量。
+
+5. 修改`kafka`广播给主机的端口。如果使用`open-im-server`中的`docker-compose.yml`部署，修改`service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS`中的`EXTERNAL`为访问`kafka`组件的地址。
+   例如：`KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`。
+
+6. 如果通过集群模式部署`redis`，则需将`redis.yml`中的`clusterMode`设置为`true`。
+
+7. 启动服务。
+
+## **常见问题/注意事项**
+
+1. 多台机器部署需要保证时钟一致，服务才可正常运行。例如`token`的签发允许各个机器的时钟误差在`5s`以内。
+2. 组件端口无法访问：通过回环地址检测组件启动是否正常，若回环地址可访问，则检查是否被防火墙规则过滤。
