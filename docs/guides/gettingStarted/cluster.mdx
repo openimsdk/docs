@@ -26,7 +26,68 @@ sidebar_position: 6
 
 6. 如果通过集群模式部署`redis`，则需将`redis.yml`中的`clusterMode`设置为`true`。
 
-7. 启动服务。
+7. 如果部署了多个`api`或者`WebSocket`监听端口，可使用`nginx`方便快捷地实现负载均衡，参考配置如下：
+   ```yaml
+   # nginx.conf
+   
+   events {
+       worker_connections 1024;
+   }
+   
+   http {
+       upstream websocket_cluster {
+           server 192.168.2.10:10101; # WebSocket address
+           server 192.168.2.11:10001;
+       }
+   
+       upstream api_cluster {
+           server 192.168.2.10:10102; # api address
+           server 192.168.2.11:10002;
+       }
+   
+       # WebSocket
+       server {
+           listen 10001;
+   
+           server_name _;
+   
+           location / {
+               proxy_pass http://websocket_cluster;
+               proxy_http_version 1.1;
+               proxy_set_header Upgrade $http_upgrade;
+               proxy_set_header Connection 'upgrade';
+               proxy_set_header Host $host;
+               proxy_cache_bypass $http_upgrade;
+           }
+       }
+   
+       # API
+       server {
+           listen 10002;
+   
+           server_name _;
+   
+           location / {
+               proxy_pass http://api_cluster;
+               proxy_set_header Host $host;
+               proxy_set_header X-Real-IP $remote_addr;
+               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+               proxy_set_header X-Forwarded-Proto $scheme;
+           }
+       }
+   }
+   
+   ```
+
+   如果决定使用`docker`启动`nginx`，可参考以下命令（linux系统）：
+
+   ```shell
+   docker run --name nginx -p 10001:10001 -p 10002:10002 -v $(pwd)/nginx-config:/etc/nginx/conf.d -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf -d nginx
+   ```
+
+   如使用不同系统修改挂载的目录即可。
+
+8. 启动服务。
 
 ## **常见问题/注意事项**
 
