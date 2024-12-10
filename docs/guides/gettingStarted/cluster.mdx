@@ -9,24 +9,57 @@ sidebar_position: 6
 
 `open-im-server`支持集群部署。以下是集群部署的步骤：
 
-1. 修改`kafka`、`minio`、`mongodb`、`etcd(discovery.yml)`、`redis`中的地址，将其配置到正确的组件地址中。**保证连接组件的各个端口可访问。**
+1. 克隆仓库，源码部署：
+   ```bash
+   git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+   ```
 
-2. 修改各个`rpc`组件的`registerIP`为设置部署`etcd`的服务器可访问的`ip`地址，**并保证各个端口可被访问**。如需启用`prometheus`，还需要保证各个组件的`prometheus.port`端口可被访问。
+   docker部署：
+   ```bash
+   git clone https://github.com/openimsdk/openim-docker
+   ```
+
+2. 修改`kafka`、`minio`、`mongodb`、`etcd`（默认服务发现方式）、`redis`中的地址，将其配置到正确的组件地址中。**保证连接组件的各个端口可访问（关注防火墙规则是否允许端口被访问）。**
+   源码部署修改方式：修改`open-im-server/config`目录下，对应组件的地址。
+   对应配置文件字段为：
+
+   - `kafka`: `kafka.yml:address`
+   - `minio`: `minio.yml`，`internalAddress`配置内部服务访问地址，`externalAddress`配置外部访问`minio`的地址。
+   - `mongo`：`mongodb.yml:address`
+   - `etcd`: `discovery.yml:etcd.address`
+   - `redis`: `redis.yml:address`
+
+3. 修改`kafka`广播的端口。如果使用`open-im-server`中的`docker-compose.yml`部署，修改`service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS`中的`EXTERNAL`为访问`kafka`组件的地址。其他部署方式请自行修改。
+   例如：`KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`。
+
+4. 如果使用内网部署集群，可将需要暴露端口的组件中的`autoSetPorts`配置设为`true`(默认即为`true`)，可实现自动配置端口。
+   如果集群机器**不在内网中**，需要将`autoSetPorts`设置为`false`，并修改各个`rpc`组件的`registerIP`为设置部署`etcd`的服务器可访问的`ip`地址，**并保证各个端口可被访问**。如需启用`prometheus`，还需要保证各个组件的`prometheus.port`端口可被访问。
+   拥有`autoSetPorts`配置的组件如下：
+
+   - `openim-api.yml:prometheus.autoSetPorts`
+   - `openim-msggateway.yml:rpc.autoSetPorts`
+   - `openim-msgtransfer.yml:prometheus.autoSetPorts`
+   - `openim-push.yml:rpc.autoSetPorts`
+   - `openim-rpc-auth.yml:rpc.autoSetPorts`
+   - `openim-rpc-conversation.yml:rpc.autoSetPorts`
+   - `openim-rpc-friend.yml:rpc.autoSetPorts`
+   - `openim-rpc-group.yml:rpc.autoSetPorts`
+   - `openim-rpc-msg.yml:rpc.autoSetPorts`
+   - `openim-rpc-third.yml:rpc.autoSetPorts`
+   - `openim-rpc-user.yml:rpc.autoSetPorts`
 
    ![rpc0](./cluster.assets/rpc0.png)
 
-   部署`promtheus`的机器需要修改`prometheus.yml`中的`targets`。
+   非内网部署时，如需启用`prometheus`，部署`promtheus`的机器需要修改`prometheus.yml`，将其中的所有`http_sd_configs`配置项及其子配置项去掉，加上`static_configs`配置项，并将其中的`targets`改为对应的服务的端口。
+   例如：`openimserver-openim-api`表示`api`组件的`prometheus`数据抓取，则其`target`中的端口地址应和`openim-api.yml`中的`prometheus.ports`一致。
 
    ![prometheus0](./cluster.assets/prometheus0.png)
 
-4. 可在`open-im-server/start-config.yml`中修改各个组件数量。
-
-5. 修改`kafka`广播给主机的端口。如果使用`open-im-server`中的`docker-compose.yml`部署，修改`service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS`中的`EXTERNAL`为访问`kafka`组件的地址。
-   例如：`KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`。
+5. 在`open-im-server/start-config.yml`中根据需求修改各个组件数量。
 
 6. 如果通过集群模式部署`redis`，则需将`redis.yml`中的`clusterMode`设置为`true`。
 
-7. 如果部署了多个`api`或者`WebSocket`监听端口，可使用`nginx`方便快捷地实现负载均衡，参考配置如下：
+7. 如果部署了多个`api`或者`WebSocket`监听端口，推荐使用`nginx`方便快捷地实现负载均衡，参考配置如下：
    ```yaml
    # nginx.conf
    
@@ -87,7 +120,7 @@ sidebar_position: 6
 
    如使用不同系统修改挂载的目录即可。
 
-8. 启动服务。
+8. 使用`docker compose up -d`启动组件。如果采用源码部署，使用`mage`编译，`mage start`启动服务。
 
 ## **常见问题/注意事项**
 
