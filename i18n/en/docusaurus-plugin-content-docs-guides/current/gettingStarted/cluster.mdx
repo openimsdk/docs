@@ -5,90 +5,142 @@ sidebar_position: 6
 
 ## Cluster Deployment Instructions
 
-`open-im-server` supports cluster deployment. The following are the steps for cluster deployment:
+`open-im-server` supports cluster deployment. Below are the steps for **source cluster** deployment:
 
-1. Modify the addresses in `kafka`, `minio`, `mongodb`, `etcd(discovery.yml)`, and `redis`, configuring them to the correct component addresses. **Ensure that all ports of the connected components are accessible.**
+**Scenario**: Deploy `open-im-server` on two machines, Machine A and Machine B, assuming both machines are in the same internal network.
 
-2. Modify the `registerIP` of each `rpc` component to the IP address accessible by the server where `etcd` is deployed, **and ensure that all ports are accessible**. If you need to enable `prometheus`, also ensure that the `prometheus.port` of each component is accessible.
+**Machine A**: Deploy `open-im-server`, `nginx`, `mongo`, `redis`, `etcd`, `kafka`, `minio`, `prometheus`, `grafana`, `alertmanager`.
 
-   ![image-20241203155731369](./cluster.assets/rpc0.png)
+**Machine B**: Deploy `open-im-server`.
 
-   The machine deploying `prometheus` needs to modify the `targets` in `prometheus.yml`.
+The components `mongo`, `redis`, `kafka`, and `etcd` all support cluster deployment. In the following scenario, each component cluster is deployed on 3 nodes by default.
 
-   ![prometheus0](./cluster.assets/prometheus0.png)
+1. **On Machine A and B**: Clone the repository:
 
-3. You can modify the number of each component in `open-im-server/start-config.yml`.
+   ```bash
+   git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+   ```
 
-4. Modify the port that `kafka` broadcasts to the host. If deploying using `docker-compose.yml` in `open-im-server`, change the `EXTERNAL` in `service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS` to the address accessing the `kafka` component.
+2. **On Machine A**: Modify the addresses in `kafka`, `minio`, `mongodb`, `etcd` (default service discovery method), and `redis`, configuring them to the correct component addresses. **Ensure that the ports of the connected components are accessible (check if firewall rules allow port access).** Modify the addresses of the corresponding components in the `open-im-server/config` directory.
 
-   For example: `KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`.
+   Corresponding configuration file fields:
 
-5. If deploying `redis` in cluster mode, set `clusterMode` in `redis.yml` to `true`.
+   - `kafka`: `kafka.yml:address`, containing `[ kafkaAddr1, kafkaAddr2, kafkaAddr3 ]`
+   - `minio`: `minio.yml`, `internalAddress` configures the internal service access address, `externalAddress` configures the external access address for `minio`.
+   - `mongo`: `mongodb.yml:address`, containing `[ mongoAddr1, mongoAddr2, mongoAddr3 ]`
+   - `etcd`: `discovery.yml:etcd.address`, containing `[ etcdAddr1, etcdAddr2, etcdAddr3 ]`
+   - `redis`: `redis.yml:address`, containing `[ redis1, redis2, redis3 ]`, and set `clusterMode` in `redis.yml` to `true` (not needed for single-node deployment).
 
-7. If you deploy multiple `api` or `WebSocket` listening ports, you can use `nginx` to easily implement load balancing. The configuration reference is as follows:
+3. Modify the number of each component as needed in `open-im-server/start-config.yml`.
+
+4. **Deploy `nginx` on Machine A**, with the following reference configuration:
+
+   >🚀 **Tip**: Ensure to replace with your actual domain name, SSL certificate path, and SSL key.
+
    ```yaml
-   # nginx.conf
-   
    events {
        worker_connections 1024;
    }
-   
+
    http {
-       upstream websocket_cluster {
-           server 192.168.2.10:10101; # WebSocket address
-           server 192.168.2.11:10001;
+       #open-im-server chat Corresponding deployment address and port
+       upstream msg_gateway{
+           #IM Message server address Multiple can be specified according to the deployment
+           server 127.0.0.1:10001;
+           server 192.168.2.36:10001;
        }
-   
-       upstream api_cluster {
-           server 192.168.2.10:10102; # API address
-           server 192.168.2.11:10002;
+       upstream im_api{
+           #IM Group user api server address Multiple can be specified according to the deployment
+           server 127.0.0.1:10002;
+           server 192.168.2.36:10001;
        }
-   
-       # WebSocket
+       upstream minio_s3_2{
+           #Minio address can be assigned to multiple modules depending on deployment
+           server 127.0.0.1:10005;
+       }
        server {
-           listen 10001;
-   
-           server_name _;
-   
-           location / {
-               proxy_pass http://websocket_cluster;
+           listen       443; #Listening on port 443
+           server_name  web.xx.xx;  #Your domain name
+           ssl on;
+           #Path of pem file for ssl certificate
+           ssl_certificate /usr/local/nginx/conf/ssh/web.xx.xx_bundle.pem;
+           #Key file path of ssl certificate
+           ssl_certificate_key /usr/local/nginx/conf/ssh/web.xx.xx.key;
+
+           gzip on;
+           gzip_min_length 1k;
+           gzip_buffers 4 16k;
+           gzip_comp_level 2;
+           gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
+           gzip_vary off;
+           gzip_disable "MSIE [1-6]\.";
+
+           location ^~/api/{
                proxy_http_version 1.1;
                proxy_set_header Upgrade $http_upgrade;
-               proxy_set_header Connection 'upgrade';
-               proxy_set_header Host $host;
-               proxy_cache_bypass $http_upgrade;
+               proxy_set_header Connection "Upgrade";
+               proxy_set_header X-real-ip $remote_addr;
+               proxy_set_header X-Forwarded-For $remote_addr;
+               proxy_set_header X-Request-Api $scheme://$host/api;
+               proxy_pass http://im_api/;
            }
-       }
-   
-       # API
-       server {
-           listen 10002;
-   
-           server_name _;
-   
-           location / {
-               proxy_pass http://api_cluster;
-               proxy_set_header Host $host;
+
+           location /msg_gateway{
+               proxy_http_version 1.1;
+               proxy_set_header Upgrade $http_upgrade;
+               proxy_set_header Connection "Upgrade";
+               proxy_set_header X-real-ip $remote_addr;
+               proxy_set_header X-Forwarded-For $remote_addr;
+               proxy_pass http://msg_gateway/;
+           }
+
+           location ^~/im-minio-api/ {
+               proxy_set_header Host $http_host;
                proxy_set_header X-Real-IP $remote_addr;
                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                proxy_set_header X-Forwarded-Proto $scheme;
+               proxy_connect_timeout 300;
+
+               proxy_http_version 1.1;
+               proxy_set_header Connection "";
+               chunked_transfer_encoding off;
+               proxy_pass http://minio_s3_2/;
            }
        }
    }
    ```
 
-   If you decide to start `nginx` using `docker`, you can refer to the following command (Linux system):
+5. Compile with `mage`, start the service with `mage start`.
 
-   ```shell
-   docker run --name nginx -p 10001:10001 -p 10002:10002 -v $(pwd)/nginx-config:/etc/nginx/conf.d -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf -d nginx
-   ```
+6. When initializing the `sdk`, configure the `api` connection address as `http://web.xx.xx/api`, the `ws` connection address as `http://web.xx.xx/msg_gateway`, and the `minio` address as `http://web.xx.xx/im-minio-api`.
 
-   If using a different system, adjust the mounted directories accordingly.
+## **Frequently Asked Questions / Notes**
 
-7. Start the services.
+1. When deploying `kafka`, you need to modify the broadcast port of `kafka`. If using `docker-compose.yml` in `open-im-server`, modify `service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS`'s `EXTERNAL` to the address to access the `kafka` component. For other deployment methods, please modify accordingly.
+   For example: `KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`.
 
-## **Common Issues/Notes**
+2. Deploying on multiple machines requires ensuring clock synchronization for services to run properly. For example, the issuance of `token` allows a clock skew within `5s` across machines.
 
-1. When deploying on multiple machines, ensure clock synchronization for the services to run properly. For example, the issuance of `tokens` allows each machine's clock to have a time difference within `5s`.
+3. If component ports are inaccessible: Use the loopback address to check if the component has started correctly. If the loopback address is accessible, then check if firewall rules are blocking access.
 
-2. Component ports are inaccessible: Check whether the component starts normally via the loopback address. If the loopback address is accessible, then check if firewall rules are blocking access.
+4. If cluster machines are **not within the internal network**, you need to set `autoSetPorts` to `false` and modify the `registerIP` of each `rpc` component to the accessible IP address of the server where `etcd` is deployed, **and ensure that all ports are accessible**. If you need to enable `prometheus`, you also need to ensure that the `prometheus.port` of each component is accessible.
+   Components with `autoSetPorts` configuration are as follows:
+
+   - `openim-api.yml:prometheus.autoSetPorts`
+   - `openim-msggateway.yml:rpc.autoSetPorts`
+   - `openim-msgtransfer.yml:prometheus.autoSetPorts`
+   - `openim-push.yml:rpc.autoSetPorts`
+   - `openim-rpc-auth.yml:rpc.autoSetPorts`
+   - `openim-rpc-conversation.yml:rpc.autoSetPorts`
+   - `openim-rpc-friend.yml:rpc.autoSetPorts`
+   - `openim-rpc-group.yml:rpc.autoSetPorts`
+   - `openim-rpc-msg.yml:rpc.autoSetPorts`
+   - `openim-rpc-third.yml:rpc.autoSetPorts`
+   - `openim-rpc-user.yml:rpc.autoSetPorts`
+
+   ![rpc0](./cluster.assets/rpc0.png)
+
+   Additionally, on Machine A, you need to modify `prometheus.yml` by removing all `http_sd_configs` configuration items and their sub-items, adding `static_configs` configuration items, and changing the `targets` to the corresponding service ports.
+   For example: `openimserver-openim-api` represents the `api` component's `prometheus` data scraping, so the port address in its `target` should be consistent with the `prometheus.ports` in `openim-api.yml`.
+
+   ![prometheus0](./cluster.assets/prometheus0.png)
