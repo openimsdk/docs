@@ -1,128 +1,138 @@
----
-title: '集群部署说明'
-sidebar_position: 6
----
+1. 
 
+   ## 集群部署说明
 
+   `open-im-server`支持集群部署。以下是**源码集群**部署的步骤：
 
-## 集群部署说明
+   场景：两台机器部署`open-im-server`，分别为机器A和机器B，假设两台机器在同一内网中。
 
-`open-im-server`支持集群部署。以下是集群部署的步骤：
+   机器A：部署`open-im-server`、`nginx`、`mongo`、`redis`、`etcd`、`kafka`、`minio`、`prometheus`、`grafana`、`aleartmanager`。
 
-1. 克隆仓库，源码部署：
-   ```bash
-   git clone https://github.com/openimsdk/open-im-server && cd open-im-server
-   ```
+   机器B：部署`open-im-server`。
 
-   docker部署：
-   ```bash
-   git clone https://github.com/openimsdk/openim-docker
-   ```
+   组件`mongo`、`redis`、`kafka`、`etcd`均支持集群部署，以下场景默认每个组件集群部署3台。
 
-2. 修改`kafka`、`minio`、`mongodb`、`etcd`（默认服务发现方式）、`redis`中的地址，将其配置到正确的组件地址中。**保证连接组件的各个端口可访问（关注防火墙规则是否允许端口被访问）。**
-   源码部署修改方式：修改`open-im-server/config`目录下，对应组件的地址。
-   对应配置文件字段为：
+   1. 机器A、B：克隆仓库：
 
-   - `kafka`: `kafka.yml:address`
-   - `minio`: `minio.yml`，`internalAddress`配置内部服务访问地址，`externalAddress`配置外部访问`minio`的地址。
-   - `mongo`：`mongodb.yml:address`
-   - `etcd`: `discovery.yml:etcd.address`
-   - `redis`: `redis.yml:address`
+      ```bash
+      git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+      ```
 
-3. 修改`kafka`广播的端口。如果使用`open-im-server`中的`docker-compose.yml`部署，修改`service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS`中的`EXTERNAL`为访问`kafka`组件的地址。其他部署方式请自行修改。
-   例如：`KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`。
+   2. 机器A：修改`kafka`、`minio`、`mongodb`、`etcd`（默认服务发现方式）、`redis`中的地址，将其配置到正确的组件地址中。**保证连接组件的各个端口可访问（关注防火墙规则是否允许端口被访问）。**
+      修改`open-im-server/config`目录下，对应组件的地址。
+      对应配置文件字段为：
 
-4. 如果使用内网部署集群，可将需要暴露端口的组件中的`autoSetPorts`配置设为`true`(默认即为`true`)，可实现自动配置端口。
-   如果集群机器**不在内网中**，需要将`autoSetPorts`设置为`false`，并修改各个`rpc`组件的`registerIP`为设置部署`etcd`的服务器可访问的`ip`地址，**并保证各个端口可被访问**。如需启用`prometheus`，还需要保证各个组件的`prometheus.port`端口可被访问。
-   拥有`autoSetPorts`配置的组件如下：
+      - `kafka`: `kafka.yml:address`，内容为`[ kafkaAddr1, kafkaAddr2, kafkaAddr3 ]`
+      - `minio`: `minio.yml`，`internalAddress`配置内部服务访问地址，`externalAddress`配置外部访问`minio`的地址。
+      - `mongo`：`mongodb.yml:address`，内容为`[ mongoAddr1, mongoAddr2, mongoAddr3 ]`
+      - `etcd`: `discovery.yml:etcd.address`，内容为`[ etcdAddr1, etcdAddr2, etcdAddr3 ]`
+      - `redis`: `redis.yml:address`，内容为`[ redis1, redis2, redis3 ]`，并将`redis.yml`中的`clusterMode`设置为`true`（单机部署不需要）。
 
-   - `openim-api.yml:prometheus.autoSetPorts`
-   - `openim-msggateway.yml:rpc.autoSetPorts`
-   - `openim-msgtransfer.yml:prometheus.autoSetPorts`
-   - `openim-push.yml:rpc.autoSetPorts`
-   - `openim-rpc-auth.yml:rpc.autoSetPorts`
-   - `openim-rpc-conversation.yml:rpc.autoSetPorts`
-   - `openim-rpc-friend.yml:rpc.autoSetPorts`
-   - `openim-rpc-group.yml:rpc.autoSetPorts`
-   - `openim-rpc-msg.yml:rpc.autoSetPorts`
-   - `openim-rpc-third.yml:rpc.autoSetPorts`
-   - `openim-rpc-user.yml:rpc.autoSetPorts`
-
-   ![rpc0](./cluster.assets/rpc0.png)
-
-   非内网部署时，如需启用`prometheus`，部署`promtheus`的机器需要修改`prometheus.yml`，将其中的所有`http_sd_configs`配置项及其子配置项去掉，加上`static_configs`配置项，并将其中的`targets`改为对应的服务的端口。
-   例如：`openimserver-openim-api`表示`api`组件的`prometheus`数据抓取，则其`target`中的端口地址应和`openim-api.yml`中的`prometheus.ports`一致。
-
-   ![prometheus0](./cluster.assets/prometheus0.png)
-
-5. 在`open-im-server/start-config.yml`中根据需求修改各个组件数量。
-
-6. 如果通过集群模式部署`redis`，则需将`redis.yml`中的`clusterMode`设置为`true`。
-
-7. 如果部署了多个`api`或者`WebSocket`监听端口，推荐使用`nginx`方便快捷地实现负载均衡，参考配置如下：
-   ```yaml
-   # nginx.conf
+   3. 在`open-im-server/start-config.yml`中根据需求修改各个组件数量。
    
-   events {
-       worker_connections 1024;
-   }
+   4. 机器A部署`nginx`，参考配置如下：
    
-   http {
-       upstream websocket_cluster {
-           server 192.168.2.10:10101; # WebSocket address
-           server 192.168.2.11:10001;
-       }
+      >🚀 **提示**: 确保替换成您的实际域名、SSL 证书路径和 SSL 密钥。
    
-       upstream api_cluster {
-           server 192.168.2.10:10102; # api address
-           server 192.168.2.11:10002;
-       }
+      ```yaml
+      events {
+          worker_connections 1024;
+      }
+      
+      http {
+          #open-im-server chat Corresponding deployment address and port
+          upstream msg_gateway{
+              #IM Message server address Multiple can be specified according to the deployment
+              server 127.0.0.1:10001;
+              server 192.168.2.36:10001;
+          }
+          upstream im_api{
+              #IM Group user api server address Multiple can be specified according to the deployment
+              server 127.0.0.1:10002;
+              server 192.168.2.36:10001;
+          }
+          upstream minio_s3_2{
+              #Minio address can be assigned to multiple modules dependingon deployment
+              server 127.0.0.1:10005;
+          }
+          server {
+              listen       443; #Listening on port 443
+              server_name  web.xx.xx;  #Your domain name
+              ssl on;
+              #Path of pem file for ssl certificate
+              ssl_certificate /usr/local/nginx/conf/ssh/web.xx.xx_bundle.pem;
+              #Key file path of ssl certificate
+              ssl_certificate_key /usr/local/nginx/conf/ssh/web.xx.xx.key;
+      
+              gzip on;
+              gzip_min_length 1k;
+              gzip_buffers 4 16k;
+              gzip_comp_level 2;
+              gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
+              gzip_vary off;
+              gzip_disable "MSIE [1-6]\.";
+      
+              location ^~/api/{
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "Upgrade";
+                  proxy_set_header X-real-ip $remote_addr;
+                  proxy_set_header X-Forwarded-For $remote_addr;
+                  proxy_set_header X-Request-Api $scheme://$host/api;
+                  proxy_pass http://im_api/;
+              }
+      
+              location /msg_gateway{
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "Upgrade";
+                  proxy_set_header X-real-ip $remote_addr;
+                  proxy_set_header X-Forwarded-For $remote_addr;
+                  proxy_pass http://msg_gateway/;
+              }
+      
+              location ^~/im-minio-api/ {
+                  proxy_set_header Host $http_host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_connect_timeout 300;
+      
+                  proxy_http_version 1.1;
+                  proxy_set_header Connection "";
+                  chunked_transfer_encoding off;
+                  proxy_pass http://minio_s3_2/;
+              }
+          }
+      }
+      ```
    
-       # WebSocket
-       server {
-           listen 10001;
+   5. `mage`编译，`mage start`启动服务。
    
-           server_name _;
+   ## **常见问题/注意事项**
    
-           location / {
-               proxy_pass http://websocket_cluster;
-               proxy_http_version 1.1;
-               proxy_set_header Upgrade $http_upgrade;
-               proxy_set_header Connection 'upgrade';
-               proxy_set_header Host $host;
-               proxy_cache_bypass $http_upgrade;
-           }
-       }
-   
-       # API
-       server {
-           listen 10002;
-   
-           server_name _;
-   
-           location / {
-               proxy_pass http://api_cluster;
-               proxy_set_header Host $host;
-               proxy_set_header X-Real-IP $remote_addr;
-               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-               proxy_set_header X-Forwarded-Proto $scheme;
-           }
-       }
-   }
-   
-   ```
+   1. 部署`kafka`时，需要修改`kafka`广播的端口。如果使用`open-im-server`中的`docker-compose.yml`部署，修改`service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS`中的`EXTERNAL`为访问`kafka`组件的地址。其他部署方式请自行修改。
+      例如：`KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`。
+   2. 多台机器部署需要保证时钟一致，服务才可正常运行。例如`token`的签发允许各个机器的时钟误差在`5s`以内。
+   3. 组件端口无法访问：通过回环地址检测组件启动是否正常，若回环地址可访问，则检查是否被防火墙规则过滤。
+   4. 如果集群机器**不在内网中**，需要将`autoSetPorts`设置为`false`，并修改各个`rpc`组件的`registerIP`为设置部署`etcd`的服务器可访问的`ip`地址，**并保证各个端口可被访问**。如需启用`prometheus`，还需要保证各个组件的`prometheus.port`端口可被访问。
+      拥有`autoSetPorts`配置的组件如下：
 
-   如果决定使用`docker`启动`nginx`，可参考以下命令（linux系统）：
-
-   ```shell
-   docker run --name nginx -p 10001:10001 -p 10002:10002 -v $(pwd)/nginx-config:/etc/nginx/conf.d -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf -d nginx
-   ```
-
-   如使用不同系统修改挂载的目录即可。
-
-8. 使用`docker compose up -d`启动组件。如果采用源码部署，使用`mage`编译，`mage start`启动服务。
-
-## **常见问题/注意事项**
-
-1. 多台机器部署需要保证时钟一致，服务才可正常运行。例如`token`的签发允许各个机器的时钟误差在`5s`以内。
-2. 组件端口无法访问：通过回环地址检测组件启动是否正常，若回环地址可访问，则检查是否被防火墙规则过滤。
+      - `openim-api.yml:prometheus.autoSetPorts`
+      - `openim-msggateway.yml:rpc.autoSetPorts`
+      - `openim-msgtransfer.yml:prometheus.autoSetPorts`
+      - `openim-push.yml:rpc.autoSetPorts`
+      - `openim-rpc-auth.yml:rpc.autoSetPorts`
+      - `openim-rpc-conversation.yml:rpc.autoSetPorts`
+      - `openim-rpc-friend.yml:rpc.autoSetPorts`
+      - `openim-rpc-group.yml:rpc.autoSetPorts`
+      - `openim-rpc-msg.yml:rpc.autoSetPorts`
+      - `openim-rpc-third.yml:rpc.autoSetPorts`
+      - `openim-rpc-user.yml:rpc.autoSetPorts`
+   
+      ![rpc0](./cluster.assets/rpc0.png)
+   
+      此外，机器A还需要修改`prometheus.yml`，将其中的所有`http_sd_configs`配置项及其子配置项去掉，加上`static_configs`配置项，并将其中的`targets`改为对应的服务的端口。
+      例如：`openimserver-openim-api`表示`api`组件的`prometheus`数据抓取，则其`target`中的端口地址应和`openim-api.yml`中的`prometheus.ports`一致。
+   
+      ![prometheus0](./cluster.assets/prometheus0.png)
