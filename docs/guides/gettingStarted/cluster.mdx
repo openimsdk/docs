@@ -1,120 +1,206 @@
 ---
-title: '集群部署说明'
+title: '源码集群部署指南'
 sidebar_position: 6
 ---
 
 
 
-## 集群部署说明
 
-`open-im-server`支持集群部署。以下是**源码集群**部署的步骤：
+## open-im-server 源码集群部署指南
 
-场景：两台机器部署`open-im-server`，分别为机器A和机器B，假设两台机器在同一内网中。
+本指南将指导您在两台机器（A 和 B，内网 IP 分别为 `IP_A` 和 `IP_B`）上集群部署 `open-im-server` 和 `nginx`，并在机器 A 上部署监控组件（Prometheus、Grafana、Alertmanager）。假设您已部署 Redis 集群、MongoDB 分片集群、Kafka 集群及 Etcd 集群，具体地址如下：
 
-机器A：部署`open-im-server`、`nginx`、`mongo`、`redis`、`etcd`、`kafka`、`minio`、`prometheus`、`grafana`、`aleartmanager`。
+- **Redis 集群地址**: `redisAddr1`, `redisAddr2`, `redisAddr3`
+- **MongoDB 集群地址**: `mongoAddr1`, `mongoAddr2`, `mongoAddr3`
+- **Kafka 集群地址**: `kafkaAddr1`, `kafkaAddr2`, `kafkaAddr3`
+- **Etcd 集群地址**: `etcdAddr1`, `etcdAddr2`, `etcdAddr3`
 
-机器B：部署`open-im-server`。
+此外，MinIO 的内部服务访问地址配置为 `internalAddress`，外部访问地址配置为 `externalAddress`。A 和 B 两台机器内网互通。
 
-组件`mongo`、`redis`、`kafka`、`etcd`均支持集群部署，以下场景默认每个组件集群部署3台。
+### 目录结构
 
-1. 机器A、B：克隆仓库：
+1. [前提条件](#前提条件)
+2. [克隆仓库](#1-克隆仓库)
+3. [配置修改](#2-配置修改)
+4. [配置 nginx](#3-配置-nginx)
+5. [设置 DNS](#4-设置-dns)
+6. [启动服务](#5-启动服务)
+7. [修改客户端 SDK 初始化参数](#6-修改客户端-sdk-初始化参数)
 
-   ```bash
-   git clone https://github.com/openimsdk/open-im-server && cd open-im-server
-   ```
+### 前提条件
 
-2. 机器A：修改`kafka`、`minio`、`mongodb`、`etcd`（默认服务发现方式）、`redis`中的地址，将其配置到正确的组件地址中。**保证连接组件的各个端口可访问（关注防火墙规则是否允许端口被访问）。**
-   修改`open-im-server/config`目录下，对应组件的地址。
-   对应配置文件字段为：
+确保以下组件已正确部署并运行：
 
-   - `kafka`: `kafka.yml:address`，内容为`[ kafkaAddr1, kafkaAddr2, kafkaAddr3 ]`
-   - `minio`: `minio.yml`，`internalAddress`配置内部服务访问地址，`externalAddress`配置外部访问`minio`的地址。
-   - `mongo`：`mongodb.yml:address`，内容为`[ mongoAddr1, mongoAddr2, mongoAddr3 ]`
-   - `etcd`: `discovery.yml:etcd.address`，内容为`[ etcdAddr1, etcdAddr2, etcdAddr3 ]`
-   - `redis`: `redis.yml:address`，内容为`[ redis1, redis2, redis3 ]`，并将`redis.yml`中的`clusterMode`设置为`true`（单机部署不需要）。
+- **Redis 集群**
+- **MongoDB 分片集群**
+- **Kafka 集群**
+- **Etcd 集群**
+- **MinIO 服务**
 
-3. 在`open-im-server/start-config.yml`中根据需求修改各个组件数量。
+### 1. 克隆仓库
 
-4. 机器A部署`nginx`，参考配置如下：
+在两台机器（A 和 B）上分别执行以下命令以克隆 `open-im-server` 仓库：
 
-   >🚀 **提示**: 确保替换成您的实际域名、SSL 证书路径和 SSL 密钥。
+```bash
+git clone https://github.com/openimsdk/open-im-server
+cd open-im-server
+```
 
-   ```yaml
-   events {
-       worker_connections 1024;
-   }
-   
-   http {
-       #open-im-server chat Corresponding deployment address and port
-       upstream msg_gateway{
-           #IM Message server address Multiple can be specified according to the deployment
-           server 127.0.0.1:10001;
-           server 192.168.2.36:10001;
-       }
-       upstream im_api{
-           #IM Group user api server address Multiple can be specified according to the deployment
-           server 127.0.0.1:10002;
-           server 192.168.2.36:10001;
-       }
-       upstream minio_s3_2{
-           #Minio address can be assigned to multiple modules dependingon deployment
-           server 127.0.0.1:10005;
-       }
-       server {
-           listen       443; #Listening on port 443
-           server_name  web.xx.xx;  #Your domain name
-           ssl on;
-           #Path of pem file for ssl certificate
-           ssl_certificate /usr/local/nginx/conf/ssh/web.xx.xx_bundle.pem;
-           #Key file path of ssl certificate
-           ssl_certificate_key /usr/local/nginx/conf/ssh/web.xx.xx.key;
-   
-           gzip on;
-           gzip_min_length 1k;
-           gzip_buffers 4 16k;
-           gzip_comp_level 2;
-           gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
-           gzip_vary off;
-           gzip_disable "MSIE [1-6]\.";
-   
-           location ^~/api/{
-               proxy_http_version 1.1;
-               proxy_set_header Upgrade $http_upgrade;
-               proxy_set_header Connection "Upgrade";
-               proxy_set_header X-real-ip $remote_addr;
-               proxy_set_header X-Forwarded-For $remote_addr;
-               proxy_set_header X-Request-Api $scheme://$host/api;
-               proxy_pass http://im_api/;
-           }
-   
-           location /msg_gateway{
-               proxy_http_version 1.1;
-               proxy_set_header Upgrade $http_upgrade;
-               proxy_set_header Connection "Upgrade";
-               proxy_set_header X-real-ip $remote_addr;
-               proxy_set_header X-Forwarded-For $remote_addr;
-               proxy_pass http://msg_gateway/;
-           }
-   
-           location ^~/im-minio-api/ {
-               proxy_set_header Host $http_host;
-               proxy_set_header X-Real-IP $remote_addr;
-               proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-               proxy_set_header X-Forwarded-Proto $scheme;
-               proxy_connect_timeout 300;
-   
-               proxy_http_version 1.1;
-               proxy_set_header Connection "";
-               chunked_transfer_encoding off;
-               proxy_pass http://minio_s3_2/;
-           }
-       }
-   }
-   ```
+### 2. 配置修改
 
-5. `mage`编译，`mage start`启动服务。
+在机器 A 和 B 上，按照以下步骤修改配置文件，确保各组件正确连接。所有地址字段均采用单行列表格式 `address: [addr1, addr2, addr3]`。
 
-6. 初始化`sdk`时，配置`api`连接地址`http://web.xx.xx/api`，`ws`连接地址`http://web.xx.xx/msg_gateway`，`minio`地址为`http://web.xx.xx/im-minio-api`。
+#### 2.1 Kafka 配置
+
+编辑 `open-im-server/config/kafka.yml` 文件，设置 `address` 字段为 Kafka 集群地址列表：
+
+```yaml
+address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
+```
+
+#### 2.2 MinIO 配置
+
+编辑 `open-im-server/config/minio.yml` 文件，设置 `internalAddress` 和 `externalAddress`：
+
+```yaml
+internalAddress: your_minio_internal_address
+externalAddress: your_minio_external_address
+```
+
+#### 2.3 MongoDB 配置
+
+编辑 `open-im-server/config/mongodb.yml` 文件，设置 `address` 字段为 MongoDB 集群地址列表：
+
+```yaml
+address: [mongoAddr1, mongoAddr2, mongoAddr3]
+```
+
+#### 2.4 Etcd 配置
+
+编辑 `open-im-server/config/discovery.yml` 文件，设置 `etcd.address` 字段为 Etcd 集群地址列表：
+
+```yaml
+etcd:
+  address: [etcdAddr1, etcdAddr2, etcdAddr3]
+```
+
+#### 2.5 Redis 配置
+
+编辑 `open-im-server/config/redis.yml` 文件，设置 `address` 字段为 Redis 集群地址列表，并启用集群模式：
+
+```yaml
+address: [redisAddr1, redisAddr2, redisAddr3]
+clusterMode: true
+```
+
+### 3. 配置 nginx
+
+在机器 A 上部署 `nginx`，参考以下配置。请确保替换为您的实际域名、SSL 证书路径和 SSL 密钥路径。
+
+> 🚀 **提示**: 确保替换成您的实际域名、SSL 证书路径和 SSL 密钥。
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    # open-im-server 
+    upstream msg_gateway {
+        server IP_A:10001;
+        server IP_B:10001;
+    }
+
+    upstream im_api {
+        # IM API 服务器地址，可根据部署情况指定多个
+        server IP_A:10002;
+        server IP_B:10002;
+    }
+
+    server {
+        listen       443 ssl;
+        server_name  your_domain.com;  # 替换为您的域名
+
+        ssl_certificate     /usr/local/nginx/conf/ssl/your_domain_bundle.pem;  # 替换为您的证书路径
+        ssl_certificate_key /usr/local/nginx/conf/ssl/your_domain.key;        # 替换为您的证书密钥路径
+
+        gzip on;
+        gzip_min_length 1k;
+        gzip_buffers 4 16k;
+        gzip_comp_level 2;
+        gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
+        gzip_vary off;
+        gzip_disable "MSIE [1-6]\.";
+
+        location ^~/api/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Request-Api $scheme://$host/api;
+            proxy_pass http://im_api/;
+        }
+
+        location /msg_gateway/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_pass http://msg_gateway/;
+        }
+    }
+
+    # 可选: HTTP 重定向到 HTTPS
+    server {
+        listen 80;
+        server_name your_domain.com;  # 替换为您的域名
+
+        return 301 https://$host$request_uri;
+    }
+}
+```
+
+将此配置添加到 `nginx` 的配置文件中（例如 `/usr/local/nginx/conf/nginx.conf`），并重启 `nginx` 服务：
+
+```bash
+sudo nginx -t  
+sudo systemctl restart nginx  
+```
+
+### 4. 设置 DNS
+
+将您的域名 `your_domain.com` 指向机器A B的外网 IP 地址。
+
+### 5. 启动服务
+
+在两台机器（A 和 B）的 `open-im-server` 目录下执行以下命令以编译和启动服务：
+
+#### 5.1 编译
+
+```bash
+mage
+```
+
+#### 5.2 启动服务
+
+```bash
+mage start
+```
+
+
+### 6. 修改客户端 SDK 初始化参数
+
+在客户端 SDK 中，配置初始化参数如下：
+
+- `apiAddr`: `https://your_domain.com/api`
+- `wsAddr`: `https://your_domain.com/msg_gateway`
+
+
+
+
+
 
 ## **常见问题/注意事项**
 
