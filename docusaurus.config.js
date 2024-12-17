@@ -141,7 +141,7 @@ const config = {
           },
           {
             label: 'Server APIs',
-            to: 'restapi/introduction',
+            to: 'restapi/apis/introduction',
           },
 
           {
