@@ -1,74 +1,55 @@
 ---
-title: Callback After Single Chat Message Recall
+sidebar_position: 1
+title: Callback Description
 hide_title: true
 ---
 
-# Callback After Single Chat Message Recall
+# 📞 Callback Description
 
-## Description
-The App backend can use this callback to receive requests for recalling a user's single chat message.
+📢 **OpenIM** offers powerful callback functionalities. When a specific event happens before or after a process, OpenIMServer proactively sends an HTTP/HTTPS request to the APP’s business server. This allows the APP’s business server to intervene in the subsequent processing of that event or to perform data synchronization based on the callback.
 
-## Important Notes
-- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, see the [Callback Introduction](../introduction) document.
-- The callback direction is from OpenIMServer to the App backend as an HTTP/HTTPS POST request.
-- The App backend must respond to this request within the specified timeout.
+## 📑 Callback Classification
 
-## Scenarios that Trigger This Callback
-- An App user recalls a single chat message through the client.
-- An administrator recalls a single chat message through the `admin_msgwithdraw` REST API.
+Callbacks are divided into two main types based on the timing of their processing:
 
-## Timing of Callback
-- After the single chat message has been successfully recalled.
+	•	🚫 **Callbacks Before the Event Occurs**: These “before” type callbacks allow the APP’s business server to intervene in the event handling process. For example, you can implement sensitive word filtering for messages. OpenIMServer determines subsequent steps based on the callback response.
+	•	📤 **Notifications After the Event Occurs**: These “after” type callbacks are mainly used to notify the APP’s business server for data synchronization. For example, when a user joins a group. In this case, OpenIMServer ignores the callback’s return values and error codes.
 
-## Interface Description
+## ⚙️ Configuration Description
 
-### Example Request URL
-The `CallbackCommand` here is: `callbackBeforeAfterMsgCommand`
+```yaml
+url: http://127.0.0.1:10006/callbackExample
+beforeSendSingleMsg:
+  enable: false
+  timeout: 5
+  failedContinue: true
+```
+
+	•	url: The APP business server callback address, supports HTTP/HTTPS
+	•	enable: Whether to enable the callback, true for enable
+	•	timeout: Response timeout in seconds
+	•	failedContinue: Whether to continue the process if the callback times out or if the API fails. Generally effective for before type callbacks. true means to continue execution.
+
+## 🔄 Callback Protocol
+
+**OpenIMServer** uses a third-party callback mechanism based on HTTP/HTTPS protocol. When initiating a callback request, OpenIMServer sends a POST request to notify the APP’s business server. The specifics of these requests are directly included in the request body.
+
+### Sample Request URL
 
 ```plaintext
-{WEBHOOK_ADDRESS}/callbackBeforeAfterMsgCommand?contenttype=json
+{WEBHOOK_ADDRESS}/callbackCommand?contenttype=json
 ```
 
-### Example Request Package
-```json
-{
-  "callbackCommand": "callbackBeforeAfterMsgCommand",
-  "conversationID": "si_u1_u2:0",
-  "seq": 10,
-  "userID": "user456"
-}
-```
+### Request Parameter Description
 
-### Request Package Field Descriptions
+|Parameter |	Description |
+|-----------------|------------------------------------------------------------|
+|{WEBHOOK_ADDRESS} |	The url field in webhooks.yml, domain or hostname, for example: http://127.0.0.1:10006/callbackExample|
+|callbackCommand |	The callback command, refer to each callback method’s description for details|
+|contenttype |	The request input type, json|
 
-| Field            | Type   | Description                                   |
-|------------------|--------|-----------------------------------------------|
-| callbackCommand  | string | Callback command for recalling a single chat message |
-| conversationID   | string | Conversation ID                               |
-| seq              | string | Message sequence number                       |
-| userID           | string | User ID of the message sender                |
+### Header
 
-## Example Response Package
-
-### Success Response
-The backend confirms successful processing of the recall request.
-
-```json
-{
-    "actionCode": 0,
-    "errCode": 0,
-    "errMsg": "",
-    "errDlt": "",
-    "nextCode": 0
-}
-```
-
-## Response Package Field Descriptions
-
-| Field         | Value                         | Description                                           |
-|---------------|-------------------------------|-------------------------------------------------------|
-| actionCode    | 0                             | Indicates whether the callback was successfully executed. `0` means success. |
-| errCode       | 0                             | Custom error code; `0` to ignore the callback result. |
-| errMsg        | "An error message"            | Simple error message for the custom error code        |
-| errDlt        | "Detailed error information"  | Detailed error message                                |
-| nextCode      | 1                             | Next step directive, `1` to halt further action if `actionCode` is `0` |
+|Header Name	|Example Value|	Required	|Type	|Description|
+|-----------------|-----------------|-----------------|-----------------|-----------------|
+|operationID|	123456|	Yes	|string|	Used for global link tracking, recommended to use timestamps, unique in each request|
