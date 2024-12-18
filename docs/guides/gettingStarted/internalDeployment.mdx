@@ -2,64 +2,123 @@
 title: '内网部署'
 sidebar_position: 4
 ---
-## 📌 一、部署服务端
+## 📌 open-im-server 内网部署指南
 
-请参考 [docker部署](./dockerCompose) 或 [源码部署](./imSourceCodeDeployment) 来进行部署。
+本指南将指导您在一台没有连接到互联网的机器上部署`open-im-server`。
 
----
-## 二、 开放端口
+### **Docker部署**
 
-### 📡 IM 端口
+1. 使用一台连接到互联网的机器，克隆仓库：
 
-| TCP 端口 | 说明 | 操作 ⚙️ |
-| --- | --- | --- |
-| TCP:10001 | ws 协议，消息端口，用于客户端 SDK | 端口放行 |
-| TCP:10002 | api 端口，如用户、好友、群组、消息等接口 | 端口放行 |
-| TCP:10005 | 选择 MinIO 存储时需要（OpenIM 默认使用 MinIO 存储） | 端口放行 |
+   ```sh
+   git clone https://github.com/openimsdk/openim-docker
+   ```
 
-###  💬 Chat 端口
+2. 运行`docker compose up -d`以拉取镜像。
 
-| TCP 端口 | 说明 | 操作 ⚙️ |
-| --- | --- | --- |
-| TCP:10008 | 业务系统，如注册、登录等 | 端口放行 |
-| TCP:10009 | 管理后台，如统计、封号等 | 端口放行 |
+3. 保存相应的镜像。命令如下：
 
-###  💻 PC Web 及管理后台前端资源端口
+   ```sh
+   docker save -o image-name.tar image-name:tag
+   ```
 
-| TCP 端口 | 说明 | 操作 ⚙️ |
-| --- | --- | --- |
-| TCP:11001 | PC Web 前端资源 | 端口放行 |
-| TCP:11002 | 管理后台前端资源 | 端口放行 |
+   例如，需要保存`openim-server`镜像，命令应为：
 
-###  💻 grafana端口
-| TCP 端口 | 说明 | 操作 ⚙️ |
-| --- | --- | --- |
-| TCP:13000 | grafana端口 | 端口放行 |
+   ```sh
+   docker save -o openim-server.tar openim/openim-server:release-v3.8.1
+   ```
 
+   保存`mongo`镜像，命令应为：
 
+   ```sh
+   docker save -o mongo.tar mongo:7.0
+   ```
 
-## 三、验证
+   可以使用`docker images`查看拉取的镜像信息，或者在`.env`文件中确认镜像的版本信息。
 
-### PC Web 验证
+   所有需要保存的镜像为：
 
-:::tip
-在浏览器中输入 `http://your_server_ip:11001` 来访问 PC Web。`your_server_ip` 为服务端部署机器`ip`地址，确保浏览器能访问。注册时验证码默认为 `666666`。
-:::
+   - `mongo:7.0`
+   - `redis:7.0.0`
+   - `bitnami/kafka:3.5.1`
+   - `minio/minio:RELEASE.2024-01-11T07-46-16Z`
+   - `quay.io/coreos/etcd:v3.5.13`
+   - `openim/openim-web-front:release-v3.8.1`
+   - `openim/openim-admin-front:release-v1.8.3`
+   - `openim/openim-server:release-v3.8.2`
+   - `openim/openim-chat:v1.8.2`
 
+   以下为监控告警组件镜像，可根据需求选择性部署：
 
+   - `prom/prometheus:v2.51.2`
+   - `prom/alertmanager:v0.27.0`
+   - `grafana/grafana:11.0.1`
+   - `prom/node-exporter:v1.7.0`
 
+4. 通过内网或者物理介质将**镜像文件**和**docker仓库文件**拷贝到部署机器上。
 
-import Image3 from './assets/pc-web.png';
+5. 导入镜像到`docker`中，命令为：
+   ```bash
+   docker load -i image-name.tar
+   ```
 
-<img src={Image3} width="700" alt="PC Web Interface" />
+   例如`openim-server`镜像导入命令为：
 
+   ```sh
+   docker load -i openim-server.tar
+   ```
 
+6. 在仓库目录下运行：
+   ```sh
+   docker copose up -d
+   ```
 
-### 管理后台验证
+   需要启动监控组件则运行：
+   ```sh
+   docker compose --profile m up -d
+   ```
 
-在浏览器中输入 `http://your_server_ip:11002` 来访问管理后台。`your_server_ip` 为服务端部署机器`ip`地址，确保您的浏览器能访问。默认账号和密码均为 chatAdmin
+### **源码部署**
 
+1. 使用一台连接到互联网的机器，克隆server仓库建议切换到 release-v3.8.2 分支：
 
-import Image4 from './assets/admin.jpg';
+   ```sh
+   git clone https://github.com/openimsdk/open-im-server
+   ```
 
-<img src={Image4} width="700" alt="admin " />
+2.  克隆`chat`仓库建议切换到 release-v1.8.3 分支
+   ```bash
+   git clone https://github.com/openimsdk/chat
+   ```
+
+3. 参考[docker部署](#Docker部署)步骤，保存镜像，区别为不需要`openim/openim-server:release-v3.8.2`和`openim/openim-chat:v1.8.2`。
+
+4. 通过内网或者物理介质将**镜像文件**、**server仓库文件**、**chat仓库文件**拷贝到部署机器上。
+
+5. 导入镜像到`docker`中，命令为：
+
+   ```bash
+   docker load -i image-name.tar
+   ```
+
+   例如`mongo`镜像导入命令为：
+
+   ```sh
+   docker load -i mongo.tar
+   ```
+
+6. 在`server`目录下依次运行：
+   ```bash
+   docker compose up -d  # 如需启用监控组件则为 docker compose --profile m up -d
+   mage
+   mage start
+   ```
+
+7. 在`chat`目录下运行：
+   ```bash
+   mage
+   mage start
+   ```
+
+   
+
