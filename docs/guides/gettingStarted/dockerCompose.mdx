@@ -1,11 +1,11 @@
 ---
 title: 'docker部署'
-sidebar_position: 3
+sidebar_position: 2
 
 ---
 ## 环境准备 🌍
 
-- 在服务器上安装带有 Compose 插件的 Docker 或 docker-compose。安装详情请访问 [Docker Compose 安装指南](https://docs.docker.com/compose/install/linux/)。
+- 在服务器上安装带有 Compose 插件的 Docker 或 docker-compose，并确保docker已正常启动。
 
 ## 仓库克隆 🗂️
 
@@ -18,17 +18,11 @@ git clone https://github.com/openimsdk/openim-docker
 - 修改 `.env` 文件，配置外网 IP。如果使用域名，需配置 [Nginx](./nginxDomainConfig.mdx)
 
   ```plaintext
-  # 设置 MinIO 服务的外网访问地址（外网IP或域名）
+  # 设置 MinIO 服务的外网访问地址（external_ip:10005或域名）
   MINIO_EXTERNAL_ADDRESS="http://external_ip:10005"
-  # 设置 Grafana 服务的外网访问地址（外网IP或域名）
-  GRAFANA_URL="http://external_ip:13000/"
   ```
 
-- 配置格式说明：
-
-  docker方式部署如果需要修改配置，则需要通过修改docker-compose.yaml中的环境变量来实现。例如修改`openim-server`的配置文件`openim-api.yml`中的`prometheus.grafanaURL`字段，则应在`docker-compose.yaml`文件中的`openim-server`的`environment`下添加：`- IMENV_OPENIM_API_PROMETHEUS_GRAFANAURL=${GRAFANA_URL}`。`IMENV`为`openim-server`配置的固定前缀，文件名和字段之间的分隔符全部为`_`，并且全部改为大写。
-
-- 其他配置请参考 .env 中的注释
+  >注意：进入容器修改config目录下的修改配置文件无效！请采用环境变量的方式修改配置，参考[设置环境变量指南](https://github.com/openimsdk/openim-docker/issues/136)。
 
 ## 服务启动 🚀
 
@@ -37,6 +31,14 @@ git clone https://github.com/openimsdk/openim-docker
 ```bash
 docker compose up -d
 ```
+
+- 启动运维组件（可选）：
+
+```bash
+docker compose --profile m up -d
+```
+
+监控告警使用参考： [监控告警](./admin.mdx)
 
 - 停止服务：
 
@@ -53,164 +55,12 @@ docker logs -f openim-chat
 
 ## 快速体验 ⚡
 
-快速体验 OpenIM 服务，请参考[快速验证](./quickTestServer)。
-
----
+快速体验 OpenIM 服务，检测部署是否正常，请参考[快速验证](./quickTestServer)。
 
 
-## 以下是release-v3.6及之前的版本部署流程
+##  常见问题
 
-
----
-# 🛠 docker部署
-
-
-## 1. 环境及组件要求
-对于服务器环境、系统、以及存储组件可以参考[此文档](./env-comp)
-
----
-## 2. docker部署
-
-## 2.1 克隆仓库并初始化
-
-```jsx
-git clone https://github.com/openimsdk/openim-docker openim-docker && cd openim-docker && make init
-
-```
-💡 **Tips**
-> 如果不是本机clone，而是通过下载压缩包获取的 **openim-docker**，执行命令 **find ./ -name "*.sh" | xargs chmod +x**，以赋予脚本执行权限
-
----
-
-
-
-
-
-## 2.2 设置OPENIM_IP
-
-🔔 **必须要设置OPENIM_IP，且不能是127.0.0.1**
-
-```jsx
-# 如果服务器有外网IP
-export OPENIM_IP="外网IP"
-
-# 如果仅提供内网服务
-export OPENIM_IP="内网IP"
-```
-
-
-
-## 2.3 启动服务及查看日志
-
-```jsx
-docker compose up -d
-docker ps
-docker compose logs -f openim-chat
-docker compose logs -f openim-server
-```
-
----
-
-## 3. 快速验证
-
-请参考[快速验证](./quickTestServer)文档
-
----
-
-## 4. 管理后台和监控系统
-请参考 [管理后台和监控系统](./admin) 文档。
-
----
-
-## 5. 关于配置项的修改
-
-此项目配置项较为复杂，主要是某些配置项涉及到**`.env`**、**`openim-chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`**多个文件，配置项的修改说明分为两个部分，分别是共用配置项的修改和其他配置项的修改。
-
-### 5.1 共用配置项
-
-**`.env`**、**`openim-chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`** 共用的配置项：
-
-1. mysql/mongo/redis/kafka/zookeeper/minio 端口及密码；
-2. SECRET；
-3.  API_OPENIM_PORT；
-4.  OPENIM_IP；
-5. MINIO_PORT;
-6. GRAFANA_PORT
-
-### 5.2 修改方法
-
-对于5.1共用配置项的修改，以下两种方式二选一。
-
-方式一：所有配置重新生成
-
-如果需要全面更新配置，可以采用以下步骤：
-
-1. 删除现有配置文件：删除 **`openim-server/config/config.yaml`** 和 **`openim-chat/config/config.yaml`** 文件。
-2. 修改 `.env` 文件：更新 **`.env`** 文件中的相关配置项。
-3. 重新生成配置并重启服务：执行 **`docker compose down ; docker compose up -d`**，这将基于 **`.env`** 文件中的新设置重新生成配置文件，并重启服务。
-
-方式二：分别修改多个配置文件
-
-如果只需部分更新配置，可以按照以下步骤操作：
-
-1. 修改 `.env` 文件：更新 **`.env`** 文件中的相关配置项。
-2. 手动更新配置文件：根据 **`.env`** 文件的修改，相应地更新 **`openim-server/config/config.yaml`** 和 **`openim-chat/config/config.yaml`** 文件中的配置项。
-3. 特殊变量的额外处理：如果修改了 **`OPENIM_IP`**、**`API_OPENIM_PORT`**、**`MINIO_PORT`**、**`GRAFANA_PORT`**，则需要在 **`openim-server/config/config.yaml`** 中更新以下配置项：
-   
-    ```yaml
-    object:
-      apiURL: "http://$OPENIM_IP:$API_OPENIM_PORT"
-      minio:
-        endpoint: "http://$DOCKER_BRIDGE_GATEWAY:$MINIO_PORT"
-        signEndpoint: "http://$OPENIM_IP:$MINIO_PORT"
-    
-    grafanaUrl: http://$OPENIM_IP:$GRAFANA_PORT
-    ```
-    
-4. 重启服务：执行 **`docker compose down ; docker compose up -d`** 以应用更改并重启服务。
-
-### 5.3 其他配置项的修改
-
-对于 **`.env`**、**`openim-chat/config/config.yaml`** 和 **`openim-server/config/config.yaml`** 中的非共用变量，可以单独修改相应文件中的这些配置项。执行 **`docker compose down ; docker compose up -d`** 以应用更改并重启服务。
-
----
-
-## ❓ 6. 常见问题 
-
-### 6.1 能正常发送文本消息，但发送图片失败 😕
-
-可能是因为没有在执行 `docker compose up -d` 命令之前设置 `OPENIM_IP` 环境变量。可以通过查看启动时日志，或使用以下命令搜索日志中的 "127.0.0.1" 地址来确认：
-
-```bash
-grep "127.0.0.1" openim-server/_output/logs/openim-docker.log
-```
-
-#### 解决方案：
-
-1. 设置 `OPENIM_IP` 环境变量为你的公网IP地址，如仅提供内网服务则为内网IP地址：
-
-   ```bash
-   export OPENIM_IP="<Public-IP>"
-   ```
-
-2. 使用 `sed` 命令更新 `config.yaml` 文件中的 `apiURL` 和 `signEndpoint` 配置项，将地址改为使用 `OPENIM_IP` 环境变量指定的IP地址：
-
-   ```bash
-   sed -i -e "s/apiURL: \"http:\/\/127\.0\.0\.1/apiURL: \"http:\/\/${OPENIM_IP}/" \
-          -e "s/signEndpoint: \"http:\/\/127\.0\.0\.1/signEndpoint: \"http:\/\/${OPENIM_IP}/" \
-          openim-server/config/config.yaml
-   ```
-
-通过上述步骤修改配置并重启服务后，应能正常发送图片消息。
-
-### 6.2 关于 Docker 版本 🐋
-强烈要求使用 docker compose 命令而不是 docker-compose，老版本 Docker 可能不支持 gateway 功能❌。我们建议您升级到较新的版本，例如 `23.0.1`🔝
-
-
-### 6.3 日志查看 📜
-
-日志位置：
-
-- 运行时日志：`{openim-server, openim-chat}/_output/logs/openim-all.*`
-- 启动时日志：`{openim-server, openim-chat}/_output/logs/openim-docker.log`
-
+### unhealthy定位
+1. 执行 `docker exec -it openim-server mage check` 确认是否超过一分钟；
+2. 执行 `docker exec -it openim-chat mage check` 确认是否超过一分钟；
+3. 查看日志；
