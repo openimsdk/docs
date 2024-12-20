@@ -3,154 +3,333 @@ title: '集群部署-kubernetes'
 sidebar_position: 6
 ---
 
+# OpenIM k8s 部署-待完善
 
-
-
-# OpenIM k8s部署-待完善
-
-OpenIM支持多种集群部署方法，包括但不限于`helm`、`sealos`、`kustomize`。
+OpenIM 支持多种集群部署方法，包括但不限于`helm`、`sealos`、`kustomize`。
 
 多个贡献者和之前的官方版本都提供了一些可供参考的解决方案：
 
-+ [k8s-jenkins仓库](https://github.com/openimsdk/k8s-jenkins)
-+ [open-im-server-k8s-deploy仓库](https://github.com/openimsdk/open-im-server-k8s-deploy)
-+ [openim-charts仓库](https://github.com/openimsdk/openim-charts)
-+ [deploy-openim仓库](https://github.com/showurl/deploy-openim)
+- [k8s-jenkins 仓库](https://github.com/openimsdk/k8s-jenkins)
+- [open-im-server-k8s-deploy 仓库](https://github.com/openimsdk/open-im-server-k8s-deploy)
+- [openim-charts 仓库](https://github.com/openimsdk/openim-charts)
+- [deploy-openim 仓库](https://github.com/showurl/deploy-openim)
 
-### 依赖性检查
+# Deployment 部署
+
+## OpenIM Server 部署
+
+### 资源要求
+
+- **CPU**：2 核心
+- **内存**：4 GiB
+- **磁盘使用**：20 GiB（在节点上）
+
+### 前提条件
+
+确保您已经部署了以下组件：
+
+- Redis
+- MongoDB
+- Kafka
+- MinIO
+
+### 原生部署
+
+#### 进入目标目录
 
 ```bash
-Kubernetes: >= 1.16.0-0
-Helm: >= 3.0
+cd ./deployments/deploy/
 ```
 
-### 最小配置
+#### 部署配置和依赖
 
-生产环境推荐的最小配置如下：
+更新您的 `openim-config.yml` 配置映射。**您可以查阅官方文档获取更多详情。**
+
+在 `openim-config.yml` 中，您需要修改以下配置：
+
+**discovery.yml**
+
+- `kubernetes.namespace`：默认是 `default`，您可以将其更改为您的 namespace。
+
+**mongodb.yml**
+
+- `address`：设置为已部署的 MongoDB 地址或 Mongo 服务名称和端口。
+- `database`：设置为您的 MongoDB 数据库名称（需要事先创建数据库）。
+- `authSource`：设置为您的 MongoDB 用户认证源数据库（`authSource` 是指定与用户凭证关联的数据库名称，用户需要在该数据库中创建）。
+
+**kafka.yml**
+
+- `address`：设置为已部署的 Kafka 地址或 Kafka 服务名称和端口。
+
+**redis.yml**
+
+- `address`：设置为已部署的 Redis 地址或 Redis 服务名称和端口。
+
+**minio.yml**
+
+- `internalAddress`：设置为已部署的 MinIO 服务名称和端口。
+- `externalAddress`：设置为您已暴露的 MinIO 外部地址。
+
+#### 设置 Secret
+
+Secret 是一个包含少量敏感数据的对象。例如密码和密钥。Secret 类似于 ConfigMaps**。**
+
+#### Redis：
+
+在 `redis-secret.yml` 中更新 `redis-password` 的值，将其设置为您的 Redis 密码，需进行 base64 编码。
 
 ```yaml
-CPU: 4
-内存: 8G
-硬盘: 100G
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openim-redis-secret
+  ...
+data:
+  redis-password: b3BlbklNMTIz # update to your redis password encoded in base64, if need empty, you can set to ""
 ```
 
-## 配置文件生成
+### Mongo：
 
-我们已经自动化了所有的文件，使得为OpenIM生成配置文件成为可选项。但如果你希望自定义配置，你可以按照以下步骤操作：
+在 `mongo-secret.yml` 文件中更新 `mongo_openim_username` 和 `mongo_openim_password` 的值，将其设置为您的 MongoDB 用户名和密码，需进行 base64 编码。
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openim-mongo-secret
+type: Opaque
+data:
+  mongo_openim_username: b3BlbklN # update to your mongo username encoded in base64, if need empty, you can set to "" (this user credentials need in authSource database)
+  mongo_openim_password: b3BlbklNMTIz # update to your mongo password encoded in base64, if need empty, you can set to ""
+```
+
+### **Minio：**
+
+在 `minio-secret.yml` 文件中更新 `minio-root-user` 和 `minio-root-password` 的值，将其设置为您的 MinIO `accessKeyID` 和 `secretAccessKey`，需进行 base64 编码。
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openim-minio-secret
+type: Opaque
+data:
+  minio-root-user: cm9vdA== # update to your minio accessKeyID encoded in base64, if need empty, you can set to ""
+  minio-root-password: b3BlbklNMTIz # update to your minio secretAccessKey encoded in base64, if need empty, you can set to ""
+```
+
+### **Kafka：**
+
+在 `kafka-secret.yml` 文件中更新 `kafka-password` 的值，将其设置为您的 Kafka 密码，需进行 base64 编码。
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openim-kafka-secret
+type: Opaque
+data:
+  kafka-password: '' # update to your kafka password encoded in base64, if need empty, you can set to ""
+```
+
+### 应用 Secrets
+
+```shell
+kubectl apply -f redis-secret.yml -f minio-secret.yml -f mongo-secret.yml -f kafka-secret.yml
+```
+
+### 应用所有配置
 
 ```bash
-$ make init
-# 或者使用脚本：
-# ./scripts/init-config.sh
+kubectl apply -f ./openim-config.yml
 ```
 
-此时，配置文件将在`deployments/openim/config`下生成，您可以根据需要进行修改。
-
-
-
-### 安装helm
-
-Helm通过打包提供版本控制和发布管理，大大简化了Kubernetes应用的部署和管理。
-
-**使用脚本:**
-
-```bash
-$ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-```
-
-**添加仓库:**
-
-```bash
-$ helm repo add brigade https://openimsdk.github.io/openim-charts
-```
-
-### OpenIM镜像策略
-
-自动化提供的包括aliyun, ghcr, docker hub：[镜像文档](https://github.com/openimsdk/open-im-server/blob/main/docs/conversions/images.md)
-
-**本地测试构建方法:**
-
-```bash
-$ make image
-```
-
-> 此命令有助于快速在本地构建所需的镜像。关于详细的构建策略，请参考[构建文档](https://github.com/openimsdk/open-im-server/blob/main/build/README.md)。
-
-## 安装
-
-浏览我们的Helm-Charts仓库并仔细阅读：[Helm-Charts仓库](https://github.com/openimsdk/helm-charts)
-
-使用helm charts仓库，您可以忽略以下配置，但如果您只想使用服务器并在其上进行扩展，您可以继续：
-
-**使用Helmfile:**
-
-```bash
-GO111MODULE=on go get github.com/roboll/helmfile@latest
-export MYSQL_ADDRESS=im-mysql
-export MYSQL_PORT=3306
-export MONGO_ADDRESS=im-mongo
-export MONGO_PORT=27017
-export REDIS_ADDRESS=im-redis-master
-export REDIS_PORT=6379
-export KAFKA_ADDRESS=im-kafka
-export KAFKA_PORT=9092
-export OBJECT_APIURL="https://openim.server.com/api"
-export MINIO_ENDPOINT="http://im-minio:9000"
-export MINIO_SIGN_ENDPOINT="https://openim.server.com/im-minio-api"
-
-mkdir ./charts/generated-configs
-../scripts/genconfig.sh ../scripts/install/environment.sh ./templates/openim.yaml > ./charts/generated-configs/config.yaml
-cp ../config/notification.yaml ./charts/generated-configs/notification.yaml
-../scripts/genconfig
-```
-
-
-## 集群设置参考
-
-如果你已经有一个`kubernetes`集群，或者你希望从头开始构建一个`kubernetes`集群，你可以跳过这一步。
-
-为了快速启动，我使用[sealos](https://github.com/labring/sealos)迅速建立集群，sealos在其核心也是kubeadm的封装：
-
-```bash
-$ SEALOS_VERSION=`curl -s https://api.github.com/repos/labring/sealos/releases/latest | grep -oE '"tag_name": "[^"]+"' | head -n1 | cut -d'"' -f4` && \
-  curl -sfL https://raw.githubusercontent.com/labring/sealos/${SEALOS_VERSION}/scripts/install.sh |
-  sh -s ${SEALOS_VERSION} labring/sealos
-```
-
-**支持的版本:**
-
-+ docker: `labring/kubernetes-docker`:(v1.24.0~v1.27.0)
-+ containerd: `labring/kubernetes`:(v1.24.0~v1.27.0)
-
-#### 集群安装：
-
-集群的详细信息如下：
-
-| 主机名   | IP地址    | 系统信息                                                     |
-| -------- | --------- | ------------------------------------------------------------ |
-| master01 | 10.0.0.9  | `Linux VM-0-9-ubuntu 5.15.0-76-generic #83-Ubuntu SMP Thu Jun 15 19:16:32 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux` |
-| node01   | 10.0.0.4  | 与master01相似                                               |
-| node02   | 10.0.0.10 | 与master01相似                                               |
-
-```bash
-$ export CLUSTER_USERNAME=ubuntu
-$ export CLUSTER_PASSWORD=123456
-$ sudo sealos run labring/kubernetes:v1.25.0 labring/helm:v3.8.2 labring/calico:v3.24.1 \
-    --masters 10.0.0.9 \
-    --nodes 10.0.0.4,10.0.0.10 \
-    -u "$CLUSTER_USERNAME" \
-    -p "$CLUSTER_PASSWORD"
-```
-
-> **注意** 卸载方法：使用`kubeadm`进行卸载并不会删除`etcd`和`cni`相关的配置。需要手动清除或使用`sealos`进行卸载。
+> **注意**：如果您使用的是 `default` 命名空间，您可以执行 `clusterRile.yml` 来为默认服务账户创建集群角色绑定。
 >
-> ```bash
-> $ sealos reset
-> ```
+> 您可以在 `openim-config.yml` 中的 `discovery.yml` 文件中修改命名空间，改变 `kubernetes.namespace` 为您的命名空间。
 
-如果您在本地，您还可以使用Kind和Minikube进行测试，例如使用Kind：
+**执行 `clusterRole.yml`**
 
-```bash$ GO111MODULE="on" go get sigs.k8s.io/kind@v0.11.1
-$ kind create cluster
+```bash
+kubectl apply -f ./clusterRole.yml
 ```
 
+### 运行所有 Deployment 和 Service
+
+> **注意**：在部署主要应用程序之前，请确保像 MinIO、Redis 和 Kafka 这样的基础设施服务已经运行。
+
+```bash
+kubectl apply \
+  -f openim-api-deployment.yml \
+  -f openim-api-service.yml \
+  -f openim-crontask-deployment.yml \
+  -f openim-rpc-user-deployment.yml \
+  -f openim-rpc-user-service.yml \
+  -f openim-msggateway-deployment.yml \
+  -f openim-msggateway-service.yml \
+  -f openim-push-deployment.yml \
+  -f openim-push-service.yml \
+  -f openim-msgtransfer-service.yml \
+  -f openim-msgtransfer-deployment.yml \
+  -f openim-rpc-conversation-deployment.yml \
+  -f openim-rpc-conversation-service.yml \
+  -f openim-rpc-auth-deployment.yml \
+  -f openim-rpc-auth-service.yml \
+  -f openim-rpc-group-deployment.yml \
+  -f openim-rpc-group-service.yml \
+  -f openim-rpc-friend-deployment.yml \
+  -f openim-rpc-friend-service.yml \
+  -f openim-rpc-msg-deployment.yml \
+  -f openim-rpc-msg-service.yml \
+  -f openim-rpc-third-deployment.yml \
+  -f openim-rpc-third-service.yml
+```
+
+### 认证
+
+在部署完成后，您可以使用以下检测已部署的信息：
+
+```bash
+# Check the status of all pods
+kubectl get pods
+
+# Check the status of services
+kubectl get svc
+
+# Check the status of deployments
+kubectl get deployments
+
+# View all resources
+kubectl get all
+```
+
+### 清除所有部署内容
+
+`kubectl delete -f ./`
+
+### 注意事项：
+
+- 如果您为部署使用了特定的命名空间，请在 kubectl 命令中添加 `-n <namespace> `参数。
+
+## OpenIM Chat 部署
+
+### 先决条件
+
+- 确保已部署 OpenIM Server 及其依赖项。
+  - Redis
+  - MongoDB
+  - Kafka
+  - MinIO
+- 暴露 OpenIM Server 的相应服务和端口。
+
+### 部署 OpenIM Chat
+
+**Chat 依赖于 OpenIM Server，因此您需要先部署 OpenIM Server。**
+
+进入目标目录
+
+```shell
+cd deployments/deploy
+```
+
+### 修改 ConfigMap
+
+您需要修改 `chat-config.yml` 文件以匹配您的环境。重点关注以下字段：
+**discovery.yml**
+
+- `kubernetes.namespace`: 默认是 `default`，您可以将其更改为您的命名空间。
+
+**mongodb.yml**
+
+- `address`：设置为已部署的 MongoDB 地址或 Mongo 服务名称和端口。
+- `database`：设置为您的 MongoDB 数据库名称（需要事先创建数据库）。
+- `authSource`：设置为您的 MongoDB 用户认证源数据库（`authSource` 是指定与用户凭证关联的数据库名称，用户需要在该数据库中创建）。
+
+  **redis.yml**
+
+- `address`: 设置为已部署的 Redis 地址或 Redis 服务名称和端口。
+
+**share.yml**
+
+- `openIM.apiURL`: 修改为您的 IM Server API 地址或使用您的 `openim-api` 服务名称和端口
+- `openIM.secret`: 与 IM Server `share.secret` 值相同。
+
+### 设置 secret
+
+Secret 是一个包含少量敏感数据的对象。例如密码和密钥。Secret 类似于 ConfigMaps。
+
+#### Redis:
+
+在 `redis-secret.yml` 中更新 `redis-password` 的值，将其设置为您的 Redis 密码，需进行 base64 编码。
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openim-redis-secret
+type: Opaque
+data:
+  redis-password: b3BlbklNMTIz # update to your redis password encoded in base64, if need empty, you can set to ""
+```
+
+#### Mongo:
+
+在 `mongo-secret.yml` 文件中更新 `mongo_openim_username` 和 `mongo_openim_password` 的值，将其设置为您的 MongoDB 用户名和密码，需进行 base64 编码。
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openim-mongo-secret
+type: Opaque
+data:
+  mongo_openim_username: b3BlbklN # update to your mongo username encoded in base64, if need empty, you can set to "" (this user credentials need in authSource database)
+  mongo_openim_password: b3BlbklNMTIz # update to your mongo password encoded in base64, if need empty, you can set to ""
+```
+
+### 应用 Secrets
+
+```shell
+kubectl apply -f redis-secret.yml -f mongo-secret.yml
+```
+
+### 应用配置和服务
+
+部署配置和服务
+
+```shell
+kubectl apply -f chat-config.yml -f openim-admin-api-service.yml -f openim-chat-api-service.yml -f openim-admin-rpc-service.yml -f openim-chat-rpc-service.yml
+```
+
+### 启动 Chat 部署
+
+```shell
+kubectl apply -f openim-chat-api-deployment.yml -f openim-admin-api-deployment.yml -f openim-chat-rpc-deployment.yml -f openim-admin-rpc-deployment.yml
+```
+
+## 验证
+
+部署完成后，您可以验证部署状态。
+
+```shell
+# Check the status of all pods
+kubectl get pods
+
+# Check the status of services
+kubectl get svc
+
+# Check the status of deployments
+kubectl get deployments
+
+# View all resources
+kubectl get all
+
+```
+
+### 清除所有部署内容
+
+`kubectl delete -f ./`
+
+### 注意事项：
+
+- 如果您为部署使用了特定的命名空间，请在 kubectl 命令中添加 `-n <namespace> `参数。
