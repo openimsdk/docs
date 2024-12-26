@@ -6,25 +6,11 @@ toc_max_heading_level: 2
 
 # getUsersInGroup
 
-# TODO！Need Update. Only write info and title.
-
 ## 功能介绍
 
 :::info 说明
 
 查找一批用户是否在指定群组内。
-
-:::
-
-:::caution 注意
-
-
-群状态字段会后台会设置为解散，群成员拉取已加入的群组时，此群组不再返回。
-
-**相关回调**:    
-[onGroupDismissed](../../callback/onGroupDismissed)  
-
-
 
 :::
 
@@ -46,8 +32,9 @@ values={[
 ### 函数原型
 
 ```dart showLineNumbers
-Future<dynamic> dismissGroup({
-    required String groupID,
+Future<dynamic> getUsersInGroup(
+    String groupID,
+    List<String> userIDs, {
     String? operationID,
   })
 ```
@@ -57,6 +44,7 @@ Future<dynamic> dismissGroup({
 | 参数名称 | 参数类型 | 是否必填 | 描述  |
 | -------- | -------- | -------- | ----- |
 | groupID  | String   | 是       | 群ID |
+| userIDs | List< String\> | 是       | 用户ID 列表 |
 
 ### 返回结果
 
@@ -67,8 +55,9 @@ Future<dynamic> dismissGroup({
 ### 代码示例
 
 ```dart showLineNumbers
-   await OpenIM.iMManager.groupManager.dismissGroup(
-      groupID: 'groupID',
+   await OpenIM.iMManager.groupManager.getUsersInGroup(
+      groupID: '',
+      userIDs: []
     );
     // todo
 ```
@@ -81,9 +70,10 @@ Future<dynamic> dismissGroup({
 
 ```swift showLineNumbers
 
-- (void)dismissGroup:(NSString *)groupID
-           onSuccess:(nullable OIMSuccessCallback)onSuccess
-           onFailure:(nullable OIMFailureCallback)onFailure;
+- (void)getUsersInGroup:(NSString *)groupID
+                userIDs:(NSArray<NSString *> *)userIDs
+            onSuccess:(nullable OIMStringArrayCallback)onSuccess
+            onFailure:(nullable OIMFailureCallback)onFailure;
 
 ```
 
@@ -92,6 +82,7 @@ Future<dynamic> dismissGroup({
 | 参数名称 | 参数类型 | 是否必填 | 描述  |
 | -------- | -------- | -------- | ----- |
 | groupID  | NSString | 是       | 群ID |
+| userIDs | NSArray< String\> | 是       | 用户ID 列表 |
 
 ### 返回结果
 
@@ -104,7 +95,8 @@ Future<dynamic> dismissGroup({
 
 ```swift showLineNumbers
 
-[OIMManager.manager dismissGroup:@""
+[OIMManager.manager getUsersInGroup:@"" 
+                            userIDs: @[]
                        onSuccess:^(NSString * _Nullable data) {
 } onFailure:^(NSInteger code, NSString * _Nullable msg) {
 }];
@@ -119,7 +111,7 @@ Future<dynamic> dismissGroup({
 
 ```java showLineNumbers
 
- public void dismissGroup(OnBase<String> callBack, String gid)
+ public void getUsersInGroup(OnBase<String[]> callBack, String groupId, String[] userIdList)
 
 ```
 
@@ -128,7 +120,8 @@ Future<dynamic> dismissGroup({
 | 参数名称 | 参数类型                                | 是否必填 | 描述     |
 | -------- | --------------------------------------- | -------- | -------- |
 | callBack | [OnBase](docs/sdks/callback/onBase.mdx) | 是       | 回调接口 |
-| gid      | String                                  | 是       | 群ID    |
+| groupID  | string   | 是       | 群ID |
+| userIDList  | string[]   | 是       | 用户ID 列表 |
 
 ### 返回结果
 
@@ -136,14 +129,14 @@ Future<dynamic> dismissGroup({
 
 ```java showLineNumbers
 
-   OpenIMClient.getInstance().groupManager.dismissGroup(new OnBase<String>() {
+   OpenIMClient.getInstance().groupManager.getUsersInGroup(new OnBase<String>() {
             @Override
             public void onError(int code, String error) {
 
             }
 
             @Override
-            public void onSuccess(String data) {
+            public void onSuccess(String[] data) {
 
             }
         },gid);
@@ -157,7 +150,10 @@ Future<dynamic> dismissGroup({
 ### 函数原型
 
 ```ts showLineNumbers
-IMSDK.dismissGroup(groupID: string, operationID?: string): Promise<WsResponse>
+IMSDK.getUsersInGroup({
+  groupID: string;
+  userIDList: string[];
+}, operationID?: string): Promise<WsResponse<string[]>>
 ```
 
 ### 输入参数
@@ -165,18 +161,20 @@ IMSDK.dismissGroup(groupID: string, operationID?: string): Promise<WsResponse>
 | 参数名称 | 参数类型 | 是否必填 | 描述    |
 | -------- | -------- | -------- | ------- |
 | groupID  | string   | 是       | 群ID |
+| userIDList  | string[]   | 是       | 用户ID 列表 |
+| operationID    | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
 
 | 参数名称        | 参数类型                                             | 描述         |
 | --------------- | ---------------------------------------------------- | ------------ |
-| Promise.then()  | Promise<[WsResponse](docs/sdks/class/response.mdx)\> | 调用成功回调 |
+| Promise.then()  | Promise<[WsResponse](docs/sdks/class/response.mdx)<string[]>\> | 调用成功回调 |
 | Promise.catch() | Promise<[WsResponse](docs/sdks/class/response.mdx)\> | 调用失败回调 |
 
 ### 代码示例
 
 ```js showLineNumbers
-import { getSDK } from 'open-im-sdk-wasm';
+import { getSDK } from '@openim/wasm-client-sdk';
 const IMSDK = getSDK();
 
 // use in electron with ffi
@@ -184,10 +182,13 @@ const IMSDK = getSDK();
 // const { instance: IMSDK } = getWithRenderProcess();
 
 // use in mini program
-// import { OpenIMSDK } from 'open-im-sdk';
-// const IMSDK = new OpenIMSDK();
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
 
-IMSDK.dismissGroup('groupID')
+IMSDK.getUsersInGroup({
+  groupID: 'groupID',
+  userIDList: ['userIDList'],
+})
   .then(() => {
     // 调用成功
   })
@@ -203,15 +204,19 @@ IMSDK.dismissGroup('groupID')
 ### 函数原型
 
 ```ts showLineNumbers
-IMSDK.asyncApi('dismissGroup', operationID: string, groupID: string): Promise<void>
+IMSDK.asyncApi('getUsersInGroup', operationID: string, {
+  groupID: string;
+  userIDList: string[];
+}): Promise<string[]>
 ```
 
 ### 输入参数
 
-| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
-| ----------- | -------- | -------- | ------------------------------------------------------- |
-| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
-| groupID     | string   | 是       | 群ID                                                 |
+| 参数名称 | 参数类型 | 是否必填 | 描述    |
+| -------- | -------- | -------- | ------- |
+| groupID  | string   | 是       | 群ID |
+| userIDList  | string[]   | 是       | 用户ID 列表 |
+| operationID    | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
 
@@ -219,7 +224,7 @@ IMSDK.asyncApi('dismissGroup', operationID: string, groupID: string): Promise<vo
 
 | 参数名称        | 参数类型                                                | 描述         |
 | --------------- | ------------------------------------------------------- | ------------ |
-| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.then()  | Promise<string[]>                                          | 调用成功回调 |
 | Promise.catch() | Promise<[CatchResponse](docs/sdks/class/response.mdx)\> | 调用失败回调 |
 
 ### 代码示例
@@ -227,7 +232,10 @@ IMSDK.asyncApi('dismissGroup', operationID: string, groupID: string): Promise<vo
 ```js showLineNumbers
 import IMSDK from 'openim-uniapp-polyfill';
 
-IMSDK.asyncApi('dismissGroup', IMSDK.uuid(), 'groupID')
+IMSDK.asyncApi('getUsersInGroup', IMSDK.uuid(), {
+  groupID: 'groupID',
+  userIDList: ['userIDList'],
+})
   .then(() => {
     // 调用成功
   })
@@ -242,21 +250,25 @@ IMSDK.asyncApi('dismissGroup', IMSDK.uuid(), 'groupID')
 ### 函数原型
 
 ```ts showLineNumbers
-OpenIMSDKRN.dismissGroup(groupID: string, operationID: string): Promise<void>
+OpenIMSDKRN.getUsersInGroup({
+  groupID: string;
+  userIDList: string[];
+}, operationID: string): Promise<string[]>
 ```
 
 ### 输入参数
 
-| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
-| ----------- | -------- | -------- | ------------------------------------------------------- |
-| groupID     | string   | 是       | 群ID                                                 |
-| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| 参数名称 | 参数类型 | 是否必填 | 描述    |
+| -------- | -------- | -------- | ------- |
+| groupID  | string   | 是       | 群ID |
+| userIDList  | string[]   | 是       | 用户ID 列表 |
+| operationID    | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
 
 | 参数名称        | 参数类型                                                | 描述         |
 | --------------- | ------------------------------------------------------- | ------------ |
-| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.then()  | Promise<string[]\>                                          | 调用成功回调 |
 | Promise.catch() | Promise<[CatchResponse](docs/sdks/class/response.mdx)\> | 调用失败回调 |
 
 ### 代码示例
@@ -264,7 +276,10 @@ OpenIMSDKRN.dismissGroup(groupID: string, operationID: string): Promise<void>
 ```js showLineNumbers
 import OpenIMSDKRN from "open-im-sdk-rn";
 
-OpenIMSDKRN.dismissGroup('groupID', 'operationID')
+OpenIMSDKRN.dismissGroup({
+  groupID: 'groupID',
+  userIDList: ['userIDList'],
+}, 'operationID')
   .then(() => {
     // 调用成功
   })
@@ -281,7 +296,7 @@ OpenIMSDKRN.dismissGroup('groupID', 'operationID')
 
 ```C# showLineNumbers
 
-public static void DismissGroup(OnSucOrError cb, string groupID)
+public static void GetUsersInGroup(OnBase<string[]> cb, string groupId, string[] userIdList)
 
 ```
 
@@ -289,8 +304,9 @@ public static void DismissGroup(OnSucOrError cb, string groupID)
 
 | 参数名称 | 参数类型                                | 是否必填 | 描述     |
 | -------- | --------------------------------------- | -------- | -------- |
-| cb | [OnSucOrError](docs/sdks/callback/OnSucOrError.mdx) | 是       | 回调函数 |
-| groupID      | string                                  | 是       | 群ID    |
+| cb | [OnBase](docs/sdks/callback/onBase.mdx)  | 是       | 回调函数 |
+| groupId      | string                                  | 是       | 群ID    |
+| userIdList  | string[]   | 是       | 用户ID 列表 |
 
 ### 返回结果
 
@@ -300,7 +316,7 @@ public static void DismissGroup(OnSucOrError cb, string groupID)
 
 IMSDK.DismissGroup((suc,errCode,errMsg)=>{
 
-},groupID);
+},groupId,{"userId"});
 
 ```
 

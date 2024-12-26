@@ -1,39 +1,55 @@
 ---
-
 sidebar_position: 1
 title: Callback Description
 hide_title: true
-
 ---
 
 # 📞 Callback Description
 
-📢 **OpenIM** offers a robust callback functionality. When a specific event occurs, either before or after it happens, **OpenIM Server** proactively notifies the APP's business server via HTTP/HTTPS requests. This way, the APP's business server can intervene in the subsequent process of the event or synchronize data based on these callbacks.
+📢 **OpenIM** offers powerful callback functionalities. When a specific event happens before or after a process, OpenIMServer proactively sends an HTTP/HTTPS request to the APP’s business server. This allows the APP’s business server to intervene in the subsequent processing of that event or to perform data synchronization based on the callback.
 
-## 📑 Callback Categories
+## 📑 Callback Classification
 
-Based on the timing of processing, callbacks are divided into two main categories:
+Callbacks are divided into two main types based on the timing of their processing:
 
-- 🚫 **Callbacks before the event is sent**: This type of callback (before type) aims to let the APP's business server intervene in event processing, such as filtering sensitive words in a message. **OpenIM Server** will determine the subsequent process based on the callback's return.
-
-- 📤 **Notifications after the event is sent**: This type of callback (after type) is primarily used to notify the APP's business server to synchronize data, for example, when a user joins a group. At this point, **OpenIM Server** will ignore the callback's return and error codes.
+	•	🚫 **Callbacks Before the Event Occurs**: These “before” type callbacks allow the APP’s business server to intervene in the event handling process. For example, you can implement sensitive word filtering for messages. OpenIMServer determines subsequent steps based on the callback response.
+	•	📤 **Notifications After the Event Occurs**: These “after” type callbacks are mainly used to notify the APP’s business server for data synchronization. For example, when a user joins a group. In this case, OpenIMServer ignores the callback’s return values and error codes.
 
 ## ⚙️ Configuration Description
 
 ```yaml
-callback:
-  url:
-  beforeCreateGroup:
-    enable: false
-    timeout: 5
-    failedContinue: true
+url: http://127.0.0.1:10006/callbackExample
+beforeSendSingleMsg:
+  enable: false
+  timeout: 5
+  failedContinue: true
 ```
 
-- url: Callback address of the APP's business server, supporting HTTP/HTTPS
-- enable: Whether to enable this callback
-- timeout: Response timeout duration (in seconds)
-- failedContinue: Whether to continue the process after timeout or API failure, generally effective only for the "before" type of callback.
+	•	url: The APP business server callback address, supports HTTP/HTTPS
+	•	enable: Whether to enable the callback, true for enable
+	•	timeout: Response timeout in seconds
+	•	failedContinue: Whether to continue the process if the callback times out or if the API fails. Generally effective for before type callbacks. true means to continue execution.
 
 ## 🔄 Callback Protocol
 
-**OpenIM Server** utilizes third-party callback mechanisms based on the **HTTP/HTTPS** protocol. When initiating a callback request, **OpenIM Server** uses the **POST** request method to notify the APP's business server. The specific content of these requests will be directly included in the request body.
+**OpenIMServer** uses a third-party callback mechanism based on HTTP/HTTPS protocol. When initiating a callback request, OpenIMServer sends a POST request to notify the APP’s business server. The specifics of these requests are directly included in the request body.
+
+### Sample Request URL
+
+```plaintext
+{WEBHOOK_ADDRESS}/callbackCommand?contenttype=json
+```
+
+### Request Parameter Description
+
+|Parameter |	Description |
+|-----------------|------------------------------------------------------------|
+|{WEBHOOK_ADDRESS} |	The url field in webhooks.yml, domain or hostname, for example: http://127.0.0.1:10006/callbackExample|
+|callbackCommand |	The callback command, refer to each callback method’s description for details|
+|contenttype |	The request input type, json|
+
+### Header
+
+|Header Name	|Example Value|	Required	|Type	|Description|
+|-----------------|-----------------|-----------------|-----------------|-----------------|
+|operationID|	123456|	Yes	|string|	Used for global link tracking, recommended to use timestamps, unique in each request|

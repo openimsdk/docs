@@ -1,44 +1,35 @@
-# Callback After Creating a Group
+---
+title: Callback After Group Creation
+hide_title: true
+---
 
-## Function Description
-The App business server can view information about user-created groups in real-time through this callback. This includes notifying the App backend of successful group creations, allowing for data synchronization and other operations.
+# Callback After Group Creation
 
-## Precautions
-- To enable the callback, a callback URL must be configured, and the switch corresponding to this callback protocol must be turned on. For configuration methods, refer to the [Callback Description](../introduction) document.
-- The callback direction is an HTTP/HTTPS POST request initiated by OpenIM Server to the App backend.
-- The App business server, upon receiving the callback request, needs to verify if the command parameter in the request URL is their SDK parameter.
-- The APP business server needs to respond to this request within the timeout period.
+## Description
+The App’s business server can use this callback to monitor information about newly created groups in real time, including notifications to the App backend that a group was created successfully. This allows the backend to perform data synchronization and other operations.
 
-## Scenarios That May Trigger This Callback
-- App users successfully create a group through the client.
-- App administrators successfully create a group through the REST API.
+## Important Notes
+- To enable the callback, you must configure the callback URL and turn on the switch for this specific callback protocol. For configuration details, refer to the [Callback Introduction](../introduction) document.
+- The callback is initiated from the OpenIM Server to the App backend as an HTTP/HTTPS POST request.
+- The App business server must respond within the timeout period.
 
-## Timing of the Callback
-- After OpenIM Server successfully creates a group.
+## Scenarios that Trigger This Callback
+- Successful group creation by an App user through the client.
+- Successful group creation by an App admin via REST API.
+
+## Timing of Callback
+- Triggered **after** the OpenIM Server successfully creates a group.
 
 ## Interface Description
 
-### Request URL Example
-In the following example, the callback URL configured by the App is `https://callbackurl`.
+### Example Request URL
+The `CallbackCommand` here is: `callbackAfterCreateGroupCommand`
+
 ```plaintext
-https://callbackurl?command=$CallbackCommand&contenttype=json
+{WEBHOOK_ADDRESS}/callbackAfterCreateGroupCommand?contenttype=json
 ```
 
-### Request Parameter Description
-
-| Parameter            | Description                                      |
-|----------------------|--------------------------------------------------|
-| https               | Request protocol is HTTPS, and the method is POST|
-| https://callbackurl | Callback URL                                     |
-| CallbackCommand     | Fixed value: callbackAfterCreateGroupCommand     |
-| contenttype         | Fixed value: JSON                                |
-
-### Header
-| Header Name  | Example Value | Optional | Type   | Description                        |
-|:-------------|:--------------|:---------|:-------|:-----------------------------------|
-| operationID  | 1646445464564 | Required | string | operationID for global link tracing|
-
-### Request Packet Example
+### Example Request Package
 ```json
 {
   "callbackCommand": "callbackAfterCreateGroupCommand",
@@ -72,53 +63,51 @@ https://callbackurl?command=$CallbackCommand&contenttype=json
 }
 ```
 
-### Request Packet Field Description
+### Request Package Field Descriptions
 
-| Object                      | Type   | Description                                    |
-|-----------------------------|--------|------------------------------------------------|
-| callbackCommand             | string | Callback command, here for post-group creation.|
-| groupID                     | string | Unique identifier of the group.                |
-| groupName                   | string | Name of the group.                             |
-| notification                | string | Notification message of the group.             |
-| introduction                | string | Introduction of the group.                     |
-| faceURL                     | string | URL of the group's icon.                       |
-| ownerUserID                 | string | User ID of the group owner.                    |
-| createTime                  | int64  | Timestamp of group creation (milliseconds).    |
-| memberCount                 | uint32 | Number of members in the group.                |
-| ex                          | string | Additional data field.                         |
-| status                      | int32  | Status of the group.                           |
-| creatorUserID               | string | User ID of the group creator.                  |
-| groupType                   | int32  | Type of the group.                             |
-| needVerification            | int32  | Whether verification is needed to join the group.|
-| lookMemberInfo              | int32  | Whether group member information is viewable.  |
-| applyMemberFriend           | int32  | Whether group members can apply to be friends. |
-| notificationUpdateTime      | int64  | Timestamp of the last group notification update (milliseconds).|
-| notificationUserID          | string | User ID of the person updating the notification.|
-| initMemberList              | array  | Initial list of group members, including userID and roleLevel fields.|
-| initMemberList.userID       | string | User ID of initial members.                    |
-| initMemberList.roleLevel    | int32  | Role level of initial members.                 |
+| Field                   | Type   | Description                                         |
+|-------------------------|--------|-----------------------------------------------------|
+| callbackCommand         | string | Callback command for group creation.                |
+| groupID                 | string | Unique identifier for the group.                    |
+| groupName               | string | Name of the group.                                  |
+| notification            | string | Group notification message.                         |
+| introduction            | string | Group introduction.                                 |
+| faceURL                 | string | URL for the group’s icon.                           |
+| ownerUserID             | string | User ID of the group owner.                         |
+| createTime              | int64  | Timestamp for when the group was created (in ms).   |
+| memberCount             | uint32 | Number of members in the group.                     |
+| ex                      | string | Additional data field.                              |
+| status                  | int32  | Group status.                                       |
+| creatorUserID           | string | User ID of the group creator.                       |
+| groupType               | int32  | Group type, fixed at 2.                             |
+| needVerification        | int32  | Whether verification is needed to join the group.   |
+| lookMemberInfo          | int32  | Whether group members’ information is visible.      |
+| applyMemberFriend       | int32  | Whether members can add each other as friends.      |
+| notificationUpdateTime  | int64  | Timestamp for when the notification was last updated (in ms). |
+| notificationUserID      | string | User ID of the person who updated the notification. |
+| initMemberList          | array  | List of initial group members, each with userID and roleLevel fields. |
+| initMemberList.userID   | string | User ID of the initial group member.                |
+| initMemberList.roleLevel| int32  | Role level of the initial group member.             |
 
-## Response Packet Example
-The App backend sends a callback response packet after syncing data.
+## Example Response Package
+The App backend sends the following response package after synchronizing data.
 
 ```json
 {
-
-
     "actionCode": 0,
     "errCode": 0,
-    "errMsg": "Success",
+    "errMsg": "",
     "errDlt": "",
     "nextCode": 1
 }
 ```
 
-## Response Packet Field Description
+## Response Package Field Descriptions
 
-| Field       | Value         | Description                                                         |
-|-------------|---------------|---------------------------------------------------------------------|
-| actionCode  | 0             | Indicates if the callback was executed correctly by the business system. `0` means the operation was successful. |
-| errCode     | 0             | Custom error code, `0` here means to ignore the callback result.    |
-| errMsg      | "An error message" | Simple error message corresponding to the custom error code.       |
-| errDlt      | "Detailed error information" | Detailed error information corresponding to the custom error code.|
-| nextCode    | 1             | Next step instruction, `1` means to refuse to proceed, set when actionCode is `0`. |
+| Field        | Value                       | Description                                                        |
+|--------------|-----------------------------|--------------------------------------------------------------------|
+| actionCode   | 0                           | Indicates if the callback was executed correctly. `0` means success. |
+| errCode      | 0                           | Custom error code. Set to `0` to ignore callback results.          |
+| errMsg       | "An error message"          | Simple error message for the custom error code.                    |
+| errDlt       | "Detailed error information"| Detailed error information for the custom error code.              |
+| nextCode     | 1                           | Next action code, set to `1` to halt further action if actionCode is `0`. |

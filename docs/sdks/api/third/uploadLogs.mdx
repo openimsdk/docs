@@ -1,18 +1,23 @@
 ---
-sidebar_position: 3
+sidebar_position: 1
 toc_min_heading_level: 2
 toc_max_heading_level: 2
 ---
 
 # uploadLogs
 
-## TODO！Need Update. Only write info and title.
 
 ## 功能介绍
 
 :::info 说明
 
-客户端上传日志，line为上传行数，当line为0时上传所有日志。
+上传SDK日志到服务器用于问题分析定位，line为上传行数，当line为0时上传所有日志。
+
+:::
+
+:::caution 注意
+
+该接口待更新。
 
 :::
 
@@ -23,9 +28,8 @@ values={[
 { label: 'Android', value: 'Android', },
 { label: 'Flutter', value: 'Flutter', },
 { label: 'uni-app', value: 'uni-app', },
-{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'Browser/Electron', value: 'Web', },
 { label: 'React-Native', value: 'React-Native', },
-{ label: 'Unity', value: 'Unity', },
 ]
 }>
 
@@ -34,7 +38,9 @@ values={[
 ### 函数原型
 
 ```dart showLineNumbers
-  Future<UserInfo> getSelfUserInfo({
+   Future uploadLogs({
+    String? ex,
+    int line = 0,
     String? operationID,
   })
 ```
@@ -47,12 +53,12 @@ values={[
 
 | 参数名称 | 参数类型                                      | 描述 |
 | -------- | --------------------------------------------- | ---- |
-| ~        | [UserInfo](docs/sdks/class/user/userInfo.mdx) | 成功返回    |
+| ~        | ~ | 无异常抛出则返回成功    |
 
 ### 代码示例
 
 ```dart showLineNumbers
-    UserInfo info = await OpenIM.iMManager.userManager.getSelfUserInfo();
+    await OpenIM.iMManager.uploadLogs();
     // todo
 ```
 
@@ -64,8 +70,11 @@ values={[
 
 ```swift showLineNumbers
 
-- (void)getSelfInfoWithOnSuccess:(OIMUserInfoCallback)onSuccess
-                       onFailure:(OIMFailureCallback)onFailure;
+- (void)uploadLogsWithProgress:(OIMUploadProgressCallback)onProgress
+                          line:(NSInteger )line
+                            ex:(NSString *)ex
+                     onSuccess:(OIMSuccessCallback)onSuccess
+                     onFailure:(OIMFailureCallback)onFailure;
 
 ```
 
@@ -77,15 +86,19 @@ values={[
 
 | 参数名称  | 参数类型                                             | 描述     |
 | --------- | ---------------------------------------------------- | -------- |
-| onSuccess | [OIMUserInfo](docs/sdks/class/user/userInfo.mdx)     | 成功返回 |
+| onSuccess | OIMSuccessCallback   | 成功返回 |
 | onFailure | OIMFailureCallback | 失败返回 |
 
 ### 代码示例
 
 ```swift showLineNumbers
 
-[OIMManager.manager getSelfInfoWithOnSuccess:^(OIMUserInfo * _Nullable userInfo) {
+[OIMManager.manager uploadLogsWithProgress:^(NSInteger saveBytes, NSInteger currentBytes, NSInteger totalBytes) {
+            
+} line:0 ex:nil onSuccess:^(NSString * _Nullable data) {
+    
 } onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    
 }];
 
 ```
@@ -122,45 +135,52 @@ OpenIMClient.getInstance().friendshipManager.getSelfUserInfo(new OnBase<UserInfo
 
 <TabItem value="Web">
 
+:::caution 注意
+
+`@openim/client-sdk` 和 `@openim/wasm-client-sdk` 不提供该方法。只有在electron中引入 `@openim/electron-client-sdk` 采用了 ffi 的方式，才可以调用。
+
+:::
+
 ### 函数原型
 
 ```ts showLineNumbers
-IMSDK.getSelfUserInfo(operationID?: string): Promise<WsResponse<SelfUserInfo>>
+IMSDK.uploadLogs({
+  line: number,
+  ex: string,
+}, operationID?: string): Promise<WsResponse>
 ```
 
 ### 输入参数
 
-无
+| 参数名称       | 参数类型 | 是否必填 | 描述             |
+| -------------- | -------- | -------- | ---------------- |
+| line | number   | 是       | 从后往前上传的行数 |         |
+| ex | string   | 是       | 额外字段        |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
 
 | 参数名称        | 参数类型                                                                | 描述         |
 | --------------- | ----------------------------------------------------------------------- | ------------ |
-| Promise.then()  | Promise<WsResponse<[SelfUserInfo](docs/sdks/class/user/userInfo.mdx)>\> | 个人信息对象 |
+| Promise.then()  | Promise<WsResponse\> | 调用成功回调 |
 | Promise.catch() | Promise<[WsResponse](docs/sdks/class/response.mdx)\>                    | 调用失败回调 |
 
 ### 代码示例
 
 ```js showLineNumbers
-import { getSDK } from 'open-im-sdk-wasm';
-const IMSDK = getSDK();
-
 // use in electron with ffi
-// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
-// const { instance: IMSDK } = getWithRenderProcess();
+import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+const { instance: IMSDK } = getWithRenderProcess();
 
-// use in mini program
-// import { OpenIMSDK } from 'open-im-sdk';
-// const IMSDK = new OpenIMSDK();
-
-IMSDK.getSelfUserInfo()
-  .then(({ data }) => {
-    // data: 当前登录用户的个人信息
+IMSDK.uploadLogs({ line: 10000, ex: "" })
+  .then(() => {
+    // 调用成功
   })
   .catch(({ errCode, errMsg }) => {
     // 调用失败
   });
 ```
+
 
 </TabItem>
 
@@ -169,13 +189,18 @@ IMSDK.getSelfUserInfo()
 ### 函数原型
 
 ```ts showLineNumbers
-IMSDK.asyncApi('getSelfUserInfo', operationID: string): Promise<SelfUserInfo>
+IMSDK.asyncApi('uploadLogs', operationID: string, {
+  line: number,
+  ex: string,
+}): Promise<void>
 ```
 
 ### 输入参数
 
-| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
-| ----------- | -------- | -------- | ------------------------------------------------------- |
+| 参数名称       | 参数类型 | 是否必填 | 描述             |
+| -------------- | -------- | -------- | ---------------- |
+| line | number   | 是       | 从后往前上传的行数 |         |
+| ex | string   | 是       | 额外字段        |
 | operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
@@ -184,7 +209,7 @@ IMSDK.asyncApi('getSelfUserInfo', operationID: string): Promise<SelfUserInfo>
 
 | 参数名称        | 参数类型                                                    | 描述         |
 | --------------- | ----------------------------------------------------------- | ------------ |
-| Promise.then()  | Promise<[SelfUserInfo](docs/sdks/class/user/userInfo.mdx)\> | 个人信息对象 |
+| Promise.then()  | Promise<void\> | 调用成功回调 |
 | Promise.catch() | Promise<[CatchResponse](docs/sdks/class/response.mdx)\>     | 调用失败回调 |
 
 ### 代码示例
@@ -192,9 +217,9 @@ IMSDK.asyncApi('getSelfUserInfo', operationID: string): Promise<SelfUserInfo>
 ```js showLineNumbers
 import IMSDK from 'openim-uniapp-polyfill';
 
-IMSDK.asyncApi('getSelfUserInfo', IMSDK.uuid())
-  .then((data) => {
-    // data: 当前登录用户的个人信息
+IMSDK.asyncApi('uploadLogs', IMSDK.uuid(), { line: 10000, ex: "" })
+  .then(() => {
+    // 调用成功
   })
   .catch(({ errCode, errMsg }) => {
     // 调用失败
@@ -207,20 +232,25 @@ IMSDK.asyncApi('getSelfUserInfo', IMSDK.uuid())
 ### 函数原型
 
 ```ts showLineNumbers
-OpenIMSDKRN.getSelfUserInfo(operationID: string): Promise<SelfUserInfo>
+OpenIMSDKRN.uploadLogs({
+  line: number,
+  ex: string,
+}, operationID: string): Promise<void>
 ```
 
 ### 输入参数
 
-| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
-| ----------- | -------- | -------- | ------------------------------------------------------- |
+| 参数名称       | 参数类型 | 是否必填 | 描述             |
+| -------------- | -------- | -------- | ---------------- |
+| line | number   | 是       | 从后往前上传的行数 |         |
+| ex | string   | 是       | 额外字段        |
 | operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
 
 | 参数名称        | 参数类型                                                    | 描述         |
 | --------------- | ----------------------------------------------------------- | ------------ |
-| Promise.then()  | Promise<[SelfUserInfo](docs/sdks/class/user/userInfo.mdx)\> | 个人信息对象 |
+| Promise.then()  | Promise<void\> | 调用成功回调 |
 | Promise.catch() | Promise<[CatchResponse](docs/sdks/class/response.mdx)\>     | 调用失败回调 |
 
 
@@ -229,9 +259,9 @@ OpenIMSDKRN.getSelfUserInfo(operationID: string): Promise<SelfUserInfo>
 ```js showLineNumbers
 import OpenIMSDKRN from "open-im-sdk-rn";
 
-OpenIMSDKRN.getSelfUserInfo('operationID')
-  .then((data) => {
-    // data: 当前登录用户的个人信息
+OpenIMSDKRN.uploadLogs({ line: 10000, ex: "" }, 'operationID')
+  .then(() => {
+    // 调用成功
   })
   .catch(({ errCode, errMsg }) => {
     // 调用失败
@@ -240,35 +270,6 @@ OpenIMSDKRN.getSelfUserInfo('operationID')
 
 </TabItem>
 
-<TabItem value="Unity">
-
-### 函数原型
-
-```C# showLineNumbers
-
-public static void GetSelfUserInfo(OnLocalUser cb)
-
-```
-
-### 输入参数
-
-| 参数名称 | 参数类型                                                                               | 是否必填 | 描述     |
-| -------- | -------------------------------------------------------------------------------------- | -------- | -------- |
-| cb | [OnLocalUser](docs/sdks/callback/OnLocalUser.mdx) | 是       | 回调接口 |
-
-### 返回结果
-
-### 代码示例
-
-```C# showLineNumbers
-
-IMSDK.GetSelfUserInfo((localUser,errCode,errMsg)=>{
-
-});
-
-```
-
-</TabItem>
 </Tabs>
 
 

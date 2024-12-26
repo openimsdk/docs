@@ -42,7 +42,7 @@ values={[
   Future<String?> setSelfInfo({
     String? nickname,
     String? faceURL,
-    int? appMangerLevel,
+    int? globalRecvMsgOpt,
     String? ex,
     String? operationID,
   })
@@ -54,7 +54,7 @@ values={[
 | --------------- | -------------- | --------- | ---------------- |
 | nickname        | String?        | No        | User nickname    |
 | faceURL         | String?        | No        | User avatar      |
-| appMangerLevel  | int?           | No        | Internal field, can be ignored |
+| globalRecvMsgOpt  | int?           | No        | Global offline push settings |
 | ex              | String?        | No        | Extension information |
 
 ### Return Result
@@ -121,21 +121,18 @@ info.faceURL = @"";
 ### Function Prototype
 
 ```java showLineNumbers
-
- public void setSelfInfo(OnBase<String> callBack, String nickname, String faceURL, int appMangerLevel, String ex)
-
+ public void setSelfInfo(OnBase<String> base, UserInfoReq userInfoReq)
 ```
 
 ### Input Parameters
-
-| Parameter Name  | Parameter Type                       | Mandatory | Description                          |
-| --------------- | ------------------------------------ | --------- | ------------------------------------ |
-| callBack        | [OnBase](/callback/onBase.mdx) | Yes       | Callback interface                   |
-| nickname        | String                               | Yes       | Name                                 |
-| faceURL         | String                               | Yes       | Avatar                               |
-| gender          | int                                  | Yes       | Gender 1: Male, 2: Female             |
-| appMangerLevel  | int                                  | Yes       | Internal field, can be ignored |
-| ex              | String                               | No        | Extension field                      |
+UserInfoReq:
+| Parameter Name   | Parameter Type                       | Mandatory | Description                          |
+| ---------------- | ------------------------------------ | --------- | ------------------------------------ |
+| userID           | String                               | Yes       | Name                                 |
+| nickname         | String                               | No        | Nickname                               |
+| faceURL          | String                               | No        | Avatar             |
+| ex               | String                               | No        | Internal field, can be ignored |
+| globalRecvMsgOpt | Integer                              | No        | Global Do Not Disturb 0: Normal; 1: Do not receive messages; 2: Receive online messages but not offline messages |
 
 ### Return Result
 
@@ -143,7 +140,16 @@ info.faceURL = @"";
 
 ```java showLineNumbers
 
-OpenIMClient.getInstance().userInfoManager.setSelfInfo(new OnBase<String>(){…},...);
+OpenIMClient.getInstance().userInfoManager.setSelfInfo(new OnBase<String>(){
+    @Override
+    public void onError(int code, String error) {
+      // todo: request error
+    }
+    @Override
+    public void onSuccess(String data) {
+      // todo: request success
+    }
+},userInfoReq);
 
 ```
 
@@ -173,7 +179,7 @@ IMSDK.setSelfInfo(userInfo: Partial<Omit<SelfUserInfo, 'userID'>>, operationID?:
 ### Code Example
 
 ```js showLineNumbers
-import { getSDK } from 'open-im-sdk-wasm';
+import { getSDK } from '@openim/wasm-client-sdk';
 const IMSDK = getSDK();
 
 // use in electron with ffi
@@ -181,8 +187,8 @@ const IMSDK = getSDK();
 // const { instance: IMSDK } = getWithRenderProcess();
 
 // use in mini program
-// import { OpenIMSDK } from 'open-im-sdk';
-// const IMSDK = new OpenIMSDK();
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
 
 const userInfo = {
   nickname: '', // Desired nickname, optional
@@ -297,7 +303,7 @@ OpenIMSDKRN.setSelfInfo(userInfo, 'operationID');
 
 ```C# showLineNumbers
 
-public static void SetSelfInfo(OnSucOrError cb, UserInfo userInfo);
+public static void SetSelfInfo(onBase<bool> cb, UserInfo userInfo);
 
 ```
 
@@ -305,7 +311,7 @@ public static void SetSelfInfo(OnSucOrError cb, UserInfo userInfo);
 
 | Parameter Name       | Parameter Type                                | Mandatory | Description                           |
 | -------------- | --------------------------------------- | -------- | ------------------------------ |
-| cb | [OnSucOrError](/callback/OnSucOrError.mdx) |Yes      | Callback                       |
+| cb | [OnBase](/callback/onBase.mdx) |Yes      | Callback                       |
 | userInfo | [UserInfo](/class/user/userInfo.mdx) |Yes      | Personal information     |
 
 ### Return Result

@@ -33,6 +33,11 @@ const docs = [
     path: 'docs/restapi',
     routeBasePath: '/restapi',
   },
+  {
+    id: 'blog',
+    path: 'docs/blog',
+    routeBasePath: '/blog',
+  }
 ];
 
 /** @type {import('@docusaurus/plugin-content-docs').Options} */
@@ -141,8 +146,13 @@ const config = {
           },
           {
             label: 'Server APIs',
-            to: 'restapi/introduction',
+            to: 'restapi/apis/introduction',
           },
+          {
+            label: 'Blog',
+            to: 'blog/introduction',
+          },
+
 
           {
             type: 'search',

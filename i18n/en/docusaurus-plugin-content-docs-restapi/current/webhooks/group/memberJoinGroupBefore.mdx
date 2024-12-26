@@ -1,62 +1,47 @@
 ---
-title: Callback Before Group Members Join
+title: Callback Before Member Joins Group
 hide_title: true
 ---
 
-# Callback Before Group Members Join
+# Callback Before Member Joins Group
 
-## Function Description
+## Description
 
-The app's backend can use this callback to monitor information about group members joining in real-time, including intercepting user details such as avatar, nickname, user permissions, and additional information before they join the group.
+The App business server can use this callback to monitor information when a member attempts to join a group, including intercepting user profile data such as avatar, nickname, user permissions, and additional information before they join.
 
-## Precautions
+## Important Notes
 
-- To enable this callback, you must configure the callback URL and activate the corresponding callback protocol switch. For configuration details, see the [Callback Documentation](../introduction).
-- The callback direction is from OpenIM Server to the app's backend via HTTP/HTTPS POST requests.
-- The app's backend must respond to this request within the timeout period.
+- To enable the callback, configure the callback URL and activate the corresponding protocol switch. For details, refer to the [Callback Introduction](../introduction) document.
+- The callback is initiated from the OpenIM Server to the App backend as an HTTP/HTTPS POST request.
+- The App business server must respond within the specified timeout period.
 
-## Scenarios That May Trigger This Callback
+## Scenarios that Trigger This Callback
 
-- The app's group owner initiates a group creation via the client.
-- The app administrator invites users to the group via REST API.
-- The app administrator handles group application responses via REST API.
-- The app user joins the group.
+- The group owner initiates the creation of a group chat via the App client.
+- The App administrator invites users to a group through the REST API.
+- The App administrator processes group join requests via the REST API.
+- A user joins a group via the App.
 
-## Callback Timing
+## Timing of Callback
 
-- The callback occurs before OpenIM Server prepares to create a group chat.
-- The callback occurs before OpenIM Server prepares to approve a user joining the group.
+- Before OpenIM Server prepares to create the group chat.
+- Before OpenIM Server approves a user joining the group.
 
 ## Interface Description
 
 ### Example Request URL
 
-The example below shows the callback URL configured for the app as `http://www.example.com/callbackCommand?contenttype=json`.
+The `CallbackCommand` here is: `callbackBeforeMembersJoinGroupCommand`
 
 ```plaintext
-http://www.example.com/CallbackBeforeMembersJoinGroupCommand?contenttype=json
+{WEBHOOK_ADDRESS}/callbackBeforeMembersJoinGroupCommand?contenttype=json
 ```
 
-### Request Parameters Description
-
-| Parameter          | Description                                                |
-| ------------------ | ---------------------------------------------------------- |
-| http               | Request protocol is HTTP, and the request method is POST   |
-| www.example.com    | Domain or hostname in the `callback.url` field of `configy.yaml` |
-| CallbackCommand    | This is: `CallbackBeforeMembersJoinGroupCommand`           |
-| contenttype        | Fixed value: `JSON`                                        |
-
-### Header
-
-| Header Name | Example Value     | Required | Type   | Description                                 |
-| ----------- | ----------------- | -------- | ------ | ------------------------------------------- |
-| operationID | 1646445464564    | Required | string | `operationID` for global link tracking      |
-
-### Request Payload Example
+### Example Request Package
 
 ```json
 {
-  "callbackCommand": "CallbackBeforeMembersJoinGroupCommand",
+  "callbackCommand": "callbackBeforeMembersJoinGroupCommand",
   "groupID": "12345",
   "memberList": [
     {
@@ -72,24 +57,24 @@ http://www.example.com/CallbackBeforeMembersJoinGroupCommand?contenttype=json
 }
 ```
 
-### Request Payload Fields Description
+### Request Package Field Descriptions
 
-| Object            | Type   | Description                                                 |
-| ----------------- | ------ | ----------------------------------------------------------- |
-| callbackCommand   | string | Callback command, here it is the callback before members join. |
-| groupID           | string | Unique identifier for the group.                          |
-| memberList        | array  | List of information about members joining, including user ID and additional info. |
-| memberList.userID | string | User ID of the member                                      |
-| memberList.ex     | string | Additional information of the member                      |
-| groupEx           | string | Additional information about the group                    |
+| Field               | Type   | Description                                                                      |
+|---------------------|--------|----------------------------------------------------------------------------------|
+| callbackCommand     | string | Callback command, indicating a pre-join member callback here.                    |
+| groupID             | string | Unique identifier of the group.                                                  |
+| memberList          | array  | List of members who will join the group, including user ID and extra info fields.|
+| memberList.userID   | string | User ID of the member.                                                           |
+| memberList.ex       | string | Additional information for the member.                                           |
+| groupEx             | string | Additional information for the group.                                            |
 
-## Response Payload Example
+## Example Response Package
 
 ```json
 {
   "actionCode": 0,
   "errCode": 0,
-  "errMsg": "Success",
+  "errMsg": "",
   "errDlt": "",
   "nextCode": 0,
   "memberCallbackList": [
@@ -113,20 +98,19 @@ http://www.example.com/CallbackBeforeMembersJoinGroupCommand?contenttype=json
 }
 ```
 
-## Response Payload Fields Description
+## Response Package Field Descriptions
 
-| Field                           | Value                       | Description                                                                                             |
-| -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
-| actionCode                       | 0                           | Indicates whether the callback was executed successfully. `0` indicates success.                      |
-| errCode                          | 5001                        | Custom error code, range from 5000-9999. Set when `actionCode` is not `0` or `nextCode` is `1`.       |
-| errMsg                           | "An error message"          | Simple error message corresponding to the custom error code.                                          |
-| errDlt                           | "Detailed error information" | Detailed error information corresponding to the custom error code.                                     |
-| nextCode                         | 1                           | Next execution instruction. Set when `actionCode` is `0`. `1` indicates to reject the continuation.    |
-| memberCallbackList               | array                        | List of callback data after webhook processing                                                         |
-| memberCallbackList.userID        | string                       | User ID                                                                                               |
-| memberCallbackList.nickname      | string                       | User nickname                                                                                         |
-| memberCallbackList.faceURL       | string                       | User avatar URL                                                                                       |
-| memberCallbackList.roleLevel     | int32                        | User permission level                                                                                |
-| memberCallbackList.muteEndTime   | int64                        | User mute end time                                                                                     |
-| memberCallbackList.ex            | string                       | User additional information                                                                           |
-```
+| Field                           | Value                        | Description                                                                     |
+|---------------------------------|------------------------------|---------------------------------------------------------------------------------|
+| actionCode                      | 0                            | Indicates if the callback executed successfully. `0` means success.             |
+| errCode                         | 5001                         | Custom error code, ranging from 5000-9999. Set if `actionCode` is not 0.       |
+| errMsg                          | "An error message"           | Simple error message corresponding to the custom error code.                    |
+| errDlt                          | "Detailed error information" | Detailed error message for the custom error code.                               |
+| nextCode                        | 1                            | Next step directive. Set to `1` to stop further action when `actionCode` = `0`. |
+| memberCallbackList              | array                        | Callback list for members joining the group.                                    |
+| memberCallbackList.userID       | string                       | User ID of the member.                                                          |
+| memberCallbackList.nickname     | string                       | Nickname of the member.                                                         |
+| memberCallbackList.faceURL      | string                       | URL for the member's profile picture.                                           |
+| memberCallbackList.roleLevel    | int32                        | Role level of the member.                                                       |
+| memberCallbackList.muteEndTime  | int64                        | Mute end time for the member.                                                   |
+| memberCallbackList.ex           | string                       | Additional information for the member.                                          |

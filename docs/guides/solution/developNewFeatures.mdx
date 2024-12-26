@@ -1,0 +1,59 @@
+---
+title: '如何进行二次开发'
+sidebar_position: 6
+
+---
+
+
+# 如何进行二次开发
+- 如果您需要基于OpenIM开发新特性，首先要确定是针对业务侧还是即时通讯核心逻辑。
+- 由于OpenIM系统本身已经做好了比较多的抽象，大部分聊天的功能已经具备了，不建议修改IM本身。
+- 如果需要增加IM的能力，可以参考以下流程，并提交PR，以保证未来代码统一性。
+
+
+## 服务器
+> OpenIMServer主要分为长短连接接口，长连接接口主要是IM消息的核心逻辑(逻辑入口位于/internal/msggateway)，短连接接口主要是IM的
+业务逻辑(逻辑入口位于/internal/api/)，下面具体介绍如何在IM中加上新的业务功能。
+
+
+### 1、开发前提
+ - 搭建环境
+    - 搭建Go环境，参考[Go官方文档](https://golang.org/doc/install)
+    - 搭建grpc环境，参考[grpc官方文档](https://grpc.io/docs/languages/go/quickstart/)
+ + fork OpenIMServer依赖的外部仓库
+    - clone官方的后台协议仓库: github.com/openimsdk/protocol
+
+    **注**：IMServer使用的protobuf协议以依赖仓库的形式在github.com/openimsdk/protocol中，如果需要修改协议，需要先fork protocol仓库，
+    然后在此仓库上增加新的接口协议，然后在OpenIMServer的go.mod中引用新的协议通过：
+
+    `replace github.com/openimsdk/protocol => ./your_protocol_path`
+### 2、协议增加与生成
+ - 编写proto文件，定义新的接口协议
+ - 生成go代码
+    - proto编辑完毕后在克隆的protocol仓库中直接执行`gen.cmd`或者`gen.sh`即可生成go代码
+### 3、api功能添加
+ - 在/internal/api/router.go文件中增加新的接口包括定义路由，如果增加的接口属于一个路由组，可直接增加到对应的路由组文件中，否则模仿创建新的路由组文件。
+ - 在/internal/api/xxx.go中如果api的json请求和rpc的request请求一致，可以直接调用a2r.Call函数，否则需要自己解析json请求，然后调用grpc接口(可模仿SendMessage接口)。
+### 4、rpc功能添加
+```
+  举例：在/internal/rpc/group/group.go中增加新的rpc函数，使用groupServer结构体实现对应的grpc的server接口，然后编写主体业务逻辑，其中涉及db更新
+  插入操作需要下发sdk实时通知，可直接模仿 g.notification.GroupApplicationAgreeMemberEnterNotification这种类型的通知下发函数(sdk对应需要处理新的通知)
+```
+### 5、存储层接口增加
+> 存储层主要分为三层
+ - controller：主要用于数据库事务处理和cache整合的逻辑控制层
+ - cache：主要为db的数据缓存
+ - database：数据持久化层，用于业务逻辑的存储
+```
+ - 在pkg\common\storage\controller中增加新的接口，实现对应的接口，提供给rpc逻辑层调用。
+ - 在pkg\common\storage\cache中增加新的接口，(pkg\common\storage\cache\cachekey中存储了缓存所有的key前缀)实现对应的接口，
+   提供给controller层调用。
+ - 在pkg\common\storage\model中可定义数据库的model结构体，pkg\common\storage\database中增加新的接口，实现对应的接口，提供给cache层整合。
+```
+
+## 客户端
+
+
+
+
+

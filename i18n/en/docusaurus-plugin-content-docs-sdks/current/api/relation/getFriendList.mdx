@@ -32,18 +32,22 @@ values={[
 ### Function Prototype
 
 ```dart showLineNumbers
-  Future<List<FriendInfo>> getFriendList({String? operationID})
+  Future<List<FriendInfo>> getFriendList({String? operationID, bool filterBlack = false})
 ```
 
 ### Input Parameters
 
-None
+| Parameter Name | Parameter Type      | Mandatory | Description                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| filterBlack  | bool | No       | Whether to filter out the blacklist                                        |
+| operationID | String   | No       | Operation ID, used for problem location, unique, recommended to use current time and random number |
+
 
 ### Return Values
 
-| Parameter Name | Parameter Type                                             | Description |
-| -------------- | ---------------------------------------------------------- | ----------- |
-| ~              | List< [FriendInfo](/class/relation/friendInfo.mdx) \* >      | Success     |
+| Parameter Name  | Parameter Type                                            | Description     |
+| -------- | --------------------------------------------------- | -------- |
+| ~        | List< [FriendInfo](/class/relation/friendInfo.mdx) \* > | Successful Return |
 
 ### Code Example
 
@@ -60,27 +64,32 @@ None
 
 ```swift showLineNumbers
 
-- (void)getFriendListWithOnSuccess:(nullable OIMFriendsInfoCallback)onSuccess
+- (void)getFriendListWithFilterBlack:(BOOL)filterBlack
+                          onSuccess:(nullable OIMFriendInfoCallback)onSuccess
                          onFailure:(nullable OIMFailureCallback)onFailure;
 
 ```
 
 ### Input Parameters
 
-None
+| Parameter Name | Parameter Type      | Mandatory | Description                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| filterBlack  | boolean | No       | Whether to filter out the blacklist                                        |
+| operationID | string   | No       | Operation ID, used for problem location, unique, recommended to use current time and random number |
 
 ### Return Values
 
-| Parameter Name | Parameter Type                                               | Description |
-| -------------- | ------------------------------------------------------------ | ----------- |
-| onSuccess      | NSArray< [OIMFriendInfo](/class/relation/friendInfo.mdx) \* >  | Success     |
-| onFailure      | OIMFailureCallback                                           | Failure     |
+| Parameter Name  | Parameter Type                                                            | Description    |
+| --------- | -------------------------------------------------------------------- | -------- |
+| onSuccess | NSArray< [OIMFriendInfo](/class/relation/friendInfo.mdx) \* > | Successful Return |
+| onFailure | OIMFailureCallback                 | Failure Return |
 
 ### Code Example
 
 ```swift showLineNumbers
 
-[OIMManager.manager getFriendListWithOnSuccess:^(NSArray<OIMFriendInfo *> * _Nullable userInfos) {
+[OIMManager.manager getFriendListWithFilterBlack: NO,
+onSuccess:^(NSArray<OIMFriendInfo *> * _Nullable userInfos) {
 } onFailure:^(NSInteger code, NSString * _Nullable msg) {
 }];
 
@@ -94,15 +103,15 @@ None
 
 ```java showLineNumbers
 
- public void getFriendList(OnBase<List<UserInfo>> callBack)
+ public void getFriendList(OnBase<List<UserInfo>> base, Boolean filterBlack)
 
 ```
 
 ### Input Parameters
 
-| Parameter Name | Parameter Type                                                          | Mandatory | Description |
-| -------------- | ----------------------------------------------------------------------- | --------- | ----------- |
-| callBack       | [OnBase](/callback/onBase.mdx)<List<[UserInfo](/class/user/userInfo.mdx)>> | Yes       | Callback    |
+| Parameter Name | Parameter Type     | Mandatory | Description |
+| -------------- | ------------------ | --------- | ----------- |
+| filterBlack    | Boolean            | No        | if true, the return value will not be include blacklist users.      |
 
 ### Return Values
 
@@ -113,19 +122,16 @@ None
 ### Code Example
 
 ```java showLineNumbers
-
-OpenIMClient.getInstance().friendshipManager.getFriendList(new OnBase<List<UserInfo>>(){
+OpenIMClient.getInstance().friendshipManager.getFriendList(new OnBase<List<UserInfo>>() {
     @Override
     public void onError(int code, String error) {
-
+        // todo: request error
     }
-
     @Override
     public void onSuccess(List<UserInfo> data) {
-
+        // todo: request success
     }
-})
-
+}, filterBlack);
 ```
 
 </TabItem>
@@ -135,24 +141,26 @@ OpenIMClient.getInstance().friendshipManager.getFriendList(new OnBase<List<UserI
 ### Function Prototype
 
 ```ts showLineNumbers
-IMSDK.getFriendList(operationID?: string): Promise<WsResponse<FullUserItem[]>>
+IMSDK.getFriendList(filterBlack?: boolean, operationID?: string): Promise<WsResponse<FriendUserItem[]>>
 ```
 
 ### Input Parameters
 
-None
-
+| Parameter Name | Parameter Type      | Mandatory | Description                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| filterBlack  | boolean | No       | Whether to filter out the blacklist                                        |
+| operationID | string   | No       | Operation ID, used for problem location, unique, recommended to use current time and random number |
 ### Return Values
 
 | Parameter Name  | Parameter Type                                                              | Description         |
 | --------------- | --------------------------------------------------------------------------- | ------------------- |
-| Promise.then()  | Promise<WsResponse<[FullUserItem](/class/user/fullUserInfo.mdx)[]>\>       | List of friend info |
+| Promise.then()  | Promise<WsResponse<[FriendUserItem](/class/relation/friendInfo.mdx)[]>\>       | List of friend info |
 | Promise.catch() | Promise<[WsResponse](/class/response.mdx)\>                                 | Failure callback    |
 
 ### Code Example
 
 ```js showLineNumbers
-import { getSDK } from 'open-im-sdk-wasm';
+import { getSDK } from '@openim/wasm-client-sdk';
 const IMSDK = getSDK();
 
 // use in electron with ffi
@@ -160,8 +168,8 @@ const IMSDK = getSDK();
 // const { instance: IMSDK } = getWithRenderProcess();
 
 // use in mini program
-// import { OpenIMSDK } from 'open-im-sdk';
-// const IMSDK = new OpenIMSDK();
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
 
 IMSDK.getFriendList()
   .then(({ data }) => {
@@ -179,13 +187,14 @@ IMSDK.getFriendList()
 ### Function Prototype
 
 ```ts showLineNumbers
-IMSDK.asyncApi('getFriendList', operationID: string): Promise<FullUserItem[]>
+IMSDK.asyncApi('getFriendList', operationID: string, filterBlack: boolean): Promise<FriendUserItem[]>
 ```
 
 ### Input Parameters
 
 | Parameter Name | Parameter Type | Mandatory | Description                                                   |
 | -------------- | -------------- | --------- | ------------------------------------------------------------- |
+| filterBlack  | boolean | Yes       | Whether to filter out the blacklist                                        |
 | operationID    | string         | Yes       | Operation ID for troubleshooting, recommended unique timestamp |
 
 ### Return Values
@@ -194,7 +203,7 @@ IMSDK.asyncApi('getFriendList', operationID: string): Promise<FullUserItem[]>
 
 | Parameter Name  | Parameter Type                                              | Description         |
 | --------------- | ----------------------------------------------------------- | ------------------- |
-| Promise.then()  | Promise<[FullUserItem](/class/user/fullUserInfo.mdx)[]\>  | List of friend info |
+| Promise.then()  | Promise<[FriendUserItem](/class/relation/friendInfo.mdx)[]\>  | List of friend info |
 | Promise.catch() | Promise<[CatchResponse](/class/response.mdx)\>              | Failure callback    |
 
 ### Code Example
@@ -202,7 +211,7 @@ IMSDK.asyncApi('getFriendList', operationID: string): Promise<FullUserItem[]>
 ```js showLineNumbers
 import IMSDK from 'openim-uniapp-polyfill';
 
-IMSDK.asyncApi('getFriendList', IMSDK.uuid())
+IMSDK.asyncApi('getFriendList', IMSDK.uuid(), false)
   .then((data) => {
     // Success
   })
@@ -217,13 +226,14 @@ IMSDK.asyncApi('getFriendList', IMSDK.uuid())
 ### Function Prototype
 
 ```ts showLineNumbers
-OpenIMSDKRN.getFriendList(operationID: string): Promise<FullUserItem[]>
+OpenIMSDKRN.getFriendList(filterBlack: boolean, operationID: string): Promise<FriendUserItem[]>
 ```
 
 ### Input Parameters
 
 | Parameter Name    | Parameter Type | Mandatory | Description                                                   |
 | ----------- | -------- | -------- | ------------------------------------------------------- |
+| filterBlack  | boolean | Yes       | Whether to filter out the blacklist                                        |
 | operationID | string   | Yes       | Operation ID, used for problem location, keep unique, suggest using current time and random number |
 
 ### Return Result
@@ -238,7 +248,7 @@ OpenIMSDKRN.getFriendList(operationID: string): Promise<FullUserItem[]>
 ```js showLineNumbers
 import OpenIMSDKRN from "open-im-sdk-rn";
 
-OpenIMSDKRN.getFriendList('operationID')
+OpenIMSDKRN.getFriendList(false, 'operationID')
   .then((data) => {
     // Success
   })
@@ -255,7 +265,7 @@ OpenIMSDKRN.getFriendList('operationID')
 
 ```C# showLineNumbers
 
-public static void GetFriendList(OnFullUserInfoList cb)
+public static void GetFriendList(OnBase<FriendInfo> cb,bool filterBlack)
 
 ```
 
@@ -263,7 +273,8 @@ public static void GetFriendList(OnFullUserInfoList cb)
 
 | Parameter Name | Parameter Type                                                                                     | Mandatory | Description     |
 | -------- | -------------------------------------------------------------------------------------------- | -------- | -------- |
-| cb | [OnFullUserInfoList](/callback/OnFullUserInfoList.mdx) |Yes      | Callback |
+| cb |  [OnBase](/callback/onBase.mdx)<List<[FriendInfo](/class/relation/friendInfo.mdx)>> |Yes      | Callback |
+| filterBlack  | bool | No       | Whether to filter out the blacklist                                        |
 
 
 ### Code Example
@@ -272,7 +283,7 @@ public static void GetFriendList(OnFullUserInfoList cb)
 
 IMSDK.GetFriendList((list,errCode,errMsg)=>{
 
-});
+},true);
 
 ```
 
