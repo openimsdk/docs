@@ -8,10 +8,11 @@ sidebar_position: 8
 
 - OpenIM支持接入多种S3存储服务，包括：MINIO、阿里云OSS、腾讯云COS、七牛云KODO以及AWS，为开发者提供了广泛的选择。
 - 文件通过SDK直接上传至S3存储，避免经过API服务器，从而显著提升服务端性能。
-- 如果需要接入其他S3存储类型，也完全支持扩展。只需在服务端实现对应接口，无需对SDK进行任何修改。[接口地址](https://github.com/openimsdk/tools/blob/main/s3/s3.go)
 - 访问时调用的API地址仅用于将请求重定向至真实的S3存储地址，同时可在此阶段加入与业务相关的权限校验，确保数据安全性和业务灵活性。
+- API使用nginx代理，需要添加`proxy_set_header X-Request-Api $scheme://$host/api;`，参考文档：[Nginx配置](https://docs.openim.io/zh-Hans/guides/gettingStarted/nginxDomainConfig)
+- 如需要接入其他S3存储类型，也完全支持扩展。只需在服务端实现对应接口，无需对SDK进行任何修改。[接口地址](https://github.com/openimsdk/tools/blob/main/s3/s3.go)
 
-- 将 `config/openim-rpc-third.yml` 文件中的 `object.enable: <name>` 修改为 `minio`、`oss`、`cos`、`kodo` 或 `aws`
+- 将 `config/openim-rpc-third.yml` 文件中的 `object.enable: <name>` 修改为 `minio`、`oss`、`cos`、`kodo` 或 `aws`, 默认为 `minio`。
 ```yaml
 object:
   enable: minio
@@ -20,23 +21,23 @@ object:
 # MINIO
 
 1. 修改 config/minio.yml 文件中的 externalAddress 为你的应用访问地址，服务器无需能访问此地址。
+2. 使用minio nginx参考文档: https://docs.openim.io/zh-Hans/guides/gettingStarted/nginxDomainConfig
 ```yaml
-# 中的存储桶名称
+# 存储桶名称，用于存储和管理文件。
 bucket: openim
-# 身份验证的访问密钥ID
+# 用于身份验证的访问密钥ID。
 accessKeyID: root
-# 身份验证的访问密钥
+# 用于身份验证的访问密钥Secret。
 secretAccessKey: openIM123
-# 身份验证的会话令牌（可选）
+# 会话令牌，若使用临时凭证则需要填写此项。
 sessionToken:
-# 服务器的内部地址
+# 服务器的内部地址，只用于服务器内部调用，一般是内网地址。
 internalAddress: localhost:10005
-# 服务器的外部地址，可从外部访问，支持使用域名的HTTP和HTTPS
+# 服务器的外部地址，可从外部访问，支持使用域名的HTTP和HTTPS，确保该地址客户端可访问。服务器无需能访问此地址，只用作签名使用。
 externalAddress: http://external_ip:10005
-# 是否启用存储桶的公共读权限
+# 是否启用存储桶的公共读权限，当设置为true，会自动将桶改为公共读权限，后续改为false不会将权限设置为私有。
 publicRead: false
 ```
-
 
 # 阿里云OSS
 1. OSS创建存储桶地址: https://oss.console.aliyun.com/bucket
@@ -44,17 +45,19 @@ publicRead: false
 3. 官方文档: https://help.aliyun.com/zh/oss/developer-reference/overview-25/?spm=a2c4g.11186623.0.i3
 4. 修改`config/openim-rpc-third.yml`文件`object.oss`。
 ```yaml
-# OSS数据中心端点，例如 http://oss-cn-hangzhou.aliyuncs.com .
+# OSS数据中心端点，例如：http://oss-cn-hangzhou.aliyuncs.com
 endpoint:
-# 存储桶名称
+# 存储桶名称，用于存储和管理文件。
 bucket:
-# 存储桶URL
+# 存储桶的外部访问 URL，通常是加速后的访问地址。
 bucketURL:
-# 访问密钥ID
+# 用于身份验证的访问密钥ID。
 accessKeyID:
-# 访问密钥Secret
+# 用于身份验证的访问密钥Secret。
 accessKeySecret:
-# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名
+# 会话令牌，若使用临时凭证则需要填写此项。
+sessionToken:
+# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名，设置为true时，需要自行在oss管理后台设置。
 publicRead: false
 ```
 
@@ -64,13 +67,15 @@ publicRead: false
 3. 官方文档: https://cloud.tencent.com/document/product/436/7751
 4. 修改`config/openim-rpc-third.yml`文件`object.cos`
 ```yaml
-# 存储桶URL
+# 存储桶URL Endpoint地址，例如：https://temp-1252357374.cos.ap-chengdu.myqcloud.com
 bucketURL:
-# 访问密钥ID
+# 用于身份验证的访问密钥ID。
 secretID:
-# 访问密钥Secret
+# 用于身份验证的访问密钥Secret。
 secretKey:
-# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名
+# 会话令牌，若使用临时凭证则需要填写此项。
+sessionToken:
+# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名，设置为true时，需要自行在cos管理后台设置。
 publicRead: false
 ```
 
@@ -82,38 +87,38 @@ publicRead: false
 ```yaml
 # 七牛云KODO的Endpoint地址，例如：http://s3.cn-south-1.qiniucs.com
 endpoint:
-# 存储桶名称
+# 存储桶名称，用于存储和管理文件。
 bucket: kodo-bucket-test
-# 存储桶URL
-bucketURL: http://kodo-bucket-test-oetobfb.qiniudns.com
-# 访问密钥ID
+# 存储桶URL Endpoint地址，例如：http://kodo-bucket-test-oetobfb.qiniudns.com
+bucketURL:
+# 用于身份验证的访问密钥ID。
 accessKeyID:
-# 访问密钥Secret
+# 用于身份验证的访问密钥Secret。
 accessKeySecret:
-# 会话令牌（可选）
+# 会话令牌，若使用临时凭证则需要填写此项。
 sessionToken:
-# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名
+# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名，需要自行在kodo管理后台设置。
 publicRead: false
 ```
-
 
 # AWS
 1. 区域文档: http://docs.aws.amazon.com/general/latest/gr/rande.html
 2. AWS创建存储桶地址: https://s3.console.aws.amazon.com/s3/home
 3. AccessKey生成地址: https://console.aws.amazon.com/iam/home?#/security_credentials
 4. 官方文档: https://docs.aws.amazon.com/zh_cn/AmazonS3/latest/userguide/Welcome.html
+5. AWS暂时不支持通过URL参数生成缩略图。
 修改`config/openim-rpc-third.yml`文件`object.aws`
 ```yaml
 # 发送请求的区域，参考：http://docs.aws.amazon.com/general/latest/gr/rande.html
 region:
-# 存储桶名称
+# 存储桶名称，用于存储和管理文件。
 bucket:
-# AWS访问密钥ID
+# 用于身份验证的访问密钥ID。
 accessKeyID:
-# AWS访问密钥Secret
+# 用于身份验证的访问密钥Secret。
 secretAccessKey:
-# AWS会话令牌
+# 会话令牌，若使用临时凭证则需要填写此项。
 sessionToken:
-# 公共读取模式，建议设置为false，否则无法设置下载的Content-Type和文件名
+# 公共读取模式。暂时不支持设置为true
 publicRead: false
 ```
