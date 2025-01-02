@@ -1,59 +1,280 @@
 ---
 title: '如何进行二次开发'
 sidebar_position: 6
-
 ---
 
-
 # 如何进行二次开发
-- 如果您需要基于OpenIM开发新特性，首先要确定是针对业务侧还是即时通讯核心逻辑。
-- 由于OpenIM系统本身已经做好了比较多的抽象，大部分聊天的功能已经具备了，不建议修改IM本身。
-- 如果需要增加IM的能力，可以参考以下流程，并提交PR，以保证未来代码统一性。
 
+- 如果您需要基于 OpenIM 开发新特性，首先要确定是针对业务侧还是即时通讯核心逻辑。
+- 由于 OpenIM 系统本身已经做好了比较多的抽象，大部分聊天的功能已经具备了，不建议修改 IM 本身。
+- 如果需要增加 IM 的能力，可以参考以下流程，并提交 PR，以保证未来代码统一性。
 
-## 服务器
-> OpenIMServer主要分为长短连接接口，长连接接口主要是IM消息的核心逻辑(逻辑入口位于/internal/msggateway)，短连接接口主要是IM的
-业务逻辑(逻辑入口位于/internal/api/)，下面具体介绍如何在IM中加上新的业务功能。
+# 服务器
 
+> OpenIMServer 主要分为长短连接接口，长连接接口主要是 IM 消息的核心逻辑(逻辑入口位于/internal/msggateway)，短连接接口主要是 IM 的
+> 业务逻辑(逻辑入口位于/internal/api/)，下面具体介绍如何在 IM 中加上新的业务功能。
 
-### 1、开发前提
- - 搭建环境
-    - 搭建Go环境，参考[Go官方文档](https://golang.org/doc/install)
-    - 搭建grpc环境，参考[grpc官方文档](https://grpc.io/docs/languages/go/quickstart/)
- + fork OpenIMServer依赖的外部仓库
-    - clone官方的后台协议仓库: github.com/openimsdk/protocol
+## 1. 开发前提
 
-    **注**：IMServer使用的protobuf协议以依赖仓库的形式在github.com/openimsdk/protocol中，如果需要修改协议，需要先fork protocol仓库，
-    然后在此仓库上增加新的接口协议，然后在OpenIMServer的go.mod中引用新的协议通过：
+- 搭建环境
+  - 搭建 Go 环境，参考[Go 官方文档](https://golang.org/doc/install)
+  - 搭建 grpc 环境，参考[grpc 官方文档](https://grpc.io/docs/languages/go/quickstart/)
 
-    `replace github.com/openimsdk/protocol => ./your_protocol_path`
-### 2、协议增加与生成
- - 编写proto文件，定义新的接口协议
- - 生成go代码
-    - proto编辑完毕后在克隆的protocol仓库中直接执行`gen.cmd`或者`gen.sh`即可生成go代码
-### 3、api功能添加
- - 在/internal/api/router.go文件中增加新的接口包括定义路由，如果增加的接口属于一个路由组，可直接增加到对应的路由组文件中，否则模仿创建新的路由组文件。
- - 在/internal/api/xxx.go中如果api的json请求和rpc的request请求一致，可以直接调用a2r.Call函数，否则需要自己解析json请求，然后调用grpc接口(可模仿SendMessage接口)。
-### 4、rpc功能添加
+* fork OpenIMServer 依赖的外部仓库 protocol
+
+  - clone 官方的后台协议仓库: [github.com/openimsdk/protocol](https://github.com/openimsdk/protocol)
+
+  **注意**：IMServer 使用的 protobuf 协议以依赖仓库的形式在 `github.com/openimsdk/protocol` 中，如果需要修改协议，需要先 fork protocol 仓库，
+  然后在此仓库上增加新的接口协议，然后在 OpenIMServer 的 `go.mod` 中引用新的包路径，通过：
+
+  `replace github.com/openimsdk/protocol => ./your_protocol_path`
+
+  其中 `your_protocol_path` 为你 fork 的 protocol 仓库所在的本地路径。
+
+## 2. Protobuf 协议增加与生成
+
+下面以 Go 为例，介绍如何完整的生成一个新的接口协议。
+
+### 编写 proto 文件
+
+- 首先根据业务需求，定义一个新的模块。本文以 `hello` 为例，创建对应的 module 文件夹和 proto 文件，如 `hello/hello.proto`。
+- 编写 proto 文件，定义新的接口方法，如：
+
+```proto
+syntax = "proto3";
+
+package openim.hello;
+
+// 定义生成的 go 语言包名，通常为 github.com/openimsdk/protocol/<module>，其中 module 为具体的模块名称。
+option go_package = "github.com/openimsdk/protocol/hello";
+
+// 定义 Hello 的请求参数
+message HelloRequest {
+  string name = 1;
+}
+
+// 定义 Hello 的响应参数
+message HelloResponse {
+  string message = 1;
+  UserInfo user = 2; // 引用自定义的 message 结构
+}
+
+// 自定义 message 结构
+message UserInfo {
+  string name = 1;
+  int32 age = 2;
+}
+
+// 定义一个 Hello 模块的 RPC 服务
+service HelloService {
+  // 定义一个 SayHello 的 RPC 方法
+  rpc SayHello(HelloRequest) returns (HelloResponse);
+}
 ```
-  举例：在/internal/rpc/group/group.go中增加新的rpc函数，使用groupServer结构体实现对应的grpc的server接口，然后编写主体业务逻辑，其中涉及db更新
-  插入操作需要下发sdk实时通知，可直接模仿 g.notification.GroupApplicationAgreeMemberEnterNotification这种类型的通知下发函数(sdk对应需要处理新的通知)
+
+这里面分别定义了一个请求参数 `HelloRequest`，一个响应参数 `HelloResponse`，一个自定义的结构体 `UserInfo`，以及一个 RPC 服务 `HelloService`，其中包含的 RPC 方法 `SayHello`。
+
+上面这个主要的关注点为：  
+定义生成的 go_package 路径 -> 定义 RPC 方法的请求和响应 message 结构，如果有需要定义的通用结构可以单独定义 message 结构（如 `UserInfo`）-> 定义 RPC 服务和方法。
+
+### 生成 Go 代码
+
+下面介绍如何在编写 proto 文件后，生成对应的 Go 的 pb 代码。
+
+- 安装执行命令的工具 mage，执行 `go install github.com/magefile/mage@latest` 即可安装。
+- 在对应仓库中执行 `mage InstallDepend`，安装 Go 所需的依赖。
+- proto 编辑完毕后，在克隆的 protocol 仓库中直接执行 `mage GenGo` 即可生成对应的 go 代码。
+- 更多内容，具体参考[用 mage 生成 PB 文件](https://github.com/openimsdk/protocol/blob/main/mage-README.md)。
+
+## 3. API 功能添加
+
+添加新的 API 功能，包括路由定义和接口定义。
+
+### API 路由定义
+
+- 定义路由的文件在 `/internal/api/router.go`，我们需要在 `newGinRouter` 函数中定义对应的路由，如：
+  例如我们要定义一个 Friend 模块的 `AddFriendCategory` 接口，我们可以在 `newGinRouter` 函数中增加如下代码：
+
+```go
+  // friend routing group
+  {
+    f := NewFriendApi(relation.NewFriendClient(friendConn))
+		friendRouterGroup := r.Group("/friend")
+		friendRouterGroup.POST("/delete_friend", f.DeleteFriend)
+    // ......
+
+    // 新增 AddFriendCategory 接口的路由
+    friendRouterGroup.POST("/add_friend_category", f.AddFriendCategory)
+  }
 ```
-### 5、存储层接口增加
+
+如果增加的接口属于一个路由组，可直接增加到对应的路由组文件中，否则模仿创建新的路由组文件。
+
+### API 接口定义
+
+根据上面的路由定义，我们需要在 `/internal/api/friend/friend.go` 中增加对应的接口定义。  
+如果 API 的 JSON 请求与 RPC 的 Request 请求一致，可以直接调用 `a2r.Call` 函数，否则需要自己解析 JSON 请求，然后调用 gRPC 接口(可参考 Message 模块的 `SendMessage` 接口)。
+例如：
+
+```go
+  // 如果 API 的 Request 与 JSON 请求一致
+  func (o *FriendApi) AddFriendCategory(c *gin.Context) {
+    // AddFriendCategory 为在 RPC 定义的方法
+    a2r.Call(c,relation.FriendClient.AddFriendCategory, o.client)
+  }
+
+  // 如果 API 的 Request 与 JSON 请求不一致，需要自己解析 JSON 请求
+  func (o *FriendApi) AddFriendCategory(c *gin.Context) {
+    var req apistruct.AddFriendCategoryReq{}
+
+    if err := c.BindJSON(&req); err != nil {
+      apiresp.GinError(c,errs.ErrArgs.WithDetail(err.Error()).Wrap())
+      return
+    }
+
+    resp, err := o.client.AddFriendCategory(c, &req)
+    if err != nil {
+      apiresp.GinError(c,err)
+      return
+    }
+
+    apiresp.GinSuccess(c, resp)
+  }
+```
+
+## 4. 添加 RPC 方法
+
+在对应模块的 Server 结构体，新增相应的 gRPC 方法来实现 Server 接口。然后编写主体的业务逻辑。  
+其中涉及 DB 更新、插入操作需要下发 SDK 实时通知，可直接模仿 `g.notification.GroupApplicationAgreeMemberEnterNotification` 这种类型的通知下发函数。(sdk 对应需要处理新的通知)
+
+### 添加新的 RPC 方法
+
+在 `internal/rpc/relation/friend/friend.go` 中增加新的 rpc 方法 `AddFriendCategory`，并编写主体的业务逻辑。
+
+```go
+
+// AddFriendCategory 添加好友分组
+
+func (s *friendServer) AddFriendCategory(ctx context.Context, req *relation.AddFriendCategoryReq) (*relation.AddFriendCategoryResp, error) {
+
+  // 实现具体的业务逻辑
+  // ...
+
+  // 调用 DB 操作
+  if err := s.db.AddFriendCategory(req.UserId, req.CategoryName); err != nil {
+    return nil, err
+  }
+
+  // 调用 sdk 下发通知(如果有对应的 DB 操作)
+  s.notification.FriendCategoryAddNotification(req.UserId, req.CategoryName) // 仅举例，具体通知函数需要根据业务需求实现
+
+  return &relation.AddFriendCategoryResp{}, nil
+}
+
+```
+
+对应的通知下发函数 `FriendCategoryAddNotification` 应在 `internal/rpc/relation/notification.go` 中实现。
+
+```go
+func (f *FriendNotificationSender) FriendCategoryAddNotification(ctx context.Context, userID string, categoryName string) {
+	tips := sdkws.FriendCategoryAddTips{UserID: userID, CategoryName: categoryName}
+	f.Notification(ctx, mcontext.GetOpUserID(ctx), userID, constant.FriendCategoryAddNotification, &tips)
+}
+
+```
+
+## 5. 添加存储层接口
+
 > 存储层主要分为三层
- - controller：主要用于数据库事务处理和cache整合的逻辑控制层
- - cache：主要为db的数据缓存
- - database：数据持久化层，用于业务逻辑的存储
+>
+> - controller：主要用于数据库事务处理和 cache 整合的逻辑控制层
+> - cache：主要为 db 的数据缓存
+> - database：数据持久化层，用于业务逻辑的存储
+
+### 添加 controller 层接口
+
+在 `pkg/common/storage/controller` 中，增加新的接口，实现对应的接口，提供给 RPC 逻辑层调用。
+
+例如我们定义的 `AddFriendCategory` 接口，需在 `pkg/common/storage/controller/friend.go` 中增加如下代码：
+
+```go
+
+type friendDatabase struct {
+	friend        database.Friend
+	cache         cache.FriendCache
+}
+
+type FriendDatabase interface {
+	CheckIn(ctx context.Context, user1, user2 string) (inUser1Friends bool, inUser2Friends bool, err error)
+  // ...
+
+  // 新增 AddFriendCategory 接口
+  AddFriendCategory(ctx context.Context, userID, categoryName string) error
+}
+
+// 实现 AddFriendCategory 接口
+
+func (f *FriendDatabase) AddFriendCategory(ctx context.Context, userID, categoryName string) error {
+  // 实现对应的业务逻辑，如数据转换等。
+
+  if err := f.friend.AddFriendCategory(ctx, userID, categoryName); err != nil {
+    return err
+  }
+
+  return f.cache.AddFriendCategory(ctx, userID, categoryName)
+}
+
 ```
- - 在pkg\common\storage\controller中增加新的接口，实现对应的接口，提供给rpc逻辑层调用。
- - 在pkg\common\storage\cache中增加新的接口，(pkg\common\storage\cache\cachekey中存储了缓存所有的key前缀)实现对应的接口，
-   提供给controller层调用。
- - 在pkg\common\storage\model中可定义数据库的model结构体，pkg\common\storage\database中增加新的接口，实现对应的接口，提供给cache层整合。
+
+### 添加 cache 层接口
+
+在 `pkg/common/storage/cache` 中增加新的接口，在 `pkg/common/storage/cache/cachekey` 中实现对应的 Key，并实现对应的接口，提供给 controller 层调用。
+
+例如我们定义的 `AddFriendCategory` 接口，需在 `pkg/common/storage/cache/cachekey/friend.go` 中实现其前缀和对应的 Get 函数，
+在 `pkg/common/storage/cache/friend.go` 定义供 controller 层调用的接口，并在 `pkg/common/storage/cache/redis/friend.go` 实现对应的缓存逻辑。
+
+**cachekey/friend.go**
+
+```go
+
+const (
+  FriendCategoryKey = "FRIEND_CATEGORY:"
+)
+
+func GetFriendCategoryKey(userID, categoryName string) string {
+  return FriendCategoryKey + userID + "-" + categoryName
+}
 ```
 
-## 客户端
+**cache/friend.go**
 
+```go
+type FriendCache interface {
+  BatchDeleter
+	CloneFriendCache() FriendCache
+  // ...
 
+  // 新增 AddFriendCategory 接口
+  AddFriendCategory(ctx context.Context, userID, categoryName string) error
+}
+```
 
+**cache/redis/friend.go**
 
+```go
+func (f *FriendCacheRedis) AddFriendCategory(ctx context.Context, userID, categoryName string) error {
+  // 实现对应的缓存逻辑
+  key := cachekey.GetFriendCategoryKey(userID, categoryName)
+  return f.redis.Set(ctx, key)
+}
+```
 
+### 添加 database 层接口
+
+- 在 pkg/common/storage/model 中可定义数据库的 model 结构体，pkg/common/storage/database 中增加新的接口，实现对应的接口，提供给 cache 层整合。
+
+# 客户端
+
+```
+
+```
