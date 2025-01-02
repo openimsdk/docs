@@ -208,7 +208,7 @@ type FriendDatabase interface {
 	CheckIn(ctx context.Context, user1, user2 string) (inUser1Friends bool, inUser2Friends bool, err error)
   // ...
 
-  // 新增 AddFriendCategory 接口
+  // 定义 Controller 层的 AddFriendCategory 接口
   AddFriendCategory(ctx context.Context, userID, categoryName string) error
 }
 
@@ -231,7 +231,7 @@ func (f *FriendDatabase) AddFriendCategory(ctx context.Context, userID, category
 在 `pkg/common/storage/cache` 中增加新的接口，在 `pkg/common/storage/cache/cachekey` 中实现对应的 Key，并实现对应的接口，提供给 controller 层调用。
 
 例如我们定义的 `AddFriendCategory` 接口，需在 `pkg/common/storage/cache/cachekey/friend.go` 中实现其前缀和对应的 Get 函数，
-在 `pkg/common/storage/cache/friend.go` 定义供 controller 层调用的接口，并在 `pkg/common/storage/cache/redis/friend.go` 实现对应的缓存逻辑。
+再 `pkg/common/storage/cache/friend.go` 定义供 controller 层调用的接口，并在 `pkg/common/storage/cache/redis/friend.go` 实现对应的缓存逻辑。
 
 **cachekey/friend.go**
 
@@ -254,7 +254,7 @@ type FriendCache interface {
 	CloneFriendCache() FriendCache
   // ...
 
-  // 新增 AddFriendCategory 接口
+  // 定义 Cache 层的 AddFriendCategory 接口
   AddFriendCategory(ctx context.Context, userID, categoryName string) error
 }
 ```
@@ -271,7 +271,44 @@ func (f *FriendCacheRedis) AddFriendCategory(ctx context.Context, userID, catego
 
 ### 添加 database 层接口
 
-- 在 pkg/common/storage/model 中可定义数据库的 model 结构体，pkg/common/storage/database 中增加新的接口，实现对应的接口，提供给 cache 层整合。
+在 `pkg/common/storage/model` 中，定义对应数据库的 model 结构体，然后在 `pkg/common/storage/database` 中增加新的接口，并实现对应的接口，提供给 cache 层整合。
+
+例如，我们定义的 `AddFriendCategory` 接口，需要在 `pkg/common/storage/model/friend.go` 中定义对应的 model 结构体，
+然后在 `pkg/common/storage/database/friend.go` 中添加对应的接口供 cache 层整合，在 `pkg/common/storage/database/mgo/friend.go` 中实现对应的数据库操作。
+
+**model/friend.go**
+
+```go
+type Friend struct {
+	ID             primitive.ObjectID `bson:"_id"`
+	OwnerUserID    string             `bson:"owner_user_id"`
+  // ...
+  CategoryName string `bson:"category_name"` // 新增 CategoryName 字段
+}
+```
+
+**database/friend.go**
+
+```go
+type Friend interface {
+  UpdateRemark(ctx context.Context, ownerUserID, friendUserID, remark string) (err error)
+  // ...
+  // 定义 DB 层的 AddFriendCategory 接口
+  AddFriendCategory(ctx context.Context, userID, categoryName string) error
+}
+```
+
+**database/mgo/friend.go**
+
+```go
+func (f *FriendMgo) AddFriendCategory(ctx context.Context, userID, categoryName string) error{
+  // 实现对应的数据库操作
+  // ...
+
+  return nil
+}
+
+```
 
 # 客户端
 
