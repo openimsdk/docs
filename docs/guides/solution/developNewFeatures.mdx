@@ -17,8 +17,9 @@ sidebar_position: 6
 ## 1. 开发前提
 
 - 搭建环境
-  - 搭建 Go 环境，参考[Go 官方文档](https://golang.org/doc/install)
-  - 搭建 grpc 环境，参考[grpc 官方文档](https://grpc.io/docs/languages/go/quickstart/)
+  - 搭建 Go 环境，推荐 Go 版本 >= 1.22，参考[Go 官方文档](https://golang.org/doc/install)
+  - 搭建 grpc 环境，推荐 `proto-gen-go` >=1.36.1，`protoc-gen-go-grpc` >= 1.5.1 ，参考[grpc 官方文档](https://grpc.io/docs/languages/go/quickstart/)
+  - 搭建 proto 环境，推荐 `protoc` >= 5.29.2，将其二进制文件存放到环境变量，参考[proto 官方文档](https://protobuf.dev/downloads/)
 
 * fork OpenIMServer 依赖的外部仓库 protocol
 
@@ -27,7 +28,7 @@ sidebar_position: 6
   **注意**：IMServer 使用的 protobuf 协议以依赖仓库的形式在 `github.com/openimsdk/protocol` 中，如果需要修改协议，需要先 fork protocol 仓库，
   然后在此仓库上增加新的接口协议，然后在 OpenIMServer 的 `go.mod` 中引用新的包路径，通过：
 
-  `replace github.com/openimsdk/protocol => ./your_protocol_path`
+  `replace github.com/openimsdk/protocol => github.com/<your-username>/protocol`
 
   其中 `your_protocol_path` 为你 fork 的 protocol 仓库所在的本地路径。
 
@@ -45,38 +46,31 @@ syntax = "proto3";
 
 package openim.relation;
 
-// 定义生成的 go 语言包名，通常为 github.com/openimsdk/protocol/<module>，其中 module 为具体的模块名称。
 option go_package = "github.com/openimsdk/protocol/relation";
 
 // 定义 AddFriendCategory 的请求参数
-message AddFriendCategoryRequest {
-  string userID = 1;
-  string categoryName = 2;
+message AddFriendCategoryReq {
+  string ownerUserID = 1;
+  string friendUserID = 2;
+  int category = 3;
 }
 
 // 定义 AddFriendCategory 的响应参数
-message AddFriendCategoryResponse {
-  string message = 1;
-  UserInfo user = 2; // 引用自定义的 message 结构
-}
-
-// 自定义 message 结构
-message UserInfo {
-  string name = 1;
-  int32 age = 2;
+// 如果无需返回参数，则不需要添加定义。错误码和错误信息已经默认定义。
+message AddFriendCategoryResp {
 }
 
 // 定义一个 Friend 模块的 RPC 服务
 service Friend {
   // 定义一个 AddFriendCategory 的 RPC 方法
-  rpc AddFriendCategory(AddFriendCategoryRequest) returns (AddFriendCategoryResponse);
+  rpc AddFriendCategory(AddFriendCategoryReq) returns (AddFriendCategoryResp);
 }
 ```
 
-这里面分别定义了一个请求参数 `AddFriendCategoryRequest`，一个响应参数 `AddFriendCategoryResponse`，一个自定义的结构体 `UserInfo`，以及一个 RPC 服务 `Friend`，其中包含的 RPC 方法 `AddFriendCategory`。
+这里面分别定义了一个请求参数 `AddFriendCategoryReq`，一个响应参数 `AddFriendCategoryResp`，以及一个 RPC 服务 `Friend`，其中包含的新增 RPC 方法 `AddFriendCategory`。
 
 上面这个主要的关注点为：  
-定义 RPC 方法的请求和响应 message 结构，如果有需要定义的通用结构可以单独定义 message 结构（如 `UserInfo`）-> 定义 RPC 服务和方法。
+定义 RPC 方法的请求参数 -> 定义 RPC 方法的响应参数 -> 在 RPC 服务内定义 RPC 方法。
 
 ### 生成 Go 代码
 
@@ -86,6 +80,27 @@ service Friend {
 - 在对应仓库中执行 `mage InstallDepend`，安装 Go 所需的依赖。
 - proto 编辑完毕后，在克隆的 protocol 仓库中直接执行 `mage GenGo` 即可生成对应的 go 代码。
 - 更多内容，具体参考[用 mage 生成 PB 文件](https://github.com/openimsdk/protocol/blob/main/mage-README.md)。
+
+### 添加校验函数
+
+如果需要对 RPC 函数的请求添加校验，同样在 protocol 仓库中添加。
+
+例如我们定义的 `AddFriendCategory` 接口，需在 `relation/relation.go` 中增加如下代码：
+
+```go
+func (x *AddFriendCategoryReq) Check() error {
+  if x.OwnerUserID == "" {
+    return errors.New("OwnerUserID is empty")
+  }
+  if x.FriendUserID == "" {
+    return errors.New("FriendUserID is empty")
+  }
+  if x.Category == 0 {
+    return errors.New("Category is empty")
+  }
+  return nil
+}
+```
 
 ## 3. API 功能添加
 
@@ -114,39 +129,22 @@ service Friend {
 ### API 接口定义
 
 根据上面的路由定义，我们需要在 `/internal/api/friend/friend.go` 中增加对应的接口定义。  
-如果 API 的 JSON 请求与 RPC 的 Request 请求一致，可以直接调用 `a2r.Call` 函数，否则需要自己解析 JSON 请求，然后调用 gRPC 接口(可参考 Message 模块的 `SendMessage` 接口)。
+如果 API 的 JSON 请求与 RPC 的 Request 请求一致，可以直接调用 `a2r.Call` 函数。否则需要自己解析 JSON 请求，然后调用 gRPC 接口(可参考 Message 模块的 `SendMessage` 接口)。
 例如：
 
 ```go
-  // 如果 API 的 Request 与 JSON 请求一致
+  // 当 API 的 Request 与 JSON 请求一致
   func (o *FriendApi) AddFriendCategory(c *gin.Context) {
-    // AddFriendCategory 为在 RPC 定义的方法
-    a2r.Call(c,relation.FriendClient.AddFriendCategory, o.client)
+  // AddFriendCategory 为在 RPC 定义的方法
+  a2r.Call(c,relation.FriendClient.AddFriendCategory, o.client)
   }
 
-  // 如果 API 的 Request 与 JSON 请求不一致，需要自己解析 JSON 请求
-  func (o *FriendApi) AddFriendCategory(c *gin.Context) {
-    var req apistruct.AddFriendCategoryReq{}
-
-    if err := c.BindJSON(&req); err != nil {
-      apiresp.GinError(c,errs.ErrArgs.WithDetail(err.Error()).Wrap())
-      return
-    }
-
-    resp, err := o.client.AddFriendCategory(c, &req)
-    if err != nil {
-      apiresp.GinError(c,err)
-      return
-    }
-
-    apiresp.GinSuccess(c, resp)
-  }
 ```
 
 ## 4. 添加 RPC 方法
 
 在对应模块的 Server 结构体，新增相应的 gRPC 方法来实现 Server 接口。然后编写主体的业务逻辑。  
-其中涉及 DB 更新、插入操作需要下发 SDK 实时通知，可直接模仿 `g.notification.GroupApplicationAgreeMemberEnterNotification` 这种类型的通知下发函数。(sdk 对应需要处理新的通知)
+其中涉及 DB 更新、插入操作需要下发 SDK 实时通知，可直接模仿 `s.notificationSender.FriendsInfoUpdateNotification` 这种类型的通知下发函数。(sdk 对应需要处理新的通知)
 
 ### 添加新的 RPC 方法
 
@@ -157,17 +155,23 @@ service Friend {
 // AddFriendCategory 添加好友分组
 
 func (s *friendServer) AddFriendCategory(ctx context.Context, req *relation.AddFriendCategoryReq) (*relation.AddFriendCategoryResp, error) {
-
   // 实现具体的业务逻辑
-  // ...
+  if err := authverify.CheckAccessV3(ctx, req.OwnerUserID, s.config.Share.IMAdminUserID); err != nil {
+		return nil, err
+	}
+
+  _, err = s.db.FindFriendsWithError(ctx, req.OwnerUserID, []string{req.FriendUserID})
+	if err != nil {
+		return nil, err
+	}
 
   // 调用 DB 操作
-  if err := s.db.AddFriendCategory(req.UserId, req.CategoryName); err != nil {
+  if err := s.db.AddFriendCategory(ctx,req.OwnerUserID, req.FriendUserID,req.category); err != nil {
     return nil, err
   }
 
   // 调用 sdk 下发通知(如果有对应的 DB 操作)
-  s.notification.FriendCategoryAddNotification(req.UserId, req.CategoryName) // 仅举例，具体通知函数需要根据业务需求实现
+  s.notification.FriendCategoryAddNotification(ctx, req.OwnerUserID, req.FriendUserID) // 仅举例，具体通知函数需要根据业务需求实现
 
   return &relation.AddFriendCategoryResp{}, nil
 }
@@ -177,11 +181,38 @@ func (s *friendServer) AddFriendCategory(ctx context.Context, req *relation.AddF
 对应的通知下发函数 `FriendCategoryAddNotification` 应在 `internal/rpc/relation/notification.go` 中实现。
 
 ```go
-func (f *FriendNotificationSender) FriendCategoryAddNotification(ctx context.Context, userID string, categoryName string) {
-	tips := sdkws.FriendCategoryAddTips{UserID: userID, CategoryName: categoryName}
-	f.Notification(ctx, mcontext.GetOpUserID(ctx), userID, constant.FriendCategoryAddNotification, &tips)
+func (f *FriendNotificationSender) FriendCategoryAddNotification(ctx context.Context,fromUserID, toUserID string) {
+	tips := sdkws.FriendInfoChangedTips{FromToUserID: &sdkws.FromToUserID{}}
+  tips.FromToUserID.FromUserID = fromUserID
+	tips.FromToUserID.ToUserID = toUserID
+	f.setSortVersion(ctx, &tips.FriendVersion, &tips.FriendVersionID, database.FriendVersionName, toUserID, &tips.FriendSortVersion)
+	f.Notification(ctx, fromUserID, toUserID, constant.FriendCategoryAddNotification, &tips)
 }
 
+```
+
+此处调用的 `constant.FriendCategoryAddNotification` 需要添加到 protocol 仓库下的 `constant/constant.go` 中定义。
+
+```go
+const(
+  FriendApplicationApprovedNotification = 1201 // add_friend_response
+  // ...
+  // 新增 FriendCategoryAddNotification 常量
+  FriendCategoryAddNotification = 1211
+)
+```
+
+并且需要更新 `sdkws/sdkws.proto` 中的对应字段。且在编写完后执行命令，重新生成对应的 `sdkws/sdkws.pb.go` 文件。
+
+```go
+message FriendInfo {
+  string ownerUserID = 1;
+  string remark = 2;
+  // ...
+
+  // 新增 Category 字段
+  int32 category = 9;
+}
 ```
 
 ## 5. 添加存储层接口
@@ -200,29 +231,24 @@ func (f *FriendNotificationSender) FriendCategoryAddNotification(ctx context.Con
 
 ```go
 
-type friendDatabase struct {
-	friend        database.Friend
-	cache         cache.FriendCache
-}
-
 type FriendDatabase interface {
 	CheckIn(ctx context.Context, user1, user2 string) (inUser1Friends bool, inUser2Friends bool, err error)
   // ...
 
   // 定义 Controller 层的 AddFriendCategory 接口
-  AddFriendCategory(ctx context.Context, userID, categoryName string) error
+  AddFriendCategory(ctx context.Context, ownerUserID, friendUserID string, category int) error
 }
 
 // 实现 AddFriendCategory 接口
 
-func (f *FriendDatabase) AddFriendCategory(ctx context.Context, userID, categoryName string) error {
+func (f *FriendDatabase) AddFriendCategory(ctx context.Context, ownerUserID, friendUserID string, category int) error {
   // 实现对应的业务逻辑，如数据转换等。
 
-  if err := f.friend.AddFriendCategory(ctx, userID, categoryName); err != nil {
+  if err := f.friend.AddFriendCategory(ctx, ownerUserID, friendUserID, category); err != nil {
     return err
   }
 
-  return f.cache.AddFriendCategory(ctx, userID, categoryName)
+  return f.cache.DeleteFriend(ownerUserID, friendUserID).DelMaxFriendVersion(ownerUserID).ChainExecDel(ctx)
 }
 
 ```
@@ -231,50 +257,16 @@ func (f *FriendDatabase) AddFriendCategory(ctx context.Context, userID, category
 
 在 `pkg/common/storage/cache` 中增加新的接口，在 `pkg/common/storage/cache/cachekey` 中实现对应的 Key，并实现对应的接口，提供给 controller 层调用。
 
-例如我们定义的 `AddFriendCategory` 接口，需在 `pkg/common/storage/cache/cachekey/friend.go` 中实现其前缀和对应的 Get 函数，
-再 `pkg/common/storage/cache/friend.go` 定义供 controller 层调用的接口，并在 `pkg/common/storage/cache/redis/friend.go` 实现对应的缓存逻辑。
+我们定义的 `AddFriendCategory` 接口，可以直接调用 cache 层已有的 `DeleteFriend` 接口即可。
 
-**cachekey/friend.go**
-
-```go
-
-const (
-  FriendCategoryKey = "FRIEND_CATEGORY:"
-)
-
-func GetFriendCategoryKey(userID, categoryName string) string {
-  return FriendCategoryKey + userID + "-" + categoryName
-}
-```
-
-**cache/friend.go**
-
-```go
-type FriendCache interface {
-  BatchDeleter
-	CloneFriendCache() FriendCache
-  // ...
-
-  // 定义 Cache 层的 AddFriendCategory 接口
-  AddFriendCategory(ctx context.Context, userID, categoryName string) error
-}
-```
-
-**cache/redis/friend.go**
-
-```go
-func (f *FriendCacheRedis) AddFriendCategory(ctx context.Context, userID, categoryName string) error {
-  // 实现对应的缓存逻辑
-  key := cachekey.GetFriendCategoryKey(userID, categoryName)
-  return f.redis.Set(ctx, key)
-}
-```
+> Notice:
+> cache 层通常是在更新时删除缓存，当获取数据时再去更新数据写入缓存。采用了写时删除，读时更新的策略。
 
 ### 添加 database 层接口
 
 在 `pkg/common/storage/model` 中，定义对应数据库的 model 结构体，然后在 `pkg/common/storage/database` 中增加新的接口，并实现对应的接口，提供给 cache 层整合。
 
-例如，我们定义的 `AddFriendCategory` 接口，需要在 `pkg/common/storage/model/friend.go` 中定义对应的 model 结构体，
+例如，我们定义的 `AddFriendCategory` 接口，需要在 `pkg/common/storage/model/friend.go` 中定义对应的 model 结构体添加对应字段，
 然后在 `pkg/common/storage/database/friend.go` 中添加对应的接口供 cache 层整合，在 `pkg/common/storage/database/mgo/friend.go` 中实现对应的数据库操作。
 
 **model/friend.go**
@@ -284,7 +276,7 @@ type Friend struct {
 	ID             primitive.ObjectID `bson:"_id"`
 	OwnerUserID    string             `bson:"owner_user_id"`
   // ...
-  CategoryName string `bson:"category_name"` // 新增 CategoryName 字段
+  Category int `bson:"category"` // 新增 Category 字段
 }
 ```
 
@@ -295,24 +287,167 @@ type Friend interface {
   UpdateRemark(ctx context.Context, ownerUserID, friendUserID, remark string) (err error)
   // ...
   // 定义 DB 层的 AddFriendCategory 接口
-  AddFriendCategory(ctx context.Context, userID, categoryName string) error
+  AddFriendCategory(ctx context.Context, ownerUserID, friendUserID string, category int) error
 }
 ```
 
 **database/mgo/friend.go**
 
 ```go
-func (f *FriendMgo) AddFriendCategory(ctx context.Context, userID, categoryName string) error{
-  // 实现对应的数据库操作
-  // ...
-
-  return nil
+func (f *FriendMgo) AddFriendCategory(ctx context.Context, ownerUserID, friendUserID string, category int) error{
+  return f.UpdateByMap(ctx, ownerUserID, friendUserID, map[string]any{"category": category})
 }
 
 ```
 
 # 客户端
 
+客户端的主要核心是 [OpenIM SDK Core](https://github.com/openimsdk/openim-sdk-core)，负责管理 WebSocket 长连接、提供事件的处理回调机制。
+
+## SDK Core 接口添加
+
+{/* 先定义访问的 Server 的 API 请求方法，在 server_api，然后再定义 api ，sdkevent 来 wrap 一下，最后 api 再调用 server_api。 */}
+{/* 定义 notification 通知的触发，Listener 的回调 就是定义 Listener */}
+
+### 定义 Server API 接口
+
+如果新增的方法需要调用服务端的接口，需要在 `server_api` 中定义对应的接口方法。
+
+例如我们定义的 `AddFriendCategory` 接口，需添加对应内容：
+
+- 在 `pkg/api/api.go` 中定义对应的调用方法变量：
+
+```go
+// relation
+var(
+  AddFriend = newApi[relation.ApplyToAddFriendReq, relation.ApplyToAddFriendResp]("/friend/add_friend")
+  // ...
+  // 定义 AddFriendCategory 接口
+  AddFriendCategory = newApi[relation.AddFriendCategoryReq, relation.AddFriendCategoryResp]("/friend/add_friend_category")
+)
 ```
 
+- 在 `relation/server_api.go` 中添加对应内容：
+
+```go
+func (r *Relation) AddFriendCategory(ctx context.Context, req *relation.AddFriendCategoryReq) error {
+  // 实现对应的逻辑和数据转换
+  req.OwnerUserID = r.loginUserID
+  return api.AddFriendCategory.Execute(ctx, req)
+}
 ```
+
+将这个接口定义到 `bindings/base/api_registry.go` 中，以便 SDK 调用。
+
+```go
+var FuncMap = map[sdkevent.FuncRequestEventName]callFunc{
+	sdkevent.FuncRequestEventName_AddFriend: wrapFunc(open_im_sdk.IMUserContext.Relation().AddFriend),
+  // ...
+  // 添加 AddFriendCategory 接口
+  sdkevent.FuncRequestEventName_AddFriendCategory: wrapFunc(open_im_sdk.IMUserContext.Relation().AddFriendCategory),
+}
+```
+
+### 定义 SDK 对应方法
+
+在相应模块的 `api.go` 中定义对应的方法，如：
+
+我们需要在 `internal/relation/api.go` 中实现对应的逻辑方法：
+
+```go
+func (r *Relation) AddFriendCategory(ctx context.Context, req *sdkpb.AddFriendCategoryReq) (*sdkpb.AddFriendCategoryResp, error) {
+  // 调用 Server API 的接口
+  sReq:= &relation.AddFriendCategoryReq{ OwnerUserID: r.loginUserID, FriendUserID: req.friendUserID, Category: req.Category}
+  if err := r.AddFriendCategory(ctx,sReq)  ; err != nil {
+    return nil, err
+  }
+
+  r.relationSyncMutex.Lock()
+	defer r.relationSyncMutex.Unlock()
+	if err := r.IncrSyncFriends(ctx); err != nil {
+		return nil, err
+	}
+
+  return &sdkpb.AddFriendCategoryResp, nil
+}
+```
+
+### 处理 Server 下发通知
+
+我们需要对 Server 下发的通知进行处理，需要在 `internal/relation/notification.go` 中实现对应的通知处理方法。
+
+例如我们定义的 `FriendCategoryAddNotification` 接口，需在 `internal/relation/notification.go` 中增加如下代码：
+
+```go
+func (r *Relation) doNotification(ctx context.Context, msg *sdkws.MsgData) error {
+	r.relationSyncMutex.Lock()
+	defer r.relationSyncMutex.Unlock()
+
+	switch msg.ContentType {
+	case constant.FriendRemarkSetNotification:
+  // ...
+
+  // 添加对应的通知处理
+  case constant.FriendCategoryAddNotification:
+  var tips sdkws.FriendCategoryAddTips // 定义对应的通知结构体
+  if err := utils.UnmarshalNotificationElem(msg.Content, &tips); err != nil {
+			return err
+		}
+  if tips.FromToUserID != nil {
+			if tips.FromToUserID.FromUserID == r.loginUserID {
+        // 包含回调的方法
+				return r.IncrSyncFriends(ctx)
+			}
+		}
+  }
+}
+```
+
+在 `IncrSyncFriends` 的方法需要写入本地 DB 中，所以需要将更新转换函数的内容：
+更新 `internal/relation/conversion.go` 中的 `ServerFriendToLocalFriend` 函数。
+
+```go
+func ServerFriendToLocalFriend(info *sdkws.FriendInfo) *model_struct.LocalFriend {
+	return &model_struct.LocalFriend{
+		OwnerUserID:    info.OwnerUserID,
+		FriendUserID:   info.FriendUser.UserID,
+		Remark:         info.Remark,
+		CreateTime:     info.CreateTime,
+		AddSource:      info.AddSource,
+		OperatorUserID: info.OperatorUserID,
+		Nickname:       info.FriendUser.Nickname,
+		FaceURL:        info.FriendUser.FaceURL,
+		Ex:             info.Ex,
+		IsPinned: info.IsPinned,
+    // 新增 Category 字段
+    Category: info.Category,
+	}
+}
+```
+
+### 处理本地 DB 层
+
+如果涉及到 db 操作，需要调用 db 层的接口，更新本地的 db 数据。
+
+- 在 `pkg/db/db_interface/databse.go` 添加接口方法 供 sdk 调用。
+
+此处使用的是现有的 `UpdateFriend` 方法来实现。
+
+- 更新 `pkg/db/model_struct/data_model_struct.go`对应的 `LocalFriend` 结构体
+
+在 `pkg/db/model_struct/data_model_struct.go` 中的 `LocalFriend` 结构体中添加对应的字段：
+
+```go
+type LocalFriend struct {
+	OwnerUserID    string `gorm:"column:owner_user_id;primary_key;type:varchar(64)" json:"ownerUserID"`
+	FriendUserID   string `gorm:"column:friend_user_id;primary_key;type:varchar(64)" json:"userID"`
+	Remark         string `gorm:"column:remark;type:varchar(255)" json:"remark"`
+  // ...
+  // 添加 Category 字段
+  Category int32 `gorm:"column:category" json:"category"`
+}
+```
+
+- 在 `pkg/db/friend_model.go`中，添加具体实现方法。
+
+此处调用了已存在的 `UpdateFriend` 方法来实现。
