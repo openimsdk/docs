@@ -306,16 +306,13 @@ func (f *FriendMgo) AddFriendCategory(ctx context.Context, ownerUserID, friendUs
 
 ## SDK Core 接口添加
 
-{/* 先定义访问的 Server 的 API 请求方法，在 server_api，然后再定义 api ，sdkevent 来 wrap 一下，最后 api 再调用 server_api。 */}
-{/* 定义 notification 通知的触发，Listener 的回调 就是定义 Listener */}
-
 ### 定义 Server API 接口
 
 如果新增的方法需要调用服务端的接口，需要在 `server_api` 中定义对应的接口方法。
 
 例如我们定义的 `AddFriendCategory` 接口，需添加对应内容：
 
-- 在 `pkg/api/api.go` 中定义对应的调用方法变量：
+- 在 `pkg/api/api.go` 中定义对应的 Server API 调用变量：
 
 ```go
 // relation
@@ -337,14 +334,11 @@ func (r *Relation) AddFriendCategory(ctx context.Context, req *relation.AddFrien
 }
 ```
 
-将这个接口定义到 `bindings/base/api_registry.go` 中，以便 SDK 调用。
+将这个接口定义到 `open_im_sdk/relation.go` 中，以便下游 SDK 调用。
 
 ```go
-var FuncMap = map[sdkevent.FuncRequestEventName]callFunc{
-	sdkevent.FuncRequestEventName_AddFriend: wrapFunc(open_im_sdk.IMUserContext.Relation().AddFriend),
-  // ...
-  // 添加 AddFriendCategory 接口
-  sdkevent.FuncRequestEventName_AddFriendCategory: wrapFunc(open_im_sdk.IMUserContext.Relation().AddFriendCategory),
+func AddFriendCategory(callback open_im_sdk_callback.Base, operationID string, req string){
+  call(callback, operationID, UserForSDK.Relation().AddFriendCategory, req)
 }
 ```
 
