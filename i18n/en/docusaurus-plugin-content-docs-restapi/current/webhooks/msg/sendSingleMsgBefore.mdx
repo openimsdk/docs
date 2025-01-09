@@ -1,56 +1,51 @@
-# Callback Before Sending a Single Chat Message
+---
+title: Callback Before Sending Single Chat Message
+hide_title: true
+---
 
-## Function Description
-The App business server can use this callback to perform real-time operations on users' single chat messages, such as real-time recording of messages and intercepting users' inappropriate message requests.
+# Callback Before Sending Single Chat Message
 
-## Precautions
-- To enable the callback, it is necessary to configure the callback URL and activate the corresponding switch for this callback protocol. Configuration methods can be found in the [Callback Explanation](../introduction) document.
-- The direction of the callback is an HTTP/HTTPS POST request initiated by OpenIM Server to the App backend.
-- After receiving the callback request, the App business server must verify whether the command parameter in the request URL is its SDKNAME parameter.
-- The APP business server must respond to this request within the timeout period.
+## Description
+The App backend can use this callback to take action on single chat messages in real-time, such as:
+- Logging single chat messages.
+- Blocking user requests with inappropriate content.
 
-## Scenarios That May Trigger This Callback
-- App users send single chat messages through the client.
-- App administrators send single chat messages through the REST API.
+## Important Notes
+- To enable this callback, configure the callback URL and activate the corresponding protocol switch. For configuration details, see the [Callback Introduction](../introduction) document.
+- The callback direction is from OpenIMServer to the App backend as an HTTP/HTTPS POST request.
+- The App backend must respond to this request within the specified timeout.
 
-## Timing of the Callback
-- After OpenIM Server receives a single chat message from a user and before delivering it to the target user.
+## Scenarios that Trigger This Callback
+- A user sends a single chat message through the client.
+- An administrator sends a single chat message via the REST API.
+
+## Timing of Callback
+- After OpenIMServer receives the user’s single chat message but before distributing it to the target user.
 
 ## Interface Description
 
-### Request URL Example
-In the following example, the callback URL configured by the App is `https://callbackurl`.
+### Example Request URL
+The `CallbackCommand` here is: `callbackBeforeSendSingleMsgCommand`
+
 ```plaintext
-https://callbackurl?command=$CallbackCommand&contenttype=json
+{WEBHOOK_ADDRESS}/callbackBeforeSendSingleMsgCommand?contenttype=json
 ```
 
-### Request Parameter Description
-
-| Parameter            | Description                                          |
-|----------------------|------------------------------------------------------|
-| https               | Request protocol is HTTPS, method is POST            |
-| https://callbackurl | Callback URL                                         |
-| CallbackCommand     | Fixed value: callbackBeforeSendSingleMsgCommand      |
-| contenttype         | Fixed value: JSON                                    |
-
-### Header
-| Header Name | Example Value | Mandatory | Type   | Description                         |
-|-------------|---------------|-----------|--------|-------------------------------------|
-| operationID | 1646445464564 | Required  | string | operationID for global link tracing |
-
-### Request Packet Example
+### Example Request Package
 ```json
 {
   "sendID": "user123",
   "callbackCommand": "callbackBeforeSendSingleMsgCommand",
   "serverMsgID": "msg001",
   "clientMsgID": "clientmsg001",
+  "operationID": "1646445464564",
   "senderPlatformID": 1,
   "senderNickname": "User123",
   "sessionType": 1,
   "msgFrom": 1,
   "contentType": 1,
   "status": 1,
+  "sendTime": 1673048592000,
   "createTime": 1673048592000,
   "content": "Hello, this is a test message",
   "seq": 1001,
@@ -61,32 +56,34 @@ https://callbackurl?command=$CallbackCommand&contenttype=json
 }
 ```
 
-### Request Packet Field Explanation
+### Request Package Field Descriptions
 
-| Field            | Type    | Description                                     |
-|------------------|---------|-------------------------------------------------|
-| sendID           | string  | Sender's user ID                                |
-| callbackCommand  | string  | Callback command, here for pre-single chat message callback |
-| serverMsgID      | string  | Server-assigned message ID                      |
-| clientMsgID      | string  | Client-assigned message ID                      |
-| senderPlatformID | int32   | Sender's platform ID                            |
-| senderNickname   | string  | Sender's nickname                               |
-| sessionType      | int32   | Session type                                    |
-| msgFrom          | int32   | Message origin                                  |
-| contentType      | int32   | Type of message content                         |
-| status           | int32   | Message status                                  |
-| createTime       | int64   | Message creation timestamp (milliseconds)       |
-| content          | string  | Message content                                 |
-| seq              | uint32  | Message sequence number                         |
-| atUserList       | array   | List of group member IDs, ignored in single chat |
-| faceURL          | string  | Sender's avatar URL                             |
-| ex               | string  | Additional data field                           |
-| recvID           | string  | Receiver's user ID                              |
+| Field               | Type     | Description                                                |
+|---------------------|----------|------------------------------------------------------------|
+| sendID              | string   | Sender's user ID                                           |
+| callbackCommand     | string   | Callback command, used for callback before sending a single chat message |
+| serverMsgID         | string   | Server-assigned message ID                                 |
+| clientMsgID         | string   | Client-assigned message ID                                 |
+| operationID         | string   | Used for global tracking                                   |
+| senderPlatformID    | int32    | Sender's platform ID                                      |
+| senderNickname      | string   | Sender's nickname                                         |
+| sessionType         | int32    | Type of session                                           |
+| msgFrom             | int32    | Source of the message                                     |
+| contentType         | int32    | Type of the content                                       |
+| status              | int32    | Status of the message                                     |
+| sendTime            | int64    | Timestamp of message sent (milliseconds)                  |
+| createTime          | int64    | Timestamp of message creation (milliseconds)              |
+| content             | string   | Message content                                           |
+| seq                 | uint32   | Sequence number of the message                            |
+| atUserList          | array    | List of group member IDs; ignore for single chat          |
+| faceURL             | string   | URL for sender's avatar                                   |
+| ex                  | string   | Extra data field                                          |
+| recvID              | string   | Receiver's user ID                                        |
 
-## Response Packet Example
+## Example Response Package
 
-### Allow Sending
-Allows the user to send the message.
+### Allow Message Sending
+Allowing the user to send the message.
 
 ```json
 {
@@ -98,12 +95,12 @@ Allows the user to send the message.
 }
 ```
 
-## Response Packet Field Explanation
+### Response Package Field Descriptions
 
-| Field       | Value | Description                                              |
-|-------------|-------|----------------------------------------------------------|
-| actionCode  | 0     | Indicates if the business system's callback was executed correctly. `0` means the operation was successful. |
-| errCode     | 5001  | Custom error code, ranging between 5000-9999. Set when actionCode is not 0; set when nextCode is 1. |
-| errMsg      | "Message" | Simple error message corresponding to the custom error code. |
-| errDlt      |"Detailed information" | Detailed error information corresponding to the custom error code. |
-| nextCode    | 1     | Next step instruction, `1` means to refuse to continue executing, set when actionCode is `0`. |
+| Field         | Value                        | Description                                                 |
+|---------------|------------------------------|-------------------------------------------------------------|
+| actionCode    | 0                            | Indicates whether the callback was successfully executed. `0` means success. |
+| errCode       | 5001                         | Custom error code, ranges from 5000-9999, set when `actionCode` is not 0, or `nextCode` is 1 |
+| errMsg        | "Message"                    | Simple error message for the custom error code              |
+| errDlt        | "Detailed information"       | Detailed error message                                      |
+| nextCode      | 1                            | Next step directive, `1` to halt further action if `actionCode` is `0` |

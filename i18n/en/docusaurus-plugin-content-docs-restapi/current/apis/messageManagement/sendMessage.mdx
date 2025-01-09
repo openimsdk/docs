@@ -1,80 +1,124 @@
 ---
-sidebar_position: 2
-title: send_msg
+sidebar_position: 1
+title: Send Message
 hide_title: true
 ---
 
 <center>
 
-## send_msg
+## Send Message
 
 </center>
 
 ### Brief Description
-- Simulate an identity sending a message to a specified user or group, can also be used to import historical records from other platforms.
+- Simulate sending a message to a specified user or group. Can also be used to import historical records from other platforms.
+
 ### Request Method
 - `post`
+
 ### Request URL
 - `{API_ADDRESS}/msg/send_msg`
 
 ### Header
-|Header Name|Example Value|Optional|Type|Description|
-|:--------- |:------------ |:------ |:-- |:--------- |
-|operationID|1646445464564|No      |string|operationID for global link tracking|
-|token      |eyJhbxxxx3Xs |No      |string|Admin token|
 
-### Request Parameter Example
+| Header Name | Example Value   | Optional | Type   | Description                                                                 |
+|:------------|:----------------|:---------|:-------|:---------------------------------------------------------------------------|
+| operationID | 1646445464564   | Required | string | Used for global trace tracking; suggested to use a unique timestamp per request |
+| token       | eyJhbxxxx3Xs    | Required | string | [Admin token](/restapi/apis/authenticationManagement/getAdminToken) |
+
+### Request Parameters Example
+
 ```json
 {
   "sendID": "openIMAdmin",
   "recvID": "2839678182",
-  ...
+  "groupID": "",
+  "senderNickname": "openIMAdmin-Gordon",
+  "senderFaceURL": "http://www.head.com",
+  "senderPlatformID": 1,
+  "content": {
+    "content": "hello!!"
+  },
+  "contentType": 101,
+  "sessionType": 1,
+  "isOnlineOnly": false,
+  "notOfflinePush": false,
+  "sendTime": 1695212630740,
+  "offlinePushInfo": {
+    "title": "send message",
+    "desc": "",
+    "ex": "",
+    "iOSPushSound": "default",
+    "iOSBadgeCount": true
+  },
+  "ex": "ex"
 }
 ```
-|Field Name|Optional|Type  |Description|
-|:-------- |:------ |:---- |:----------|
-|sendID    |No      |string|Sender ID (APP admin ID or user ID)|
-|recvID    |Yes     |string|Recipient ID, required for sessionType 1 or 4; leave empty for group chat|
-|groupID   |Yes     |string|Group ID, required for sessionType 2 or 3; leave empty for individual chat|
-|senderNickname|Yes |string|Sender's nickname|
-|senderFaceURL|Yes  |string|Sender's avatar URL|
-|senderPlatformID|Yes|int|Sender's platform number, input when simulating user sending. Enumerations: 1: IOS, 2: Android, etc.|
-|content   |No      |object|Specific message content, internally a json object. For detailed fields of other messages, refer to [Message Type Format Description](/restapi/contentDescription) document|
-|contentType|No   |int   |[Message Type](/restapi/contentDescription)|
-|sessionType|No   |int   |Conversation type, 1: Individual chat, 3: Group chat, 4: System notification|
-|isOnlineOnly|Yes  |boolean|Message can only be received if the recipient is online, otherwise it will be lost|
-|notOfflinePush|Yes|boolean|Do not push offline|
-|sendTime  |Yes     |int   |Message sending time, fill in only when importing messages, in milliseconds|
-|offlinePushInfo|Yes|object|Details of offline push; if not provided, the server's default push title will be used|
-... (Details for offlinePushInfo attributes) ...
-### Successful Response Example
+
+| Field Name             | Optional | Type     | Description                                                                 |
+|:-----------------------|:---------|:---------|:----------------------------------------------------------------------------|
+| sendID                 | Required | string   | System notification ID, or user ID                                         |
+| recvID                 | Optional | string   | Receiver ID, required if `sessionType` is 1 or 4; if it's a group chat, leave blank |
+| groupID                | Optional | string   | Group ID, required if `sessionType` is 3; leave blank for one-to-one chats |
+| senderNickname         | Optional | string   | Sender’s nickname                                                          |
+| senderFaceURL          | Optional | string   | Sender’s avatar URL                                                        |
+| senderPlatformID       | Optional | int      | Sender’s [platform type](/restapi/commonFields/#通用字段说明), value from 1-9 |
+| content                | Required | object   | Message content; refer to [Message Type Format Description](/restapi/contentDescription/#content-具体内容-) |
+| content.content        | Required | string   | Message content text                                                       |
+| contentType            | Required | int      | [Message type](/restapi/contentDescription)                        |
+| sessionType            | Required | int      | [Conversation type](/restapi/commonFields/#通用字段说明)           |
+| isOnlineOnly           | Optional | boolean  | Receiver must be online to receive; otherwise, message is dropped          |
+| notOfflinePush         | Optional | boolean  | Do not push offline notifications                                          |
+| sendTime               | Optional | int      | Send time in milliseconds; only for imported messages                      |
+| offlinePushInfo        | Optional | object   | Details for offline push notification                                      |
+| offlinePushInfo.title  | Optional | string   | Push notification title                                                    |
+| offlinePushInfo.desc   | Optional | string   | Push notification description                                              |
+| offlinePushInfo.ex     | Optional | string   | Extended field                                                             |
+| offlinePushInfo.iOSPushSound | Optional | string | iOS push notification sound                                                |
+| offlinePushInfo.iOSBadgeCount | Optional | boolean | iOS badge count on app icon                                               |
+| ex                     | Optional | string   | Extended field                                                             |
+
+### Success Response Example
+
 ```json
 {
   "errCode": 0,
-  ...
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "serverMsgID": "8698dd5d163dd79b8fdfa333fee06f40",
+    "clientMsgID": "1ca0e4cf279ad5cce6b28331b2b42092",
+    "sendTime": 1679558586210
+  }
 }
 ```
-### Successful Response Parameter Description
-|Parameter Name|Type  |Description|
-|:------------ |:---- |:----------|
-|errCode       |int   |Error code, 0 indicates success|
-|errMsg        |string|Brief error information, empty if no error|
-|errDlt        |errDlt|Detailed error information|
-|data          |object|General data object, see structure below|
-|serverMsgID   |string|Server message ID, a reserved field|
-|clientMsgID   |string|Client message ID, this ID is the unique ID of the message|
-|sendTime      |int   |Message sending time|
 
-### Failed Response Example
+### Success Response Parameters Description
+
+| Parameter Name | Type   | Description                             |
+|:---------------|:-------|:----------------------------------------|
+| errCode        | int    | Error code; 0 indicates success         |
+| errMsg         | string | Brief error message, empty if none      |
+| errDlt         | errDlt | Detailed error information, empty if none |
+| data           | object | General data object, structure detailed below |
+| serverMsgID    | string | Server message ID; reserved field       |
+| clientMsgID    | string | Client message ID; unique ID for message |
+| sendTime       | int    | Time the message was sent               |
+
+### Failure Response Example
+
 ```json
 {
   "errCode": 1004,
-  ...
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
 }
 ```
-### Failed Response Parameter Description
-|Parameter Name|Type  |Description|
-|:------------ |:---- |:----------|
-|errCode       |int   |Error code, see global error code documentation for details|
-|errMsg        |string|Brief error information|
-|errDlt        |errDlt|Detailed error information|
+
+### Failure Response Parameters Description
+
+| Parameter Name | Type   | Description                                     |
+|:---------------|:-------|:------------------------------------------------|
+| errCode        | int    | Error code, refer to global error code documentation |
+| errMsg         | string | Brief error message                             |
+| errDlt         | errDlt | Detailed error information                      |
