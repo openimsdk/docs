@@ -12,7 +12,9 @@ sidebar_position: 6
 # 服务器
 
 > OpenIMServer 主要分为长短连接接口，长连接接口主要是 IM 消息的核心逻辑(逻辑入口位于/internal/msggateway)，短连接接口主要是 IM 的
-> 业务逻辑(逻辑入口位于/internal/api/)，下面具体介绍如何在 IM 中加上新的业务功能。
+> 业务逻辑(逻辑入口位于/internal/api/)，下面具体介绍如何在 IM 中加上新的业务功能；
+>
+> 下面通过增加一个API 为例，介绍如何完整的从api => rpc => storage代码的增加修改。
 
 ## 1. 开发前提
 
@@ -30,11 +32,9 @@ sidebar_position: 6
 
   `replace github.com/openimsdk/protocol => github.com/<your-username>/protocol`
 
-  其中 `your_protocol_path` 为你 fork 的 protocol 仓库所在的本地路径。
+  其中 `your_protocol_path` 为你 fork 的 protocol 仓库所在的仓库路径。
 
 ## 2. Protobuf 协议增加与生成
-
-下面以 Go 为例，介绍如何完整的生成一个新的接口协议。
 
 ### 编写 proto 文件
 
@@ -69,21 +69,18 @@ service Friend {
 
 这里面分别定义了一个请求参数 `AddFriendCategoryReq`，一个响应参数 `AddFriendCategoryResp`，以及一个 RPC 服务 `Friend`，其中包含的新增 RPC 方法 `AddFriendCategory`。
 
-上面这个主要的关注点为：  
-定义 RPC 方法的请求参数 -> 定义 RPC 方法的响应参数 -> 在 RPC 服务内定义 RPC 方法。
-
 ### 生成 Go 代码
 
 下面介绍如何在编写 proto 文件后，生成对应的 Go 的 pb 代码。
 
-- 安装执行命令的工具 mage，执行 `go install github.com/magefile/mage@latest` 即可安装。
+- 安装执行命令的工具 mage（openim使用mage执行各种命令从而避免使用脚本带来的跨平台兼容性），执行 `go install github.com/magefile/mage@latest` 即可安装。
 - 在对应仓库中执行 `mage InstallDepend`，安装 Go 所需的依赖。
 - proto 编辑完毕后，在克隆的 protocol 仓库中直接执行 `mage GenGo` 即可生成对应的 go 代码。
 - 更多内容，具体参考[用 mage 生成 PB 文件](https://github.com/openimsdk/protocol/blob/main/mage-README.md)。
 
 ### 添加校验函数
 
-如果需要对 RPC 函数的请求添加校验，同样在 protocol 仓库中添加。
+API请求参数的校验，通常需要通过插件生成并且在proto文件中直接定义，openim并没有使用这种方式，而是在生成的pb协议文件目录中增加了一个文件，通过实现check函数的方式，定义实现每个参数的校验逻辑，这样更加直观，而且避免使用tag反射语法，性能更佳。
 
 例如我们定义的 `AddFriendCategory` 接口，需在 `relation/relation.go` 中增加如下代码：
 
@@ -219,9 +216,9 @@ message FriendInfo {
 
 > 存储层主要分为三层
 >
-> - controller：主要用于数据库事务处理和 cache 整合的逻辑控制层
-> - cache：主要为 db 的数据缓存
-> - database：数据持久化层，用于业务逻辑的存储
+> - **controller 层**：负责数据库事务管理和缓存整合的业务逻辑控制层。它协调数据库操作和缓存系统，确保数据一致性和事务处理的正确性。
+> - **cache 层**：作为数据库的缓存层，缓存热点数据，以减少频繁的数据库访问，提高系统性能。通过缓存策略和有效的缓存更新机制，确保数据访问的高效性。
+> - **database 层**：负责持久化存储，处理业务逻辑中的数据存储需求。它通过数据库管理系统（如关系型数据库或 NoSQL）确保数据的持久性和一致性。
 
 ### 添加 controller 层接口
 
@@ -300,19 +297,27 @@ func (f *FriendMgo) AddFriendCategory(ctx context.Context, ownerUserID, friendUs
 
 ```
 
+
+
 # 客户端
 
-客户端的主要核心是 [OpenIM SDK Core](https://github.com/openimsdk/openim-sdk-core)，负责管理 WebSocket 长连接、提供事件的处理回调机制。
+客户端的核心是跨平台层 **[OpenIM SDK Core](https://github.com/openimsdk/openim-sdk-core)**，该层全面负责 IM 系统的核心功能，包括但不限于：
 
-## SDK Core 接口添加
+- **网络连接管理**：实现与服务器的稳定、高效的 WebSocket 长连接，确保实时数据传输和通信流畅性。
+- **消息转发与存储**：负责接收、转发和存储用户之间的即时消息，确保消息的准确、及时传递以及数据的持久化管理。
+- **好友与群组管理**：提供灵活的好友管理与群组管理功能，支持好友添加、删除、群组创建与管理等操作，为社交交互提供完整的基础设施。
+- **跨平台支持**：该 SDK 能够在多个平台（如 Android、iOS、Windows、Mac 等）上无缝运行，确保客户端在不同设备和操作系统上具有一致的表现和用户体验。
 
-### 定义 Server API 接口
+## 1、定义 Server API 接口
 
 如果新增的方法需要调用服务端的接口，需要在 `server_api` 中定义对应的接口方法。
 
 例如我们定义的 `AddFriendCategory` 接口，需添加对应内容：
 
 - 在 `pkg/api/api.go` 中定义对应的 Server API 调用变量：
+
+
+ >> 其中的relation.AddFriendCategoryReq为服务器上proto定义的协议文件，sdk-core也需要引用
 
 ```go
 // relation
@@ -324,7 +329,7 @@ var(
 )
 ```
 
-- 在 `relation/server_api.go` 中添加对应内容：
+- 在 `relation/server_api.go` 中添加对应的server_api调用器：
 
 ```go
 func (r *Relation) AddFriendCategory(ctx context.Context, req *relation.AddFriendCategoryReq) error {
@@ -340,13 +345,14 @@ func (r *Relation) AddFriendCategory(ctx context.Context, req *relation.AddFrien
 func AddFriendCategory(callback open_im_sdk_callback.Base, operationID string, req string){
   call(callback, operationID, UserForSDK.Relation().AddFriendCategory, req)
 }
+在相应模块的 `api.go` 中定义对应的方法，如：
 ```
 
-### 定义 SDK 对应方法
-
-在相应模块的 `api.go` 中定义对应的方法，如：
+## 2、实现 SDK 接口业务逻辑
 
 我们需要在 `internal/relation/api.go` 中实现对应的逻辑方法：
+
+>>其中的req *sdkpb.AddFriendCategoryReq和 *sdkpb.AddFriendCategoryResp结构体可以使用pb，也可以自定义结构体，有json tag即可
 
 ```go
 func (r *Relation) AddFriendCategory(ctx context.Context, req *sdkpb.AddFriendCategoryReq) (*sdkpb.AddFriendCategoryResp, error) {
@@ -366,7 +372,7 @@ func (r *Relation) AddFriendCategory(ctx context.Context, req *sdkpb.AddFriendCa
 }
 ```
 
-### 处理 Server 下发通知
+## 3、处理 Server 下发通知
 
 我们需要对 Server 下发的通知进行处理，需要在 `internal/relation/notification.go` 中实现对应的通知处理方法。
 
@@ -383,13 +389,13 @@ func (r *Relation) doNotification(ctx context.Context, msg *sdkws.MsgData) error
 
   // 添加对应的通知处理
   case constant.FriendCategoryAddNotification:
-  var tips sdkws.FriendCategoryAddTips // 定义对应的通知结构体
+  var tips sdkws.FriendCategoryAddTips //解析据服务器定义对应的通知结构体
   if err := utils.UnmarshalNotificationElem(msg.Content, &tips); err != nil {
 			return err
 		}
   if tips.FromToUserID != nil {
 			if tips.FromToUserID.FromUserID == r.loginUserID {
-        // 包含回调的方法
+        // 执行增量同步逻辑
 				return r.IncrSyncFriends(ctx)
 			}
 		}
@@ -419,7 +425,7 @@ func ServerFriendToLocalFriend(info *sdkws.FriendInfo) *model_struct.LocalFriend
 }
 ```
 
-### 处理本地 DB 层
+## 4、处理本地 DB 层
 
 如果涉及到 db 操作，需要调用 db 层的接口，更新本地的 db 数据。
 
@@ -445,3 +451,26 @@ type LocalFriend struct {
 - 在 `pkg/db/friend_model.go`中，添加具体实现方法。
 
 此处调用了已存在的 `UpdateFriend` 方法来实现。
+
+## 5、导出层增加接口提供给其他语言使用
+
+**[OpenIM SDK Core](https://github.com/openimsdk/openim-sdk-core)**使用go语言开发，步骤2的逻辑增加完毕后，需要将相应的接口导出给到其他语言调用：
+
+以Android和iOS为例，导出层的接口主要位于：
+
+-    open_im_sdk/（函数接口层）
+-    open_im_sdk_callback/（callback定义层，使用callback进行通信交互）
+
+然后使用gomobille将其编译成Android的aar和iOS的xcframework库文件供其调用；具体关于**[OpenIM SDK Core](https://github.com/openimsdk/openim-sdk-core)**如何利用gomobile编译成为Android的aar和iOS的xcframework可以参考仓库文档。
+
+
+上面的例子将这个接口定义到 `open_im_sdk/relation.go` 中，以便提供给Android/iOS 调用。
+
+```go
+func AddFriendCategory(callback open_im_sdk_callback.Base, operationID string, req string){
+  call(callback, operationID, UserForSDK.Relation().AddFriendCategory, req)
+}
+```
+
+注：**[OpenIM SDK Core](https://github.com/openimsdk/openim-sdk-core)**除开gomobile提供给Android/iOS调用，还提供c语言接口以便于更多语言进行跨平台调用，其主要实现在**[OpenIM SDK CPP](https://github.com/openimsdk/openim-sdk-cpp)**这个仓库中，如果需要在其他语言利用c接口调用，可以参考该仓库的实现封装SDK。
+
