@@ -1,0 +1,55 @@
+---
+title: '如何迁移到其他S3存储'
+sidebar_position: 9
+
+---
+
+# S3存储接入
+
+### 获取最新代码
+请下载项目的最新代码版本：
+  - 最新代码已集成`S3`迁移工具，无需单独操作。
+```shell
+git clone https://github.com/openimsdk/open-im-server.git
+cd open-im-server
+```
+
+### 配置文件修改指南
+请根据需要修改`config`目录下的相关配置文件，以完成迁移相关的 S3 配置：
+1. 编辑`openim-rpc-third.yml`配置文件
+   - 定位并更新与 S3 相关的配置项，确保其符合您的实际迁移需求。
+2. 关于 minio.yml 配置文件
+   - 如果项目中未实际使用 MinIO，该文件可以忽略。
+   - 如需使用，请同样根据迁移需求更新 S3 配置相关项。
+3. `openim-rpc-third.yml`中都有`object.enable`字段，用于指定新的S3存储引擎。
+
+### 编译S3迁移工具
+1. 进入工具目录
+```shell
+cd tools/s3
+```
+2. 执行编译命令
+```shell
+go build -o s3convert main.go
+```
+
+### 开始迁移
+为确保数据迁移过程的稳定性，请按照以下建议进行操作：
+1. 准备工作
+   - 关闭服务：建议在服务停止的状态下进行迁移操作，以避免数据不一致或操作冲突。
+   - 备份 MongoDB：重点备份`s3`表的数据，以便在发生意外时快速恢复。
+2. 迁移说明
+   - 迁移工具不会删除原有的`S3`数据，但会修改`MongoDB`中`s3`表的相关记录。
+   - 请在迁移完成后，核对数据完整性，确保所有迁移步骤正确执行。
+3. 执行迁移命令
+   - `<config dir path>`：指定配置文件目录路径。
+   - `<old s3 name>`：填写原 S3 配置名称，例如 minio。
+```shell
+./s3convert -config <config dir path> -name <old s3 name>
+```
+4. 示例命令
+如配置文件位于 config 目录下，且原 S3 名称为 minio，可执行以下命令：
+```shell
+./s3convert -config ./../../config -name minio
+```
+当看到输出信息`success`时，表示迁移操作已完成。
