@@ -1,0 +1,81 @@
+---
+title: '故障恢复'
+sidebar_position: 21
+---
+
+## 一、组件停止服务
+
+1. 如果`mongo`、`redis`、`kafka`停止服务，直接尝试重启服务。
+2. 如果由于数据原因启动失败，`redis`、`kafka`可尝试删除对应的数据文件，`mongo`尝试[恢复备份数据文件](#三mongo数据备份恢复)。
+   组件默认对应数据文件如下：
+   - `kafka`：`components/kafka/`
+   - `redis`：`components/redis/`
+3. 如果`etcd`停止服务，需要首先关闭`open-im-server`服务，然后重启`etcd`组件后，再启动`open-im-server`服务。
+
+## 二、OpenIM停止服务
+
+使用源码方式部署`open-im-server`情况下，可以在`open-im-server/start-config.yml`文件中配置每一个服务的实例数量。需要保证每一个服务都至少有一个实例正常运行，`open-im-server`才可以正常提供服务。
+
+### 增加服务实例
+
+如果需要在不停止服务的情况下动态增加服务实例数量，可以直接使用命令启动服务。
+
+在运行`mage start`启动服务时，控制台会打印所有服务的启动命令：
+
+![0](faultRecovery.assets/0.png)
+
+可以从中找到需要启动的服务的命令，如需要增加一个`push`实例，运行如下命令即可：
+```shell
+/data/open-im-server/_output/bin/platforms/linux/amd64/openim-push -i 0 -c /data/open-im-server/config/
+```
+
+如需要后台运行，可用如下命令（linux系统）：
+```shell
+nohup /data/open-im-server/_output/bin/platforms/linux/amd64/openim-push -i 0 -c /data/open-im-server/config/ &
+```
+
+`-i`参数在启用自动端口配置时可不用修改（默认即为启用）。如果需要使用手动配置端口，需要在服务实例对应的配置文件中配置相应的端口，并将`-i`参数修改为对应的下标。
+
+### 减少服务实例
+
+如果需要在不停止服务的情况下动态停止某一个实例，可以通过杀死进程的方式实现。例如可从上图中看到`openim-rpc-conversation`的`PID`为：`854943`，可以使用如下命令停止该服务实例：
+
+```sh
+kill -9 854943
+```
+
+## 三、Mongo数据备份、恢复
+
+mongo提供数据备份、恢复的功能，步骤如下：
+
+1. 修改`.env`文件中的`MONGO_BACKUP_DIR`为需要保存备份文件的目录（默认备份目录为`components/backup/mongo/`）。
+2. 运行`docker compose up -d`启动容器。
+3. 运行`docker exec -it mongo mongodump --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" --out="/data/backup/$(date +\%Y-\%m-\%d_\%H-\%M-\%S)";`，即可完成一次当前数据的备份。
+
+如果需要恢复备份的数据，需要进行以下步骤：
+
+1. 停止`open-im-server`服务，运行`docker compose down`删除容器。
+
+2. 删除`components/redis/`和`components/mongodb/data/`文件夹。
+
+3. 到备份的目录中找到需要恢复的数据的名称，将下面命令中的`your_backup_name`替换为备份数据目录名称并运行：
+
+   ```sh
+   docker exec -it mongo mongorestore --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" /data/backup/your_backup_name/openim_v3
+   ```
+
+4. 运行`docker compose up -d`启动容器，启动`open-im-server`服务。
+
+### 定时备份
+
+如果想要实现定时备份的功能，建议使用`linux`的`Crontab`定时任务实现。例如，想要每天凌晨2时进行一次数据备份，可以参考下面的命令：
+```sh
+crontab -e  # 打开cron配置
+
+# 在crontab文件中添加下面一行表示每天2时执行命令
+0 2 * * * docker exec mongo mongodump --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" --out="/data/backup/$(date +\%Y-\%m-\%d_\%H-\%M-\%S)"
+```
+
+然后在编辑器中保存并退出 `crontab` 配置（通常按 `CTRL+X`，然后按 `Y` 保存）。
+
+如果需要其他定时规则，修改`cron`表达式即可。
