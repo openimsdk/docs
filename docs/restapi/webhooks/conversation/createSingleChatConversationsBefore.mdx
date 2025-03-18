@@ -1,0 +1,111 @@
+---
+title: 创建单聊会话之前的回调
+hide_title: true
+---
+
+# 创建单聊会话之前的回调
+
+## 功能说明
+
+App 业务服务端可以通过该回调实时查看创建单聊会话的请求，包括：App 后台可以在实际创建单聊会话前，对请求进行审核或修改。
+
+## 注意事项
+
+- 为启用回调，必须配置回调 URL，并开启本条回调协议对应的开关。配置方法详见 [回调说明](../introduction) 文档。
+- 回调的方向是 OpenIMServer 向 App 后台发起 HTTP/HTTPS POST 请求。
+- APP 业务服务端需在超时时间内响应此请求。
+
+## 可能触发该回调的场景
+
+- App 用户通过客户端点击与其未创建过会话用户的聊天框时和好友通过时发送通知消息时。
+- App 管理员通过 REST API 向没有聊天过的用户发送信息和添加好友通过时。
+
+## 回调发生时机
+
+- OpenIMServer 准备创建用户单聊会话之前进行回调。
+
+## 接口说明
+
+### 请求 URL 示例
+
+此处`CallbackCommand`为：`callbackBeforeCreateSingleChatConversationsCommand`
+
+```plaintext
+{WEBHOOK_ADDRESS}/callbackBeforeCreateSingleChatConversationsCommand?contenttype=json
+```
+
+### 请求包示例
+
+```json
+{
+  "callbackCommand": "callbackBeforeCreateSingleChatConversationsCommand",
+  "owner_user_id": "112345",
+  "conversation_id": "si_112345_1654321",
+  "conversation_type": 1,
+  "user_id": "1654321",
+  "recv_msg_opt": 0,
+  "is_pinned": false,
+  "is_private_chat": false,
+  "burn_duration": 0,
+  "group_at_type": 0,
+  "attached_info": "Are you OK?",
+  "ex": "RUOK"
+}
+```
+
+### 请求包字段说明
+
+| 对象             | 类型    | 描述                                                                      |
+| ---------------- | ------- | ------------------------------------------------------------------------- |
+| CallbackCommand  | string  | 回调命令，这里是创建单聊会话之前的回调的回调。                            |
+| ownerUserID      | string  | 会话的拥有者用户 ID                                                       |
+| conversationID   | string  | 会话 ID                                                                   |
+| conversationType | int     | 会话类型，1 为单聊                                                        |
+| userID           | string  | 会话用户 ID，当会话类型为 1 时，此字段生效                                |
+| recvMsgOpt       | int     | 接收消息参数，0 为接收消息；1 为不接收消息；2 为接收消息但不提醒          |
+| isPinned         | boolean | 会话是否置顶                                                              |
+| isPrivateChat    | boolean | 是否开启阅后即焚                                                          |
+| burnDuration     | int     | 阅后即焚消息持续时间                                                      |
+| groupAtType      | int     | 群会话公告强提示类型，群公告有人**@ownerUserID** , **@全体** 的特殊标识符 |
+| attachedInfo     | string  | openIM 使用的拓展字段                                                     |
+| ex               | string  | 用户使用的拓展字段                                                        |
+
+## 应答包示例
+
+### 允许创建
+
+允许用户创建单聊会话。
+
+```json
+{
+  "actionCode": 0,
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "nextCode": 0,
+  "recv_msg_opt": 0,
+  "is_pinned": false,
+  "is_private_chat": false,
+  "burn_duration": 0,
+  "group_at_type": 0,
+  "attached_info": "Are you OK?",
+  "ex": "RUOK"
+}
+```
+
+## 应答包字段说明
+
+| 字段          | 值                           | 说明                                                                                                |
+| ------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| actionCode    | 0                            | 表示业务系统的回调是否正确执行。`0`表示操作成功。                                                   |
+| errCode       | 5001                         | 表示自定义错误码，范围在 5000-9999 之间。在 actionCode 不等于 0 时设置；在 nextCode 等于 1 时设置。 |
+| errMsg        | "An error message"           | 自定义错误码对应的简单错误信息。                                                                    |
+| errDlt        | "Detailed error information" | 自定义错误码对应的详细错误信息。                                                                    |
+| nextCode      | 1                            | 下一步执行指令，`1`表示拒绝继续执行，actionCode 等于`0`时设置。                                     |
+| recvMsgOpt    | int                          | 接收消息参数，0 为接收消息；1 为不接收消息；2 为接收消息但不提醒                                    |
+| isPinned      | boolean                      | 会话是否置顶                                                                                        |
+| isPrivateChat | boolean                      | 是否开启阅后即焚                                                                                    |
+| attachedInfo  | string                       | openIM 使用的拓展字段                                                                               |
+| burnDuration  | int                          | 阅后即焚消息持续时间                                                                                |
+| groupAtType   | int                          | 群会话公告强提示类型，群公告有人**@ownerUserID** , **@全体** 的特殊标识符                           |
+| ex            | string                       | 用户使用的拓展字段                                                                                  |
