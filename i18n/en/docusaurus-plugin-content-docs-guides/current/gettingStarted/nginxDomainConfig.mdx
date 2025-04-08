@@ -1,18 +1,22 @@
 # Nginx Domain Configuration
+
 ### 1. Prerequisites
->(1) Successful startup of open-im-server and chat (configuration of minio in open-im-server needs to be changed, refer to Step 3)
 
->(2) Successful installation of Nginx (including SSL module)
+> (1) Successful startup of open-im-server and chat (configuration of minio in open-im-server needs to be changed, refer to Step 3)
 
->(3) Successful application for two SSL certificates: test-web.rentsoft.cn, test-admin.rentsoft.cn
+> (2) Successful installation of Nginx (including SSL module)
 
->(4) Ports 443 and 80 are open
+> (3) Successful application for two SSL certificates: test-web.rentsoft.cn, test-admin.rentsoft.cn
+
+> (4) Ports 443 and 80 are open
 
 ### 2. Domain Configuration Reference
+
 Taking the Nginx installation directory **/usr/local** as an example,
 create a **config.conf** file in the **/usr/local/nginx** directory, paste the following template into the **/usr/local/nginx/config.conf** file,
 and import the newly created config.conf file into the general configuration file **/usr/local/nginx/nginx.conf**
->tips: Pay attention to replacing the domain names, SSL certificate paths, and SSL keys in the domain configuration template
+
+> tips: Pay attention to replacing the domain names, SSL certificate paths, and SSL keys in the domain configuration template
 
 ```
 #open-im-server chat Corresponding deployment address and port
@@ -114,6 +118,15 @@ server {
         chunked_transfer_encoding off;
         proxy_pass http://minio_s3_2/;
     }
+
+    location ^~/im_open_rtc/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://127.0.0.1:17880;
+    }
 }
 
 # Take the domain name "test-admin.rentsoft.cn" for example
@@ -193,6 +206,7 @@ server {
 ```
 
 ### 3. Minio Configuration
+
 Open **open-im-server/config/config.yaml**, modify the corresponding Minio content, and restart open-im-server.
 
 ```yaml
@@ -209,10 +223,13 @@ signEndpoint: "https://test-web.rentsoft.cn/im-minio-api" //10005
 ```
 
 ### 4. Starting Nginx
+
 Navigate to the **/usr/local/nginx/sbin** directory and execute the following command:
+
 > ./nginx -s reload
 
 ### 5. Using the Corresponding Domain Names for Login Verification
->IM: test-web.rentsoft.cn
 
->Admin Backend: test-admin.rentsoft.cn
+> IM: test-web.rentsoft.cn
+
+> Admin Backend: test-admin.rentsoft.cn

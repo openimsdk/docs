@@ -3,9 +3,7 @@ title: '域名及SSL证书配置'
 sidebar_position: 8
 ---
 
-
-
-# 域名及SSL证书配置
+# 域名及 SSL 证书配置
 
 ## 1. 前置条件 🛠️
 
@@ -120,6 +118,16 @@ server {
         chunked_transfer_encoding off;
         proxy_pass http://minio_s3_2/;
     }
+
+    location ^~/im_open_rtc/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://127.0.0.1:17880;
+    }
+
 }
 
 #Take the domain name "admin.xx.xx" for example
@@ -200,6 +208,7 @@ server {
 ```
 
 ## 3. Minio 配置 🗄️
+
 - **源码部署**: 修改 `config/minio.yml` 文件中的 `externalAddress` 为 `"https://web.your_domain.com/im-minio-api"`.
 - **Docker 部署**: 修改 `.env` 文件中的 `MINIO_EXTERNAL_ADDRESS` 为 `"https://web.your_domain.com/im-minio-api"`.
 
@@ -209,14 +218,12 @@ server {
 
 ## 5. 登录验证 🔍
 
-- 访问IM web端：`web.your_domain.com`
+- 访问 IM web 端：`web.your_domain.com`
 - 访问管理后台：`admin.your_domain.com`
 
 ## 6. 修改客户端 SDK 初始化参数
+
 在客户端 SDK 中，配置初始化参数如下：
 
 - `apiAddr`: `https://your_domain.com/api`
 - `wsAddr`: `wss://your_domain.com/msg_gateway`
-
-
-
