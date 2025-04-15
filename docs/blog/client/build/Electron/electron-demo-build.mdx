@@ -1,5 +1,152 @@
 ---
-title: Electron Demo快速编译
-hide_title: true
+title: Electron Demo 的快速编译与启动
+hide_title: false
 sidebar_position: 1
 ---
+
+## 前言
+
+本文将带你从零开始，快速搭建并运行一个基于 OpenIMSDK 的 Electron 应用。本项目以 OpenIMSDK 开源版为基础，借助 [`@openim/electron-client-sdk`](https://www.npmjs.com/package/@openim/electron-client-sdk) 与 [`@openim/wasm-client-sdk`](https://www.npmjs.com/package/@openim/wasm-client-sdk)，能够同时构建 Web 端及桌面端（Windows、macOS、Linux）的即时通讯应用。如果你想要替换 Twilio 或 Sendbird 等第三方云通信服务，借助 OpenIMSDK 可大幅减少部署成本，完全掌握数据安全与隐私。
+
+## 1. 背景介绍
+
+OpenIMSDK 是一款开源的即时通讯 SDK，与市面上一些收费的云通信服务（如 Twilio、Sendbird）不同，OpenIMSDK 让开发者能够自行掌控服务端部署与数据，适合对安全性、可控性有较高要求的业务场景。基于 OpenIMSDK，可以轻松开发微信、Slack、Zoom 类似的即时通讯、语音视频通话等应用。
+
+import demo_preview from './assets/demo_preview.png'
+
+<p align="center">
+    <img src={demo_preview} alt="预览图" width="80%"/>
+</p>
+
+## 2. 环境准备
+
+系统要求：  
+- Windows 10 及以上  
+- macOS 10.15 及以上  
+- Linux 22.04 及以上  
+
+开发依赖：  
+- Node.js ≥ 16.x（[官网下载](https://nodejs.org) 或 [nvm](https://github.com/nvm-sh/nvm)）  
+- npm ≥ 6.x（随 Node.js 一起安装）  
+- Git（代码版本管理）
+
+请[提前部署](https://docs.openim.io/zh-Hans/guides/gettingStarted/dockerCompose)好最新版本的 **OpenIM Server**，确保本地可正常与服务端通信。
+
+## 3. 获取示例项目
+
+首先，使用 Git 拉取示例项目代码：
+
+```bash
+git clone https://github.com/openimsdk/openim-electron-demo.git
+cd openim-electron-demo
+```
+
+## 4. 安装依赖
+
+在项目根目录执行：
+
+```bash
+npm install
+```
+
+> 等待所有依赖安装完成。
+
+## 5. 配置环境变量
+
+打开项目根目录下的 .env 文件，按需修改其中的主机地址或域名配置。
+
+例如，如果你的服务器 IP 为 123.45.67.89 且没有修改过服务端端口，可以这样配置：
+
+```bash
+VITE_BASE_HOST=123.45.67.89
+
+VITE_WS_URL=ws://$VITE_BASE_HOST:10001
+VITE_API_URL=http://$VITE_BASE_HOST:10002
+VITE_CHAT_URL=http://$VITE_BASE_HOST:10008
+
+# VITE_BASE_DOMAIN=your-server-domain
+
+# VITE_WS_URL=wss://$VITE_BASE_DOMAIN/msg_gateway
+# VITE_API_URL=https://$VITE_BASE_DOMAIN/api
+# VITE_CHAT_URL=https://$VITE_BASE_DOMAIN/chat
+```
+
+> 如果你使用域名和 HTTPS（需要 nginx 配置），则取消注释带有 VITE_BASE_DOMAIN 的部分，并将 VITE_BASE_DOMAIN 修改为你的域名。同时，根据部署情况，配置正确的 wss:// 和 https:// 地址。
+
+## 6. 本地启动
+
+执行以下命令即可启动开发服务器和 Electron 应用：
+
+```bash
+npm run dev
+```
+
+> 如果你仅需要在浏览器访问，则可以在控制台看到本地服务地址（例如 http://localhost:5173）。
+> 同时，Electron 打包的桌面应用也会自动运行，方便你在桌面环境下进行调试。
+
+## 7. 音视频通话
+
+开源版 OpenIM 默认支持一对一的音视频通话功能。要使用此功能，需要在服务端安装并配置音视频服务，详情可参考[官方文档](https://github.com/openimsdk/chat/blob/main/HOW_TO_SETUP_LIVEKIT_SERVER.md)。如果你有多人音视频和视频会议需求，可以联系官方邮箱 `contact@openim.io` 获取更多支持。
+
+> **注意 ⚠️**：如果要在 Web 端调用音视频功能，需在 localhost 或 HTTPS 环境下进行，以确保满足浏览器安全策略的限制要求。
+
+## 8. 生产环境构建
+
+### 8.1 构建 Web 版本
+
+如需将 Web 版本部署到服务器，请执行：
+
+```bash
+npm run build
+```
+
+生成后的静态文件会位于 dist 目录下，然后将其上传到你的 Web 服务器或使用 nginx 等服务进行托管即可。
+
+### 8.2 构建 Electron 版本
+
+1. 将 package_electron.json 文件内容替换到 package.json，这样可以去掉仅在 Web 环境需要的依赖包，减少桌面版本应用的体积。
+2. 执行以下命令进行对应平台的打包：
+
+   • macOS：
+
+    ```bash
+    npm run build:mac
+    ```
+
+    •	Windows：
+
+    ```bash
+    npm run build:win
+    ```
+
+    •	Linux：
+
+    ```bash
+    npm run build:linux
+    ```
+
+    > **注意 ⚠️**：在 macOS 上可以打包 Windows 和 Linux 版本应用程序，但在 Windows 和 Linux系统下只能打包对应系统的应用程序。 
+
+3. 打包完成后，生成的安装包/可执行文件会位于 release 目录下。
+
+## 9. 常见问题与解决方案
+
+Q1：正式部署发布到 Web 端时，出现报错：WASM: TypeError: Failed to execute 'compile' on 'WebAssembly': Incorrect response MIME type. Expected 'application/wasm'  
+A：参考官方 [nginx配置](https://docs.openim.io/zh-hans/guides/gettingstarted/nginxdomainconfig#2-%E5%9F%9F%E5%90%8D%E9%85%8D%E7%BD%AE%E6%A8%A1%E6%9D%BF-)文件，重点在于`default_type application/wasm`。
+
+Q2：正式部署发布到 Web 端时，wasm 加载过慢怎么办？  
+A：建议采用 gzip 或其他压缩方式优化 wasm 文件的体积，同时可以将其托管至 CDN，以获得更快的加载速度。
+
+Q3：CKEditorError: ckeditor-duplicated-modules  
+A：通常是依赖冲突导致，可尝试运行 npm dedupe 整理依赖后再次启动或构建。
+
+## 10. 结语
+
+通过本篇博客的指引，你应该已经能够在本地快速运行 OpenIMSDK 的 Electron 示例项目，并且对 Web 与 Electron 两种构建方式都能有一定认识。OpenIMSDK 为你提供了灵活度与可控性，希望能为你的项目带来更安全、可靠和低成本的实时通信解决方案。
+
+如果你在使用或部署的过程中遇到问题，欢迎在 [GitHub Issues](https://github.com/openimsdk/openim-electron-demo/issues) 中与社区交流，或者直接联系官方获取更多支持。
+
+更多资源  
+• [OpenIMSDK 官网](https://www.openim.io)  
+• [OpenIMSDK 官方文档](https://docs.openim.io)  
+• [GitHub 仓库](https://github.com/openimsdk)
