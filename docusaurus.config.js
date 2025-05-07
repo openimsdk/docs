@@ -197,7 +197,7 @@ const config = {
               },
               {
                 label: 'Contact Us',
-                href: 'mailto:service@open-im.com',
+                href: 'mailto:contact@openim.io',
               },
             ],
           },
