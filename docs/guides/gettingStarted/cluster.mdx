@@ -5,7 +5,6 @@ sidebar_position: 5
 
 
 
-
 ## open-im-server 源码集群部署指南
 
 本指南将指导您在两台机器（A 和 B，内网 IP 分别为 `IP_A` 和 `IP_B`）上集群部署 `open-im-server` 和 `nginx`，并在机器 A 上部署监控组件（Prometheus、Grafana、Alertmanager）。
@@ -193,6 +192,180 @@ mage start
 - `apiAddr`: `https://your_domain.com/api`
 - `wsAddr`: `wss://your_domain.com/msg_gateway`
 
+## Chat源码集群部署指南
+
+本部分将指导您在两台机器（A 和 B，内网 IP 分别为 `IP_A` 和 `IP_B`）上集群部署 `chat` 和 `nginx`，。
+此文档中假设您已部署 Redis 集群、MongoDB 分片集群及 Etcd 集群，具体地址如下：
+
+- **Redis 集群地址**: `redisAddr1`, `redisAddr2`, `redisAddr3`
+- **MongoDB 集群地址**: `mongoAddr1`, `mongoAddr2`, `mongoAddr3`
+- **Etcd 集群地址**: `etcdAddr1`, `etcdAddr2`, `etcdAddr3`
+
+本文假设以上组件都部署在三台机器上，实际上不限于三台，**您可根据需求自行选择多台或者一台**。
+
+A 和 B 两台机器以及组件集群内网互通，且A、B两台机器都有外网IP。
+
+### 目录结构
+
+1. [前提条件](#前提条件)
+2. [克隆仓库](#1-克隆仓库)
+3. [配置修改](#2-配置修改)
+4. [配置 nginx](#3-配置-nginx)
+5. [启动服务](#5-启动服务)
+
+### 前提条件
+
+确保以下组件已正确部署并运行：
+
+- **Redis 集群**
+- **MongoDB 分片集群**
+- **Etcd 集群**
+- **MinIO 服务**
+
+### 1. 克隆仓库
+
+在两台机器（A 和 B）上分别执行以下命令以克隆 `chat` 仓库：
+
+```bash
+git clone https://github.com/openimsdk/chat
+cd chat
+```
+
+### 2. 配置修改
+
+在机器 A 和 B 上，按照以下步骤修改配置文件，确保各组件正确连接。所有地址字段均采用单行列表格式 `address: [addr1, addr2, addr3]`。
+
+#### 2.1 MongoDB 配置
+
+编辑 `chat/config/mongodb.yml` 文件，设置 `address` 字段为 MongoDB 集群地址列表：
+
+```yaml
+address: [mongoAddr1, mongoAddr2, mongoAddr3]
+```
+
+#### 2.2 Etcd 配置
+
+编辑 `open-im-server/config/discovery.yml` 文件，设置 `etcd.address` 字段为 Etcd 集群地址列表：
+
+```yaml
+etcd:
+  address: [etcdAddr1, etcdAddr2, etcdAddr3]
+```
+
+#### 2.3 Redis 配置
+
+编辑 `open-im-server/config/redis.yml` 文件，设置 `address` 字段为 Redis 集群地址列表，并启用集群模式：
+
+```yaml
+address: [redisAddr1, redisAddr2, redisAddr3]
+clusterMode: true
+```
+
+### 3. 配置 nginx
+
+在机器 A 、B上部署 `nginx`，参考以下配置。请确保替换为您的实际域名、SSL 证书路径和 SSL 密钥路径。
+
+> 🚀 **提示**: 确保替换成您的实际域名、SSL 证书路径和 SSL 密钥。
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream chat_admin_api {
+        # Chat Admin API (管理员模块api) 服务器地址，可根据部署情况指定多个
+        server IP_A:10009;
+        server IP_B:10009;
+    }
+    
+    upstream chat_chat_api {
+        # Chat Chat API (chat服务模块) 服务器地址，可根据部署情况指定多个
+        server IP_A:10008;
+        server IP_B:10008;
+    }
+    
+    upstream chat_bot_api {
+        # Chat Bot API (智能体模块) 服务器地址，可根据部署情况指定0个或多个
+        server IP_A:10010;
+        server IP_B:10010;
+    }
+
+    server {
+        listen       443 ssl;
+        server_name  your_chat_domain.com;  # 替换为您的域名
+
+        ssl_certificate     /usr/local/nginx/conf/ssl/your_domain_bundle.pem;  # 替换为您的证书路径
+        ssl_certificate_key /usr/local/nginx/conf/ssl/your_domain.key;        # 替换为您的证书密钥路径
+
+        location ^~/chat_admin_api/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Request-Api $scheme://$host/api;
+            proxy_pass http://chat_admin_api/;
+        }
+
+        location ^~/chat_chat_api/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Request-Api $scheme://$host/api;
+            proxy_pass http://chat_chat_api/;
+        }
+        
+        location ^~/chat_bot_api/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Request-Api $scheme://$host/api;
+            proxy_pass http://chat_bot_api/;
+        }
+    }
+
+    # 可选: HTTP 重定向到 HTTPS
+    server {
+        listen 80;
+        server_name your_chat_domain.com;  # 替换为您的域名
+
+        return 301 https://$host$request_uri;
+    }
+}
+```
+
+将此配置添加到 `nginx` 的配置文件中， 并reload使配置生效：
+
+### 4. 设置 DNS
+
+将您的域名 `your_chat_domain.com` 指向机器A、B的外网 IP 地址。
+
+### 5. 启动服务
+
+在两台机器（A 和 B）的 `chat` 目录下执行以下命令以编译和启动服务：
+
+中国境内建议设置go代理
+```
+$ go env -w GO111MODULE=on
+$ go env -w GOPROXY=https://goproxy.cn,direct
+```
+
+#### 5.1 编译
+
+```bash
+mage
+```
+
+#### 5.2 启动服务
+
+```bash
+mage start
+```
 
 
 
