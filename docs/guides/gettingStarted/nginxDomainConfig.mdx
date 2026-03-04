@@ -1,16 +1,16 @@
 ---
-title: '域名及SSL证书配置'
-sidebar_position: 8
+title: '域名配置'
+sidebar_position: 7
 ---
 
 # 域名及 SSL 证书配置
 
 ## 1. 前置条件 🛠️
 
-- **open-im-server** 和 **chat** 成功启动。
+- **IMServer** 成功启动。
 - **Nginx** 已成功安装，包括 SSL 模块。
-- 成功申请两个域名及其 SSL 证书，例如：`web.your_domain.com` (用于 IM 服务端及 Web 端)， `admin.your_domain.com`（用于管理后台）。
-- 开放 443 和 80 端口。
+- 申请域名（或子域名）及 SSL 证书，例如：`im.yourhost.com` ，用于 IMServer。
+- 开放 443端口。
 
 ## 2. 域名配置模板 📝
 
@@ -18,7 +18,6 @@ sidebar_position: 8
 
 ```nginx
 
-#open-im-server chat Corresponding deployment address and port
 upstream msg_gateway{
     #IM Message server address Multiple can be specified according to the deployment
     server 127.0.0.1:10001;
@@ -27,37 +26,21 @@ upstream im_api{
     #IM Group user api server address Multiple can be specified according to the deployment
     server 127.0.0.1:10002;
 }
-upstream im_chat_api{
-    #IM Business version login registration server address Multiple can be specified according to the deployment
-    server 127.0.0.1:10008;
-}
-upstream im_admin_api{
-    #IM The admin address of the commercial version can specify multiple units according to the deployment situation
-    server 127.0.0.1:10009;
-}
+
 upstream minio_s3_2{
     #Minio address can be assigned to multiple modules dependingon deployment
     server 127.0.0.1:10005;
 }
-upstream pc_web{
-    #PC web address can be validate
-    server 127.0.0.1:11001;
-}
-upstream openim_admin{
-    #Admin backend address can be used for validation
-    server 127.0.0.1:11002;
-}
 
 
-# Take the domain name "web.xx.xx" for example
 server {
     listen       443; #Listening on port 443
-    server_name  web.xx.xx;  #Your domain name
+    server_name  im.yourhost.com;  #Your domain
     ssl on;
     #Path of pem file for ssl certificate
-    ssl_certificate /usr/local/nginx/conf/ssh/web.your_domain.com_bundle.pem;
+    ssl_certificate /usr/local/nginx/conf/ssh/im.yourhost.com_bundle.pem;
     #Key file path of ssl certificate
-    ssl_certificate_key /usr/local/nginx/conf/ssh/web.your_domain.com.key;
+    ssl_certificate_key /usr/local/nginx/conf/ssh/im.yourhost.com.key;
 
     gzip on;
     gzip_min_length 1k;
@@ -69,14 +52,6 @@ server {
 
     default_type application/wasm;
 
-    location / {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://pc_web/;
-    }
 
     location /msg_gateway{
         proxy_http_version 1.1;
@@ -97,14 +72,7 @@ server {
         proxy_pass http://im_api/;
     }
 
-    location ^~/chat/{
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://im_chat_api/;
-    }
+
 
     location ^~/im-minio-api/ {
         proxy_set_header Host $http_host;
@@ -119,111 +87,27 @@ server {
         proxy_pass http://minio_s3_2/;
     }
 
-    location ^~/im_open_rtc/ {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://127.0.0.1:17880;
-    }
+
 
 }
 
-#Take the domain name "admin.xx.xx" for example
-server {
-    listen       443; #listening port
-    server_name  admin.your_domain.com; #Your domain server_name
-    ssl on;
-    #Path of pem file for ssl certificate
-    ssl_certificate /usr/local/nginx/conf/ssh/admin.your_domain.com_bundle.pem;
-    #Key file path of ssl certificate
-    ssl_certificate_key /usr/local/nginx/conf/ssh/admin.your_domain.com.key;
 
 
-    gzip on;
-    gzip_min_length 1k;
-    gzip_buffers 4 16k;
-    gzip_comp_level 2;
-    gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
-    gzip_vary off;
-    gzip_disable "MSIE [1-6]\.";
-
-    default_type application/wasm;
-
-    location / {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://openim_admin/;
-
-    }
-
-    location /msg_gateway{
-    proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://msg_gateway/;
-    }
-
-    location ^~/api/{
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_set_header X-Request-Api $scheme://$host/api;
-        proxy_pass http://im_api/;
-    }
-
-    location ^~/chat/{
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://im_chat_api/;
-    }
-
-    location ^~/complete_admin/{
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header X-real-ip $remote_addr;
-        proxy_set_header X-Forwarded-For $remote_addr;
-        proxy_pass http://im_admin_api/;
-    }
-}
-
-#Redirection from HTTP to HTTPS redirection
-server {
-    listen 80;
-    server_name web.your_domain.com;
-    rewrite ^(.*)$ https://$host$1 permanent;
-}
 ```
 
 ## 3. Minio 配置 🗄️
 
-- **源码部署**: 修改 `config/minio.yml` 文件中的 `externalAddress` 为 `"https://web.your_domain.com/im-minio-api"`.
-- **Docker 部署**: 修改 `.env` 文件中的 `MINIO_EXTERNAL_ADDRESS` 为 `"https://web.your_domain.com/im-minio-api"`.
+- **源码部署**: 修改 `config/minio.yml` 文件中的 `externalAddress`值为 `"https://im.yourhost.com/im-minio-api"`.
+- **Docker部署**: 修改 `.env` 文件中的 `MINIO_EXTERNAL_ADDRESS` 值为 `"https://im.yourhost.com/im-minio-api"`.
 
 ## 4. 启动 Nginx 🚀
 
-执行命令 `nginx -s reload` 以重载 Nginx 配置，启用新的域名设置。
+执行命令 `nginx -s reload` 以重载 Nginx 配置。
 
-## 5. 登录验证 🔍
 
-- 访问 IM web 端：`web.your_domain.com`
-- 访问管理后台：`admin.your_domain.com`
-
-## 6. 修改客户端 SDK 初始化参数
+## 5. 修改客户端 SDK 初始化参数
 
 在客户端 SDK 中，配置初始化参数如下：
 
-- `apiAddr`: `https://your_domain.com/api`
-- `wsAddr`: `wss://your_domain.com/msg_gateway`
+- `apiAddr`: `https://im.yourhost.com/api`
+- `wsAddr`: `wss://im.yourhost.com/msg_gateway`
