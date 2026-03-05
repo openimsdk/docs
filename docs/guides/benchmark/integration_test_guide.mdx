@@ -1,0 +1,169 @@
+---
+title: 'integration_test 使用说明（可靠性/时延）'
+hide_title: true
+sidebar_position: 2
+---
+
+# integration_test 使用说明（可靠性/时延）
+
+integration_test 用于模拟一组 SDK 客户端完成注册、登录、好友关系、建群、发消息与校验等完整链路，适合用于统计：
+
+- 消息投递可靠性（消息必达）
+- 端到端时延（从发送端发出到接收端收到并入库）
+- 一致性/正确性校验（群数、会话数、消息数、未读数等）
+
+程序路径：`open-im-sdk-core-enterprise/integration_test/`
+
+---
+
+## 压测前准备
+
+### 服务端与客户端数据清理
+
+每次运行前，建议保证服务端与客户端初始数据为空或可控，否则会影响会话数量、消息数量、未读数等校验结果。
+
+- 服务端：清理数据库数据并重启，包括mongo/kafka/redis（默认保存在open-im-server/components/下面）。
+- 客户端：清理本地数据目录（默认 `integration_test/data`，`data` 目录需手动创建）。
+
+### 建议部署方式
+
+- 推荐将测试程序 A 部署在内存文件系统（例如 `/dev/shm`）上，减少磁盘读写开销。
+- 测试程序与服务端尽量使用内网连接，减少网络抖动对结果的影响。
+
+---
+
+## 参数说明
+
+| 参数 | 含义 | 类型 |
+| --- | --- | --- |
+| `test` | SDK 是否运行测试模式（测试模式对大量消息更高容忍度） | bool |
+| `u` | 用户数量 | int |
+| `su` | 拥有所有好友的用户数量 | int |
+| `lg` | 大群数量 | int |
+| `lgm` | 大群人数 | int |
+| `cg` | 每个人创建的常规群聊数量 | int |
+| `cgm` | 常规群人数 | int |
+| `sm` | 每人发送的私聊消息数量 | int |
+| `gm` | 每人发送的群聊消息数量 | int |
+| `msgitv` | 发送消息间隔（单位 ms），群聊与单聊分别计算间隔 | int |
+| `reg` | 是否注册 | bool |
+| `imf` | 是否导入好友 | bool |
+| `crg` | 是否创建群组 | bool |
+| `sem` | 是否发送消息 | bool |
+| `ckgn` | 是否检查群组数量 | bool |
+| `ckcon` | 是否检查会话数量 | bool |
+| `ckmsn` | 是否检查消息数量 | bool |
+| `ckuni` | 是否模拟卸载和重新安装并再次检查 | bool |
+| `lgr` | 登录用户比例/登录率 | float |
+
+---
+
+## 示例命令
+
+```bash
+go run main.go \
+  -test \
+  -u 10 -su 3 -lg 2 -cg 4 -cgm 5 \
+  -sm 6 -gm 7 -msgitv 1000 \
+  -reg -lgr 0.7 -imf -crg -ckgn -ckcon -sem -ckmsn -ckuni
+```
+
+---
+
+## 配置文件说明
+
+配置文件位于 `internal/config/`，基础配置文件为 `config.go`。文档中的配置示例如下：
+
+```go
+TestIP              = "127.0.0.1"  // ip 地址
+APIAddr             = "http://" + TestIP + ":10002"
+WsAddr              = "ws://" + TestIP + ":10001"
+AdminUserID         = "imAdmin"    // 服务端管理员ID
+Secret              = "openIM123"  // 服务端管理员密码
+PlatformID          = constant.WindowsPlatformID // 模拟的登录平台类型
+LogLevel            = 3  // 日志级别
+DataDir             = "./data/"  // 数据文件路径
+LogFilePath         = "./logs/"  // 日志文件路径
+IsLogStandardOutput = false    // 是否在控制台输出日志，建议 false
+```
+
+---
+
+## 模拟操作与检测逻辑
+
+integration_test 的核心操作分为两类：
+
+- 模拟操作：注册、登录、导入好友、建群、发消息、卸载重装等。
+- 检测操作：对登录数、好友数、群数、会话数、消息数、未读数等进行校验，确保异步操作已完成且结果符合预期。
+
+---
+
+## 注意事项（关键）
+
+大规模压测时，常见问题不是服务端扛不住，而是测试程序自身（大量 SDK 实例）因超时、管道阻塞、日志 IO 等因素出现误报。以下调整用于提升压测稳定性，避免“客户端压力”干扰你对服务端能力的判断。
+
+### 1）修改请求超时时间
+
+- 位置：`openim-sdk-core/pkg/network/http_client.go`
+- 修改方式：搜索 `Timeout`，将默认超时适当延长。
+- 原因：大量 SDK 并发发起请求会对客户端侧造成压力，超时多为客户端拥塞导致；适当延长可减少误报。
+
+### 2）修改 SDK 异步管道超时时间
+
+- 位置：`openim-sdk-core/pkg/common/trigger_channel.go`
+- 修改方式：找到 `const timeout`，将管道超时时间适当调大。
+- 原因：大量 SDK 同时接收/处理服务端数据时，异步队列与回调容易拥塞；调大超时可降低误报。
+
+### 3）修改服务端通知超时时间
+
+- 位置：`open-im-server/pkg/notification/msg.go`
+- 修改方式：搜索 `WithTimeout`，适当调大 `context` 超时时间。
+- 原因：客户端与服务端部署在同一台机器时，资源争用会放大超时概率；适当放宽超时可提升稳定性。
+
+### 4）降低服务端日志级别
+
+- 位置：`open-im-server/config/log.yml`
+- 修改方式：将 `remainLogLevel` 设置为 3。
+- 原因：debug 级日志会带来较大 IO 与 CPU 组装开销，影响压测结果与稳定性。
+
+### 5）通知消息未读状态（用于未读数统计口径一致）
+
+- 位置：`open-im-server/config/notification.yml`
+- 修改方式：将 `groupCreated` 与 `friendApplicationApproved` 的 `unreadCount` 设置为 `true`。
+- 原因：确保在线用户收到群创建/好友申请通过通知时仍计入未读，便于后续未读数校验。
+
+### 6）服务端最大连接数量（FD）
+
+- 位置：`open-im-server/start-config.yml`
+- 修改方式：根据需要登录的用户数量，将 `maxFileDescriptors` 适当调大。
+- 原因：保证服务端可接受足够多的长连接。
+
+### 7）客户端动态端口范围
+
+- 场景：运行测试程序 B 的客户端压测机（长连接数量大时必须调整）
+- 当前会话生效：
+
+```sh
+sudo sysctl -w net.ipv4.ip_local_port_range="10000 65000"
+```
+
+- 永久生效：
+
+```sh
+# 1) 写入（追加）到 /etc/sysctl.conf
+sudo bash -c 'echo "net.ipv4.ip_local_port_range = 10000 65000" >> /etc/sysctl.conf'
+
+# 2) 立刻生效
+sudo sysctl -p
+
+# 3) 验证
+cat /proc/sys/net/ipv4/ip_local_port_range
+```
+
+- 原因：保证有足够的动态端口数模拟海量长连接。
+
+### 8）打开全量在线缓存
+
+- 位置：`open-im-server/config/openim-push.yml`
+- 修改方式：将 `fullUserCache` 设置为 `true`。
+- 原因：该功能会占用更多内存，但能提高运行效率。
