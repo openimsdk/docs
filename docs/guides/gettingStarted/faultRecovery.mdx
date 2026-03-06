@@ -37,13 +37,13 @@ crontab -l
 
 ## 二、异常测试范围与执行方法
 
-### 1. 测试范围（单机微服务）
+### 1. 测试范围
 
 - 外部组件：`MongoDB` `Redis` `Kafka` `Etcd` `MinIO`
 - OpenIMServer 服务：`openim-api` `openim-msggateway` `openim-rpc-*` `openim-msgtransfer` `openim-push` `openim-crontask`
 - ChatServer 服务：`chat-api` `chat-rpc` `admin-api` `admin-rpc` `bot-api` `bot-rpc`
 
-### 2. 标准执行步骤（每个用例都按此流程）
+### 2. 标准执行步骤
 
 1. 记录基线：`mage check`、核心接口探针、关键日志状态。
 2. 故障注入：停组件或 kill 单个服务。
@@ -84,7 +84,7 @@ curl -sS -X POST "http://127.0.0.1:10008/application/latest_version" \
   -d '{}'
 ```
 
-## 三、异常测试方案（影响与恢复矩阵）
+## 三、异常测试方案
 
 ### 1. 外部组件故障
 
@@ -118,7 +118,7 @@ curl -sS -X POST "http://127.0.0.1:10008/application/latest_version" \
 | CHAT-04 | `admin-rpc` | `pkill -f admin-rpc` | 管理后台业务失败 | 是 | 同上 |
 | CHAT-05 | `bot-api`/`bot-rpc` | `pkill -f bot-api` / `pkill -f bot-rpc` | Bot 相关能力失败 | 是（主链路可继续） | 同上 |
 
-## 四、组件异常停止处理（恢复 Runbook）
+## 四、组件异常停止处理
 
 ### 1. 通用恢复顺序
 
@@ -137,13 +137,6 @@ docker compose up -d mongodb redis kafka etcd minio
 ```bash
 docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'mongo|redis|kafka|etcd|minio'
 ```
-
-### 2.1 实测补充（2026-03-06，`/root/test`）
-
-1. Chat 相关 API 探针必须带 `operationID` 请求头，否则会返回参数错误。
-2. Redis 恢复后，OpenIM 不一定自动恢复，需要执行 OpenIM 全量重启。
-3. Etcd 宕机时，已运行实例可短时可用；但在服务重启阶段会失败，需先恢复 Etcd。
-4. Chat 单服务拉起（如 `mage start chat-api`、`mage start admin-api`）在异常场景下可能导致其他 Chat 进程缺失，故障恢复优先采用 Chat 全量重启。
 
 ### 3. OpenIMServer 恢复
 
@@ -165,7 +158,7 @@ mage start
 mage check
 ```
 
-### 5. MongoDB 数据恢复（需要时）
+### 5. MongoDB 数据恢复
 
 ```bash
 docker exec -it mongo mongorestore \
@@ -179,25 +172,7 @@ docker exec -it mongo mongorestore \
 2. 若源数据盘与备份盘同时损坏，无法直接恢复，只能依赖云厂商快照或其他离线备份。
 3. MongoDB 恢复到历史备份点后，备份时间点之后的数据会丢失。
 4. 删除 Redis 数据可能导致未读数、会话状态等短期不一致。
-
-## 六、完整异常测试报告模板
-
-每个用例必须记录以下字段。
-
-| 字段 | 内容 |
-| --- | --- |
-| 用例ID | 例如 `EXT-01` |
-| 测试日期 | YYYY-MM-DD HH:mm |
-| 测试环境 | 服务器规格、版本、部署方式 |
-| 故障注入对象 | 组件或服务名 |
-| 注入命令 | 实际执行命令 |
-| 注入开始时间 | 时间戳 |
-| 业务影响现象 | 用户可见现象与接口报错 |
-| 影响范围 | OpenIMClientSDK、APP 业务服务器、APP 管理员后台 |
-| 恢复动作 | 实际执行步骤 |
-| 恢复完成时间 | 时间戳 |
-| MTTR | 恢复耗时 |
-| 数据影响 | 是否丢消息/丢数据/状态不一致 |
-| 验收结果 | 通过/不通过 |
-| 根因分析 | 简述根因 |
-| 改进项 | 监控、告警、配置、流程优化 |
+5. Chat 相关 API 探针必须带 `operationID` 请求头，否则会返回参数错误。
+6. Redis 恢复后，OpenIM 不一定自动恢复，可能需要执行 OpenIM 全量重启（`mage stop && mage start`）。
+7. Etcd 宕机时，已运行实例可短时可用；但在服务重启阶段可能失败，需先恢复 Etcd。
+8. Chat 单服务拉起（如 `mage start chat-api`、`mage start admin-api`）在异常场景下可能导致其他 Chat 进程缺失，故障恢复优先采用 Chat 全量重启。
