@@ -7,7 +7,7 @@ const code_themes = {
 const meta = {
   title: 'OpenIM Docs',
   tagline: 'Instant messaging SDKs, ready to launch 🚀',
-  url: 'https://doc.rentsoft.cn',
+  url: 'https://docs.openim.io',
   baseUrl: '/',
   favicon: '/favicon.ico',
   i18n: {
