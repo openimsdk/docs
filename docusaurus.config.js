@@ -242,9 +242,9 @@ const config = {
         ],
       },
       algolia: {
-        appId: 'NRY7H605ZD',
-        apiKey: '0521a959a3cf5eccb1347a65129dc3b4',
-        indexName: 'rentsoft',
+        appId: 'J7HMRSX31W',
+        apiKey: 'a73e05e0f76cd0aef949aea962ada224',
+        indexName: 'OpenIM Docs',
         contextualSearch: true,
         searchParameters: {},
       },
