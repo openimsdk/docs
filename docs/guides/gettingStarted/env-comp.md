@@ -5,10 +5,6 @@ sidebar_position: 1
 
 # 🧩 平台及组件要求
 
-适用于 `docs/guides/gettingStarted` 下的 OpenIMServer、ChatServer 部署文档。
-
----
-
 ## 一、名词约定
 
 - **OpenIMSDK**：项目统称，包含 OpenIMClientSDK 与 OpenIMServer。
@@ -37,12 +33,12 @@ sidebar_position: 1
 
 ## 四、外部组件要求
 
-| 组件 | 建议版本 | OpenIMServer 支持模式                 | ChatServer 接入方式 | 支持云服务 / 备注 |
-| --- | --- |-----------------------------------| --- | --- |
-| MongoDB | `v7.0` | `standalone`、`replicaSet`、`sharded` | `address` 或 `uri` | 支持；如接副本集或分片集群，建议优先使用 `uri` |
-| Redis | `v7.0.0` | `standalone`、`cluster`、`sentinel` | `standalone`、`clusterMode` | 支持；`sentinel` 仅在 OpenIMServer 配置层有显式支持 |
-| Etcd | `v3.5.13` | 单机、多节点集群                          | 多地址接入 | 不支持云服务 |
-| Kafka | `v3.5.1` | 单机、分布式集群                          | 不直接依赖 | 支持；需按文档预建 topic |
-| MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机                                | 不直接依赖 | 可替换为 S3 兼容存储（`COS`、`OSS`、`Kodo`、`AWS S3`） |
+| 组件 | 建议版本 | 支持模式                | 支持云服务 / 备注                                      |
+| --- | --- |----------------------------------- |-------------------------------------------------|
+| MongoDB | `v7.0` | `standalone`、`replicaSet`、`sharded` | 支持；如接副本集或分片集群，建议优先使用 `uri`                      |
+| Redis | `v7.0.0` | `standalone`、`cluster`、`sentinel`  | 支持          |
+| Etcd | `v3.5.13` | 单机、多节点集群                        | 不支持云服务                                          |
+| Kafka | `v3.5.1` | 单机、分布式集群                           | 支持；需按文档预建 topic                                 |
+| MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机                             | 可替换为 S3 兼容存储（`COS`、`OSS`、`Kodo`(社区维护)、`AWS S3`） |
 
 ---

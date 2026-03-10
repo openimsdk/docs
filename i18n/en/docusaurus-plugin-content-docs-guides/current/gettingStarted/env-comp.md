@@ -5,10 +5,6 @@ sidebar_position: 1
 
 # 🧩 Platform & Component Requirements
 
-Applies to the OpenIMServer and ChatServer deployment documents under `docs/guides/gettingStarted`.
-
----
-
 ## 1. Terminology
 
 - **OpenIMSDK**: The overall project name, including OpenIMClientSDK and OpenIMServer.
@@ -37,12 +33,12 @@ Applies to the OpenIMServer and ChatServer deployment documents under `docs/guid
 
 ## 4. External Component Requirements
 
-| Component | Recommended Version | Supported Modes in OpenIMServer | ChatServer Access Mode | Cloud Support / Notes |
-| --- | --- | --- | --- | --- |
-| MongoDB | `v7.0` | `standalone`, `replicaSet` | `address` or `uri` | Supported; for replica sets or sharded clusters, `uri` is preferred |
-| Redis | `v7.0.0` | `standalone`, `cluster`, `sentinel` | `standalone`, `clusterMode` | Supported; `sentinel` is explicitly supported only in OpenIMServer config |
-| Etcd | `v3.5.13` | Single node, multi-node cluster | Multi-address access | No managed cloud support |
-| Kafka | `v3.5.1` | Single node, distributed cluster | Not directly used by ChatServer | Supported; required topics must be created in advance |
-| MinIO | `RELEASE.2024-01-11T07-46-16Z` | Single node | Not directly used by ChatServer | Can be replaced with S3-compatible storage such as `COS`, `OSS`, `Kodo`, or `AWS S3` |
+| Component | Recommended Version | Supported Modes | Cloud Support / Notes |
+| --- | --- | --- | --- |
+| MongoDB | `v7.0` | `standalone`, `replicaSet`, `sharded` | Supported; for replica sets or sharded clusters, `uri` is preferred |
+| Redis | `v7.0.0` | `standalone`, `cluster`, `sentinel` | Supported |
+| Etcd | `v3.5.13` | Single node, multi-node cluster | No managed cloud support |
+| Kafka | `v3.5.1` | Single node, distributed cluster | Supported; create the required topics in advance according to the docs |
+| MinIO | `RELEASE.2024-01-11T07-46-16Z` | Single node | Can be replaced with S3-compatible storage such as `COS`, `OSS`, `Kodo` (community-maintained), or `AWS S3` |
 
 ---

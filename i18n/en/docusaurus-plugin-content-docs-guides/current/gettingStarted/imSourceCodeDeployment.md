@@ -176,40 +176,7 @@ For `openim-msggateway` and `openim-api`:
 
 ## 9. Monitoring & Alerting (Optional)
 
-### 9.1 Components
-
-- `Prometheus`: collects Prometheus metrics exposed by OpenIMServer
-- `Alertmanager`: routes and notifies alerts triggered by rules
-- `Grafana`: displays dashboards
-- `node-exporter`: collects host CPU, memory, disk, and network metrics
-
-### 9.2 How to Start
-
-Run the following in the `open-im-server` directory:
-
-```bash
-docker compose --profile m up -d
-```
-
-### 9.3 Key Configuration Files
-
-- `config/prometheus.yml`: Prometheus scrape configuration
-- `config/instance-down-rules.yml`: instance-down alert rules
-- `config/alertmanager.yml`: Alertmanager routing configuration
-- `config/email.tmpl`: email alert template
-
-### 9.4 Default Ports
-
-- `19091`: Prometheus
-- `19093`: Alertmanager
-- `13000`: Grafana
-- `19100`: node-exporter
-
-### 9.5 Recommendations
-
-- Make sure OpenIMServer is already running and `10002` is reachable before starting the monitoring stack.
-- If email alerts are required, complete the recipient and SMTP settings in `config/alertmanager.yml` first.
-- If ChatServer also needs to be included in monitoring, extend the existing Prometheus setup accordingly.
+WIP
 
 ## 10. Important Guidance
 

@@ -176,40 +176,7 @@ mage
 
 ## 九、监控告警（可选）
 
-### 9.1 组件组成
-
-- `Prometheus`：采集 OpenIMServer 暴露的 Prometheus 指标。
-- `Alertmanager`：处理规则命中后的告警路由与通知。
-- `Grafana`：展示仪表盘。
-- `node-exporter`：采集主机 CPU、内存、磁盘、网络等资源指标。
-
-### 9.2 启动方式
-
-在 `open-im-server` 目录执行：
-
-```bash
-docker compose --profile m up -d
-```
-
-### 9.3 关键配置文件
-
-- `config/prometheus.yml`：Prometheus 抓取配置
-- `config/instance-down-rules.yml`：实例存活告警规则
-- `config/alertmanager.yml`：Alertmanager 路由配置
-- `config/email.tmpl`：邮件告警模板
-
-### 9.4 默认端口
-
-- `19091`：Prometheus
-- `19093`：Alertmanager
-- `13000`：Grafana
-- `19100`：node-exporter
-
-### 9.5 使用建议
-
-- 先确保 OpenIMServer 已正常启动并能访问 `10002`，再启动监控栈。
-- 如需邮件告警，请先补齐 `config/alertmanager.yml` 中的收件人与 SMTP 信息。
-- ChatServer 需要统一纳入监控时，建议沿用现有 Prometheus 体系继续扩展抓取配置。
+待补充
 
 ## 十、重要指引
 
