@@ -1,0 +1,203 @@
+---
+title: '异常处理及数据恢复'
+sidebar_position: 8
+slug: /gettingStarted/production
+---
+
+# 异常处理及数据恢复
+
+在生产环境中，通常会采用集群部署来保证组件和服务的高可用性。然而，在资源有限的情况下，也可能采用单机部署（源码部署或 Docker 部署）。
+
+## 一、mongo 定时数据备份
+
+OpenIMServer 核心数据存储在 MongoDB 中，因此备份 MongoDB 数据可以恢复大部分业务数据。
+
+### 1. 修改备份目录
+
+- 在 `.env` 中修改 `MONGO_BACKUP_DIR`（默认 `components/backup/mongo/`）。
+- 建议将备份目录放在与 `components` 不同的磁盘，避免同盘故障导致源数据与备份同时损坏。
+
+### 2. 配置定时备份
+
+```bash
+crontab -e
+```
+
+添加示例任务（每天 2 点备份，保留最近 2 份）：
+
+```bash
+0 2 * * * docker exec mongo mongodump --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" --out="/data/backup/$(expr $(date +\%s) / 86400 \% 2)"
+```
+
+检查是否生效：
+
+```bash
+crontab -l
+```
+
+## 二、异常测试范围与执行方法
+
+### 1. 测试范围（单机微服务）
+
+- 外部组件：`MongoDB` `Redis` `Kafka` `Etcd` `MinIO`
+- OpenIMServer 服务：`openim-api` `openim-msggateway` `openim-rpc-*` `openim-msgtransfer` `openim-push` `openim-crontask`
+- ChatServer 服务：`chat-api` `chat-rpc` `admin-api` `admin-rpc` `bot-api` `bot-rpc`
+
+### 2. 标准执行步骤（每个用例都按此流程）
+
+1. 记录基线：`mage check`、核心接口探针、关键日志状态。
+2. 故障注入：停组件或 kill 单个服务。
+3. 影响观察：记录“完全不可用 / 部分可用 / 可用但退化”。
+4. 执行恢复：重启组件或服务，必要时恢复数据。
+5. 验收复测：探针恢复、链路恢复、日志无持续报错。
+
+### 3. 测试前基线命令
+
+```bash
+# OpenIMServer
+cd /path/to/open-im-server
+mage check
+
+# ChatServer
+cd /path/to/chat
+mage check
+```
+
+```bash
+# 外部组件（docker compose 部署时）
+docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'mongo|redis|kafka|etcd|minio'
+```
+
+```bash
+# OpenIMServer 鉴权探针
+curl -sS -X POST "http://127.0.0.1:10002/auth/get_admin_token" \
+  -H "Content-Type: application/json" \
+  -H "operationID: fault-baseline" \
+  -d '{"secret":"your_openim_secret","userID":"imAdmin"}'
+```
+
+```bash
+# ChatServer 业务探针
+curl -sS -X POST "http://127.0.0.1:10008/application/latest_version" \
+  -H "Content-Type: application/json" \
+  -H "operationID: fault-baseline-chat" \
+  -d '{}'
+```
+
+## 三、异常测试方案（影响与恢复矩阵）
+
+### 1. 外部组件故障
+
+| 用例ID | 注入对象 | 注入方式（示例） | 主要影响 | 是否可部分服务 | 修复动作 |
+| --- | --- | --- | --- | --- | --- |
+| EXT-01 | MongoDB | `docker stop mongo` | 注册/登录、历史消息与业务数据读写异常 | 否（核心数据链路受阻） | `docker start mongo`，必要时执行备份恢复 |
+| EXT-02 | Redis | `docker stop redis` | OpenIM 鉴权链路报 `auth-rpc-service down` | 是（部分接口仍可返回） | `docker start redis` 后通常还需执行 OpenIM `mage stop && mage start` |
+| EXT-03 | Kafka | `docker stop kafka` | 消息转发与推送链路受阻，可能积压 | 是（非消息链路可部分可用） | `docker start kafka`，核查 topic 消费恢复 |
+| EXT-04 | Etcd | `docker stop etcd` | 运行中实例短时可用；`mage start` 阶段会卡在组件检查/服务注册 | 是（短时） | 先 `docker start etcd`，再执行 OpenIM/Chat 全量重启与复检 |
+| EXT-05 | MinIO | `docker stop minio` | 图片/文件上传下载失败 | 是（文本消息通常可用） | `docker start minio`，检查 `externalAddress` |
+
+### 2. OpenIMServer 单服务故障
+
+| 用例ID | 注入对象 | 注入方式（示例） | 主要影响 | 是否可部分服务 | 修复动作 |
+| --- | --- | --- | --- | --- | --- |
+| IM-01 | `openim-api` | `pkill -f openim-api` | REST API 不可用，Chat 对 OpenIM 调用失败 | 否 | 实测单独 `mage start openim-api` 不足以恢复完整链路，建议 `mage stop && mage start` |
+| IM-02 | `openim-msggateway` | `pkill -f openim-msggateway` | WS 连接断开，实时消息中断 | 否（实时链路） | 同上 |
+| IM-03 | `openim-rpc-auth` | `pkill -f openim-rpc-auth` | token 相关能力异常 | 是（部分不依赖鉴权链路） | 同上 |
+| IM-04 | `openim-rpc-msg` | `pkill -f openim-rpc-msg` | 消息发送/拉取异常 | 是（非消息接口可用） | 同上 |
+| IM-05 | `openim-msgtransfer` | `pkill -f openim-msgtransfer` | 消息转发链路中断或高延迟 | 是（非消息接口可用） | 同上 |
+| IM-06 | `openim-push` | `pkill -f openim-push` | 离线推送失败 | 是（在线消息通常可用） | 同上 |
+| IM-07 | `openim-crontask` | `pkill -f openim-crontask` | 定时任务不执行 | 是（实时链路通常可用） | 同上 |
+
+### 3. ChatServer 单服务故障
+
+| 用例ID | 注入对象 | 注入方式（示例） | 主要影响 | 是否可部分服务 | 修复动作 |
+| --- | --- | --- | --- | --- | --- |
+| CHAT-01 | `chat-api` | `pkill -f chat-api` | 业务系统接口失败（10008） | 否（Chat 业务入口受阻） | 实测单独 `mage start chat-api` 可能连带影响其他 Chat 服务，建议 `mage stop && mage start` |
+| CHAT-02 | `chat-rpc` | `pkill -f chat-rpc` | Chat 核心业务接口异常 | 否（Chat 核心链路） | 同上 |
+| CHAT-03 | `admin-api` | `pkill -f admin-api` | 管理后台接口失败（10009），10008 可继续提供服务 | 是（用户侧链路可继续） | 实测单独 `mage start admin-api` 可能出现 `admin-rpc` 不可用，建议 `mage stop && mage start` |
+| CHAT-04 | `admin-rpc` | `pkill -f admin-rpc` | 管理后台业务失败 | 是 | 同上 |
+| CHAT-05 | `bot-api`/`bot-rpc` | `pkill -f bot-api` / `pkill -f bot-rpc` | Bot 相关能力失败 | 是（主链路可继续） | 同上 |
+
+## 四、组件异常停止处理（恢复 Runbook）
+
+### 1. 通用恢复顺序
+
+1. 先恢复外部组件。
+2. 再恢复 OpenIMServer。
+3. 最后恢复 ChatServer。
+4. 全量执行 `mage check` + 探针复测。
+
+### 2. 外部组件恢复
+
+```bash
+cd /path/to/open-im-server
+docker compose up -d mongodb redis kafka etcd minio
+```
+
+```bash
+docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'mongo|redis|kafka|etcd|minio'
+```
+
+### 2.1 实测补充（2026-03-06，`/root/test`）
+
+1. Chat 相关 API 探针必须带 `operationID` 请求头，否则会返回参数错误。
+2. Redis 恢复后，OpenIM 不一定自动恢复，需要执行 OpenIM 全量重启。
+3. Etcd 宕机时，已运行实例可短时可用；但在服务重启阶段会失败，需先恢复 Etcd。
+4. Chat 单服务拉起（如 `mage start chat-api`、`mage start admin-api`）在异常场景下可能导致其他 Chat 进程缺失，故障恢复优先采用 Chat 全量重启。
+
+### 3. OpenIMServer 恢复
+
+```bash
+cd /path/to/open-im-server
+mage check
+mage stop
+mage start
+mage check
+```
+
+### 4. ChatServer 恢复
+
+```bash
+cd /path/to/chat
+mage check
+mage stop
+mage start
+mage check
+```
+
+### 5. MongoDB 数据恢复（需要时）
+
+```bash
+docker exec -it mongo mongorestore \
+  --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" \
+  /data/backup/your_backup_name/openim_v3
+```
+
+## 五、潜在风险
+
+1. 单机部署存在单点故障，无法等价替代高可用集群。
+2. 若源数据盘与备份盘同时损坏，无法直接恢复，只能依赖云厂商快照或其他离线备份。
+3. MongoDB 恢复到历史备份点后，备份时间点之后的数据会丢失。
+4. 删除 Redis 数据可能导致未读数、会话状态等短期不一致。
+
+## 六、完整异常测试报告模板
+
+每个用例必须记录以下字段。
+
+| 字段 | 内容 |
+| --- | --- |
+| 用例ID | 例如 `EXT-01` |
+| 测试日期 | YYYY-MM-DD HH:mm |
+| 测试环境 | 服务器规格、版本、部署方式 |
+| 故障注入对象 | 组件或服务名 |
+| 注入命令 | 实际执行命令 |
+| 注入开始时间 | 时间戳 |
+| 业务影响现象 | 用户可见现象与接口报错 |
+| 影响范围 | OpenIMClientSDK、APP 业务服务器、APP 管理员后台 |
+| 恢复动作 | 实际执行步骤 |
+| 恢复完成时间 | 时间戳 |
+| MTTR | 恢复耗时 |
+| 数据影响 | 是否丢消息/丢数据/状态不一致 |
+| 验收结果 | 通过/不通过 |
+| 根因分析 | 简述根因 |
+| 改进项 | 监控、告警、配置、流程优化 |

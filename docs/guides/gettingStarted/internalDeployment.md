@@ -4,7 +4,7 @@ sidebar_position: 4
 ---
 ## 📌 内网部署指南
 
-本指南将指导您在一台纯内网的机器上部署OpenIM相关服务。
+本指南将指导您在一台纯内网机器上部署 OpenIMSDK 相关服务。
 
 ### **Docker部署**
 
@@ -80,20 +80,20 @@ sidebar_position: 4
 
 ### **源码部署**
 
-1. 使用一台连接到互联网的机器，克隆server仓库建议切换到 release-v3.8.2 分支：
+1. 使用一台连接到互联网的机器，克隆 OpenIMServer 仓库，建议切换到 `release-v3.8.2` 分支：
 
    ```sh
    git clone https://github.com/openimsdk/open-im-server
    ```
 
-2.  克隆`chat`仓库建议切换到 release-v1.8.3 分支
+2. 克隆 ChatServer 仓库，建议切换到 `release-v1.8.3` 分支
    ```bash
    git clone https://github.com/openimsdk/chat
    ```
 
 3. 参考[docker部署](#docker部署)步骤，保存镜像，区别为不需要`openim/openim-server:release-v3.8.2`和`openim/openim-chat:v1.8.2`。
 
-4. 通过内网或者物理介质将**镜像文件**、**server仓库文件**、**chat仓库文件**拷贝到部署机器上。
+4. 通过内网或者物理介质将**镜像文件**、**OpenIMServer 仓库文件**、**ChatServer 仓库文件**拷贝到部署机器上。
 
 5. 导入镜像到`docker`中，命令为：
 
@@ -107,18 +107,17 @@ sidebar_position: 4
    docker load -i mongo.tar
    ```
 
-6. 在`server`目录下依次运行：
+6. 在 OpenIMServer 目录下依次运行：
    ```bash
    docker compose up -d  # 如需启用监控组件则为 docker compose --profile m up -d
    mage
    mage start
    ```
 
-7. 在`chat`目录下运行：
+7. 在 ChatServer 目录下运行：
    ```bash
    mage
    mage start
    ```
 
    
-

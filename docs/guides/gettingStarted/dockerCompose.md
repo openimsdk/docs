@@ -6,7 +6,7 @@ sidebar_position: 2
 ## 1.环境准备 🌍
 对于服务器硬件、软件、操作系统、以及所依赖组件请参考[此文档](./env-comp)
 
-## 2. 部署 IMServer
+## 2. 部署 OpenIMServer
 ### 2.1 仓库克隆 🗂️
 
 ```bash
@@ -15,7 +15,7 @@ git clone https://github.com/openimsdk/openim-docker && cd openim-docker
 
 ### 2.2 配置修改 🔧
 
-- 修改 `.env` 文件，配置MinIO外网 IP，以支持发送图片视频文件，其中your-server-ip为服务端外网IP
+- 修改 `.env` 文件，配置 MinIO 外网 IP，以支持发送图片和文件，其中 `your-server-ip` 为服务端外网 IP。
 
   ```plaintext
   MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
@@ -46,7 +46,9 @@ docker logs -f openim-server
 
 ## 3. 快速体验 ⚡
 
-快速体验 OpenIMSDK 核心能力，并测试部署是否正常，请参考[快速验证](./quickTestServer)。
+快速体验 OpenIMSDK 核心能力，并测试 OpenIMServer/ChatServer 部署是否正常，请参考[快速验证](./quickTestServer)。
+
+> 补充（基于当前项目目录）：如果你是按 `open-im-server` + `chat` 两个源码仓库部署，`open-im-server/docker-compose.yml` 主要用于依赖组件，ChatServer 仍需在 `chat` 目录执行 `mage start`。可参考[源码部署](./imSourceCodeDeployment)。
 
 
 ## 4. 常见问题

@@ -61,7 +61,7 @@ sidebar_position: 10
 ---
 ## 二、 如何迁移数据
 
-在使用`docker compose up -d`命令启动`IMServer`依赖的各个组件之后，`IMServer`根目录下会生成一个`components`的文件夹，`IMServer`运行后产生的数据（如用户、群聊、消息等等）都保存在这个文件夹中。如果需要迁移数据，需要先关闭服务和组件：
+在使用`docker compose up -d`命令启动 OpenIMServer 依赖的各个组件之后，OpenIMServer 根目录下会生成一个`components`文件夹，OpenIMServer 运行后产生的数据（如用户、群聊、消息等）都保存在这个文件夹中。如果需要迁移数据，需要先关闭服务和组件：
 
 `docker`部署：
 
@@ -119,13 +119,13 @@ docker compose down  # 关闭组件
 一般发送图片失败是由于没有配置第三方存储的原因。默认使用的第三方存储为`minio`，需修改相关配置
 ```
 源码部署：
-修改 config/minio.yml 文件，配置MinIO外网 IP，以支持发送图片视频文件，其中your-server-ip为服务端外网IP
+修改 config/minio.yml 文件，配置 MinIO 外网 IP，以支持发送图片和文件，其中 `your-server-ip` 为服务端外网 IP
 externalAddress="http://your-server-ip:10005"
 ```
 
 ```
 docker部署
-修改 .env 文件，配置MinIO外网 IP，以支持发送图片视频文件，其中your-server-ip为服务端外网IP
+修改 .env 文件，配置 MinIO 外网 IP，以支持发送图片和文件，其中 `your-server-ip` 为服务端外网 IP
 MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 ```
 ---
