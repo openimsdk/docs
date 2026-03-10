@@ -1,61 +1,93 @@
 ---
 title: '生产环境'
 sidebar_position: 8
+slug: /gettingStarted/production
 ---
 
+# 生产环境
 
+本文只描述生产环境**运行时故障**会造成的影响，以及对应的恢复方式。
 
+## 一、通用恢复顺序
 
-在生产环境中，通常会采用集群部署来保证组件和服务的高可用性。然而，在资源有限的情况下，一些开发者可能会选择在生产环境中进行单机部署（使用源码部署或`docker`容器）。本文将介绍在单机部署环境下如何进行数据备份、异常恢复，以及潜在的风险。
+1. 先恢复外部组件。
+2. 再恢复 OpenIMServer。
+3. 最后恢复 ChatServer。
 
-## 一、mongo定时数据备份
-IMServer核心数据存储在MongoDB中，因此备份MongoDB数据就能恢复大部分数据。在容器启动之前，设置mongo数据备份目录和定时任务。
-### 数据备份
+## 二、外部组件运行时故障
 
-IMServer服务的核心数据存储在MongoDB中，因此备份MongoDB数据就能恢复大部分数据。以下是备份的步骤：
+| 组件故障 | 运行时影响 | 恢复方式 |
+| --- | --- | --- |
+| MongoDB 不可用 | OpenIMServer `10002` 可能仍可返回，但 ChatServer 与 APP 管理员接口常失败 | 先恢复 MongoDB；恢复后立即复测 `10002/10008/10009`，若仍异常，再重启 OpenIMServer / ChatServer |
+| Redis 不可用 | OpenIMServer 鉴权链路异常；源码部署常见 `auth-rpc-service down`，Docker 一体化部署常见 Redis 连接或解析错误 | 先恢复 Redis；观察 `30-60s`，若 OpenIMServer 鉴权仍异常，再重启 OpenIMServer |
+| Kafka 不可用 | 基础探针可能仍正常，但消息转发、推送链路会异常 | 先恢复 Kafka；恢复后补做消息发送、消费、推送闭环验证 |
+| Etcd 不可用 | 已运行实例通常短时可继续服务，但服务重启阶段可能失败 | 先恢复 Etcd；如果服务注册未恢复，再重启 OpenIMServer / ChatServer |
+| MinIO 不可用 | 文件上传下载失败；源码部署下基础探针通常仍可用，Docker 一体化部署下可能连带 `10002/10008/10009` 异常 | 先恢复 MinIO，并检查 `externalAddress`；若 Docker 一体化部署在 `30-60s` 后基础探针仍未恢复，再重启 OpenIMServer / ChatServer 服务栈 |
 
-1. **修改备份目录**
+### 外部组件恢复命令
 
-   - `.env`文件中修改`MONGO_BACKUP_DIR`的路径，默认值为`components/backup/mongo/`。建议将备份目录设置为与`components`目录不同的磁盘路径，以避免同一磁盘故障导致原始数据和备份数据同时丢失。
-3. **定时备份配置**
-   - 配置Linux系统的定时备份任务，执行以下命令编辑crontab：
-   ```sh
-   crontab -e
-   ```
-   - 添加如下定时任务，表示每天凌晨2点执行备份，并保存最新的2个备份文件。如果需要其他定时规则，请调整`cron`表达式：
-   ```sh
-   0 2 * * * docker exec mongo mongodump --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" --out="/data/backup/$(expr $(date +\%s) / 86400 \% 2)"
-   ```
-   - 使用`crontab -l`命令可以查看当前定时任务是否设置成功。
+`openim-docker` 部署：
 
+```bash
+cd /path/to/openim-docker
+docker compose up -d mongo redis kafka etcd minio
+```
 
+`open-im-server` 源码部署：
 
-## 二、组件异常停止处理
+```bash
+cd /path/to/open-im-server
+docker compose up -d mongodb redis kafka etcd minio
+```
 
-1. 如果 `mongo`、`redis`、`kafka`、`etcd` 等组件异常停止，首先尝试重启所有组件和 IMServer 服务。
+> `openim-docker` 默认服务名为 `mongo`，`open-im-server` 默认服务名为 `mongodb`。
 
-2. 如果由于数据问题（如磁盘故障、磁盘满等）导致服务启动失败，则先停止所有组件和 IMServer 服务。
-   - 如果 `redis` 启动失败，删除 `components/redis/` 目录。
-   - 如果 `kafka` 启动失败，删除 `components/kafka/` 目录。
-   - 如果 `mongo` 启动失败
-        - 1. 删除 `components/redis/` `components/mongodb/` `components/kafka/`目录
-        - 2. 恢复备份数据 docker exec -it mongo mongorestore --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" /data/backup/your_backup_name/openim_v3 
-		- **your_backup_name 为0 或者1， 选择时间较新的那个目录**
-   - 如果 `etcd` 启动失败，删除 `components/etcd/` 目录。
+## 三、OpenIMServer 运行时故障
 
-3. 在进行上述操作后，重启所有组件和 IMServer 服务。
+| 服务故障 | 运行时影响 | 恢复方式 |
+| --- | --- | --- |
+| `openim-api` | `10002` 通常不可用 | 在 `open-im-server` 目录执行 `mage stop && mage start` |
+| `openim-rpc-auth` | OpenIMServer 鉴权探针失败，ChatServer 探针可能仍可用 | 在 `open-im-server` 目录执行 `mage stop && mage start` |
+| `openim-msggateway` | WebSocket 实时链路中断 | 在 `open-im-server` 目录执行 `mage stop && mage start` |
+| `openim-msgtransfer` / `openim-push` | 消息链路、推送链路退化，基础探针不一定失败 | 在 `open-im-server` 目录执行 `mage stop && mage start`，恢复后补做消息闭环验证 |
+| `openim-crontask` | 定时任务停止执行 | 在 `open-im-server` 目录执行 `mage stop && mage start` |
 
-## 三、潜在风险
+OpenIMServer 恢复命令：
 
-1. **单机部署风险**  
-   如果机器故障导致原始数据磁盘和备份磁盘都无法访问，则无法直接恢复数据。此时，可能需要通过运营商的快照服务来恢复数据。
+```bash
+cd /path/to/open-im-server
+mage check
+mage stop
+mage start
+mage check
+```
 
-2. **备份目录建议**  
-   为防止由于单一磁盘故障导致的数据丢失，建议将 `mongo` 的备份目录 `MONGO_BACKUP_DIR` 设置为与 `components` 目录分开的磁盘。
+## 四、ChatServer 运行时故障
 
-3. **数据恢复风险**  
-   恢复 MongoDB 数据时，备份时间之后的数据将会丢失。因此，备份频率过快可能会对 MongoDB 的性能造成较大的影响。
+| 服务故障 | 运行时影响 | 恢复方式 |
+| --- | --- | --- |
+| `chat-api` | APP 业务服务器接口 `10008` 通常不可用 | 在 `chat` 目录执行 `mage stop && mage start` |
+| `chat-rpc` | ChatServer 核心业务调用失败，基础 HTTP 端口可能仍在 | 在 `chat` 目录执行 `mage stop && mage start` |
+| `admin-api` | APP 管理员接口 `10009` 通常不可用，但 `10008` 可能仍可用 | 在 `chat` 目录执行 `mage stop && mage start` |
+| `admin-rpc` | APP 管理员业务调用失败 | 在 `chat` 目录执行 `mage stop && mage start` |
+| `bot-api` / `bot-rpc` | Bot 相关能力异常 | 在 `chat` 目录执行 `mage stop && mage start` |
 
-4. **Redis 数据删除的影响**  
-   如果删除 Redis 中的数据，可能会导致 **消息未读数不正确**。
+ChatServer 恢复命令：
 
+```bash
+cd /path/to/chat
+mage check
+mage stop
+mage start
+mage check
+```
+
+## 五、恢复后确认
+
+恢复完成后，至少确认以下三项：
+
+1. `mage check` 或 `docker ps` 正常。
+2. `10002`、`10008`、`10009` 三个基础探针恢复。
+3. Kafka、MinIO 场景补做消息与文件链路验证。
+
+> OpenIMServer、ChatServer 的基础探针都必须带 `operationID` 请求头。

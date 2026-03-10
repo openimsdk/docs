@@ -1,62 +1,93 @@
 ---
-title: 'Production Environment'
+title: 'Production'
 sidebar_position: 8
+slug: /gettingStarted/production
 ---
 
+# Production
 
+This page only describes the impact of **runtime failures** in production and how to recover from them.
 
+## 1. General Recovery Order
 
-In production environments, cluster deployments are typically used to ensure high availability of components and services. However, with limited resources, some developers may opt for single-machine deployment (using source code or Docker containers) in production. This document covers data backup, failure recovery, and potential risks in single-machine deployment environments.
+1. Recover external components first.
+2. Recover OpenIMServer next.
+3. Recover ChatServer last.
 
-## 1. Scheduled MongoDB Backup
-IMServer stores its core data in MongoDB, so backing up MongoDB data can recover most of the data. Set up the MongoDB backup directory and scheduled tasks before starting containers.
+## 2. Runtime Failures of External Components
 
-### Data Backup
+| Failed Component | Runtime Impact | Recovery Action |
+| --- | --- | --- |
+| MongoDB unavailable | OpenIMServer `10002` may still respond, but ChatServer and APP Administrator APIs often fail | Recover MongoDB first; immediately retest `10002/10008/10009`; if still abnormal, restart OpenIMServer / ChatServer |
+| Redis unavailable | OpenIMServer authentication becomes abnormal; source deployment often shows `auth-rpc-service down`, while all-in-one Docker deployment often shows Redis connection or resolution errors | Recover Redis first; observe for `30-60s`; if OpenIMServer authentication is still abnormal, restart OpenIMServer |
+| Kafka unavailable | Basic probes may still pass, but message transfer and push paths become abnormal | Recover Kafka first; then run end-to-end message send / consume / push verification |
+| Etcd unavailable | Running instances can usually keep serving for a short period, but service restarts may fail | Recover Etcd first; if service registration does not recover, restart OpenIMServer / ChatServer |
+| MinIO unavailable | File upload/download fails; in source deployment the basic probes usually remain healthy, while all-in-one Docker deployment may also break `10002/10008/10009` | Recover MinIO and verify `externalAddress`; if all-in-one Docker deployment still does not recover within `30-60s`, restart the OpenIMServer / ChatServer service stack |
 
-IMServer stores its core data in MongoDB, so backing up MongoDB data enables recovery of most data. Here are the backup steps:
+### External Component Recovery Commands
 
-1. **Modify Backup Directory**
+For `openim-docker` deployment:
 
-   - Edit the `MONGO_BACKUP_DIR` path in the `.env` file (default: `components/backup/mongo/`). It is recommended to set the backup directory to a different disk than the `components` directory to avoid losing both original data and backups due to a single disk failure.
+```bash
+cd /path/to/openim-docker
+docker compose up -d mongo redis kafka etcd minio
+```
 
-3. **Scheduled Backup Configuration**
-   - Configure a scheduled backup task in Linux by editing crontab:
-   ```sh
-   crontab -e
-   ```
-   - Add the following scheduled task to run a backup at 2:00 AM daily, keeping the 2 most recent backups. Adjust the `cron` expression as needed for different schedules:
-   ```sh
-   0 2 * * * docker exec mongo mongodump --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" --out="/data/backup/$(expr $(date +\%s) / 86400 \% 2)"
-   ```
-   - Use `crontab -l` to verify the scheduled task was set up correctly.
+For `open-im-server` source deployment:
 
+```bash
+cd /path/to/open-im-server
+docker compose up -d mongodb redis kafka etcd minio
+```
 
+> The default service name is `mongo` in `openim-docker`, and `mongodb` in `open-im-server`.
 
-## 2. Handling Component Failures
+## 3. OpenIMServer Runtime Failures
 
-1. If `mongo`, `redis`, `kafka`, `etcd`, or other components stop unexpectedly, first try restarting all components and the IMServer service.
+| Failed Service | Runtime Impact | Recovery Action |
+| --- | --- | --- |
+| `openim-api` | `10002` is usually unavailable | Run `mage stop && mage start` in the `open-im-server` directory |
+| `openim-rpc-auth` | OpenIMServer auth probes fail, while ChatServer probes may still be available | Run `mage stop && mage start` in the `open-im-server` directory |
+| `openim-msggateway` | Real-time WebSocket connectivity is interrupted | Run `mage stop && mage start` in the `open-im-server` directory |
+| `openim-msgtransfer` / `openim-push` | Message delivery and push degrade; basic probes may still pass | Run `mage stop && mage start` in the `open-im-server` directory, then run message-path verification |
+| `openim-crontask` | Scheduled tasks stop running | Run `mage stop && mage start` in the `open-im-server` directory |
 
-2. If services fail to start due to data issues (e.g., disk failure, disk full), first stop all components and the IMServer service.
-   - If `redis` fails to start, delete the `components/redis/` directory.
-   - If `kafka` fails to start, delete the `components/kafka/` directory.
-   - If `mongo` fails to start:
-        - 1. Delete the `components/redis/`, `components/mongodb/`, and `components/kafka/` directories.
-        - 2. Restore from backup: `docker exec -it mongo mongorestore --uri="mongodb://openIM:openIM123@localhost:27017/openim_v3" /data/backup/your_backup_name/openim_v3`
-		- **your_backup_name is either 0 or 1 — choose the more recent directory**
-   - If `etcd` fails to start, delete the `components/etcd/` directory.
+OpenIMServer recovery command:
 
-3. After performing the above steps, restart all components and the IMServer service.
+```bash
+cd /path/to/open-im-server
+mage check
+mage stop
+mage start
+mage check
+```
 
-## 3. Potential Risks
+## 4. ChatServer Runtime Failures
 
-1. **Single-Machine Deployment Risk**
-   If a machine failure makes both the original data disk and backup disk inaccessible, data cannot be directly recovered. In this case, you may need to use your cloud provider's snapshot service for data recovery.
+| Failed Service | Runtime Impact | Recovery Action |
+| --- | --- | --- |
+| `chat-api` | The APP Business Server API `10008` is usually unavailable | Run `mage stop && mage start` in the `chat` directory |
+| `chat-rpc` | Core ChatServer business calls fail, while the basic HTTP port may still exist | Run `mage stop && mage start` in the `chat` directory |
+| `admin-api` | The APP Administrator API `10009` is usually unavailable, while `10008` may still work | Run `mage stop && mage start` in the `chat` directory |
+| `admin-rpc` | APP Administrator business calls fail | Run `mage stop && mage start` in the `chat` directory |
+| `bot-api` / `bot-rpc` | Bot-related capabilities fail | Run `mage stop && mage start` in the `chat` directory |
 
-2. **Backup Directory Recommendation**
-   To prevent data loss from a single disk failure, it is recommended to set MongoDB's backup directory `MONGO_BACKUP_DIR` on a separate disk from the `components` directory.
+ChatServer recovery command:
 
-3. **Data Recovery Risk**
-   When restoring MongoDB data, any data created after the backup time will be lost. However, backing up too frequently may significantly impact MongoDB performance.
+```bash
+cd /path/to/chat
+mage check
+mage stop
+mage start
+mage check
+```
 
-4. **Impact of Deleting Redis Data**
-   Deleting Redis data may cause **incorrect unread message counts**.
+## 5. Post-Recovery Verification
+
+After recovery, verify at least the following:
+
+1. `mage check` or `docker ps` is healthy.
+2. The three basic probes `10002`, `10008`, and `10009` are restored.
+3. For Kafka and MinIO incidents, run additional message-path and file-path verification.
+
+> Basic probes for OpenIMServer and ChatServer must include the `operationID` request header.

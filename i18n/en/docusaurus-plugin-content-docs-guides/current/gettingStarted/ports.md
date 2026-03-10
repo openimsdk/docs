@@ -1,56 +1,50 @@
 ---
-title: 'Ports & Firewall'
+title: 'Ports'
 sidebar_position: 6
 ---
 
-# 🔐 Ports & Firewall
+# 🔐 Ports and Firewall
 
----
+## 1. Without a Domain Name and SSL Certificate
 
-## 📡 IM Server Ports
+The following ports must be opened on the server. Other ports should not be exposed publicly.
 
-The following ports must be allowed through the firewall for IMServer to communicate properly.
+| Module | Port | Description | Action |
+| --- | --- | --- | --- |
+| OpenIMServer | TCP:10001 | WebSocket message port used by OpenIMClientSDK | Open the port |
+| OpenIMServer | TCP:10002 | API port for users, friends, groups, messages, and related APIs | Open the port |
+| OpenIMServer | TCP:10005 | MinIO object storage | Open the port |
+| ChatServer | TCP:10008 | APP Business Server APIs such as registration and login | Open the port |
+| ChatServer | TCP:10009 | APP Administrator APIs such as statistics and user bans | Open the port |
+| Web frontend (optional) | TCP:11001 | PC Web frontend; needed for browser-based quick verification | Open if needed |
+| Admin frontend (optional) | TCP:11002 | APP Administrator frontend page | Open if needed |
 
-| TCP Port | Description | Action ⚙️ |
+In the client SDK, initialize with:
+
+```text
+apiAddr: http://your_server_ip:10002
+wsAddr: ws://your_server_ip:10001
+```
+
+## 2. With a Domain Name and SSL Certificate
+
+The following ports must be opened on the server. Other ports should not be exposed publicly.
+
+| Port | Description | Action |
 | --- | --- | --- |
-| **10001** | WebSocket message port for client SDK communication | ✅ Allow |
-| **10002** | API port providing user, contact, group, and message interfaces | ✅ Allow |
-| **10005** | Required when using MinIO storage (default in IMServer) | ✅ Allow |
+| TCP:443 | Default HTTPS port | Open the port |
 
----
+Configuration reference: [Domain and SSL Certificate Configuration](./nginxDomainConfig)
 
-## 💻 Web Frontend & Admin Dashboard Ports
+Complete DNS resolution first so that the IP is bound to the domain.
 
-| TCP Port | Description | Action ⚙️ |
-| --- | --- | --- |
-| **11001** | PC Web client and admin dashboard frontend resources | ✅ Allow |
+In the client SDK, initialize with:
 
----
+```text
+apiAddr: https://your_domain.com/api
+wsAddr: wss://your_domain.com/msg_gateway
+```
 
-## 📊 Grafana Monitoring Port
+> Monitoring, frontend, and other service ports are recommended to stay internal-only and be exposed only when needed.
 
-| TCP Port | Description | Action ⚙️ |
-| --- | --- | --- |
-| **13000** | Grafana monitoring dashboard | ✅ Allow |
-
----
-
-> ⚠️ **Note:**
-> If your server has a firewall enabled (such as `ufw` or `firewalld`), make sure the above ports are allowed.
-> For example, on Linux:
->
-> ```bash
-> sudo ufw allow 10001:10005/tcp
-> sudo ufw allow 11001/tcp
-> sudo ufw allow 13000/tcp
-> sudo ufw reload
-> ```
->
-
-You can also use online port checking tools (for public-facing servers):
-
-https://portchecker.co/
-
-https://www.yougetsignal.com/tools/open-ports/
-
-Enter your server's public IP and port number to check if it is accessible.
+> If you want to access `11001` directly from the browser as described in [Quick Verification](./quickTestServer), the frontend port must be reachable. If you do not need frontend page verification, you do not need to expose `11001/11002` publicly.

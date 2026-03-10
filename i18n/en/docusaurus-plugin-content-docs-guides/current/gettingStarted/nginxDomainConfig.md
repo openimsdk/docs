@@ -1,59 +1,57 @@
 ---
-title: 'Domain & SSL Configuration'
+title: 'Domain Configuration'
 sidebar_position: 7
 ---
 
-# Domain & SSL Certificate Configuration
+# Domain and SSL Certificate Configuration
 
-## 1. Prerequisites 🛠️
+> This page only covers domain configuration related to OpenIMServer and ChatServer.
 
-- **IMServer** is successfully running.
-- **Nginx** is installed with the SSL module enabled.
-- A domain (or subdomain) and SSL certificate have been obtained, e.g., `im.yourhost.com` for IMServer.
-- Port 443 is open.
+## 1. Prerequisites
 
-## 2. Domain Configuration Template 📝
+- OpenIMServer and ChatServer are already running successfully.
+- Nginx is installed with SSL support enabled.
+- You have applied for a domain and SSL certificate (for example `im.yourhost.com`).
+- Port `443` is open on the server.
 
-> 🚀 **Tip**: Make sure to replace with your actual domain name, SSL certificate path, and SSL key.
+If Nginx is not installed yet, install it first using the package manager of your distribution (for example on Debian/Ubuntu: `apt-get install -y nginx`).
+
+## 2. Nginx Configuration Template
+
+> Replace the domain, certificate paths, and service addresses with your real values. The comments below explain the purpose of each block; it is recommended to replace them line by line according to the comments.
 
 ```nginx
-
-upstream msg_gateway{
-    #IM Message server address Multiple can be specified according to the deployment
+upstream msg_gateway {
+    # OpenIMServer WebSocket gateway
     server 127.0.0.1:10001;
 }
-upstream im_api{
-    #IM Group user api server address Multiple can be specified according to the deployment
+
+upstream im_api {
+    # OpenIMServer REST API
     server 127.0.0.1:10002;
 }
 
-upstream minio_s3_2{
-    #Minio address can be assigned to multiple modules depending on deployment
+upstream im_chat_api {
+    # ChatServer API
+    server 127.0.0.1:10008;
+}
+
+upstream minio_s3 {
+    # MinIO object storage
     server 127.0.0.1:10005;
 }
 
-
 server {
-    listen       443; #Listening on port 443
-    server_name  im.yourhost.com;  #Your domain
-    ssl on;
-    #Path of pem file for ssl certificate
-    ssl_certificate /usr/local/nginx/conf/ssh/im.yourhost.com_bundle.pem;
-    #Key file path of ssl certificate
-    ssl_certificate_key /usr/local/nginx/conf/ssh/im.yourhost.com.key;
+    # Unified external HTTPS entry
+    listen 443 ssl;
+    server_name im.yourhost.com;
 
-    gzip on;
-    gzip_min_length 1k;
-    gzip_buffers 4 16k;
-    gzip_comp_level 2;
-    gzip_types text/plain application/javascript application/x-javascript text/css application/xml text/javascript application/x-httpd-php image/jpeg image/gif image/png application/wasm;
-    gzip_vary off;
-    gzip_disable "MSIE [1-6]\.";
+    # SSL certificate and private key paths
+    ssl_certificate /usr/local/nginx/conf/ssl/im.yourhost.com_bundle.pem;
+    ssl_certificate_key /usr/local/nginx/conf/ssl/im.yourhost.com.key;
 
-    default_type application/wasm;
-
-
-    location /msg_gateway{
+    location /msg_gateway {
+        # OpenIMServer WebSocket reverse proxy; keep the Upgrade headers
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -62,7 +60,8 @@ server {
         proxy_pass http://msg_gateway/;
     }
 
-    location ^~/api/{
+    location ^~ /api/ {
+        # OpenIMServer REST API reverse proxy
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -72,42 +71,71 @@ server {
         proxy_pass http://im_api/;
     }
 
+    location ^~ /chat/ {
+        # ChatServer API reverse proxy
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_chat_api/;
+    }
 
-
-    location ^~/im-minio-api/ {
+    location ^~ /im-minio-api/ {
+        # MinIO file access reverse proxy; keep it consistent with externalAddress
         proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_connect_timeout 300;
-
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         chunked_transfer_encoding off;
-        proxy_pass http://minio_s3_2/;
+        proxy_pass http://minio_s3/;
     }
-
-
-
 }
-
-
-
 ```
 
-## 3. MinIO Configuration 🗄️
+## 3. MinIO Configuration
 
-- **Source code deployment**: Edit the `externalAddress` value in `config/minio.yml` to `"https://im.yourhost.com/im-minio-api"`.
-- **Docker deployment**: Edit the `MINIO_EXTERNAL_ADDRESS` value in the `.env` file to `"https://im.yourhost.com/im-minio-api"`.
+- Source deployment: modify `externalAddress` in `config/minio.yml`
+- Docker deployment: modify `MINIO_EXTERNAL_ADDRESS` in `.env`
 
-## 4. Start Nginx 🚀
+Example value:
 
-Run `nginx -s reload` to reload the Nginx configuration.
+```text
+https://im.yourhost.com/im-minio-api
+```
 
+## 4. Reload Nginx
 
-## 5. Update Client SDK Initialization Parameters
+```bash
+nginx -t
+nginx -s reload
+```
 
-In the client SDK, configure the initialization parameters as follows:
+## 5. OpenIMClientSDK Initialization Parameters
 
-- `apiAddr`: `https://im.yourhost.com/api`
-- `wsAddr`: `wss://im.yourhost.com/msg_gateway`
+```text
+apiAddr: https://im.yourhost.com/api
+wsAddr: wss://im.yourhost.com/msg_gateway
+```
+
+## 6. Gateway Path Mapping
+
+| Path | Service |
+| --- | --- |
+| `/api/*` | OpenIMServer API (`10002`) |
+| `/msg_gateway` | OpenIMServer WebSocket (`10001`) |
+| `/chat/*` | ChatServer API (`10008`) |
+| `/im-minio-api/*` | MinIO object storage (`10005`) |
+
+## 7. Naming Consistency
+
+- OpenIMSDK: the overall project name.
+- OpenIMClientSDK: the client SDK.
+- OpenIMServer: the IM core service.
+- ChatServer: the business extension service, i.e. the APP Business Server.
+- Accounts calling management REST APIs are uniformly referred to as APP Administrators.
+
+> The current template only covers the common external entry points for OpenIMServer and ChatServer (APP Business Server). If you also need to expose APP Administrator APIs through the domain entry, add an additional `upstream` and `location` for `10009`.

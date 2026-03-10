@@ -5,7 +5,7 @@ sidebar_position: 10
 
 ## 一、如何升级
 
-在同一大版本内，不同小版本之间的数据是兼容的。例如，版本 **3.8.0** 的数据可以在升级到 **3.8.2** 后正常运行。本文将重点介绍这种升级情况的具体操作步骤。
+在同一大版本内，不同小版本之间的数据通常兼容。建议优先升级到目标仓库 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布 tag**；如需固定版本（例如 `v3.8.3-patch.12`），请显式 checkout 对应 tag。
 
 ### Docker 部署
 
@@ -14,22 +14,24 @@ sidebar_position: 10
     cd openim-docker
     ```
 
-2. **编辑 `.env` 文件，修改相应的镜像标签（tag）。例如，将：**
-    ```env
-    OPENIM_SERVER_IMAGE=openim/openim-server:release-v3.8.0
-    ```
-    **修改为：**
-    ```env
-    OPENIM_SERVER_IMAGE=openim/openim-server:release-v3.8.2
+2. **拉取最新正式版 release tag 并切换：**
+    ```bash
+    git fetch --tags
+    TARGET_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
+    git checkout "$TARGET_TAG"
+    echo "upgrade openim-docker to stable release tag: $TARGET_TAG"
     ```
 
-3. **停止现有的 Docker 服务：**
+3. **检查 `.env` 中镜像 tag 与当前仓库版本一致（必要时按发布说明手动调整）。**
+
+4. **停止现有的 Docker 服务：**
     ```bash
     docker compose down
     ```
 
-4. **启动更新后的 Docker 服务：**
+5. **启动更新后的 Docker 服务：**
     ```bash
+    docker compose pull
     docker compose up -d
     ```
 
@@ -46,9 +48,11 @@ sidebar_position: 10
     mage stop
     ```
 
-3. **切换分支并更新代码：**
+3. **切换到最新正式版 release tag（或指定 tag）并更新代码：**
     ```bash
-    git pull
+    git fetch --tags
+    TARGET_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+    git checkout "$TARGET_TAG"
     ```
 
 4. **编译并启动服务：**
@@ -57,11 +61,15 @@ sidebar_position: 10
     mage start
     ```
 
+5. **如果部署了 ChatServer，也建议同步升级到对应 tag 后再重启 ChatServer。**
+
+> 说明：这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
+
 
 ---
 ## 二、 如何迁移数据
 
-在使用`docker compose up -d`命令启动`IMServer`依赖的各个组件之后，`IMServer`根目录下会生成一个`components`的文件夹，`IMServer`运行后产生的数据（如用户、群聊、消息等等）都保存在这个文件夹中。如果需要迁移数据，需要先关闭服务和组件：
+在使用 `docker compose up -d` 启动组件后，当前部署仓库根目录下会生成一个 `components` 文件夹（例如 `openim-docker/components` 或 `open-im-server/components`）。运行后产生的数据（如用户、群聊、消息等）都保存在这个目录中。如果需要迁移数据，需要先关闭服务和组件：
 
 `docker`部署：
 
@@ -72,8 +80,8 @@ docker compose down
 源码部署：
 
 ```sh
-mage stop  # 关闭服务
-docker compose down  # 关闭组件
+mage stop  # Stop services
+docker compose down  # Stop components
 ```
 
 然后移动整个文件夹到数据目录，修改.env文件中DATA_DIR的值为新数据目录，再启动服务和组件：
@@ -81,14 +89,14 @@ docker compose down  # 关闭组件
 `docker`部署：
 
 ```sh
-docker compose up -d  # 启动组
+docker compose up -d  # Start components
 ```
 
 源码部署：
 
 ```sh
-docker compose up -d  # 启动组件
-mage start  # 启动服务
+docker compose up -d  # Start components
+mage start  # Start services
 ```
 
 ---
@@ -105,11 +113,11 @@ docker compose down
 源码部署：
 
 ```sh
-mage stop  # 关闭服务
-docker compose down  # 关闭组件
+mage stop  # Stop services
+docker compose down  # Stop components
 ```
 
-然后删除`open-im-server`下的`components`文件夹。
+然后删除当前部署仓库下的 `components` 文件夹。
 
 客户端方面需要重新卸载重装`app`。
 
@@ -117,15 +125,16 @@ docker compose down  # 关闭组件
 ## 四、 发送文本消息正常，但发送图片失败
 
 一般发送图片失败是由于没有配置第三方存储的原因。默认使用的第三方存储为`minio`，需修改相关配置
-```
-源码部署：
-修改 config/minio.yml 文件，配置MinIO外网 IP，以支持发送图片视频文件，其中your-server-ip为服务端外网IP
-externalAddress="http://your-server-ip:10005"
+
+源码部署：修改 `config/minio.yml`，将 `externalAddress` 改为外网 IP 或域名路径。
+
+```yaml
+externalAddress: http://your-server-ip:10005
 ```
 
-```
-docker部署
-修改 .env 文件，配置MinIO外网 IP，以支持发送图片视频文件，其中your-server-ip为服务端外网IP
+Docker 部署：修改 `.env`，将 `MINIO_EXTERNAL_ADDRESS` 改为外网 IP 或域名路径。
+
+```dotenv
 MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 ```
 ---
@@ -134,12 +143,14 @@ MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 
 如果是是使用`docker`部署的各个组件，可以通过在`docker-compose.yml`文件中限制`mongo`和`kafka`的内存的方式来减小内存的占用。
 
-`mongo`：
+`mongo`（`openim-docker` 中的服务名）或 `mongodb`（`open-im-server` 中的服务名）：
+
+> 如果你使用源码部署，请把下面示例中的 `mongo` 替换为 `mongodb`。
 
 ```yml
-  mongodb:
+  mongo:
     environment:
-    - wiredTigerCacheSizeGB=0.5  # 修改为适当的值，单位GB
+    - wiredTigerCacheSizeGB=0.5  # Adjust to an appropriate value, unit: GB
 ```
 
 `kafka`：
@@ -147,7 +158,7 @@ MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 ```yml
   kafka:
     environment:
-      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"  # 添加该限制
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"  # Add this memory limit
 ```
 
 ---
