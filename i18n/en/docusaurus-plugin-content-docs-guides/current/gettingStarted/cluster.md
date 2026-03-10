@@ -5,55 +5,62 @@ sidebar_position: 5
 
 
 
-# IMServer Source Code Cluster Deployment Guide (Same LAN)
+# OpenIMServer Source Code Cluster Deployment Guide on the Same Internal Network
 
-This guide uses machines A and B (with internal IPs `IP_A` and `IP_B`) as an example. They are located in the same LAN environment, used for deploying the clustered IM Server and Nginx.
-Assuming you have already deployed Redis cluster, MongoDB sharded cluster, Kafka cluster, and Etcd cluster at the following addresses:
-- **Redis Cluster**: `redisAddr1`, `redisAddr2`, `redisAddr3`
-- **MongoDB Cluster**: `mongoAddr1`, `mongoAddr2`, `mongoAddr3`
-- **Kafka Cluster**: `kafkaAddr1`, `kafkaAddr2`, `kafkaAddr3`
-- **Etcd Cluster**: `etcdAddr1`, `etcdAddr2`, `etcdAddr3`
+This guide uses machines A and B (with internal IPs `IP_A` and `IP_B`) as examples. They are located in the same internal network and are used to deploy clustered OpenIMServer and Nginx.
+Assume that you have already deployed a Redis cluster, MongoDB sharded cluster, Kafka cluster, and Etcd cluster with the following addresses:
+- **Redis cluster addresses**: `redisAddr1`, `redisAddr2`, `redisAddr3`
+- **MongoDB cluster addresses**: `mongoAddr1`, `mongoAddr2`, `mongoAddr3`
+- **Kafka cluster addresses**: `kafkaAddr1`, `kafkaAddr2`, `kafkaAddr3`
+- **Etcd cluster addresses**: `etcdAddr1`, `etcdAddr2`, `etcdAddr3`
 
-These components should be deployed on three or more nodes to ensure high availability and load balancing.
+It is recommended to deploy these components on three or more nodes to ensure high availability and load balancing.
 
-Additionally, MinIO's internal access address is configured as `your_minio_internal_address`, and the external access address is `your_minio_external_address`.
-Machines A and B, as well as the component clusters, have internal network connectivity. Both machines A and B also have public IPs.
+In addition, MinIO is configured with `your_minio_internal_address` for internal access and `your_minio_external_address` for external access.
+Machines A and B, as well as the component clusters, must be reachable over the internal network, and both A and B must have public IPs.
 
 ### Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Clone Repository](#1-clone-repository)
+2. [Clone the Repository](#1-clone-the-repository)
 3. [Modify Configuration](#2-modify-configuration)
 4. [Configure Nginx](#3-configure-nginx)
-5. [Set Up DNS](#4-set-up-dns)
+5. [Configure DNS](#4-configure-dns)
 6. [Start Services](#5-start-services)
 
 ### Prerequisites
 
-Ensure the following components are properly deployed and running:
+Ensure that the following components are already deployed and running correctly:
 
-- **Redis Cluster**
-- **MongoDB Sharded Cluster**
-- **Kafka Cluster**
-- **Etcd Cluster**
-- **MinIO Service**
+- **Redis cluster**
+- **MongoDB sharded cluster**
+- **Kafka cluster**
+- **Etcd cluster**
+- **MinIO service**
 
-### 1. Clone Repository
+> This document only covers deploying two OpenIMServer business nodes and Nginx. It does not include the deployment of the Redis / MongoDB / Kafka / Etcd clusters themselves. If you currently only have two empty machines, complete those external component clusters first before continuing.
 
-On both machines (A and B), run the following commands to clone the `open-im-server` repository:
+### 1. Clone the Repository
+
+Run the following commands on both machines (A and B) to clone the OpenIMServer repository and switch to the latest official release tag marked with the green **Latest** badge on GitHub Releases:
 
 ```bash
 git clone https://github.com/openimsdk/open-im-server
 cd open-im-server
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
 ```
+
+> Here, `latest` means the latest official release marked with the green **Latest** badge on GitHub Releases. It does not include alpha, beta, rc, or other pre-releases. It is recommended that both machines use the same stable tag. If you need a fixed version such as `v3.8.3-patch.12`, run `git checkout v3.8.3-patch.12` on both machines.
 
 ### 2. Modify Configuration
 
-On both machines A and B, modify the configuration files as follows to ensure all components are correctly connected. All address fields use the inline list format `address: [addr1, addr2, addr3]`.
+On machines A and B, modify the configuration files as follows so that all components connect correctly. All address fields use the single-line list format `address: [addr1, addr2, addr3]`.
 
 #### 2.1 Kafka Configuration
 
-Edit the `open-im-server/config/kafka.yml` file, setting the `address` field to the Kafka cluster address list:
+Edit `open-im-server/config/kafka.yml` and set the `address` field to the Kafka cluster address list:
 
 ```yaml
 address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
@@ -61,7 +68,7 @@ address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
 
 #### 2.2 MinIO Configuration
 
-Edit the `open-im-server/config/minio.yml` file, setting `internalAddress` and `externalAddress`:
+Edit `open-im-server/config/minio.yml` and set `internalAddress` and `externalAddress`:
 
 ```yaml
 internalAddress: your_minio_internal_address
@@ -70,7 +77,7 @@ externalAddress: your_minio_external_address
 
 #### 2.3 MongoDB Configuration
 
-Edit the `open-im-server/config/mongodb.yml` file, setting the `address` field to the MongoDB cluster address list:
+Edit `open-im-server/config/mongodb.yml` and set the `address` field to the MongoDB cluster address list:
 
 ```yaml
 address: [mongoAddr1, mongoAddr2, mongoAddr3]
@@ -78,7 +85,7 @@ address: [mongoAddr1, mongoAddr2, mongoAddr3]
 
 #### 2.4 Etcd Configuration
 
-Edit the `open-im-server/config/discovery.yml` file, setting the `etcd.address` field to the Etcd cluster address list:
+Edit `open-im-server/config/discovery.yml` and set `etcd.address` to the Etcd cluster address list:
 
 ```yaml
 etcd:
@@ -87,7 +94,7 @@ etcd:
 
 #### 2.5 Redis Configuration
 
-Edit the `open-im-server/config/redis.yml` file, setting the `address` field to the Redis cluster address list and enabling cluster mode:
+Edit `open-im-server/config/redis.yml`, set `address` to the Redis cluster address list, and enable cluster mode:
 
 ```yaml
 address: [redisAddr1, redisAddr2, redisAddr3]
@@ -96,9 +103,9 @@ clusterMode: true
 
 ### 3. Configure Nginx
 
-Deploy `nginx` on both machines A and B using the following configuration. Make sure to replace with your actual domain name, SSL certificate path, and SSL key path.
+Deploy `nginx` on machines A and B using the following configuration. Make sure to replace it with your actual domain, SSL certificate path, and SSL private key path.
 
-> 🚀 **Tip**: Make sure to replace with your actual domain name, SSL certificate path, and SSL key.
+> 🚀 **Tip**: Be sure to replace the example domain, SSL certificate path, and SSL key path with your actual values.
 
 ```nginx
 events {
@@ -113,7 +120,7 @@ http {
     }
 
     upstream im_api {
-        # IM API server addresses — specify multiple based on your deployment
+        # OpenIMServer API addresses; add more upstreams if needed
         server IP_A:10002;
         server IP_B:10002;
     }
@@ -123,9 +130,9 @@ http {
         server_name  yourhost.com;  # Replace with your domain
 
         ssl_certificate     /usr/local/nginx/conf/ssl/your_host_bundle.pem;  # Replace with your certificate path
-        ssl_certificate_key /usr/local/nginx/conf/ssl/your_host.key;        # Replace with your certificate key path
+        ssl_certificate_key /usr/local/nginx/conf/ssl/your_host.key;        # Replace with your private key path
 
-        location ^~/api/ {
+        location ^~ /api/ {
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "Upgrade";
@@ -145,7 +152,7 @@ http {
         }
     }
 
-    # Optional: HTTP to HTTPS redirect
+    # Optional: redirect HTTP to HTTPS
     server {
         listen 80;
         server_name yourhost.com;  # Replace with your domain
@@ -155,23 +162,32 @@ http {
 }
 ```
 
-Add this configuration to your `nginx` config file and reload to apply:
+Add this configuration to the Nginx configuration file and reload it to apply the changes:
 
-### 4. Set Up DNS
+### 4. Configure DNS
 
 Point your domain `yourhost.com` to the public IP addresses of machines A and B.
 
 ### 5. Start Services
 
-On both machines (A and B), run the following commands in the `open-im-server` directory to build and start the services:
+Run the following commands in the `open-im-server` directory on both machines (A and B) to build and start the services:
 
-For users in China, it is recommended to set a Go proxy:
+For users in Mainland China, setting a Go proxy is recommended:
 ```
 $ go env -w GO111MODULE=on
 $ go env -w GOPROXY=https://goproxy.cn,direct
 ```
 
 #### 5.1 Build
+
+Before the first execution on each machine, it is recommended to run:
+
+```bash
+bash bootstrap.sh
+```
+
+This step installs `mage`. If `mage` is already installed on your machine, you can skip it.
+
 ```bash
 mage
 ```
@@ -183,8 +199,8 @@ mage start
 ```
 
 
-## **FAQ / Important Notes**
+## **FAQ / Notes**
 
-1. When deploying `Kafka`, you need to modify the Kafka advertised port. If using the `docker-compose.yml` from `open-im-server`, modify `service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS` where `EXTERNAL` should be set to the address for accessing the Kafka component. For other deployment methods, modify accordingly.
-   Example: `KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`.
-2. Multi-machine deployments require clock synchronization across machines for services to run correctly. For example, the `token` signing process allows a maximum clock skew of `5 seconds` between machines.
+1. When deploying `kafka`, you need to modify the Kafka advertised port. If you use `docker-compose.yml` from `open-im-server`, change the `EXTERNAL` listener in `service.kafka.environment.KAFKA_CFG_ADVERTISED_LISTENERS` to the address used to access the `kafka` component. If you use another deployment method, adjust it accordingly.
+   For example: `KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`.
+2. In multi-machine deployment, the clocks of all machines must stay synchronized, or services may fail. For example, token issuing only tolerates clock drift within `5s`.
