@@ -69,7 +69,7 @@ sidebar_position: 10
 ---
 ## 二、 如何迁移数据
 
-在使用`docker compose up -d`命令启动 OpenIMServer 依赖的各个组件之后，OpenIMServer 根目录下会生成一个`components`文件夹，OpenIMServer 运行后产生的数据（如用户、群聊、消息等）都保存在这个文件夹中。如果需要迁移数据，需要先关闭服务和组件：
+在使用 `docker compose up -d` 启动组件后，当前部署仓库根目录下会生成一个 `components` 文件夹（例如 `openim-docker/components` 或 `open-im-server/components`）。运行后产生的数据（如用户、群聊、消息等）都保存在这个目录中。如果需要迁移数据，需要先关闭服务和组件：
 
 `docker`部署：
 
@@ -89,7 +89,7 @@ docker compose down  # 关闭组件
 `docker`部署：
 
 ```sh
-docker compose up -d  # 启动组
+docker compose up -d  # 启动组件
 ```
 
 源码部署：
@@ -117,7 +117,7 @@ mage stop  # 关闭服务
 docker compose down  # 关闭组件
 ```
 
-然后删除`open-im-server`下的`components`文件夹。
+然后删除当前部署仓库下的 `components` 文件夹。
 
 客户端方面需要重新卸载重装`app`。
 
@@ -128,7 +128,7 @@ docker compose down  # 关闭组件
 ```
 源码部署：
 修改 config/minio.yml 文件，配置 MinIO 外网 IP，以支持发送图片和文件，其中 `your-server-ip` 为服务端外网 IP
-externalAddress="http://your-server-ip:10005"
+externalAddress: http://your-server-ip:10005
 ```
 
 ```
@@ -142,10 +142,12 @@ MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 
 如果是是使用`docker`部署的各个组件，可以通过在`docker-compose.yml`文件中限制`mongo`和`kafka`的内存的方式来减小内存的占用。
 
-`mongo`：
+`mongo`（`openim-docker` 中的服务名）或 `mongodb`（`open-im-server` 中的服务名）：
+
+> 如果你使用源码部署，请把下面示例中的 `mongo` 替换为 `mongodb`。
 
 ```yml
-  mongodb:
+  mongo:
     environment:
     - wiredTigerCacheSizeGB=0.5  # 修改为适当的值，单位GB
 ```

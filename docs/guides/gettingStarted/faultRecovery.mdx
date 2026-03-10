@@ -94,10 +94,10 @@ curl -sS -X POST "http://127.0.0.1:10008/application/latest_version" \
 | 注入对象 | 注入方式（示例） | 主要影响 | 是否可部分服务 | 修复动作 |
 | --- | --- | --- | --- | --- |
 | MongoDB | `docker stop mongo` | 注册/登录、历史消息与业务数据读写异常 | 是（鉴权可用，业务数据链路受阻） | `docker start mongo`，必要时执行备份恢复 |
-| Redis | `docker stop redis` | OpenIM 鉴权链路报 `auth-rpc-service down` | 是（部分接口仍可返回） | `docker start redis` 后先观察 `30-60s`；若鉴权仍异常再执行 OpenIM `mage stop && mage start` |
+| Redis | `docker stop redis` | OpenIM 鉴权链路异常；源码部署常见 `auth-rpc-service down`，Docker 一体化部署常见 Redis 连接/解析错误 | 是（部分接口仍可返回） | `docker start redis` 后先观察 `30-60s`；若鉴权仍异常再执行 OpenIM `mage stop && mage start` |
 | Kafka | `docker stop kafka` | 消息转发与推送链路受阻，可能积压 | 是（非消息链路可部分可用） | `docker start kafka`，核查 topic 消费恢复 |
 | Etcd | `docker stop etcd` | 运行中实例短时可用；`mage start` 阶段会卡在组件检查/服务注册 | 是（短时） | 先 `docker start etcd` 并等待服务注册回稳（建议 `5-10s`），再执行 OpenIM/Chat 全量重启与复检 |
-| MinIO | `docker stop minio` | 图片/文件上传下载失败 | 是（文本消息通常可用） | `docker start minio`，检查 `externalAddress` |
+| MinIO | `docker stop minio` | 图片/文件上传下载失败；源码部署下基础探针通常仍可用，Docker 一体化部署下可能连带 `10002/10008/10009` 基础探针异常 | 视部署方式而定 | `docker start minio`，检查 `externalAddress`；若 `30-60s` 后基础探针仍未恢复，再重启 OpenIM/Chat 服务栈 |
 
 ### 2. OpenIMServer 单服务故障
 
@@ -138,6 +138,8 @@ curl -sS -X POST "http://127.0.0.1:10008/application/latest_version" \
 cd /path/to/open-im-server
 docker compose up -d mongodb redis kafka etcd minio
 ```
+
+> 如果你使用的是 `openim-docker` 仓库，对应服务名为 `mongo redis kafka etcd minio`；如果你使用的是 `open-im-server` 仓库，对应服务名为 `mongodb redis kafka etcd minio`。
 
 ```bash
 docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'mongo|redis|kafka|etcd|minio'

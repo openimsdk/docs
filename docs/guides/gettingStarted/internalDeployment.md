@@ -84,7 +84,13 @@ sidebar_position: 4
 
 3. 参考 [docker部署](#docker部署) 步骤保存依赖组件镜像（源码部署场景不需要服务端业务镜像）。
 
+   > 注意：`open-im-server/docker-compose.yml` 当前默认还会拉起 `openim-web-front`、`openim-admin-front`。如果部署机上的 compose 文件不做裁剪，则还需要一并准备这两个前端镜像；如果你只想部署依赖组件，请先在联网机器调整 compose 文件后再离线拷贝。
+
 4. 通过内网或者物理介质将**镜像文件**、**OpenIMServer 仓库文件**、**ChatServer 仓库文件**拷贝到部署机器上。
+
+   > 纯内网机器如果无法访问 Go 模块源，直接执行 `mage` 可能失败，因为源码仓库默认**不包含 vendor 依赖**。这种场景建议二选一：
+   > 1. 在联网机器提前编译好 `_output/bin` 后再拷贝到内网机器；
+   > 2. 在联网机器预先准备 `go` 依赖缓存和 `mage` 可执行文件，再一起拷贝到内网机器。
 
 5. 导入镜像到`docker`中，命令为：
 
@@ -101,12 +107,14 @@ sidebar_position: 4
 6. 在 OpenIMServer 目录下依次运行：
    ```bash
    docker compose up -d  # 如需启用监控组件则为 docker compose --profile m up -d
+   bash bootstrap.sh     # 已预装 mage 时可跳过
    mage
    mage start
    ```
 
 7. 在 ChatServer 目录下运行：
     ```bash
+    bash bootstrap.sh     # 已预装 mage 时可跳过
     mage
     mage start
     ```

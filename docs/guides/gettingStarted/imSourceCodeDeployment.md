@@ -49,6 +49,8 @@ echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
 docker compose up -d
 ```
 
+> 当前 `open-im-server/docker-compose.yml` 除外部组件外，还会一并拉起 `openim-web-front`、`openim-admin-front`。如果你当前只想部署依赖组件，可以按需调整 compose 文件后再启动。
+
 ### 2.2 自行部署组件或使用云服务时的初始化要求
 
 | 存储组件 | 初始化要求 |
@@ -59,6 +61,8 @@ docker compose up -d
 ## 三、部署 OpenIMServer
 
 确保 Go 已正确安装。
+
+> `bootstrap.sh` 会尝试自动安装 `mage`，但前提是系统里已经有可用的 `go` 命令。因此如果 `go version` 不通过，后续 `bash bootstrap.sh`、`mage` 都无法执行。
 
 ### 3.1 中国境内建议设置 Go 代理
 
@@ -103,6 +107,8 @@ mage
 | 停止 | `mage stop` | - |
 | 检测 | `mage check` | - |
 
+> 首次启动后建议等待 `20-30s` 再执行 `mage check` 或接口验证，避免把启动过程中的短暂连接失败误判为最终异常。
+
 ## 四、获取 Chat
 
 > 如果已有自有账号系统，可不部署 ChatServer。
@@ -146,6 +152,8 @@ mage
 | 后台启动 | `nohup mage start >> _output/logs/chat.log 2>&1 &` | 生产环境建议使用 |
 | 停止 | `mage stop` | - |
 | 检测 | `mage check` | - |
+
+> ChatServer 启动时依赖 OpenIMServer 先可用，建议在 OpenIMServer `mage check` 正常后，再启动 ChatServer，并等待 `20-30s` 再验证 `10008/10009` 接口。
 
 ## 六、配置文件说明
 
@@ -196,4 +204,4 @@ mage
 
 ### 10.3 单机生产环境数据备份及恢复
 
-请参考：[单机生产环境数据备份及恢复](./faultRecovery)
+请参考：[单机生产环境数据备份及恢复](./faultRecovery.mdx)

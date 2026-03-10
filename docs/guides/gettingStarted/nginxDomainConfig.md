@@ -14,6 +14,8 @@ sidebar_position: 7
 - 已申请域名和 SSL 证书（示例：`im.yourhost.com`）。
 - 服务器已放行 `443` 端口。
 
+如果系统尚未安装 Nginx，可先通过发行版包管理器安装（例如 Debian/Ubuntu：`apt-get install -y nginx`）。
+
 ## 2. Nginx 配置模板
 
 > 请替换为你的实际域名、证书路径与服务地址。
@@ -40,12 +42,11 @@ upstream minio_s3 {
 }
 
 server {
-    listen 443;
+    listen 443 ssl;
     server_name im.yourhost.com;
 
-    ssl on;
-    ssl_certificate /usr/local/nginx/conf/ssh/im.yourhost.com_bundle.pem;
-    ssl_certificate_key /usr/local/nginx/conf/ssh/im.yourhost.com.key;
+    ssl_certificate /usr/local/nginx/conf/ssl/im.yourhost.com_bundle.pem;
+    ssl_certificate_key /usr/local/nginx/conf/ssl/im.yourhost.com.key;
 
     location /msg_gateway {
         proxy_http_version 1.1;
@@ -56,7 +57,7 @@ server {
         proxy_pass http://msg_gateway/;
     }
 
-    location ^~/api/ {
+    location ^~ /api/ {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -66,7 +67,7 @@ server {
         proxy_pass http://im_api/;
     }
 
-    location ^~/chat/ {
+    location ^~ /chat/ {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -75,7 +76,7 @@ server {
         proxy_pass http://im_chat_api/;
     }
 
-    location ^~/im-minio-api/ {
+    location ^~ /im-minio-api/ {
         proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -103,6 +104,7 @@ https://im.yourhost.com/im-minio-api
 ## 4. 重载 Nginx
 
 ```bash
+nginx -t
 nginx -s reload
 ```
 
