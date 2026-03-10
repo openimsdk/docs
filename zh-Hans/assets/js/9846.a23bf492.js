@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkopenim_docs=self.webpackChunkopenim_docs||[]).push([[9846],{9846:(e,s,c)=>{c.r(s)}}]);
