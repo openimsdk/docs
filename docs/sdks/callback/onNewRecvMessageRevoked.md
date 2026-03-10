@@ -1,0 +1,160 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# onNewRecvMessageRevoked
+
+## 功能介绍
+
+:::info
+
+收到的消息被撤回或自己发出的消息被撤回时，会收到此回调。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 返回原型
+
+```dart showLineNumbers
+    Function(RevokedInfo info)? onRecvMessageRevokedV2;
+```
+
+### 返回结果
+
+| 名称 | 类型                                                   | 描述     |
+| ---- | ------------------------------------------------------ | -------- |
+| info | [RevokedInfo](/class/message/revokedInfo.md) | 撤回信息详情 |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 返回原型
+
+```swift showLineNumbers
+
+- (void)onNewRecvMessageRevoked:(OIMMessageRevokedInfo *)messageRevoked;
+
+```
+
+### 返回结果
+
+| 名称           | 类型                                                             | 描述     |
+| -------------- | ---------------------------------------------------------------- | -------- |
+| messageRevoked | [OIMMessageRevokedInfo](/class/message/revokedInfo.md) | 撤回信息详情 |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 返回原型
+
+```java showLineNumbers
+      void onRecvMessageRevokedV2(RevokedInfo info);
+```
+
+### 返回结果
+
+| 名称 | 类型                                                   | 描述     |
+| ---- | ------------------------------------------------------ | -------- |
+| info | [RevokedInfo](/class/message/revokedInfo.md) | 撤回信息 |
+
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onNewRecvMessageRevoked(data: WSEvent<RevokedInfo>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                            | 描述         |
+| ---- | ----------------------------------------------------------------------------------------------- | ------------ |
+| data | [WSEvent](/class/response.md)<[RevokedInfo](/class/message/revokedInfo.md)> | 撤回信息详情 |
+
+### 调用示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnNewRecvMessageRevoked, ({ data }) => {
+  // data 撤回信息详情
+});
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onNewRecvMessageRevoked(data: WSEvent<RevokedInfo>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                            | 描述         |
+| ---- | ----------------------------------------------------------------------------------------------- | ------------ |
+| data | [WSEvent](/class/response.md)<[RevokedInfo](/class/message/revokedInfo.md)> | 撤回信息详情 |
+
+### 调用示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.subscribe(IMSDK.IMEvents.OnNewRecvMessageRevoked, ({ data }) => {
+  // data 撤回信息详情
+});
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 返回原型
+
+```C# showLineNumbers
+void OnNewRecvMessageRevoked(MessageRevoked info);
+```
+
+### 返回结果
+
+| 名称 | 类型                                                   | 描述     |
+| ---- | ------------------------------------------------------ | -------- |
+| info | [MessageRevoked](/class/message/revokedInfo.md) | 撤回信息详情 |
+
+</TabItem>
+</Tabs>

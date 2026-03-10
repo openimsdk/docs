@@ -1,0 +1,294 @@
+---
+sidebar_position: 6
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# unsubscribeUsersStatus
+
+## 功能介绍
+
+:::info 说明
+
+取消订阅指定用户的在线状态。
+
+:::
+
+:::caution 注意
+
+取消后，对方的上下线不再通知。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future unsubscribeUsersStatus(
+    List<String> userIDs, {
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型      | 是否必填 | 描述    |
+| -------- | ------------- | -------- | ------- |
+| userIDs  | List<String\> | 是       | 用户 ID 列表 |
+
+### 返回结果
+
+| 参数名称 | 参数类型 | 描述         |
+| -------- | -------- | ------------ |
+| then     | void     | 调用成功回调 |
+| onError  | Function | 调用失败回调 |
+
+### 代码示例
+
+```dart showLineNumbers
+await OpenIM.iMManager.userManager.unsubscribeUsersStatus([]);
+// todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)unsubscribeUsersStatus:(NSArray<NSString *> *)userIDs
+                   onSuccess:(nullable OIMUserStatusInfosCallback)onSuccess
+                   onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型              | 是否必填 | 描述    |
+| -------- | --------------------- | -------- | ------- |
+| userIDs  | NSArray<NSString \*\> | 是       | 用户 ID 列表 |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                             | 描述     |
+| --------- | ---------------------------------------------------- | -------- |
+| onSuccess | OIMSuccessCallback                                   | 成功返回 |
+| onFailure | OIMFailureCallback | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager unsubscribeUsersStatus:@[]
+                                   onSuccess:^(NSString * _Nullable result) {
+
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+ public void unsubscribeOnlineUsersStatus(OnBase<String> callBack, List<String> uid)
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                                                                    | 是否必填 | 描述    |
+| -------- | ----------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| callback | [OnBase](/callback/onBase.md)<List<[UsersOnlineStatus](/class/user/userStatusInfo.md)>> | 是       | 用户 ID |
+| ids      | List<String\>                                                                                               | 是       | 用户 ID |
+
+### 代码示例
+
+```java showLineNumbers
+        OpenIMClient.getInstance().userInfoManager.unsubscribeOnlineUsersStatus(new OnBase<List<UsersOnlineStatus>>() {
+            @Override
+            public void onError(int code, String error) {
+
+            }
+
+            @Override
+            public void onSuccess(List<UsersOnlineStatus> data) {
+
+            }
+        },ids);
+// todo
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.unsubscribeUsersStatus(userIDList: string[], operationID?: string): Promise<WsResponse<UserOnlineState[]>>
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型 | 是否必填 | 描述         |
+| ---------- | -------- | -------- | ------------ |
+| userIDList | string[] | 是       | 用户 ID 列表 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                           | 描述                 |
+| --------------- | ---------------------------------------------------------------------------------- | -------------------- |
+| Promise.then()  | Promise<WsResponse<[UserOnlineState](/class/user/userStatusInfo.md)[]>\> | 用户在线状态详情列表 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                               | 调用失败回调         |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.unsubscribeUsersStatus()
+  .then(({ data }) => {
+    // data: 用户在线状态详情列表
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('unsubscribeUsersStatus', operationID: string, userIDList: string[]): Promise<UserOnlineState[]>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| userIDList  | string[] | 是       | 用户 ID 列表                                            |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                               | 描述                 |
+| --------------- | ---------------------------------------------------------------------- | -------------------- |
+| Promise.then()  | Promise<[UserOnlineState](/class/user/userStatusInfo.md)[]\> | 用户在线状态详情列表 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>                | 调用失败回调         |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('unsubscribeUsersStatus', IMSDK.uuid())
+  .then((data) => {
+    // data: 用户在线状态详情列表
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.unsubscribeUsersStatus(userIDList: string[], operationID?: string): Promise<UserOnlineState[]>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| userIDList  | string[] | 是       | 用户 ID 列表                                            |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                               | 描述                 |
+| --------------- | ---------------------------------------------------------------------- | -------------------- |
+| Promise.then()  | Promise<[UserOnlineState](/class/user/userStatusInfo.md)[]\> | 用户在线状态详情列表 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>                | 调用失败回调         |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.unsubscribeUsersStatus(userIDList)
+  .then((data) => {
+    // data: 用户在线状态详情列表
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void UnsubscribeUsersStatus(OnBase<bool> cb, string[] userIds)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                                                                    | 是否必填 | 描述    |
+| -------- | ----------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| cb | [OnBase](/callback/onBase.md) |是       |  回调 |
+| userIDS     |  string[]                                                                                             | 是       | 用户 ID |
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.UnsubscribeUsersStatus((suc,errCode,errMsg)=>{
+
+},userIdS);
+
+```
+
+</TabItem>
+
+</Tabs>

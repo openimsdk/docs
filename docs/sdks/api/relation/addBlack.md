@@ -1,0 +1,303 @@
+---
+sidebar_position: 4
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# addBlack
+
+## 功能介绍
+
+:::info 说明
+
+把对方添加到黑名单中。
+
+:::
+
+:::caution 注意
+
+意味着对方不能给你发送消息，但你可以给对方发送消息。  
+**相关回调**:    
+[onBlackAdded](../../callback/onBlackAdded) 
+
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+  Future<dynamic> addBlacklist({
+    required String userID,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型 | 是否必填 | 描述    |
+| -------- | -------- | -------- | ------- |
+| userID   | String   | 是       | 用户 ID |
+
+### 返回结果
+
+| 参数名称 | 参数类型 | 描述                 |
+| -------- | -------- | -------------------- |
+| ~        | ~        | 无异常抛出则添加成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+    await OpenIM.iMManager.friendshipManager.addBlacklist(userID: 'userID');
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)addToBlackList:(NSString *)userID
+             onSuccess:(OIMSuccessCallback)onSuccess
+             onFailure:(OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型 | 是否必填 | 描述    |
+| -------- | -------- | -------- | ------- |
+| userID   | NSString | 是       | 用户 ID |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                               | 描述     |
+| --------- | ------------------------------------------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback   | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager addToBlackList:@""
+                         onSuccess:^(NSString * _Nullable data) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+### 函数原型
+
+```java showLineNumbers
+
+public void addBlacklist(OnBase<String> callBack, String uid)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述     |
+| -------- | --------------------------------------- | -------- | -------- |
+| callBack | [OnBase](/callback/onBase.md) | 是       | 回调接口 |
+| uid      | String                                  | 是       | 用户 ID  |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+
+OpenIMClient.getInstance().friendshipManager.addBlacklist(new OnBase<String>(){...},uid)
+
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.addBlack({
+  toUserID: string;
+  ex?: string;
+}, operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型 | 是否必填 | 描述    |
+| -------- | -------- | -------- | ------- |
+| userID   | string   | 是       | 用户 ID |
+| ex       | string   | 否       | 扩展字段，携带到该用户的黑名单信息中   |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.addBlack({ toUserID: 'userID' })
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('addBlack', operationID: string, {
+  toUserID: string;
+  ex?: string;
+}): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| userID      | string   | 是       | 用户 ID                                                 |
+| ex          | string   | 否       | 扩展字段   |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('addBlack', IMSDK.uuid(), { toUserID: 'userID' })
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.addBlack({
+  toUserID: string;
+  ex?: string;
+}, operationID?: string): Promise<void>;
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| userID      | string   | 是       | 用户 ID                                                 |
+| ex          | string   | 否       | 扩展字段   |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.addBlack({
+  toUserID: 'userID',
+})
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+### 函数原型
+
+```C# showLineNumbers
+
+public static void AddBlack(OnBase<bool> cb, string blackUserId, string ex)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述     |
+| -------- | --------------------------------------- | -------- | -------- |
+| cb | [OnBase](/callback/onBase.md) | 是       | 回调 |
+| blackUserId | string | 是       | 用户 ID  |
+| ex | string| 是       | 自定义字段  |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+IMSDK.AddBlack((suc,errCode,errMsg)=>{
+
+},"userId","");
+```
+
+</TabItem>
+
+</Tabs>

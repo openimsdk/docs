@@ -1,0 +1,179 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# onUserStatusChanged
+
+## 功能介绍
+
+:::info
+
+已订阅用户的在线状态发生变化时，会触发此回调。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 返回原型
+
+```dart showLineNumbers
+  Function(UserStatusInfo info)? onUserStatusChanged;
+```
+
+### 返回结果
+
+| 名称 | 类型           | 描述     |
+| ---- | -------------- | -------- |
+| info | [UserStatusInfo](/class/user/userStatusInfo.md) | 用户状态信息 |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 返回原型
+
+```swift showLineNumbers
+
+- (void)onUserStatusChanged:(OIMUserStatusInfo *)info;
+
+```
+
+### 返回结果
+
+| 名称 | 类型              | 描述         |
+| ---- | ----------------- | ------------ |
+| info | [OIMUserStatusInfo](/class/user/userStatusInfo.md) | 用户状态信息 |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 返回原型
+
+```java showLineNumbers
+    void onUserStatusChanged(UsersOnlineStatus onlineStatus)
+```
+
+### 返回结果
+
+| 名称 | 类型                                                    | 描述     |
+| ---- | ------------------------------------------------------- | -------- |
+| info | [onlineStatus](/class/user/userStatusInfo.md) | 用户信息 |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 返回原型
+
+```ts showLineNumbers
+
+enum OnlineState {
+  Online = 1,
+  Offline = 0,
+}
+type UserOnlineState = {
+  platformID: Platform;
+  status: OnlineState;
+  userID: string;
+};
+onUserStatusChanged(data: WSEvent<UserOnlineState>): void;
+
+```
+
+### 调用示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.on(
+  CbEvents.OnUserStatusChanged,
+  ({ data }) => {}
+);
+```
+
+### 返回结果
+
+| 名称 | 类型                                    | 描述 |
+| ---- | --------------------------------------- | ---- |
+| data | [WSEvent](/class/response.md) | -    |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 返回原型
+
+```ts showLineNumbers
+
+enum OnlineState {
+  Online = 1,
+  Offline = 0,
+}
+type UserOnlineState = {
+  platformID: Platform;
+  status: OnlineState;
+  userID: string;
+};
+onUserStatusChanged(data: WSEvent<UserOnlineState>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                    | 描述 |
+| ---- | --------------------------------------- | ---- |
+| data | [WSEvent](/class/response.md) | -    |
+
+### 调用示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.subscribe(
+  IMSDK.IMEvents.OnUserStatusChanged,
+  ({ data }: WSEvent<UserOnlineState>) => {}
+);
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 返回原型
+
+```C# showLineNumbers
+void OnUserStatusChanged(OnlineStatus userOnlineStatus);
+```
+
+### 返回结果
+
+| 名称 | 类型           | 描述     |
+| ---- | -------------- | -------- |
+| userOnlineStatus | [OnlineStatus](/class/user/userStatusInfo.md) | 用户状态信息 |
+
+</TabItem>
+</Tabs>

@@ -1,0 +1,469 @@
+---
+sidebar_position: 1
+title: Get Current User's Paginated Conversation List
+hide_title: true
+---
+
+<center>
+
+## Get Current User's Conversation List
+
+</center>
+
+### Brief Description
+- Get the conversation list of the current user
+### Request Method
+- `post` 
+### Request URL
+- `{API_ADDRESS}/conversation/get_owner_conversation` 
+
+
+### Header
+| Header Name | Example Value | Optional | Type | Description |
+| :----    | :-------    | :--- | --- | ------      |
+| operationID | 1646445464564 | Required | string | Used for global link tracking, timestamp is recommended, independent in each request |
+| token | eyJhbxxxx3Xs | Required | string | [Admin token](/apis/authenticationManagement/getAdminToken.md) |
+
+
+### Request Parameter Example
+
+
+```json
+{
+  "userID": "1008432211",
+  "pagination": {
+    "pageNumber": 1,
+    "showNumber": 20
+  }
+}
+```
+| Field Name | Optional | Type | Description |
+| :----    | :-------    | :--- | --- |
+| userID | Required | string | Current user ID |
+| pagination | Required | object | Pagination parameter structure |
+| pagination.pageNumber | Required | string | Current page number, starting from 1 |
+| pagination.showNumber | Required | string | Number of requests on the current page |
+### Success Return Example
+
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "total": 38,
+    "conversations": [
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_1012900607",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "1012900607",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 0,
+        "minSeq": 0,
+        "maxSeq": 184,
+        "msgDestructTime": 0,
+        "latestMsgDestructTime": -62135596800000,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_1084800774",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "1084800774",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1695265099982,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_1300152726",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "1300152726",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1700464579733,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_1760150676",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "1760150676",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1694565537524,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_1959004809",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "1959004809",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1693526134219,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_198075251",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "198075251",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 0,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 0,
+        "latestMsgDestructTime": -62135596800000,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_198617661",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "198617661",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 0,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 0,
+        "latestMsgDestructTime": -62135596800000,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_2211210937",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "2211210937",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1698321453986,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_2338619613",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "2338619613",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 4,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 268,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1695175479581,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_2590740935",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "2590740935",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1694565650924,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_2849984129",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "2849984129",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1695175496783,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_2978362440",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "2978362440",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 5,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1694569026129,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3140024257",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3140024257",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1695175468085,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3179761042",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3179761042",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1693525753518,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3187706596",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3187706596",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 4,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1693364218123,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3327367899",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3327367899",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1694375242097,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3419642055",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3419642055",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1700445790936,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3561750878",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3561750878",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 0,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1695175484281,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3710129094",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3710129094",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 3,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1697081735129,
+        "isMsgDestruct": false
+      },
+      {
+        "ownerUserID": "1008432211",
+        "conversationID": "sg_3905809684",
+        "recvMsgOpt": 0,
+        "conversationType": 3,
+        "userID": "",
+        "groupID": "3905809684",
+        "isPinned": false,
+        "attachedInfo": "",
+        "isPrivateChat": false,
+        "groupAtType": 0,
+        "ex": "",
+        "burnDuration": 30,
+        "minSeq": 0,
+        "maxSeq": 2,
+        "msgDestructTime": 604800,
+        "latestMsgDestructTime": 1695622938140,
+        "isMsgDestruct": false
+      }
+    ]
+  }
+}
+```
+### Parameter Description for Success Return Example
+
+
+| Parameter Name | Type | Description |
+| :----    | :-------    | :--- |
+| errCode | int | Error code, 0 means success |
+| errMsg | string | Brief error message, empty |
+| errDlt | errDlt | Detailed error message, empty |
+| data | object | General data object, see structure below |
+| total | string | Total number of conversations |
+| conversations | array | [Conversation](/commonFields.md#conversationinfo) list |
+### Failure Return Example
+
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+### Parameter Description for Failure Return Example
+
+
+| Parameter Name | Type | Description |
+| :----    | :-------    | :--- |
+| errCode | int | Error code, see global error code document for details |
+| errMsg | string | Brief error message |
+| errDlt | errDlt | Detailed error message |

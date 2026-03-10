@@ -1,0 +1,325 @@
+---
+sidebar_position: 4
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# checkFriend
+
+## 功能介绍
+
+:::info 说明
+
+检验好友关系，如果用户不在自己的好友列表中或者被添加到黑名单中，返回的结果为非好友，
+如果仅仅需要检验对方是否在自己的好友列表中，建议调用getSpecifiedFriendsInfo接口。
+
+:::
+
+:::caution 注意
+
+由于好友关系是双向关系，仅检验对方是否在自己的好友列表中，并不能检验自己是否在对方的好友列表中。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<List<FriendshipInfo>> checkFriend({
+    required List<String> userIDList,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型      | 是否必填 | 描述         |
+| ---------- | ------------- | -------- | ------------ |
+| userIDList | List<String\> | 是       | 用户 ID 列表 |
+
+### 返回结果
+
+| 参数名称 | 参数类型                                                      | 描述     |
+| -------- | ------------------------------------------------------------- | -------- |
+| ~        | List<FriendshipInfo\> | 成功返回 |
+
+#### FriendshipInfo
+
+| 字段名称 | 字段类型 | 描述                         |
+| -------- | -------- | ---------------------------- |
+| userID   | String   | 用户 UserID                  |
+| result   | int      | checkFriend 的时候: result 为 1 表示好友（并且不是黑名单） |
+
+### 代码示例
+
+```dart showLineNumbers
+   final list = await OpenIM.iMManager.friendshipManager.checkFriend(userIDList: ['ID']);
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)checkFriend:(NSArray <NSString *> *)usersID
+          onSuccess:(nullable OIMSimpleResultsCallback)onSuccess
+          onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型              | 是否必填 | 描述         |
+| -------- | --------------------- | -------- | ------------ |
+| usersID  | NSArray <NSString \*> | 是       | 用户 ID 列表 |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                                                   | 描述     |
+| --------- | -------------------------------------------------------------------------- | -------- |
+| onSuccess | NSArray< OIMSimpleResultInfo \* > | 成功返回 |
+| onFailure | OIMFailureCallback                       | 失败返回 |
+
+#### OIMSimpleResultInfo
+
+| 字段名称 | 字段类型  | 描述                                                       |
+| -------- | --------- | ---------------------------------------------------------- |
+| userID   | NSString  | 用户 ID                                                    |
+| result   | NSInteger | checkFriend 的时候: result 为 1 表示好友（并且不是黑名单） |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager checkFriend:@[]
+                              onSuccess:^(NSArray<OIMSimpleResultInfo *> * _Nullable results) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+
+public void checkFriend(OnBase<List<FriendshipInfo>> callBack, List<String> uidList)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                                                               | 是否必填 | 描述         |
+| -------- | ------------------------------------------------------------------------------------------------------ | -------- | ------------ |
+| callBack | [OnBase](/callback/onBase.md)<List<FriendshipInfo\>> | 是       | 回调接口     |
+| uidList  | String                                                                                                 | 是       | 用户 ID 集合 |
+
+#### FriendInfo
+
+| 字段名称 | 字段类型 | 描述                         |
+| -------- | -------- | ---------------------------- |
+| userID   | String   | 用户 UserID                  |
+| result   | int      | 1 表示好友（并且不是黑名单） |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+
+OpenIMClient.getInstance().friendshipManager.checkFriend(new OnBase<FriendshipInfo>(){...},uidList)
+
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+type FriendshipInfo = {
+    result: number; //  1是好友 0非好友
+    userID: string;
+};
+IMSDK.checkFriend(userIDList: string[], operationID?: string): Promise<WsResponse<FriendshipInfo[]>>
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型 | 是否必填 | 描述         |
+| ---------- | -------- | -------- | ------------ |
+| userIDList | string[] | 是       | 用户 ID 列表 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                        | 描述                 |
+| --------------- | ------------------------------------------------------------------------------- | -------------------- |
+| Promise.then()  | Promise<WsResponse<FriendshipInfo[]>\> | 好友关系结果信息列表 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                            | 调用失败回调         |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+const userIDList = ['userID1', 'userID2'];
+IMSDK.checkFriend(userIDList)
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+type FriendshipInfo = {
+    result: number; //  1是好友 0非好友
+    userID: string;
+};
+IMSDK.asyncApi('checkFriend', operationID: string, userIDList: string[]): Promise<FriendshipInfo[]>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| userIDList  | string[] | 是       | 用户 ID 列表                                            |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                            | 描述                 |
+| --------------- | ------------------------------------------------------------------- | -------------------- |
+| Promise.then()  | Promise<FriendshipInfo[]\> | 好友关系结果信息列表 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>             | 调用失败回调         |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+const userIDList = ['userID1', 'userID2'];
+IMSDK.asyncApi('checkFriend', IMSDK.uuid(), userIDList)
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+type FriendshipInfo = {
+    result: number; //  1是好友 0非好友
+    userID: string;
+};
+OpenIMSDK.checkFriend(userIDList: string[], operationID?: string): Promise<FriendshipInfo[]>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| userIDList  | string[] | 是       | 用户 ID 列表                                            |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+
+| 参数名称        | 参数类型                                                            | 描述                 |
+| --------------- | ------------------------------------------------------------------- | -------------------- |
+| Promise.then()  | Promise<FriendshipInfo[]\> | 好友关系结果信息列表 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>             | 调用失败回调         |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+const userIDList = ['userID1', 'userID2'];
+OpenIMSDK.checkFriend(userIDList)
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void CheckFriend(OnBase<List<UserIDResult>> cb, string[] userIdList)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                                                               | 是否必填 | 描述         |
+| -------- | ------------------------------------------------------------------------------------------------------ | -------- | ------------ |
+| cb | [OnBase](/callback/onBase.md)<List<[UserIDResult](/class/relation/UserIdResult.md)>> | 是       | 回调 |
+| userIdList | string[]                                                                                                | 是       | 用户 ID 集合 |
+
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.CheckFriend((list,errCode,errMsg)=>{
+
+}, {"userid1","userid2"});
+
+```
+
+</TabItem>
+
+</Tabs>

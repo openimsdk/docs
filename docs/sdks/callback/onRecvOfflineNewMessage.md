@@ -1,0 +1,147 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# onRecvOfflineNewMessage
+
+## 功能介绍
+
+:::info
+
+当应用在后台运行，接收到新消息时，会收到该回调，回调中只会携带一条消息。    
+设置了批量消息监听[setBatchMsgListener](/api/message/setBatchMsgListener.md)时，此回调不会触发。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 返回原型
+
+```dart
+void recvOfflineNewMessage(Message msg)
+```
+
+### 返回结果
+
+| 名称 | 类型                                                     | 描述       |
+| ---- | -------------------------------------------------------- | ---------- |
+| msg  | [Message](/class/message/messageInfo.md) | 新离线消息 |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 返回原型
+
+</TabItem>
+
+<TabItem value="Android">
+
+```java showLineNumbers
+
+void onRecvOfflineNewMessage(List<Message> msg)
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                     | 描述       |
+| ---- | -------------------------------------------------------- | ---------- |
+| msg  | List<[Message](/class/message/messageInfo.md)> | 新离线消息 |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onRecvOfflineNewMessage(data: WSEvent<MessageItem>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                            | 描述       |
+| ---- | ----------------------------------------------------------------------------------------------- | ---------- |
+| data | [WSEvent](/class/response.md)<[MessageItem](/class/message/messageInfo.md)> | 新离线消息 |
+
+### 调用示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnRecvOfflineNewMessage, ({ data }) => {
+  // data 新离线消息
+});
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onRecvOfflineNewMessage(data: WSEvent<MessageItem>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                            | 描述       |
+| ---- | ----------------------------------------------------------------------------------------------- | ---------- |
+| data | [WSEvent](/class/response.md)<[MessageItem](/class/message/messageInfo.md)> | 新离线消息 |
+
+### 调用示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.subscribe(IMSDK.IMEvents.OnRecvOfflineNewMessage, ({ data }) => {
+  // data 新离线消息
+});
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 返回原型
+
+```C#
+void OnRecvOfflineNewMessage(Message msg);
+```
+
+### 返回结果
+
+| 名称 | 类型                                                     | 描述       |
+| ---- | -------------------------------------------------------- | ---------- |
+| msg  | [Message](/class/message/messageInfo.md) | 新离线消息 |
+
+</TabItem>
+</Tabs>

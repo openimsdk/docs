@@ -1,0 +1,155 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# RevokedInfo
+
+## 功能介绍
+
+:::info
+
+消息撤回详情。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### RevokedInfo
+
+| 字段名称                    | 字段类型 | 描述           |
+| --------------------------- | -------- | -------------- |
+| revokerID                   | String   | 撤回者 ID      |
+| revokerNickname             | String   | 撤回者昵称     |
+| revokerRole                 | [int](/enum/roleLevel.md)       | 撤回者群角色   |
+| clientMsgID                 | String   | 消息 ID        |
+| revokeTime                  | int      | 撤回时间       |
+| sourceMessageSendTime       | int      | 消息发送时间   |
+| sourceMessageSendID         | String   | 消息发送者     |
+| sourceMessageSenderNickname | String   | 消息发送者昵称 |
+| sessionType                 | [int](/enum/conversationType.md)      | 会话类型       |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMMessageRevokedInfo
+
+| 字段名称                    | 字段类型                                                   | 描述           |
+| --------------------------- | ---------------------------------------------------------- | -------------- |
+| revokerID                   | NSString                                                   | 撤回者 ID      |
+| revokerNickname             | NSString                                                   | 撤回者昵称     |
+| revokerRole                 | [OIMGroupMemberRole](/enum/roleLevel.md)         | 撤回者群角色   |
+| clientMsgID                 | NSTimeInterval                                             | 消息 ID        |
+| revokeTime                  | NSInteger                                                  | 撤回时间       |
+| sourceMessageSendTime       | NSTimeInterval                                             | 消息发送时间   |
+| sourceMessageSendID         | NSString                                                   | 消息发送者     |
+| sourceMessageSenderNickname | NSString                                                   | 消息发送者昵称 |
+| sessionType                 | [OIMConversationType](/enum/conversationType.md) | 会话类型       |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### RevokedInfo
+
+| 字段名称                    | 字段类型 | 描述           |
+| --------------------------- | -------- | -------------- |
+| revokerID                   | String   | 撤回者 ID      |
+| revokerNickname             | String   | 撤回者昵称     |
+| revokerRole                 | int      | [RevokerRole](/enum/roleLevel.md) 撤回者群角色   |
+| clientMsgID                 | String   | 消息 ID        |
+| revokeTime                  | int      | 撤回时间       |
+| sourceMessageSendTime       | int      | 消息发送时间   |
+| sourceMessageSendID         | String   | 消息发送者     |
+| sourceMessageSenderNickname | String   | 消息发送者昵称 |
+| sessionType                 | int      | [ConversationType](/enum/conversationType.md) 会话类型       |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### RevokedInfo
+
+| 字段名称                    | 字段类型 | 描述           |
+| --------------------------- | -------- | -------------- |
+| revokerID                   | string   | 撤回者 ID      |
+| revokerNickname             | string   | 撤回者昵称     |
+| revokerRole                 | number   | 撤回者群角色   |
+| clientMsgID                 | string   | 消息 ID        |
+| revokeTime                  | number   | 撤回时间       |
+| sourceMessageSendTime       | number   | 消息发送时间   |
+| sourceMessageSendID         | string   | 消息发送者     |
+| sourceMessageSenderNickname | string   | 消息发送者昵称 |
+| sessionType                 | number   | 会话类型       |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### RevokedInfo
+
+| 字段名称                    | 字段类型 | 描述           |
+| --------------------------- | -------- | -------------- |
+| revokerID                   | string   | 撤回者 ID      |
+| revokerNickname             | string   | 撤回者昵称     |
+| revokerRole                 | number   | 撤回者群角色   |
+| clientMsgID                 | string   | 消息 ID        |
+| revokeTime                  | number   | 撤回时间       |
+| sourceMessageSendTime       | number   | 消息发送时间   |
+| sourceMessageSendID         | string   | 消息发送者     |
+| sourceMessageSenderNickname | string   | 消息发送者昵称 |
+| sessionType                 | number   | 会话类型       |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### RevokedInfo
+
+| 字段名称                    | 字段类型 | 描述           |
+| --------------------------- | -------- | -------------- |
+| revokerID                   | string   | 撤回者 ID      |
+| revokerNickname             | string   | 撤回者昵称     |
+| revokerRole                 | number   | 撤回者群角色   |
+| clientMsgID                 | string   | 消息 ID        |
+| revokeTime                  | number   | 撤回时间       |
+| sourceMessageSendTime       | number   | 消息发送时间   |
+| sourceMessageSendID         | string   | 消息发送者     |
+| sourceMessageSenderNickname | string   | 消息发送者昵称 |
+| sessionType                 | number   | 会话类型       |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### MessageRevoked
+
+| 字段名称                    | 字段类型 | 描述           |
+| --------------------------- | -------- | -------------- |
+| RevokerID                   | string   | 撤回者 ID      |
+| RevokerNickname             | string   | 撤回者昵称     |
+| RevokerRole                 | [int](/enum/roleLevel.md)       | 撤回者群角色   |
+| ClientMsgID                 | string   | 消息 ID        |
+| RevokeTime                  | int      | 撤回时间       |
+| SourceMessageSendTime       | int      | 消息发送时间   |
+| SourceMessageSendID         | string   | 消息发送者     |
+| SourceMessageSenderNickname | string   | 消息发送者昵称 |
+| SessionType                 | [int](/enum/conversationType.md)      | 会话类型       |
+
+</TabItem>
+</Tabs>

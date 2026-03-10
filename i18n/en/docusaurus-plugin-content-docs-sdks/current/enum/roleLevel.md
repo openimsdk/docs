@@ -1,0 +1,120 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# RoleLevel
+
+:::info
+
+Group member role.
+
+:::
+
+## Group Role Options {#RoleLevel}
+
+| Enum Value | Description               |
+| ---------- | ------------------------- |
+| 100        | Group owner               |
+| 60         | Group administrator       |
+| 20         | Ordinary group member     |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+<TabItem value="Flutter">
+
+### GroupMemberRole
+
+| Enum Name  | Enum Value |
+| ---------- | ---------- |
+| owner      | 100        |
+| admin      | 60         |
+| member     | 20         |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMGroupMemberRole
+
+| Enum Name                | Enum Value |
+| ------------------------ | ---------- |
+| OIMGroupMemberRoleOwner  | 100        |
+| OIMGroupMemberRoleAdmin  | 60         |
+| OIMGroupMemberRoleMember | 20         |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### Enum Details
+
+| Enum Name  | Enum Value |
+| ---------- | ---------- |
+| OWNER      | 100        |
+| ADMIN      | 60         |
+| MEMBER     | 20         |
+
+
+</TabItem>
+
+<TabItem value="Web">
+
+### GroupMemberRole
+
+| Enum Name  | Enum Value |
+| ---------- | ---------- |
+| Owner      | 100        |
+| Admin      | 60         |
+| Nomal      | 20         |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### GroupMemberRole
+
+| Enum Name  | Enum Value |
+| ---------- | ---------- |
+| Owner      | 100        |
+| Admin      | 60         |
+| Nomal      | 20         |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### GroupMemberRole
+
+| Enum Name  | Enum Value |
+| ---------- | ---------- |
+| Owner      | 100        |
+| Admin      | 60         |
+| Nomal      | 20         |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### GroupMemberRole
+
+| Enum Name  | Enum Value |
+| ---------- | ---------- |
+| Owner      | 100        |
+| Admin      | 60         |
+| Nomal      | 20         |
+
+</TabItem>
+
+</Tabs>

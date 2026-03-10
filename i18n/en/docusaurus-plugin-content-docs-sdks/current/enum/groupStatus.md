@@ -1,0 +1,128 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# GroupStatus
+
+:::info
+
+Group status.
+
+:::
+
+## Group Status Options {#GroupStatus}
+
+| Enum Value | Description             |
+| ---------- | ----------------------- |
+| 0          | Normal                  |
+| 1          | Banned (Out of use)     |
+| 2          | Disbanded               |
+| 3          | Muted                   |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### GroupStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| nomal     | 0          |
+| baned     | 1          |
+| dismissed | 2          |
+| muted     | 3          |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMGroupStatus
+
+| Enum Name               | Enum Value |
+| ----------------------- | ---------- |
+| OIMGroupStatusOk        | 0          |
+| OIMGroupStatusBanChat   | 1          |
+| OIMGroupStatusDismissed | 2          |
+| OIMGroupStatusMuted     | 3          |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### GroupStatus
+
+| Enum Name      | Enum Value |
+| -------------- | ---------- |
+| GROUP_OK       | 0          |
+| GROUP_BANNED   | 1          |
+| GROUP_DISSOLVE | 2          |
+| GROUP_MUTED    | 3          |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### GroupStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Nomal     | 0          |
+| Baned     | 1          |
+| Dismissed | 2          |
+| Muted     | 3          |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### GroupStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Nomal     | 0          |
+| Baned     | 1          |
+| Dismissed | 2          |
+| Muted     | 3          |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### GroupStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Nomal     | 0          |
+| Baned     | 1          |
+| Dismissed | 2          |
+| Muted     | 3          |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### GroupStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Nomal     | 0          |
+| Baned     | 1          |
+| Dismissed | 2          |
+| Muted     | 3          |
+
+</TabItem>
+
+</Tabs>

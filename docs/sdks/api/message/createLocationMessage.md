@@ -1,0 +1,322 @@
+---
+sidebar_position: 14
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# createLocationMessage
+
+## 功能介绍
+
+:::info 说明
+
+创建位置消息，包含所在位置的经纬度和描述。
+
+:::
+
+:::caution 注意
+
+经纬度需要自行获取。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<Message> createLocationMessage({
+    required double latitude,
+    required double longitude,
+    required String description,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述 |
+| ----------- | -------- | -------- | ---- |
+| description | String   | 是       | 描述 |
+| latitude    | double   | 是       | 纬度 |
+| longitude   | double   | 是       | 经度 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+    Message msg = await OpenIM.iMManager.messageManager.createLocationMessage(latitude: latitude, longitude: longitude, description: description);
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
++ (OIMMessageInfo *)createLocationMessage:(NSString *)description
+                                 latitude:(double)latitude
+                                longitude:(double)longitude;
+
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述 |
+| ----------- | -------- | -------- | ---- |
+| description | NSString | 是       | 描述 |
+| latitude    | double   | 是       | 纬度 |
+| longitude   | double   | 是       | 经度 |
+
+### 返回结果
+
+| 名称    | 类型                                                      | 描述     |
+| ------- | --------------------------------------------------------- | -------- |
+| message | [OIMMessageInfo](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMMessageInfo *message = [OIMMessageInfo createLocationMessage:@"" latitude:0 longitude:0];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```dart showLineNumbers
+    public Message createLocationMessage(double latitude, double longitude, String description)
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述 |
+| ----------- | -------- | -------- | ---- |
+| description | String   | 是       | 描述 |
+| latitude    | double   | 是       | 纬度 |
+| longitude   | double   | 是       | 经度 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+       Message Message= OpenIMClient.getInstance().messageManager.  createLocationMessage( latitude,  longitude,  description)
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.createLocationMessage({
+  description: string;
+  longitude: number;
+  latitude: number;
+}, operationID?: string): Promise<WsResponse<MessageItem>>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述     |
+| ----------- | -------- | -------- | -------- |
+| description | string   | 是       | 位置描述 |
+| latitude    | number   | 是       | 纬度     |
+| longitude   | number   | 是       | 经度     |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                     | 描述         |
+| --------------- | ---------------------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<WsResponse<[MessageItem](/class/message/messageInfo.md)>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                         | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.createLocationMessage({
+  description: '',
+  longitude: 0,
+  latitude: 0,
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('createLocationMessage', operationID: string,{
+  description: string;
+  longitude: number;
+  latitude: number;
+}): Promise<MessageItem>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| description | string   | 是       | 位置描述                                                |
+| latitude    | number   | 是       | 纬度                                                    |
+| longitude   | number   | 是       | 经度                                                    |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                         | 描述         |
+| --------------- | ---------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[MessageItem](/class/message/messageInfo.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>          | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('createLocationMessage', IMSDK.uuid(), {
+  description: '',
+  longitude: 0,
+  latitude: 0,
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.createLocationMessage({
+  description: string,
+  longitude: number,
+  latitude: number,
+}, operationID?: string): Promise<MessageItem>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| description | string   | 是       | 位置描述                                                |
+| latitude    | number   | 是       | 纬度                                                    |
+| longitude   | number   | 是       | 经度                                                    |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                         | 描述         |
+| --------------- | ---------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[MessageItem](/class/message/messageInfo.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>          | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.createLocationMessage({
+  description: '',
+  longitude: 0,
+  latitude: 0,
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+public static Message CreateLocationMessage(string description, double longitude, double latitude)
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述 |
+| ----------- | -------- | -------- | ---- |
+| description | string   | 是       | 描述 |
+| latitude    | double   | 是       | 纬度 |
+| longitude   | double   | 是       | 经度 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```C# showLineNumbers
+var msg = IMSDK. CreateLocationMessage(description,longitude,latitude);
+```
+
+</TabItem>
+
+</Tabs>
+

@@ -1,0 +1,21 @@
+---
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# ConnectListener
+
+:::info
+
+SDK 连接状态监听器，当连接状态变化时回调。
+
+:::
+
+| 模块名称                                                        | 模块功能简介                           |
+| --------------------------------------------------------------- | -------------------------------------- |
+| [onConnectFailed](/callback/onConnectFailed.md)       | SDK 连接服务器失败                     |
+| [onConnectSuccess](/callback/onConnectSuccess.md)     | SDK 连接服务器成功                     |
+| [onConnecting](/callback/onConnecting.md)             | SDK 正在连接服务器                     |
+| [onKickedOffline](/callback/onKickedOffline.md)       | 账号已在其他地方登录，当前设备被踢下线 |
+| [onUserTokenExpired](/callback/onUserTokenExpired.md) | 登录凭证过期，需要重新登录             |

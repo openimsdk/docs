@@ -1,0 +1,125 @@
+---
+sidebar_position: 12
+title: 获取用户的入群申请
+hide_title: true
+---
+
+<center>
+
+## 获取用户的入群申请列表
+
+</center>
+
+### 简要描述
+- 获取指定用户申请入群的所有申请列表，按时间按排序。
+### 请求方式
+- `post` 
+### 请求URL
+- `{API_ADDRESS}/group/get_user_req_group_applicationList` 
+
+
+### Header
+|header名|示例值|选填|类型|说明|
+|:----    |:-------    |:--- |---|------      |
+|operationID|1646445464564|必填|string|用于全局链路追踪，建议使用时间戳，在每个请求中独立|
+|token|eyJhbxxxx3Xs|必填|string|[管理员 token](/apis/authenticationManagement/getAdminToken.md)|
+
+
+### 请求参数示例
+
+
+```json
+{
+  "userID": "1225441072",
+  "pagination": {
+    "pageNumber": 1,
+    "showNumber": 100
+  }
+}
+```
+|字段名|选填|类型|说明|
+|:----    |:-------    |:--- |---|
+|userID|必填|string|用户ID|
+|pagination|必填|object|分页参数结构体|
+|pagination.showNumber|选填|int|当前页码，从1开始|
+|pagination.pageNumber|选填|int|当前页请求数量|
+### 成功返回示例
+
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "total": 1,
+    "groupRequests": [
+      {
+        "userInfo": {
+          "userID": "1225441072",
+          "nickname": "blooming66",
+          "faceURL": "",
+          "ex": ""
+        },
+        "groupInfo": {
+          "groupID": "3666081223",
+          "groupName": "Group1",
+          "notification": "notification1",
+          "introduction": "",
+          "faceURL": "",
+          "ownerUserID": "1054527962",
+          "createTime": 1687747185342,
+          "memberCount": 14,
+          "ex": "",
+          "status": 0,
+          "creatorUserID": "1054527962",
+          "groupType": 2,
+          "needVerification": 0,
+          "lookMemberInfo": 0,
+          "applyMemberFriend": 0,
+          "notificationUpdateTime": 0,
+          "notificationUserID": ""
+        },
+        "handleResult": 1,
+        "reqMsg": "EEE",
+        "handleMsg": "reason",
+        "reqTime": 1687747407352,
+        "handleUserID": "",
+        "handleTime": 0,
+        "ex": "",
+        "joinSource": 3,
+        "inviterUserID": ""
+      }
+    ]
+  }
+}
+```
+### 成功返回示例的参数说明
+
+
+|参数名|类型|说明|
+|:----    |:-------    |:--- |
+|errCode|int|错误码，0表示成功|
+|errMsg|string|错误简要信息，为空|
+|errDlt|errDlt|错误详细信息，为空|
+|data|object|通用数据对象，具体结构见下方|
+|total|int|加群申请总数|
+|groupRequests|array|[入群申请对象](/commonFields.md#grouprequestinfo)列表|
+### 失败返回示例
+
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+### 失败返回示例的参数说明
+
+
+|参数名|类型|说明|
+|:----    |:-------    |:--- |
+|errCode|int|错误码，具体查看全局错误码文档|
+|errMsg|string|错误简要信息|
+|errDlt|errDlt|错误详细信息|

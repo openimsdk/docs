@@ -1,0 +1,336 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# setSelfInfo
+
+## 功能介绍
+
+:::info 说明
+
+修改当前登录用户的个人信息。包含Ex字段。   
+
+:::
+
+:::caution 注意
+
+
+
+
+**相关回调**:    
+[onSelfInfoUpdated](/callback/onSelfUserInfoUpdate.md)  
+
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+  Future<String?> setSelfInfo({
+    String? nickname,
+    String? faceURL,
+    int? globalRecvMsgOpt,
+    String? ex,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型 | 是否必填 | 描述           |
+| -------------- | -------- | -------- | -------------- |
+| nickname       | String?  | 否       | 用户昵称       |
+| faceURL        | String?  | 否       | 用户头像URL       |
+| globalRecvMsgOpt | int?     | 否       | 全局接收离线推送设置              |
+| ex             | String?  | 否       | 扩展信息       |
+
+### 返回结果
+
+| 参数名称 | 参数类型 | 描述                 |
+| -------- | -------- | -------------------- |
+| ~        | ~        | 无异常抛出则修改成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+   await OpenIM.iMManager.userManager.setSelfInfo(
+      nickname: 'lucy',
+    );
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)setSelfInfo:(OIMUserInfo *)userInfo
+          onSuccess:(OIMSuccessCallback)onSuccess
+          onFailure:(OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                         | 是否必填 | 描述         |
+| -------- | ------------------------------------------------ | -------- | ------------ |
+| userInfo | [OIMUserInfo](/class/user/userInfo.md) | 是       | 用户相关信息 |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                               | 描述     |
+| --------- | ------------------------------------------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback   | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMUserInfo *info = [OIMUserInfo new];
+info.nickname = @"";
+info.faceURL = @"";
+
+[OIMManager.manager setSelfInfo:info
+                      onSuccess:^(NSString * _Nullable data) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+ public void setSelfInfo(OnBase<String> base, UserInfoReq userInfoReq)
+```
+
+### 输入参数
+
+请求结构体UserInfoReq属性如下所示：
+
+| 参数名称       | 参数类型 | 是否必填 | 描述           |
+| -------------- | -------- | -------- | -------------- |
+| userID       | String  | 是       | 用户id       |
+| nickname        | String  | 否       | 用户昵称       |
+| faceURL | String     | 否       | 用户头像              |
+| ex             | String  | 否       | 扩展参数       |
+| globalRecvMsgOpt             | Integer  | 否       | 全局免打扰，1:屏蔽消息; 2:接收消息但不提示; 0:正常       |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+
+OpenIMClient.getInstance().userInfoManager.setSelfInfo(new OnBase<String>(){
+    @Override
+    public void onError(int code, String error) {
+      // todo: 处理错误信息
+    }
+    @Override
+    public void onSuccess(String data) {
+      // todo: 请求成功
+    }
+},userInfoReq);
+
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.setSelfInfo(userInfo: Partial<Omit<SelfUserInfo, 'userID'>>, operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                                   | 是否必填 | 描述     |
+| -------- | -------------------------------------------------------------------------- | -------- | -------- |
+| userInfo | Partial<Omit<[SelfUserInfo](/class/user/userInfo.md), 'userID'>> | 是       | 个人信息 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+const userInfo = {
+  nickname: '', // 要修改的昵称，选填
+  faceURL: '', // 要修改的头像，选填
+  ex: '', // 要修改的扩展字段内容，选填
+};
+IMSDK.setSelfInfo(userInfo)
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('setSelfInfo', operationID: string, userInfo: Partial<Omit<SelfUserInfo, 'userID'>>): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                                   | 是否必填 | 描述                                                    |
+| ----------- | -------------------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                                                     | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| userInfo    | Partial<Omit<[SelfUserInfo](/class/user/userInfo.md), 'userID'>> | 是       | 个人信息                                                |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+const userInfo = {
+  nickname: '', // 要修改的昵称，选填
+  faceURL: '', // 要修改的头像，选填
+  ex: '', // 要修改的扩展字段内容，选填
+};
+IMSDK.asyncApi('setSelfInfo', IMSDK.uuid(), userInfo)
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.setSelfInfo(
+  userInfo: Partial<SelfUserInfo>,
+  operationID?: string
+): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                                   | 是否必填 | 描述                                                    |
+| ----------- | -------------------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| userInfo    | Partial<[SelfUserInfo](/class/user/userInfo.md)> | 是       | 个人信息                                                |
+| operationID | string                                                                     | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+const userInfo = {
+  nickname: '', // 要修改的昵称，选填
+  faceURL: '', // 要修改的头像，选填
+  ex: '', // 要修改的扩展字段内容，选填
+};
+
+OpenIMSDK.setSelfInfo(userInfo)
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void SetSelfInfo(onBase<bool> cb, UserInfo userInfo)
+
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型                                | 是否必填 | 描述                           |
+| -------------- | --------------------------------------- | -------- | ------------------------------ |
+| cb | [OnBase](/callback/onBase.md) | 是       | 回调                       |
+| userInfo | [UserInfo](/class/user/userInfo.md) | 是       | 名字                           |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.SetSelfInfo((suc,errCode,errMsg)=>{
+
+},userInfo);
+
+```
+
+</TabItem>
+</Tabs>

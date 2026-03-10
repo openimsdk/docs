@@ -1,0 +1,383 @@
+---
+sidebar_position: 15
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# searchGroupMembers
+
+## 功能介绍
+
+:::info 说明
+
+通过关键词搜索某个群的群成员。  
+
+:::
+
+:::caution 注意
+
+（1）群成员才有搜索权限；  
+（2）至少需指定一个搜索域；  
+（3）多个域之间是或的关系。   
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+Future<List<GroupMembersInfo>> searchGroupMembers({
+    required String groupID,
+    List<String> keywordList = const [],
+    bool isSearchUserID = false,
+    bool isSearchMemberNickname = false,
+    int offset = 0,
+    int count = 40,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称               | 参数类型      | 是否必填 | 描述           |
+| ---------------------- | ------------- | -------- | -------------- |
+| groupID                | String        | 是       | 群ID          |
+| keywordList            | List<String\> | 是       | 关键字         |
+| isSearchUserID         | bool          | 是       | 检索用户 ID    |
+| isSearchMemberNickname | bool          | 是       | 检索用户昵称   |
+| offset                 | int           | 是       | 起始偏移量     |
+| count                  | int           | 是       | 每次查询的总数 |
+
+### 返回结果
+
+| 参数名称 | 参数类型                                                            | 描述     |
+| -------- | ------------------------------------------------------------------- | -------- |
+| ~        | List<[GroupMembersInfo](/class/group/groupMemberInfo.md)> | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+  List<GroupMembersInfo> list =  await OpenIM.iMManager.groupManager.searchGroupMembers(
+      groupID: '',
+      keywordList: ['haha'],
+      isSearchUserID: true,
+      isSearchMemberNickname: true,
+      offset: 0,
+      count: 20,
+    );
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)searchGroupMembers:(OIMSearchGroupMembersParam *)searchParam
+                 onSuccess:(nullable OIMGroupMembersInfoCallback)onSuccess
+                 onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 字段名称               | 字段类型              | 是否必填 |描述                                           |
+| ---------------------- | --------------------- | -----------------------| - |----------------------- |
+| SearchGroupMembersParam.groupID                | NSString              | 是 |群ID                                          |
+| SearchGroupMembersParam.keywordList            | NSArray< NSString \*> | 是 |搜索关键词，目前仅支持一个关键词搜索，不能为空 |
+| SearchGroupMembersParam.isSearchUserID         | BOOL                  | 否 |是否以关键词搜索 UserID                        |
+| SearchGroupMembersParam.isSearchMemberNickname | BOOL                  | 否 |是否以关键词搜索昵称，默认 false               |
+| SearchGroupMembersParam.offset                 | NSInteger             | 否 |偏移量                                         |
+| SearchGroupMembersParam.count                  | NSInteger             | 否 |数量                                           |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                                                     | 描述     |
+| --------- | ---------------------------------------------------------------------------- | -------- |
+| onSuccess | NSArray< [OIMGroupMemberInfo](/class/group/groupMemberInfo.md) \*> | 成功返回 |
+| onFailure | OIMFailureCallback                         | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMSearchGroupMembersParam *param = [OIMSearchGroupMembersParam new];
+param.groupID = @"";
+param.keywordList = @[];
+param.offset = 0;
+param.count = 20;
+
+[OIMManager.manager searchGroupMembers:param
+                              onSuccess:^(NSArray<OIMGroupMemberInfo *> * _Nullable groupMembersInfo) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+public void searchGroupMembers(OnBase<List<GroupMembersInfo>> callBack, String groupID, List<String> keywordList, boolean isSearchUserID, boolean isSearchMemberNickname, int offset, int count)
+
+```
+
+### 输入参数
+
+| 参数名称               | 参数类型                                                                                                     | 是否必填 | 描述           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ | -------- | -------------- |
+| callBack               | [OnBase](/callback/onBase.md)<List<[GroupMembersInfo](/class/group/groupMemberInfo.md)>> | 是       | 回调接口       |
+| groupID                | String                                                                                                       | 是       | 群ID          |
+| keywordList            | List<String\>                                                                                                | 是       | 关键字         |
+| isSearchUserID         | Boolean                                                                                                      | 是       | 检索用户 ID    |
+| isSearchMemberNickname | Boolean                                                                                                      | 是       | 检索用户昵称   |
+| offset                 | int                                                                                                          | 是       | 起始偏移量     |
+| count                  | int                                                                                                          | 是       | 每次查询的总数 |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+OpenIMClient.getInstance().groupManager.searchGroupMembers(new OnBase<List<GroupMembersInfo>>() {
+            @Override
+            public void onError(int code, String error) {
+
+            }
+
+            @Override
+            public void onSuccess(List<GroupMembersInfo> data) {
+
+            }
+        }, groupID,  keywordList,  isSearchUserID,  isSearchMemberNickname,  offset,  count);
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.searchGroupMembers({
+    groupID: string;
+    keywordList: string[];
+    isSearchUserID: boolean;
+    isSearchMemberNickname: boolean;
+    offset: number;
+    count: number;
+}, operationID?: string): Promise<WsResponse<GroupMemberItem[]>>
+```
+
+### 输入参数
+
+| 参数名称               | 参数类型 | 是否必填 | 描述                                           |
+| ---------------------- | -------- | -------- | ---------------------------------------------- |
+| groupID                | string   | 是       | 群组 ID                                        |
+| keywordList            | string[] | 是       | 搜索关键词，目前仅支持一个关键词搜索，不能为空 |
+| isSearchUserID         | boolean  | 是       | 是否以关键词搜索群成员 userID                  |
+| isSearchMemberNickname | boolean  | 是       | 是否以关键词搜索群成员昵称                     |
+| offset                 | number   | 是       | 起始偏移，分页拉取使用                         |
+| count                  | number   | 是       | 分页拉取，一页拉取的成员个数                   |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                             | 描述                   |
+| --------------- | ------------------------------------------------------------------------------------ | ---------------------- |
+| Promise.then()  | Promise<WsResponse<[GroupMemberItem](/class/group/groupMemberInfo.md)[]>\> | 搜索到的群成员信息列表 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                                 | 调用失败回调           |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+IMSDK.searchGroupMembers({
+  groupID: '',
+  keywordList: ['nickname'],
+  isSearchUserID: false,
+  isSearchMemberNickname: true,
+  offset: 0,
+  count: 20,
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('searchGroupMembers', operationID: string, {
+    groupID: string;
+    keywordList: string[];
+    isSearchUserID: boolean;
+    isSearchMemberNickname: boolean;
+    offset: number;
+    count: number;
+}): Promise<GroupMemberItem[]>
+```
+
+### 输入参数
+
+| 参数名称         | 参数类型 | 是否必填 | 描述                                                    |
+| ---------------- | -------- | -------- | ------------------------------------------------------- |
+| operationID      | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| keywordList      | string[] | 是       | 搜索关键词，目前仅支持一个关键词搜索，不能为空          |
+| isSearchUserID   | boolean  | 是       | 是否以关键词搜索 userID                                 |
+| isSearchNickname | boolean  | 是       | 是否以关键词搜索昵称                                    |
+| isSearchRemark   | boolean  | 是       | 是否以关键词搜索备注                                    |
+| offset           | number   | 是       | 起始偏移，分页拉取使用                         |
+| count            | number   | 是       | 分页拉取，一页拉取的成员个数                   |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                                 | 描述                   |
+| --------------- | ------------------------------------------------------------------------ | ---------------------- |
+| Promise.then()  | Promise<[GroupMemberItem](/class/group/groupMemberInfo.md)[]\> | 搜索到的群成员信息列表 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>                  | 调用失败回调           |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('searchGroupMembers', IMSDK.uuid(), {
+  groupID: '',
+  keywordList: ['nickname'],
+  isSearchUserID: false,
+  isSearchMemberNickname: true,
+  offset: 0,
+  count: 20,
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.searchGroupMembers({
+  groupID: string;
+  keywordList: string[];
+  isSearchUserID: boolean;
+  isSearchMemberNickname: boolean;
+  offset: number;
+  count: number;
+}, operationID?: string): Promise<GroupMemberItem[]>
+```
+
+### 输入参数
+
+| 参数名称         | 参数类型 | 是否必填 | 描述                                                    |
+| ---------------- | -------- | -------- | ------------------------------------------------------- |
+| keywordList      | string[] | 是       | 搜索关键词，目前仅支持一个关键词搜索，不能为空          |
+| isSearchUserID   | boolean  | 是       | 是否以关键词搜索 userID                                 |
+| isSearchNickname | boolean  | 是       | 是否以关键词搜索昵称                                    |
+| isSearchRemark   | boolean  | 是       | 是否以关键词搜索备注                                    |
+| operationID      | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| offset           | number   | 是       | 起始偏移，分页拉取使用                         |
+| count            | number   | 是       | 分页拉取，一页拉取的成员个数                   |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                 | 描述                   |
+| --------------- | ------------------------------------------------------------------------ | ---------------------- |
+| Promise.then()  | Promise<[GroupMemberItem](/class/group/groupMemberInfo.md)[]\> | 搜索到的群成员信息列表 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>                  | 调用失败回调           |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.searchGroupMembers({
+  groupID: '',
+  keywordList: ['nickname'],
+  isSearchUserID: false,
+  isSearchMemberNickname: true,
+  offset: 0,
+  count: 20,
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void SearchGroupMembers(OnBase<List<GroupMember>> cb, SearchGroupMembersParam searchParam)
+
+```
+
+### 输入参数
+
+| 参数名称               | 参数类型      | 是否必填 | 描述           |
+| ---------------------- | --------------| -------- | -------------- |
+| cb| [OnBase](/callback/onBase.md)<List<[GroupMembersInfo](/class/group/groupMemberInfo.md)>> | 是       | 回调接口       |
+|searchParam | [SearchGroupMembersParam](/class/group/SearchGroupMembersParam.md) | 是       | 群ID          |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+IMSDK.SearchGroupMembers((list,errCode,errMsg)=>{
+
+},new SearchGroupMembersParam(){
+});
+```
+
+</TabItem>
+
+</Tabs>

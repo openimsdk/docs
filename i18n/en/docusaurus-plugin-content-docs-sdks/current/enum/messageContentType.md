@@ -1,0 +1,408 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# MessageContentType
+
+:::info
+
+Message type.
+
+:::
+
+## Message Types {#MessageContentType}
+
+| Enum Value | Description                                         |
+| ---------- | --------------------------------------------------- |
+| 101        | Text message                                        |
+| 102        | Image message                                       |
+| 103        | Voice message                                       |
+| 104        | Video message                                       |
+| 105        | File message                                        |
+| 106        | @Mention message                                    |
+| 107        | Merge message                                       |
+| 108        | Contact card message                                |
+| 109        | Location message                                    |
+| 110        | Custom message                                      |
+| 113        | Typing status                                       |
+| 114        | Quote message                                       |
+| 115        | Face message                                        |
+| 118        | Markdown message                                    |
+| 1201       | Mutual friend added notification                    |
+| 1400       | System notification                                 |
+| 1501       | Group created notification                          |
+| 1502       | Group info changed notification                     |
+| 1504       | Group member quit notification                      |
+| 1507       | Group owner transferred notification                |
+| 1508       | Group member kicked notification                    |
+| 1509       | Group member invited notification                   |
+| 1510       | Group member entered notification                   |
+| 1511       | Group disbanded notification                        |
+| 1512       | Group member muted notification                     |
+| 1513       | Cancel group member mute notification               |
+| 1514       | Group muted notification                            |
+| 1515       | Cancel group mute notification                      |
+| 1519       | Group announcement changed notification             |
+| 1520       | Group name changed notification                     |
+| 1701       | Burn-after-reading enabled or disabled notification |
+| 2101       | Message revoked notification                        |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### MessageType
+
+| Enum Name                                | Enum Value |
+| ---------------------------------------- | ---------- |
+| text                                     | 101        |
+| picture                                  | 102        |
+| voice                                    | 103        |
+| video                                    | 104        |
+| file                                     | 105        |
+| atText                                   | 106        |
+| merger                                   | 107        |
+| card                                     | 108        |
+| location                                 | 109        |
+| custom                                   | 110        |
+| typing                                   | 113        |
+| quote                                    | 114        |
+| customFace                               | 115        |
+| advancedText                             | 117        |
+| customMsgNotTriggerConversation          | 119        |
+| customMsgOnlineOnly                      | 120        |
+| friendApplicationApprovedNotification    | 1201       |
+| friendApplicationRejectedNotification    | 1202       |
+| friendApplicationNotification            | 1203       |
+| friendAddedNotification                  | 1204       |
+| friendDeletedNotification                | 1205       |
+| friendRemarkSetNotification              | 1206       |
+| blackAddedNotification                   | 1207       |
+| blackDeletedNotification                 | 1208       |
+| conversationChangeNotification           | 1300       |
+| userInfoUpdatedNotification              | 1303       |
+| oaNotification                           | 1400       |
+| groupCreatedNotification                 | 1501       |
+| groupInfoSetNotification                 | 1502       |
+| joinGroupApplicationNotification         | 1503       |
+| memberQuitNotification                   | 1504       |
+| groupApplicationAcceptedNotification     | 1505       |
+| groupApplicationRejectedNotification     | 1506       |
+| groupOwnerTransferredNotification        | 1507       |
+| memberKickedNotification                 | 1508       |
+| memberInvitedNotification                | 1509       |
+| memberEnterNotification                  | 1510       |
+| dismissGroupNotification                 | 1511       |
+| groupMemberMutedNotification             | 1512       |
+| groupMemberCancelMutedNotification       | 1513       |
+| groupMutedNotification                   | 1514       |
+| groupCancelMutedNotification             | 1515       |
+| groupMemberInfoChangedNotification       | 1516       |
+| groupMemberSetToAdminNotification        | 1517       |
+| groupMemberSetToOrdinaryUserNotification | 1518       |
+| groupInfoSetAnnouncementNotification     | 1519       |
+| groupInfoSetNameNotification             | 1520       |
+| burnAfterReadingNotification             | 1701       |
+| businessNotification                     | 2001       |
+| revokeMessageNotification                | 2101       |
+| signalHasReadReceiptNotification         | 2150       |
+| groupHasReadReceiptNotification          | 2155       |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMMessageContentType
+
+| Enum Name                                                     | Enum Value |
+| ------------------------------------------------------------- | ---------- |
+| OIMMessageContentTypeText                                     | 101        |
+| OIMMessageContentTypeImage                                    | 102        |
+| OIMMessageContentTypeAudio                                    | 103        |
+| OIMMessageContentTypeVideo                                    | 104        |
+| OIMMessageContentTypeFile                                     | 105        |
+| OIMMessageContentTypeAt                                       | 106        |
+| OIMMessageContentTypeMerge                                    | 107        |
+| OIMMessageContentTypeCard                                     | 108        |
+| OIMMessageContentTypeLocation                                 | 109        |
+| OIMMessageContentTypeCustom                                   | 110        |
+| OIMMessageContentTypeRevokeReciept                            | 111        |
+| OIMMessageContentTypeC2CReciept                               | 112        |
+| OIMMessageContentTypeTyping                                   | 113        |
+| OIMMessageContentTypeQuote                                    | 114        |
+| OIMMessageContentTypeFace                                     | 115        |
+| OIMMessageContentTypeAdvancedText                             | 117        |
+| OIMMessageContentTypeAdvancedRevoke                           | 118        |
+| OIMMessageContentTypeCustomMsgNotTriggerConversation          | 119        |
+| OIMMessageContentTypeCustomMsgOnlineOnly                      | 120        |
+| OIMMessageContentTypeFriendAppApproved                        | 1201       |
+| OIMMessageContentTypeFriendAppRejected                        | 1202       |
+| OIMMessageContentTypeFriendApplication                        | 1203       |
+| OIMMessageContentTypeFriendAdded                              | 1204       |
+| OIMMessageContentTypeFriendDeleted                            | 1205       |
+| OIMMessageContentTypeFriendRemarkSet                          | 1206       |
+| OIMMessageContentTypeBlackAdded                               | 1207       |
+| OIMMessageContentTypeBlackDeleted                             | 1208       |
+| OIMMessageContentTypeConversationOptChange                    | 1300       |
+| OIMMessageContentTypeUserInfoUpdated                          | 1303       |
+| OIMMessageContentTypeOANotification                           | 1400       |
+| OIMMessageContentTypeGroupCreated                             | 1501       |
+| OIMMessageContentTypeGroupInfoSet                             | 1502       |
+| OIMMessageContentTypeJoinGroupApplication                     | 1503       |
+| OIMMessageContentTypeMemberQuit                               | 1504       |
+| OIMMessageContentTypeGroupAppAccepted                         | 1505       |
+| OIMMessageContentTypeGroupAppRejected                         | 1506       |
+| OIMMessageContentTypeGroupOwnerTransferred                    | 1507       |
+| OIMMessageContentTypeMemberKicked                             | 1508       |
+| OIMMessageContentTypeMemberInvited                            | 1509       |
+| OIMMessageContentTypeMemberEnter                              | 1510       |
+| OIMMessageContentTypeDismissGroup                             | 1511       |
+| OIMMessageContentTypeGroupMemberMutedNotification             | 1512       |
+| OIMMessageContentTypeGroupMemberCancelMutedNotification       | 1513       |
+| OIMMessageContentTypeGroupMutedNotification                   | 1514       |
+| OIMMessageContentTypeGroupCancelMutedNotification             | 1515       |
+| OIMMessageContentTypeGroupMemberInfoSetNotification           | 1516       |
+| OIMMessageContentTypeGroupMemberSetToAdminNotification        | 1517       |
+| OIMMessageContentTypeGroupMemberSetToOrdinaryUserNotification | 1518       |
+| OIMMessageContentTypeSuperGroupUpdateNotification             | 1651       |
+| OIMMessageContentTypeIsPrivateMessage                         | 1701       |
+| OIMMessageContentTypeBusiness                                 | 2001       |
+| OIMMessageContentTypeRevoke                                   | 2101       |
+| OIMMessageContentTypeHasReadReceipt                           | 2150       |
+| OIMMessageContentTypeGroupHasReadReceipt                      | 2155       |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### MessageType
+
+| Enum Name                                | Enum Value |
+| ---------------------------------------- | ---------- |
+| text                                     | 101        |
+| picture                                  | 102        |
+| voice                                    | 103        |
+| video                                    | 104        |
+| file                                     | 105        |
+| atText                                   | 106        |
+| merger                                   | 107        |
+| card                                     | 108        |
+| location                                 | 109        |
+| custom                                   | 110        |
+| typing                                   | 113        |
+| quote                                    | 114        |
+| customFace                               | 115        |
+| advancedText                             | 117        |
+| customMsgNotTriggerConversation          | 119        |
+| customMsgOnlineOnly                      | 120        |
+| friendApplicationApprovedNotification    | 1201       |
+| friendApplicationRejectedNotification    | 1202       |
+| friendApplicationNotification            | 1203       |
+| friendAddedNotification                  | 1204       |
+| friendDeletedNotification                | 1205       |
+| friendRemarkSetNotification              | 1206       |
+| blackAddedNotification                   | 1207       |
+| blackDeletedNotification                 | 1208       |
+| conversationChangeNotification           | 1300       |
+| userInfoUpdatedNotification              | 1303       |
+| oaNotification                           | 1400       |
+| groupCreatedNotification                 | 1501       |
+| groupInfoSetNotification                 | 1502       |
+| joinGroupApplicationNotification         | 1503       |
+| memberQuitNotification                   | 1504       |
+| groupApplicationAcceptedNotification     | 1505       |
+| groupApplicationRejectedNotification     | 1506       |
+| groupOwnerTransferredNotification        | 1507       |
+| memberKickedNotification                 | 1508       |
+| memberInvitedNotification                | 1509       |
+| memberEnterNotification                  | 1510       |
+| dismissGroupNotification                 | 1511       |
+| groupMemberMutedNotification             | 1512       |
+| groupMemberCancelMutedNotification       | 1513       |
+| groupMutedNotification                   | 1514       |
+| groupCancelMutedNotification             | 1515       |
+| groupMemberInfoChangedNotification       | 1516       |
+| groupMemberSetToAdminNotification        | 1517       |
+| groupMemberSetToOrdinaryUserNotification | 1518       |
+| groupNoticeChangedNotification           | 1519       |
+| groupNameChangedNotification             | 1520       |
+| burnAfterReadingNotification             | 1701       |
+| businessNotification                     | 2001       |
+| revokeMessageNotification                | 2101       |
+| signalHasReadReceiptNotification         | 2150       |
+| groupHasReadReceiptNotification          | 2155       |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### MessageType
+
+| Enum Name                | Enum Value |
+| ------------------------ | ---------- |
+| TextMessage              | 101        |
+| PictureMessage           | 102        |
+| VoiceMessage             | 103        |
+| VideoMessage             | 104        |
+| FileMessage              | 105        |
+| AtTextMessage            | 106        |
+| MergeMessage             | 107        |
+| CardMessage              | 108        |
+| LocationMessage          | 109        |
+| CustomMessage            | 110        |
+| TypingMessage            | 113        |
+| QuoteMessage             | 114        |
+| FaceMessage              | 115        |
+| MarkdownMessage          | 118        |
+| FriendAdded              | 1201       |
+| OANotification           | 1400       |
+| GroupCreated             | 1501       |
+| GroupInfoUpdated         | 1502       |
+| MemberQuit               | 1504       |
+| GroupOwnerTransferred    | 1507       |
+| MemberKicked             | 1508       |
+| MemberInvited            | 1509       |
+| MemberEnter              | 1510       |
+| GroupDismissed           | 1511       |
+| GroupMemberMuted         | 1512       |
+| GroupMemberCancelMuted   | 1513       |
+| GroupMuted               | 1514       |
+| GroupCancelMuted         | 1515       |
+| GroupAnnouncementUpdated | 1519       |
+| GroupNameUpdated         | 1518       |
+| BurnMessageChange        | 1701       |
+| RevokeMessage            | 2101       |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### MessageType
+
+| Enum Name                | Enum Value |
+| ------------------------ | ---------- |
+| TextMessage              | 101        |
+| PictureMessage           | 102        |
+| VoiceMessage             | 103        |
+| VideoMessage             | 104        |
+| FileMessage              | 105        |
+| AtTextMessage            | 106        |
+| MergeMessage             | 107        |
+| CardMessage              | 108        |
+| LocationMessage          | 109        |
+| CustomMessage            | 110        |
+| TypingMessage            | 113        |
+| QuoteMessage             | 114        |
+| FaceMessage              | 115        |
+| FriendAdded              | 1201       |
+| OANotification           | 1400       |
+| GroupCreated             | 1501       |
+| MemberQuit               | 1504       |
+| GroupOwnerTransferred    | 1507       |
+| MemberKicked             | 1508       |
+| MemberInvited            | 1509       |
+| MemberEnter              | 1510       |
+| GroupDismissed           | 1511       |
+| GroupMemberMuted         | 1512       |
+| GroupMemberCancelMuted   | 1513       |
+| GroupMuted               | 1514       |
+| GroupCancelMuted         | 1515       |
+| GroupAnnouncementUpdated | 1519       |
+| GroupNameUpdated         | 1518       |
+| BurnMessageChange        | 1701       |
+| RevokeMessage            | 2101       |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### MessageType
+
+| Enum Name                | Enum Value |
+| ------------------------ | ---------- |
+| TextMessage              | 101        |
+| PictureMessage           | 102        |
+| VoiceMessage             | 103        |
+| VideoMessage             | 104        |
+| FileMessage              | 105        |
+| AtTextMessage            | 106        |
+| MergeMessage             | 107        |
+| CardMessage              | 108        |
+| LocationMessage          | 109        |
+| CustomMessage            | 110        |
+| TypingMessage            | 113        |
+| QuoteMessage             | 114        |
+| FaceMessage              | 115        |
+| FriendAdded              | 1201       |
+| OANotification           | 1400       |
+| GroupCreated             | 1501       |
+| MemberQuit               | 1504       |
+| GroupOwnerTransferred    | 1507       |
+| MemberKicked             | 1508       |
+| MemberInvited            | 1509       |
+| MemberEnter              | 1510       |
+| GroupDismissed           | 1511       |
+| GroupMemberMuted         | 1512       |
+| GroupMemberCancelMuted   | 1513       |
+| GroupMuted               | 1514       |
+| GroupCancelMuted         | 1515       |
+| GroupAnnouncementUpdated | 1519       |
+| GroupNameUpdated         | 1518       |
+| BurnMessageChange        | 1701       |
+| RevokeMessage            | 2101       |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### MessageType
+
+| Enum Name                | Enum Value |
+| ------------------------ | ---------- |
+| TextMessage              | 101        |
+| PictureMessage           | 102        |
+| VoiceMessage             | 103        |
+| VideoMessage             | 104        |
+| FileMessage              | 105        |
+| AtTextMessage            | 106        |
+| MergeMessage             | 107        |
+| CardMessage              | 108        |
+| LocationMessage          | 109        |
+| CustomMessage            | 110        |
+| TypingMessage            | 113        |
+| QuoteMessage             | 114        |
+| FaceMessage              | 115        |
+| FriendAdded              | 1201       |
+| OANotification           | 1400       |
+| GroupCreated             | 1501       |
+| MemberQuit               | 1504       |
+| GroupOwnerTransferred    | 1507       |
+| MemberKicked             | 1508       |
+| MemberInvited            | 1509       |
+| MemberEnter              | 1510       |
+| GroupDismissed           | 1511       |
+| GroupMemberMuted         | 1512       |
+| GroupMemberCancelMuted   | 1513       |
+| GroupMuted               | 1514       |
+| GroupCancelMuted         | 1515       |
+| GroupAnnouncementUpdated | 1519       |
+| GroupNameUpdated         | 1518       |
+| BurnMessageChange        | 1701       |
+| RevokeMessage            | 2101       |
+
+</TabItem>
+
+</Tabs>

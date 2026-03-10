@@ -1,0 +1,289 @@
+---
+sidebar_position: 10
+title: 消息类型
+toc_max_heading_level: 4 
+---
+
+# 消息中 contentType 及对应 content 说明
+
+### **简要描述**
+
+- `{API_ADDRESS}/msg/send_msg` [API](../restapi/apis/messageManagement/sendMessage) 请求字段中 `contentType` 支持的消息类型说明以及消息 `content` 的具体字段说明。
+
+:::caution 注意
+
+针对图片、语音、视频、文件等消息类型，需要先[上传文件](./apis/uploadManagement/initUpload.md)，获取下载地址后再发送消息。
+
+:::
+
+### **contentType 汇总**
+
+| contentType 值 | 类型说明   |
+| :------------: | :--------- |
+|      101       | 文本消息   |
+|      102       | 图片消息   |
+|      103       | 音频消息   |
+|      104       | 视频消息   |
+|      105       | 文件消息   |
+|      106       | @消息      |
+|      109       | 位置消息   |
+|      110       | 自定义消息 |
+
+### **content 具体内容**
+
+- `content` 内部为 json 对象，不同的消息类型对应不同的 json 对象
+
+#### **contentType=101 文本消息** 📜
+
+```json
+{
+  ...,
+  "content": {
+      "content": "hello"
+  },
+  ....
+}
+```
+
+| 参数名  | 必选 |  类型  | 说明               |
+| :-----: | :--: | :----: | :----------------- |
+| content |  是  | string | 文本消息的具体内容 |
+
+#### **名片消息** 🏷️
+
+```json
+{
+  ...,
+  "content": {
+     "userID":"",
+      "nickname":"",
+      "faceURL":"",
+      "ex":""
+  },
+  ....
+}
+```
+
+|  参数名  | 必选 |  类型  | 说明     |
+| :------: | :--: | :----: | :------- |
+|  userID  |  是  | string | 用户 ID  |
+| nickname |  是  | string | 用户名   |
+| faceURL  |  是  | string | 用户头像 |
+|    ex    |  否  | string | 扩展字段 |
+
+#### **图片消息** 📷
+
+```json
+{
+  ...,
+  "content": {
+     "sourcePath":"",
+  "sourcePicture":{
+      "uuid":"",
+      "type":"",
+      "size":0,
+      "width":0,
+      "height":0,
+      "url":""
+  },
+  "bigPicture":{
+      "uuid":"",
+      "type":"",
+      "size":0,
+      "width":0,
+      "height":0,
+      "url":""
+  },
+  "snapshotPicture":{
+      "uuid":"",
+      "type":"",
+      "size":0,
+      "width":0,
+      "height":0,
+      "url":""
+  }
+  },
+  ....
+}
+```
+
+|     参数名      | 必选 |  类型  | 说明                                                                   |
+| :-------------: | :--: | :----: | :--------------------------------------------------------------------- |
+|   sourcePath    |  否  | string | 图片文件本地路径                                                       |
+|  sourcePicture  |  是  | object | 原图信息                                                               |
+|   bigPicture    |  是  | object | 大图信息                                                               |
+| snapshotPicture |  是  | object | 缩略图信息                                                             |
+|      uuid       |  否  | string | 图片文件唯一 ID                                                        |
+|      type       |  是  | string | 图片文件类型                                                           |
+|      size       |  否  |  int   | 图片文件大小                                                           |
+|      width      |  是  |  int   | 图片宽度                                                               |
+|     height      |  是  |  int   | 图片高度                                                               |
+|       url       |  是  | string | 图片下载地址，需要先[上传文件](./apis/uploadManagement/initUpload.md) |
+
+#### **语音消息** 🎤
+
+```json
+{
+  ...,
+  "content": {
+      "uuid":"",
+      "soundPath":"",
+      "sourceUrl":"",
+      "dataSize":0,
+      "duration":0,
+      "soundType":""
+  },
+  ....
+}
+```
+
+|  参数名   | 必选 |  类型  | 说明                                                                       |
+| :-------: | :--: | :----: | :------------------------------------------------------------------------- |
+|   uuid    |  否  | string | 语音文件唯一 ID                                                            |
+| soundPath |  否  | string | 语音文件的本地路径                                                         |
+| sourceUrl |  是  | string | 语音文件下载地址，需要先[上传文件](./apis/uploadManagement/initUpload.md) |
+| dataSize  |  否  |  int   | 语音文件大小                                                               |
+| duration  |  是  |  int   | 语音时长                                                                   |
+| soundType |  否  | string | 语音文件类型                                                               |
+
+#### **视频消息** 📹
+
+```json
+{
+  ...,
+  "content": {
+      "videoPath":"",
+      "videoUUID":"",
+      "videoUrl":"",
+      "videoType":"",
+      "videoSize":0,
+      "duration":0,
+      "snapshotPath":"",
+      "snapshotUUID":"",
+      "snapshotSize":0,
+      "snapshotUrl":"",
+      "snapshotWidth":0,
+      "snapshotHeight":0
+  },
+  ....
+}
+```
+
+|     参数名     | 必选 |  类型  | 说明                                                                             |
+| :------------: | :--: | :----: | :------------------------------------------------------------------------------- |
+|   videoPath    |  否  | string | 视频文件本地路径                                                                 |
+|   videoUUID    |  否  | string | 视频文件唯一 ID                                                                  |
+|    videoUrl    |  是  | string | 视频文件下载地址，需要先[上传文件](./apis/uploadManagement/initUpload.md)       |
+|   videoType    |  是  | string | 视频文件类型                                                                     |
+|   videoSize    |  是  |  int   | 视频文件大小                                                                     |
+|    duration    |  是  |  int   | 视频时长                                                                         |
+|  snapshotPath  |  否  | string | 视频封面图文件本地路径                                                           |
+|  snapshotUUID  |  否  | string | 视频封面图唯一 ID                                                                |
+|  snapshotSize  |  否  |  int   | 视频封面图文件大小                                                               |
+|  snapshotUrl   |  是  | string | 视频封面图文件下载地址，需要先[上传文件](./apis/uploadManagement/initUpload.md) |
+| snapshotWidth  |  是  |  int   | 视频封面图宽度                                                                   |
+| snapshotHeight |  是  |  int   | 视频封面图高度                                                                   |
+
+#### **文件消息** 📁
+
+```json
+{
+  ...,
+  "content": {
+      "filePath":"",
+      "uuid":"",
+      "sourceUrl":"",
+      "fileName":"",
+      "fileSize":0,
+      "fileType":""
+  },
+  ....
+}
+```
+
+|  参数名   | 必选 |  类型  | 说明                                                                   |
+| :-------: | :--: | :----: | :--------------------------------------------------------------------- |
+| filePath  |  否  | string | 文件本地路径                                                           |
+|   uuid    |  否  | string | 文件唯一 ID                                                            |
+| sourceUrl |  是  | string | 文件下载地址，需要先[上传文件](./apis/uploadManagement/initUpload.md) |
+| fileName  |  是  | string | 文件名称                                                               |
+| fileSize  |  是  |  int   | 文件大小                                                               |
+| fileType  |  否  | string | 文件类型                                                               |
+
+#### **表情消息** 😄
+
+```json
+{
+  ...,
+  "content":{
+    "index": 0,
+    "data": ""
+  },
+  ...
+}
+```
+
+| 参数名 | 必选 |  类型  | 说明                 |
+| :----: | :--: | :----: | :------------------- |
+| index  |  是  |  int   | 表情索引             |
+|  data  |  否  | string | 表情自定义 json 数据 |
+
+#### **位置消息** 📍
+
+```json
+{
+  ...,
+  "content":{
+  "description": "",
+  "longitude": 0,
+  "latitude": 0
+  },
+  ...,
+}
+```
+
+|   参数名    | 必选 |  类型  | 说明     |
+| :---------: | :--: | :----: | :------- |
+| description |  否  | string | 位置描述 |
+|  longitude  |  是  | double | 定位经度 |
+|  latitude   |  是  | double | 定位纬度 |
+
+#### **@消息** 📢
+
+```json
+{
+  ...,
+  "content": {
+      "text": "",
+      "atUserList": ['12312'],
+      "isAtSelf": false,
+  },
+  ....
+}
+```
+
+|   参数名   | 必选 |  类型   | 说明         |
+| :--------: | :--: | :-----: | :----------- |
+|    text    |  否  | string  | 消息文本内容 |
+| atUserList |  是  |  array  | @的用户列表  |
+|  isAtSelf  |  否  | boolean | 是否@自己    |
+
+#### **自定义消息** 🖌️
+
+```json
+{
+  ...,
+  "content": {
+      "data": "",
+      "description": "",
+      "extension": ""
+  },
+  ....
+}
+```
+
+|   参数名    | 必选 |  类型  | 说明                 |
+| :---------: | :--: | :----: | :------------------- |
+|    data     |  是  | string | 用户自定义的消息内容 |
+| description |  否  | string | 扩展的描述信息       |
+|  extension  |  否  | string | 扩展字段             |

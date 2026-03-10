@@ -1,0 +1,119 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# GroupVerification
+
+:::info
+
+Group join verification options.
+
+:::
+
+## Group Verification Options {#GroupVerification}
+
+| Enum Value | Description                                                                                                                                           |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0          | Applying to join requires approval from the group owner or an administrator; users invited by group members can join directly                         |
+| 1          | Applying to join requires approval from the group owner or an administrator; users invited by ordinary members also require approval                  |
+| 2          | Join directly                                                                                                                                         |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### GroupVerification
+
+| Enum Name                           | Enum Value |
+| ----------------------------------- | ---------- |
+| applyNeedVerificationInviteDirectly | 0          |
+| allNeedVerification                 | 1          |
+| directly                            | 2          |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMGroupVerificationType
+
+| Enum Name                                                   | Enum Value |
+| ----------------------------------------------------------- | ---------- |
+| OIMGroupVerificationTypeApplyNeedVerificationInviteDirectly | 0          |
+| OIMGroupVerificationTypeAllNeedVerification                 | 1          |
+| OIMGroupVerificationTypeDirectly                            | 2          |
+
+</TabItem>
+
+<TabItem value="Android">
+
+###  GroupVerification
+
+| Enum Name                               | Enum Value |
+| --------------------------------------- | ---------- |
+| APPLY_NEED_VERIFICATION_INVITE_DIRECTLY | 0          |
+| ALL_NEED_VERIFICATION                   | 1          |
+| DIRECTLY                                | 2          |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### GroupVerificationType
+
+| Enum Name          | Enum Value |
+| ------------------ | ---------- |
+| ApplyNeedInviteNot | 0          |
+| AllNeed            | 1          |
+| AllNot             | 2          |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### GroupVerificationType
+
+| Enum Name          | Enum Value |
+| ------------------ | ---------- |
+| ApplyNeedInviteNot | 0          |
+| AllNeed            | 1          |
+| AllNot             | 2          |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### GroupVerificationType
+
+| Enum Name          | Enum Value |
+| ------------------ | ---------- |
+| ApplyNeedInviteNot | 0          |
+| AllNeed            | 1          |
+| AllNot             | 2          |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### GroupVerificationType
+
+| Enum Name          | Enum Value |
+| ------------------ | ---------- |
+| ApplyNeedInviteNot | 0          |
+| AllNeed            | 1          |
+| AllNot             | 2          |
+
+</TabItem>
+</Tabs>

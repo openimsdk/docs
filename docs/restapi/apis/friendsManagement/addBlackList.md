@@ -1,0 +1,82 @@
+---
+sidebar_position: 10
+title: 添加黑名单
+hide_title: true
+---
+
+<center>
+
+## 添加黑名单
+
+</center>
+
+### 简要描述
+
+- 将 blackUserID 添加到 ownerUserID 的黑名单中，blackUserID 不能再给 ownerUserID 发送消息。
+
+### 请求方式
+
+- `post`
+
+### 请求 URL
+
+- `{API_ADDRESS}/friend/add_black`
+
+### Header
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | 用于全局链路追踪，建议使用时间戳，在每个请求中独立 |
+| token       | eyJhbxxxx3Xs  | 必填 | string | [管理员 token](/apis/authenticationManagement/getAdminToken.md)                 |
+
+### 请求参数示例
+
+```json
+{
+  "ownerUserID": "11111111",
+  "blackUserID": "11111113",
+  "ex": "ex"
+}
+```
+
+| 字段名      | 选填 | 类型   | 说明               |
+| :---------- | :--- | :----- | ------------------ |
+| ownerUserID | 必填 | string | 为此用户添加黑名单 |
+| blackUserID | 必填 | string | 被拉黑的用户 ID    |
+| ex          | 选填 | string | 扩展字段           |
+
+### 成功返回示例
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": ""
+}
+```
+
+### 成功返回示例的参数说明
+
+| 参数名  | 类型   | 说明                         |
+| :------ | :----- | :--------------------------- |
+| errCode | int    | 错误码，0 表示成功            |
+| errMsg  | string | 错误简要信息，为空    |
+| errDlt  | errDlt | 错误详细信息，为空    |
+
+### 失败返回示例
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+
+### 失败返回示例的参数说明
+
+| 参数名  | 类型   | 说明                          |
+| :------ | :----- | :---------------------------- |
+| errCode | int    | 错误码，具体查看全局错误码文档 |
+| errMsg  | string | 错误简要信息                  |
+| errDlt  | errDlt | 错误详细信息                  |

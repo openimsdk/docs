@@ -1,0 +1,80 @@
+---
+sidebar_position: 4
+title: 删除好友
+hide_title: true
+---
+
+<center>
+
+## 删除好友
+
+</center>
+
+### 简要描述
+
+- 将 friendUserID 从 ownerUserID 的好友列表中单向删除。
+
+### 请求方式
+
+- `post`
+
+### 请求 URL
+
+- `{API_ADDRESS}/friend/delete_friend`
+
+### Header
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | 用于全局链路追踪，建议使用时间戳，在每个请求中独立 |
+| token       | eyJhbxxxx3Xs  | 必填 | string | [管理员 token](/apis/authenticationManagement/getAdminToken.md)                 |
+
+### 请求参数示例
+
+```json
+{
+  "ownerUserID": "11111111",
+  "friendUserID": "11111113"
+}
+```
+
+| 字段名       | 选填 | 类型   | 说明               |
+| :----------- | :--- | :----- | ------------------ |
+| ownerUserID  | 必填 | string | 需要删除好友的用户 |
+| friendUserID | 必填 | string | 待删除的好友       |
+
+### 成功返回示例
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": ""
+}
+```
+
+### 成功返回示例的参数说明
+
+| 参数名  | 类型   | 说明                         |
+| :------ | :----- | :--------------------------- |
+| errCode | int    | 错误码，0 表示成功            |
+| errMsg  | string | 错误简要信息，为空    |
+| errDlt  | errDlt | 错误详细信息，为空    |
+
+### 失败返回示例
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+
+### 失败返回示例的参数说明
+
+| 参数名  | 类型   | 说明                          |
+| :------ | :----- | :---------------------------- |
+| errCode | int    | 错误码，具体查看全局错误码文档 |
+| errMsg  | string | 错误简要信息                  |
+| errDlt  | errDlt | 错误详细信息                  |

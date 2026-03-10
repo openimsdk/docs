@@ -1,0 +1,281 @@
+---
+sidebar_position: 13
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# createForwardMessage
+
+## 功能介绍
+
+:::info 说明
+
+创建转发消息。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<Message> createForwardMessage({
+    required Message message,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                           | 是否必填 | 描述           |
+| -------- | -------------------------------------------------- | -------- | -------------- |
+| message  | [Message](/class/message/messageInfo.md) | 是       | 需要转发的消息 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+  Message msg = await OpenIM.iMManager.messageManager.createForwardMessage(message: message);
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
++ (OIMMessageInfo *)createForwardMessage:(OIMMessageInfo *)msg;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                  | 是否必填 | 描述           |
+| -------- | --------------------------------------------------------- | -------- | -------------- |
+| msg      | [OIMMessageInfo](/class/message/messageInfo.md) | 是       | 需要转发的消息 |
+
+### 返回结果
+
+| 名称    | 类型                                                      | 描述     |
+| ------- | --------------------------------------------------------- | -------- |
+| message | [OIMMessageInfo](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMMessageInfo *message = [OIMMessageInfo createForwardMessage: ];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```dart showLineNumbers
+    public Message createForwardMessage(Message message)
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                           | 是否必填 | 描述           |
+| -------- | -------------------------------------------------- | -------- | -------------- |
+| message  | [Message](/class/message/messageInfo.md) | 是       | 需要转发的消息 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+     Message Message= OpenIMClient.getInstance().messageManager. createForwardMessage( message)
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.createForwardMessage(message:MessageItem, operationID?: string): Promise<WsResponse<MessageItem>>
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                               | 是否必填 | 描述         |
+| -------- | ------------------------------------------------------ | -------- | ------------ |
+| text     | string                                                 | 是       | 文本内容     |
+| message  | [MessageItem](/class/message/messageInfo.md) | 是       | 被转发的消息 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                     | 描述         |
+| --------------- | ---------------------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<WsResponse<[MessageItem](/class/message/messageInfo.md)>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                         | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+const message = {...} as MessageItem;
+
+IMSDK.createForwardMessage(message)
+  .then(({data}) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('createForwardMessage', operationID: string, message: MessageItem): Promise<MessageItem>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                               | 是否必填 | 描述                                                    |
+| ----------- | ------------------------------------------------------ | -------- | ------------------------------------------------------- |
+| operationID | string                                                 | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| message     | [MessageItem](/class/message/messageInfo.md) | 是       | 要转发的消息                                            |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                         | 描述         |
+| --------------- | ---------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[MessageItem](/class/message/messageInfo.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>          | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+const message = {...} as MessageItem;
+
+IMSDK.asyncApi('createForwardMessage', IMSDK.uuid(), message)
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.createForwardMessage( message: MessageItem, operationID?: string): Promise<MessageItem>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                               | 是否必填 | 描述                                                    |
+| ----------- | ------------------------------------------------------ | -------- | ------------------------------------------------------- |
+| message     | [MessageItem](/class/message/messageInfo.md) | 是       | 要转发的消息                                            |
+| operationID | string                                                 | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                         | 描述         |
+| --------------- | ---------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[MessageItem](/class/message/messageInfo.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>          | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+const message = {...} as MessageItem;
+
+OpenIMSDK.createForwardMessage(message)
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+public static Message CreateForwardMessage(Message msg)
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                           | 是否必填 | 描述           |
+| -------- | -------------------------------------------------- | -------- | -------------- |
+| msg  | [Message](/class/message/messageInfo.md) | 是       | 需要转发的消息 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```C# showLineNumbers
+var msg = IMSDK.CreateForwardMessage(msg);
+```
+
+</TabItem>
+
+</Tabs>

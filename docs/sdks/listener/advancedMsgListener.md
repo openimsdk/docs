@@ -1,0 +1,22 @@
+---
+sidebar_position: 6
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# AdvancedMsgListener
+
+## 模块概览
+
+:::info
+
+消息监听器，当收到新消息、已读回执及撤回消息时回调
+
+:::
+
+| 模块名称                                                                  | 模块功能简介     |
+| ------------------------------------------------------------------------- | ---------------- |
+| [onRecvNewMessage](/callback/onRecvNewMessage.md)               | 收到新消息       |
+| [onRecvOfflineNewMessage](/callback/onRecvOfflineNewMessage.md) | 收到离线消息     |
+| [onRecvC2CReadReceipt](/callback/onRecvC2CReadReceipt.md)       | 单聊消息已读回执 |
+| [onNewRecvMessageRevoked](/callback/onNewRecvMessageRevoked.md) | 撤回消息回调     |

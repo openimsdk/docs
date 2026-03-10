@@ -1,0 +1,339 @@
+---
+sidebar_position: 12
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# createMergeMessage
+
+## 功能介绍
+
+:::info 说明
+
+创建合并消息，多条消息合并成一条，参数包含标题、摘要以及多条消息。
+
+:::
+
+:::caution 注意
+
+建议合并消息总数在一百条以内。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<Message> createMergerMessage({
+    required List<Message> messageList,
+    required String title,
+    required List<String> summaryList,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                 | 是否必填 | 描述         |
+| ----------- | -------------------------------------------------------- | -------- | ------------ |
+| messageList | List<[Message](/class/message/messageInfo.md)> | 是       | 消息列表     |
+| title       | String                                                   | 是       | 标题         |
+| summaryList | List<String\>                                            | 是       | 消息摘要列表 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+    Message msg = await OpenIM.iMManager.messageManager.createMergerMessage(messageList: messageList, title: title, summaryList: summaryList);
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
++ (OIMMessageInfo *)createMergeMessage:(NSArray <OIMMessageInfo *> *)messages
+                                 title:(NSString *)title
+                           summaryList:(NSArray <NSString *> *)summarys;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                                 | 是否必填 | 描述         |
+| -------- | ------------------------------------------------------------------------ | -------- | ------------ |
+| messages | NSArray < [OIMMessageInfo](/class/message/messageInfo.md) \* > | 是       | 消息列表     |
+| title    | NSString                                                                 | 是       | 标题         |
+| summarys | NSArray <NSString \*>                                                    | 是       | 消息摘要列表 |
+
+### 返回结果
+
+| 名称    | 类型                                                      | 描述     |
+| ------- | --------------------------------------------------------- | -------- |
+| message | [OIMMessageInfo](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMMessageInfo *message = [OIMMessageInfo createMergeMessage:@[]
+                                                       title:@""
+                                                 summaryList:@[]];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```dart showLineNumbers
+    public Message createMergerMessage(List<Message> messageList, String title, List<String> summaryList)
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                 | 是否必填 | 描述         |
+| ----------- | -------------------------------------------------------- | -------- | ------------ |
+| messageList | List<[Message](/class/message/messageInfo.md)> | 是       | 消息列表     |
+| title       | String                                                   | 是       | 标题         |
+| summaryList | List<String\>                                            | 是       | 消息摘要列表 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+     Message Message= OpenIMClient.getInstance().messageManager.createMergerMessage( messageList,  title,  summaryList);
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.createMergerMessage({
+  messageList: MessageItem[];
+  title: string;
+  summaryList: string[];
+}, operationID?: string): Promise<WsResponse<MessageItem>>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                 | 是否必填 | 描述         |
+| ----------- | -------------------------------------------------------- | -------- | ------------ |
+| messageList | [MessageItem](/class/message/messageInfo.md)[] | 是       | 消息列表     |
+| title       | string                                                   | 是       | 标题         |
+| summaryList | string[]                                                 | 是       | 消息摘要列表 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                     | 描述         |
+| --------------- | ---------------------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<WsResponse<[MessageItem](/class/message/messageInfo.md)>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                         | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.createMergerMessage({
+  messageList: [
+    {
+      // message
+      ...
+    }
+  ],
+  title: "和xx的聊天记录",
+  summaryList: ["xx: 你好", "xx: 你好"];
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('createMergerMessage', operationID: string, {
+  messageList: MessageItem[];
+  title: string;
+  summaryList: string[];
+}): Promise<MessageItem>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                 | 是否必填 | 描述                                                    |
+| ----------- | -------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                                   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| messageList | [MessageItem](/class/message/messageInfo.md)[] | 是       | 消息列表                                                |
+| title       | string                                                   | 是       | 标题                                                    |
+| summaryList | string[]                                                 | 是       | 消息摘要列表                                            |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                         | 描述         |
+| --------------- | ---------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[MessageItem](/class/message/messageInfo.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>          | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('createMergerMessage', IMSDK.uuid(), {
+  messageList: [
+    {
+      // message
+      ...
+    }
+  ],
+  title: "和xx的聊天记录",
+  summaryList: ["xx: 你好", "xx: 你好"];
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.createMergerMessage({
+  title: string,
+  messageList: Array,
+  summaryList: Array,
+}, operationID?: string): Promise<MessageItem>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                 | 是否必填 | 描述                                                    |
+| ----------- | -------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| messageList | [MessageItem](/class/message/messageInfo.md)[] | 是       | 消息列表                                                |
+| title       | string                                                   | 是       | 标题                                                    |
+| summaryList | string[]                                                 | 是       | 消息摘要列表                                            |
+| operationID | string                                                   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                         | 描述         |
+| --------------- | ---------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[MessageItem](/class/message/messageInfo.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>          | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.createMergerMessage({
+  messageList: [
+    {
+      // message
+      ...
+    }
+  ],
+  title: "和xx的聊天记录",
+  summaryList: ["xx: 你好", "xx: 你好"];
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static Message CreateMergerMessage(Message[] messageList, string title, string[] summaryList)
+
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                 | 是否必填 | 描述         |
+| ----------- | -------------------------------------------------------- | -------- | ------------ |
+| messageList | [Message](/class/message/messageInfo.md)[] | 是       | 消息列表     |
+| title       | string                                                   | 是       | 标题         |
+| summaryList | string[]                                            | 是       | 消息摘要列表 |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```C# showLineNumbers
+var msg = IMSDK.CreateMergerMessage(messageList,title,summaryList);
+```
+
+</TabItem>
+</Tabs>

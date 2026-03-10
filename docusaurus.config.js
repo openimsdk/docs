@@ -1,6 +1,7 @@
+const {themes: prismThemes} = require('prism-react-renderer');
 const code_themes = {
-  light: require('prism-react-renderer/themes/github'),
-  dark: require('prism-react-renderer/themes/vsDark'),
+  light: prismThemes.github,
+  dark: prismThemes.vsDark,
 };
 
 /** @type {import('@docusaurus/types').Config} */
@@ -80,12 +81,21 @@ const plugins = [tailwindPlugin, ...docs_plugins, webpackPlugin];
 const config = {
   ...meta,
   plugins,
-  scripts: [
-    '/embed.js'
-  ],
+  // scripts: [
+  //   '/embed.js'
+  // ],
 
   trailingSlash: false,
-  // themes: ['@docusaurus/theme-live-codeblock'],
+  onBrokenLinks: 'throw',
+  onBrokenAnchors: 'throw',
+
+
+  markdown: {
+    format: 'detect',
+    hooks: {
+      onBrokenMarkdownLinks: 'throw',
+    },
+  },
 
   presets: [
     [
@@ -247,6 +257,10 @@ const config = {
         indexName: 'OpenIM Docs',
         contextualSearch: true,
         searchParameters: {},
+        replaceSearchResultPathname: {
+          from: '/zh-hans/',
+          to: '/',
+        },
       },
     }),
 

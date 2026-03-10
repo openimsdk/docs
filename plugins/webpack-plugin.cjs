@@ -4,7 +4,18 @@ const { ProvidePlugin } = require('webpack');
 function webpackPlugin(context, options) {
   return {
     name: 'webpack-plugin',
-    configureWebpack(config) {
+    configureWebpack(config, isServer) {
+      // Server builds: only provide React globally to fix SSR JSX compilation
+      if (isServer) {
+        return {
+          plugins: [
+            new ProvidePlugin({
+              React: require.resolve('react'),
+            }),
+          ],
+        };
+      }
+      // Client builds: provide Node.js polyfills
       return {
         module: {
           rules: [
@@ -19,6 +30,7 @@ function webpackPlugin(context, options) {
         plugins: [
           new ProvidePlugin({
             process: require.resolve('process/browser'),
+            React: require.resolve('react'),
           }),
         ],
         resolve: {

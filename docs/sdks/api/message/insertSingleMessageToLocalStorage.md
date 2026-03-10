@@ -1,0 +1,352 @@
+---
+sidebar_position: 33
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# insertSingleMessageToLocalStorage
+
+## 功能介绍
+
+:::info 说明
+
+插入一条群聊消息到本地，仅当前设备可见，不会同步到其他端。
+
+:::
+
+:::caution 注意
+
+**相关回调**：      
+[onConversationChanged](/callback/onConversationChanged.md)   
+仅当前设备可见。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<Message> insertSingleMessageToLocalStorage({
+    String? receiverID,
+    String? senderID,
+    Message? message,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型                                           | 是否必填 | 描述              |
+| ---------- | -------------------------------------------------- | -------- | ----------------- |
+| message    | [Message](/class/message/messageInfo.md) | 是       | 消息体            |
+| receiverID | String                                             | 是       | 接收消息的 userID |
+| senderID   | String                                             | 是       | 发送消息的 userID |
+
+### 返回结果
+
+| 名称 | 类型                                               | 描述     |
+| ---- | -------------------------------------------------- | -------- |
+| ~    | [Message](/class/message/messageInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+  await OpenIM.iMManager.messageManager.insertSingleMessageToLocalStorage(
+      receiverID: '',
+      senderID: '',
+      message: Message()
+    );
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)insertSingleMessageToLocalStorage:(OIMMessageInfo *)message
+                                   recvID:(NSString *)recvID
+                                   sendID:(NSString *)sendID
+                                onSuccess:(nullable OIMMessageInfoCallback)onSuccess
+                                onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型       | 是否必填 | 描述              |
+| -------- | -------------- | -------- | ----------------- |
+| message  | [OIMMessageInfo](/class/message/messageInfo.md) | 是       | 消息体            |
+| recvID   | NSString       | 是       | 接收消息的 userID |
+| sendID   | NSString       | 是       | 发送消息的 userID |
+
+### 返回结果
+
+| 名称      | 类型                                                      | 描述     |
+| --------- | --------------------------------------------------------- | -------- |
+| onSuccess | [OIMMessageInfo](/class/message/messageInfo.md) | 成功返回 |
+| onFailure | OIMFailureCallback      | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager insertSingleMessageToLocalStorage:
+                                               recvID:@""
+                                               sendID:@""
+                                            onSuccess:^(OIMMessageInfo * _Nullable message) {
+
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```dart showLineNumbers
+   public void insertSingleMessageToLocalStorage(OnBase<String> base, Message message, String receiver, String sender)
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型                                           | 是否必填 | 描述              |
+| ---------- | -------------------------------------------------- | -------- | ----------------- |
+| base       | OnBase<String\>                                    | 是       | 回调接口          |
+| message    | [Message](/class/message/messageInfo.md) | 是       | 消息体            |
+| receiverID | String                                             | 是       | 接收消息的 userID |
+| senderID   | String                                             | 是       | 发送消息的 userID |
+
+### 代码示例
+
+```dart showLineNumbers
+        OpenIMClient.getInstance().messageManager.insertSingleMessageToLocalStorage(new OnBase<AdvancedMessage>() {
+            @Override
+            public void onError(int code, String error) {
+
+            }
+
+            @Override
+            public void onSuccess(AdvancedMessage data) {
+
+            }
+        },   message,  receiver,  sender);
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.insertSingleMessageToLocalStorage({
+  message: MessageItem;
+  recvID: string;
+  sendID: string;
+}, operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                               | 是否必填 | 描述              |
+| -------- | ------------------------------------------------------ | -------- | ----------------- |
+| message  | [MessageItem](/class/message/messageInfo.md) | 是       | 消息体            |
+| recvID   | string                                                 | 是       | 接收消息的用户 ID |
+| sendID   | string                                                 | 是       | 发送消息的 userID |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+IMSDK.insertSingleMessageToLocalStorage({
+  message: {
+    // MessageItem
+    ...
+  };
+  recvID: "",
+  sendID: "",
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('insertSingleMessageToLocalStorage', operationID: string,{
+  message: MessageItem;
+  recvID: string;
+  sendID: string;
+}): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                               | 是否必填 | 描述                                                    |
+| ----------- | ------------------------------------------------------ | -------- | ------------------------------------------------------- |
+| operationID | string                                                 | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| message     | [MessageItem](/class/message/messageInfo.md) | 是       | 消息体                                                  |
+| recvID      | string                                                 | 是       | 接收消息的用户 ID                                       |
+| sendID      | string                                                 | 是       | 发送消息的 userID                                       |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi(
+  'insertSingleMessageToLocalStorage',
+  IMSDK.uuid(),
+  {
+    message: {
+      // MessageItem
+      ...
+    };
+    recvID: "",
+    sendID: "",
+  }
+)
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.insertSingleMessageToLocalStorage({
+  message: MessageItem;
+  recvID: string;
+  sendID: string;
+},operationID?: string): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                               | 是否必填 | 描述                                                    |
+| ----------- | ------------------------------------------------------ | -------- | ------------------------------------------------------- |
+| operationID | string                                                 | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| message     | [MessageItem](/class/message/messageInfo.md) | 是       | 消息体                                                  |
+| recvID     | string                                                 | 是       | 接收消息的 groupID                                      |
+| sendID      | string                                                 | 是       | 发送消息的 userID                                       |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.insertSingleMessageToLocalStorage({
+  message: {
+    // MessageItem
+    ...
+  },
+  recvID: "",
+  sendID: "",
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void InsertSingleMessageToLocalStorage(OnBase<Message> cb, Message message, string recvId, string sendId)
+
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型                                           | 是否必填 | 描述              |
+| ---------- | -------------------------------------------------- | -------- | ----------------- |
+| cb |    [OnBase](/callback/onBase.md)<[Message](/class/message/messageInfo.md)>                                 | 是       | 回调接口          |
+| message    | [Message](/class/message/messageInfo.md) | 是       | 消息体            |
+| receiverId | string                                             | 是       | 接收消息的 userID |
+| senderId   | string                                             | 是       | 发送消息的 userID |
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.InsertSingleMessageToLocalStorage((msg,errCode,errMsg)=>{
+
+},   message,  receiver,  sender);
+
+```
+
+</TabItem>
+</Tabs>

@@ -1,0 +1,88 @@
+---
+sidebar_position: 2
+title: 获取用户token
+hide_title: true
+---
+
+<center>
+
+## 获取用户 token
+
+</center>
+
+### 简要描述
+
+- 获取用户 token，需指定用户登录时所使用的终端类型。
+
+
+### 请求方式
+
+- `post`
+
+### 请求 URL
+
+- `{API_ADDRESS}/auth/get_user_token`
+
+### Header
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | 用于全局链路追踪，建议使用时间戳，在每个请求中独立 |
+| token       | eyJhbxxxx3Xs  | 必填 | string | [管理员 token](./getAdminToken.md)                 |
+
+### 请求参数示例
+
+```json
+{
+  "platformID": 1,
+  "userID": "111111"
+}
+```
+
+| 字段名     | 选填 | 类型   | 说明                                                                                                              |
+| :--------- | :--- | :----- | ----------------------------------------------------------------------------------------------------------------- |
+| platformID | 必填 | int    | [用户登录时的终端类型](/commonFields.md) |
+| userID     | 必填 | string | 用户 ID                                                                                                           |
+
+### 成功返回示例
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySUQiOiJvcGVuSU1BZG1pbiIsIlBsYXRmb3JtSUQiOjEsImV4cCI6MTY5Njc1NDgwNSwibmJmIjoxNjg4OTc4NTA1LCJpYXQiOjE2ODg5Nzg4MDV9.SAu86X3PzfYjtjBeYA4vZefNr1IiFKRgg12FeiXSm14",
+    "expireTimeSeconds": 7776000
+  }
+}
+```
+
+### 成功返回示例的参数说明
+
+| 参数名            | 类型   | 说明                         |
+| :---------------- | :----- | :--------------------------- |
+| errCode           | int    | 错误码，0 表示成功            |
+| errMsg            | string | 错误简要信息，成功时为空    |
+| errDlt            | errDlt | 错误详细信息，成功时为空    |
+| data              | object | 通用数据对象，具体结构见下方 |
+| token             | string | 获取到的用户 token           |
+| expireTimeSeconds | string | token 的过期时间（单位秒）   |
+
+### 失败返回示例
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+
+### 失败返回示例的参数说明
+
+| 参数名  | 类型   | 说明                          |
+| :------ | :----- | :---------------------------- |
+| errCode | int    | 错误码，具体查看全局错误码文档 |
+| errMsg  | string | 错误简要信息                  |
+| errDlt  | errDlt | 错误详细信息                  |

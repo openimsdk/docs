@@ -1,0 +1,157 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# onSelfInfoUpdated
+
+## 功能介绍
+
+:::info
+
+当前登录用户个人信息改变时会收到此回调。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 返回原型
+
+```dart showLineNumbers
+  Function(UserInfo info)? onSelfInfoUpdated;
+```
+
+### 返回结果
+
+| 名称 | 类型                                          | 描述     |
+| ---- | --------------------------------------------- | -------- |
+| info | [UserInfo](/class/user/userInfo.md) | 个人信息 |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 返回原型
+
+```swift showLineNumbers
+
+- (void)onSelfInfoUpdated:(OIMUserInfo *)info;
+
+```
+
+### 返回结果
+
+| 名称     | 类型     | 描述     |
+| -------- | -------- | -------- |
+| userInfo | [OIMUserInfo](/class/user/userInfo.md) | 个人信息 |
+
+</TabItem>
+
+<TabItem value="Android">
+### 返回原型
+
+```java showLineNumbers
+ void onSelfInfoUpdated(UserInfo info)
+```
+
+### 返回结果
+
+| 名称 | 类型                                          | 描述     |
+| ---- | --------------------------------------------- | -------- |
+| info | [UserInfo](/class/user/userInfo.md) | 用户信息 |
+</TabItem>
+
+<TabItem value="Web">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onSelfInfoUpdated(data: WSEvent<SelfUserInfo>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                       | 描述     |
+| ---- | ------------------------------------------------------------------------------------------ | -------- |
+| data | [WSEvent](/class/response.md)<[SelfUserInfo](/class/user/userInfo.md)> | 个人信息 |
+
+### 调用示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnSelfInfoUpdated, ({ data }) => {
+  // data 个人信息
+});
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onSelfInfoUpdated(data: WSEvent<SelfUserInfo>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                       | 描述     |
+| ---- | ------------------------------------------------------------------------------------------ | -------- |
+| data | [WSEvent](/class/response.md)<[SelfUserInfo](/class/user/userInfo.md)> | 个人信息 |
+
+### 调用示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.subscribe(IMSDK.IMEvents.OnSelfInfoUpdated, ({ data }) => {
+  // data 个人信息
+});
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 返回原型
+
+```C# showLineNumbers
+void OnSelfInfoUpdated(UserInfo info);
+```
+
+### 返回结果
+
+| 名称 | 类型                                          | 描述     |
+| ---- | --------------------------------------------- | -------- |
+| info | [UserInfo](/class/user/userInfo.md) | 个人信息 |
+
+</TabItem>
+</Tabs>

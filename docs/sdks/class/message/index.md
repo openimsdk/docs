@@ -1,0 +1,42 @@
+---
+sidebar_position: 6
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# 消息相关
+
+## 模块概览
+
+:::info
+
+消息相关
+
+:::
+
+| 模块名称                                                               | 模块功能简介         |
+| ---------------------------------------------------------------------- | -------------------- |
+| [MessageInfo](/class/message/messageInfo.md)                 | 消息体               |
+| [AtTextElem](/class/message/atElem.md)                       | @消息元素            |
+| [AtInfo](/class/message/atInfo.md)                           | @用户信息            |
+| [AttachedInfoElem](/class/message/attachedInfoElem.md)       | 附加信息元素         |
+| [GroupHasReadInfo](/class/message/groupHasReadInfo.md)       | 群聊已读详情         |
+| [CardElem](/class/message/cardElem.md)                       | 名片信息元素         |
+| [CustomElem](/class/message/customElem.md)                   | 自定义信息元素       |
+| [FaceElem](/class/message/faceElem.md)                       | 表情信息元素         |
+| [FileElem](/class/message/fileElem.md)                       | 文件信息元素         |
+| [LocationElem](/class/message/locationElem.md)               | 位置信息元素         |
+| [MergeElem](/class/message/mergeElem.md)                     | 合并信息元素         |
+| [NotificationElem](/class/message/notificationElem.md)       | 通知信息元素         |
+| [PictureElem](/class/message/pictureElem.md)                 | 图片信息元素         |
+| [PictureInfo](/class/message/pictureInfo.md)                 | 图片信息详情         |
+| [QuoteElem](/class/message/quoteElem.md)                     | 引用信息元素         |
+| [SoundElem](/class/message/soundElem.md)                     | 语音信息元素         |
+| [TextElem](/class/message/textElem.md)                       | 文字信息元素         |
+| [TypingElem](/class/message/typingElem.md)                   | 正在输入信息元素     |
+| [VideoElem](/class/message/videoElem.md)                     | 视频信息元素         |
+| [OfflinePushInfo](/class/message/offlinePushInfo.md)         | 离线推送内容         |
+| [ReceiptInfo](/class/message/receiptInfo.md)                 | 已读回执详情         |
+| [RevokedInfo](/class/message/revokedInfo.md)                 | 撤回信息详情         |
+| [AdvancedHistoryInfo](/class/message/advancedHistoryInfo.md) | 获取历史记录返回类型 |
+| [SearchResultItem](/class/message/searchResultItem.md)       | 搜索消息返回元素     |
