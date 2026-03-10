@@ -5,7 +5,7 @@ sidebar_position: 10
 
 ## 一、如何升级
 
-在同一大版本内，不同小版本之间的数据通常兼容。建议优先升级到目标仓库的 **latest tag**；如需固定版本（例如 `v3.8.3-patch.12`），请显式 checkout 对应 tag。
+在同一大版本内，不同小版本之间的数据通常兼容。建议优先升级到目标仓库 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布 tag**；如需固定版本（例如 `v3.8.3-patch.12`），请显式 checkout 对应 tag。
 
 ### Docker 部署
 
@@ -14,12 +14,12 @@ sidebar_position: 10
     cd openim-docker
     ```
 
-2. **拉取最新 tag 并切换：**
+2. **拉取最新正式版 release tag 并切换：**
     ```bash
     git fetch --tags
-    TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
+    TARGET_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
     git checkout "$TARGET_TAG"
-    echo "upgrade openim-docker to tag: $TARGET_TAG"
+    echo "upgrade openim-docker to stable release tag: $TARGET_TAG"
     ```
 
 3. **检查 `.env` 中镜像 tag 与当前仓库版本一致（必要时按发布说明手动调整）。**
@@ -48,10 +48,10 @@ sidebar_position: 10
     mage stop
     ```
 
-3. **切换到最新 tag（或指定 tag）并更新代码：**
+3. **切换到最新正式版 release tag（或指定 tag）并更新代码：**
     ```bash
     git fetch --tags
-    TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
+    TARGET_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
     git checkout "$TARGET_TAG"
     ```
 
@@ -62,6 +62,8 @@ sidebar_position: 10
     ```
 
 5. **如果部署了 ChatServer，也建议同步升级到对应 tag 后再重启 Chat 服务。**
+
+> 说明：这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
 
 
 ---

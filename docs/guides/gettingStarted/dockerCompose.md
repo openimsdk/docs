@@ -9,17 +9,17 @@ sidebar_position: 2
 ## 2. 部署 OpenIMServer
 ### 2.1 仓库克隆 🗂️
 
-建议使用 **latest tag**，避免直接跟随未发布变更。
+建议使用 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布 tag**，不要直接按 tag 名字排序，也不要使用 alpha/rc 等预发布版本。
 
 ```bash
 git clone https://github.com/openimsdk/openim-docker && cd openim-docker
 git fetch --tags
-LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
-git checkout "$LATEST_TAG"
-echo "using openim-docker tag: $LATEST_TAG"
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+echo "using openim-docker stable release tag: $LATEST_STABLE_TAG"
 ```
 
-> 如需复现指定版本（例如 `v3.8.3-patch.12`），将 `git checkout "$LATEST_TAG"` 替换为 `git checkout v3.8.3-patch.12`。
+> 这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
 
 ### 2.2 配置修改 🔧
 

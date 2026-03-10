@@ -8,20 +8,21 @@ sidebar_position: 4
 
 ## 版本策略（重要）
 
-- 默认建议：在联网机器上拉取仓库后，切换到 **latest tag** 再做离线打包。
-- 如需固定版本（例如 `v3.8.3-patch.12`）：将 `git checkout "$LATEST_TAG"` 替换为 `git checkout v3.8.3-patch.12`。
+- 默认建议：在联网机器上拉取仓库后，切换到 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布 tag** 再做离线打包。
+- 这里的 latest 指**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
+- 如需固定版本（例如 `v3.8.3-patch.12`）：直接执行 `git checkout v3.8.3-patch.12`。
 - 强烈建议：OpenIMServer、ChatServer、openim-docker 使用同一批次发布版本，避免跨版本组合。
 
 ### **Docker部署**
 
-1. 使用一台连接到互联网的机器，克隆仓库并切换到 latest tag：
+1. 使用一台连接到互联网的机器，克隆仓库并切换到最新正式发布 tag：
 
    ```sh
    git clone https://github.com/openimsdk/openim-docker && cd openim-docker
    git fetch --tags
-   LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
-   git checkout "$LATEST_TAG"
-   echo "using openim-docker tag: $LATEST_TAG"
+   LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
+   git checkout "$LATEST_STABLE_TAG"
+   echo "using openim-docker stable release tag: $LATEST_STABLE_TAG"
    ```
 
 2. 运行 `docker compose up -d` 拉取镜像并生成本地镜像清单。
@@ -61,24 +62,24 @@ sidebar_position: 4
 
 ### **源码部署**
 
-1. 使用一台连接到互联网的机器，克隆 OpenIMServer 并切换到 latest tag：
+1. 使用一台连接到互联网的机器，克隆 OpenIMServer 并切换到最新正式发布 tag：
 
    ```sh
    git clone https://github.com/openimsdk/open-im-server && cd open-im-server
    git fetch --tags
-   LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
-   git checkout "$LATEST_TAG"
-   echo "using open-im-server tag: $LATEST_TAG"
+   LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+   git checkout "$LATEST_STABLE_TAG"
+   echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
    ```
 
-2. 克隆 ChatServer 并切换到 latest tag：
+2. 克隆 ChatServer 并切换到最新正式发布 tag：
 
    ```bash
    git clone https://github.com/openimsdk/chat && cd chat
    git fetch --tags
-   LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
-   git checkout "$LATEST_TAG"
-   echo "using chat tag: $LATEST_TAG"
+   LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/chat/releases/latest)")
+   git checkout "$LATEST_STABLE_TAG"
+   echo "using chat stable release tag: $LATEST_STABLE_TAG"
    ```
 
 3. 参考 [docker部署](#docker部署) 步骤保存依赖组件镜像（源码部署场景不需要服务端业务镜像）。
