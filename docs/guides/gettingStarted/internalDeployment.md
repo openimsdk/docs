@@ -2,119 +2,185 @@
 title: '内网部署'
 sidebar_position: 4
 ---
+
 ## 📌 内网部署指南
 
-本指南将指导您在一台纯内网机器上部署 OpenIMSDK 相关服务。
+内网部署主流程：**在联网构建机执行 `mage export` 导出部署包，再拷贝到内网目标机运行**。
 
-## 版本策略（重要）
 
-- 默认建议：在联网机器上拉取仓库后，切换到 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布 tag** 再做离线打包。
-- 这里的 latest 指**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
-- 如需固定版本（例如 `v3.8.3-patch.12`）：直接执行 `git checkout v3.8.3-patch.12`。
-- 强烈建议：OpenIMServer、ChatServer、openim-docker 使用同一批次发布版本，避免跨版本组合。
+## 一、版本与分支策略
 
-### **Docker部署**
+- `main`：开发版分支，仅用于跟进未发布变更。
+- `vX.Y.Z...`：稳定版发布版本。
+- 内网生产环境建议统一使用 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布版**。
 
-1. 使用一台连接到互联网的机器，克隆仓库并切换到最新正式发布 tag：
+## 二、总体流程
 
-   ```sh
-   git clone https://github.com/openimsdk/openim-docker && cd openim-docker
-   git fetch --tags
-   LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
-   git checkout "$LATEST_STABLE_TAG"
-   echo "using openim-docker stable release tag: $LATEST_STABLE_TAG"
-   ```
+1. 在**联网构建机**拉取 OpenIMServer / ChatServer 稳定版代码。
+2. 在联网构建机执行 `mage export`，生成可直接带走的部署归档。
+3. 将部署归档、配置文件、外部组件安装包拷贝到**内网目标机**。
+4. 在内网目标机解压部署归档，直接使用归档内自带的 `./mage` 启动和检查服务。
 
-2. 运行 `docker compose up -d` 拉取镜像并生成本地镜像清单。
+## 三、外部组件准备方式
 
-3. 导出当前 compose 实际使用镜像（避免手工维护版本号）：
+OpenIMServer / ChatServer 的内网部署包只负责业务服务本身。外部组件（MongoDB、Redis、Kafka、Etcd、MinIO）有两种准备方式。
 
-   ```sh
-   docker compose config --images | sort -u > images.txt
-   ```
+### 方案 A：目标机使用 Docker
 
-4. 批量保存镜像：
+如果目标机尚未安装 Docker，建议在联网机器提前下载与目标机发行版、架构匹配的 Docker 离线安装包，再拷贝到内网目标机安装。
 
-   ```sh
-   while read -r image; do
-     docker save -o "$(echo "$image" | tr '/:' '_').tar" "$image"
-   done < images.txt
-   ```
+- Debian / Ubuntu：准备 `docker-ce`、`docker-ce-cli`、`containerd.io`、`docker-buildx-plugin`、`docker-compose-plugin` 对应的 `.deb` 包
+- RHEL / CentOS：准备上述组件对应的 `.rpm` 包
 
-5. 通过内网或物理介质将**镜像文件**和**openim-docker 仓库文件**拷贝到部署机器。
+安装完成后，再通过 `docker load` 导入你提前保存好的外部组件镜像。
 
-6. 在部署机器导入镜像：
+### 方案 B：目标机不使用 Docker
 
-   ```bash
-   docker load -i image-name.tar
-   ```
+可以直接将 MongoDB、Redis、Kafka、Etcd、MinIO 的官方二进制包或内部制品包拷贝到内网目标机，按各组件自己的 systemd / supervisor / 脚本方式启动。
 
-7. 在仓库目录下运行：
+这种模式下，OpenIMServer / ChatServer 只需要正确指向这些组件的地址与账号信息，不要求目标机安装 Docker。
 
-   ```sh
-   docker compose up -d
-   ```
+## 四、联网构建机导出 OpenIMServer
 
-   需要启动监控组件则运行：
-   ```sh
-   docker compose --profile m up -d
-   ```
+```bash
+git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
 
-### **源码部署**
+bash bootstrap.sh
+PLATFORMS="linux_amd64" mage export
+```
 
-1. 使用一台连接到互联网的机器，克隆 OpenIMServer 并切换到最新正式发布 tag：
+执行成功后，部署归档默认生成在：
 
-   ```sh
-   git clone https://github.com/openimsdk/open-im-server && cd open-im-server
-   git fetch --tags
-   LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
-   git checkout "$LATEST_STABLE_TAG"
-   echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
-   ```
+```text
+_output/export/
+```
 
-2. 克隆 ChatServer 并切换到最新正式发布 tag：
+典型文件名示例：
 
-   ```bash
-   git clone https://github.com/openimsdk/chat && cd chat
-   git fetch --tags
-   LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/chat/releases/latest)")
-   git checkout "$LATEST_STABLE_TAG"
-   echo "using chat stable release tag: $LATEST_STABLE_TAG"
-   ```
+```text
+exported_open-im-server_v3.8.3-patch.12_linux_amd64.tar.gz
+```
 
-3. 参考 [docker部署](#docker部署) 步骤保存依赖组件镜像（源码部署场景不需要服务端业务镜像）。
+## 五、联网构建机导出 ChatServer
 
-   > 注意：`open-im-server/docker-compose.yml` 当前默认还会拉起 `openim-web-front`、`openim-admin-front`。如果部署机上的 compose 文件不做裁剪，则还需要一并准备这两个前端镜像；如果你只想部署依赖组件，请先在联网机器调整 compose 文件后再离线拷贝。
+```bash
+git clone https://github.com/openimsdk/chat && cd chat
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/chat/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
 
-4. 通过内网或者物理介质将**镜像文件**、**OpenIMServer 仓库文件**、**ChatServer 仓库文件**拷贝到部署机器上。
+bash bootstrap.sh
+PLATFORMS="linux_amd64" mage export
+```
 
-   > 纯内网机器如果无法访问 Go 模块源，直接执行 `mage` 可能失败，因为源码仓库默认**不包含 vendor 依赖**。这种场景建议二选一：
-   > 1. 在联网机器提前编译好 `_output/bin` 后再拷贝到内网机器；
-   > 2. 在联网机器预先准备 `go` 依赖缓存和 `mage` 可执行文件，再一起拷贝到内网机器。
+典型文件名示例：
 
-5. 导入镜像到`docker`中，命令为：
+```text
+exported_chat_v1.8.4-patch.3_linux_amd64.tar.gz
+```
 
-   ```bash
-   docker load -i image-name.tar
-   ```
+## 六、部署包内容说明
 
-   例如`mongo`镜像导入命令为：
+`mage export` 生成的归档会包含：
 
-   ```sh
-   docker load -i mongo.tar
-   ```
+- 已编译好的业务二进制
+- `start-config.yml`
+- 运行所需配置文件
+- 可直接在目标机执行的 `mage` 启动器
 
-6. 在 OpenIMServer 目录下依次运行：
-   ```bash
-   docker compose up -d  # 如需启用监控组件则为 docker compose --profile m up -d
-   bash bootstrap.sh     # 已预装 mage 时可跳过
-   mage
-   mage start
-   ```
+因此，**内网目标机不需要再安装 Go，也不需要重新编译源码**。
 
-7. 在 ChatServer 目录下运行：
-    ```bash
-    bash bootstrap.sh     # 已预装 mage 时可跳过
-    mage
-    mage start
-    ```
+## 七、拷贝到内网目标机
+
+将以下内容拷贝到内网目标机：
+
+- OpenIMServer 导出归档
+- ChatServer 导出归档
+- 外部组件镜像包或二进制安装包
+- 你的实际配置文件（如域名、外部组件地址、`secret`、MinIO `externalAddress`）
+
+## 八、在内网目标机部署外部组件
+
+### 1. Docker 方式
+
+如果目标机使用 Docker：
+
+```bash
+docker load -i image-name.tar
+```
+
+导入完所有外部组件镜像后，再按你的组件编排文件启动。
+
+### 2. 非 Docker 方式
+
+如果目标机不用 Docker：
+
+- 启动 MongoDB
+- 启动 Redis
+- 启动 Kafka
+- 启动 Etcd
+- 启动 MinIO
+
+然后把这些组件的地址、账号、密码写入 OpenIMServer / ChatServer 的配置文件。
+
+## 九、在内网目标机解压并启动 OpenIMServer
+
+```bash
+mkdir -p /opt/openim/open-im-server
+tar -xzf exported_open-im-server_v*.tar.gz -C /opt/openim/open-im-server
+cd /opt/openim/open-im-server
+```
+
+修改配置文件中的外部组件地址、`secret`、MinIO `externalAddress` 后，执行：
+
+```bash
+./mage check
+./mage start
+./mage check
+```
+
+## 十、在内网目标机解压并启动 ChatServer
+
+```bash
+mkdir -p /opt/openim/chat
+tar -xzf exported_chat_v*.tar.gz -C /opt/openim/chat
+cd /opt/openim/chat
+```
+
+修改 ChatServer 配置文件中的 Redis、MongoDB、Etcd、OpenIMServer `secret` 后，执行：
+
+```bash
+./mage check
+./mage start
+./mage check
+```
+
+## 十一、运行时常用命令
+
+OpenIMServer：
+
+```bash
+cd /opt/openim/open-im-server
+./mage check
+./mage stop
+./mage start
+```
+
+ChatServer：
+
+```bash
+cd /opt/openim/chat
+./mage check
+./mage stop
+./mage start
+```
+
+## 十二、内网部署注意事项
+
+1. `main` 是开发版，不要拿 `main` 做内网生产包。
+2. `mage export` 的目标机侧运行依赖已经随归档带出，因此不要再在目标机重新执行源码编译流程。
+3. 如果目标机与构建机架构不同，请在联网构建机通过 `PLATFORMS` 指定目标平台，例如 `PLATFORMS="linux_amd64" mage export` 或 `PLATFORMS="linux_arm64" mage export`。
+4. 外部组件无论使用 Docker 还是二进制拷贝方式，都需要先保证地址和鉴权信息与 OpenIMServer / ChatServer 配置一致。

@@ -5,11 +5,27 @@ sidebar_position: 1
 
 # 🧩 平台及组件要求
 
-适用于 OpenIMSDK 服务端生产环境源码部署（单机）。
+适用于 `docs/guides/gettingStarted` 下的 OpenIMServer、ChatServer 部署文档。
 
 ---
 
-## 一、环境要求
+## 一、名词约定
+
+- **OpenIMSDK**：项目统称，包含 OpenIMClientSDK 与 OpenIMServer。
+- **OpenIMClientSDK**：客户端 SDK。
+- **OpenIMServer**：IM 基础服务端。
+- **ChatServer**：业务扩展服务端，文档中不再使用 `Chat` 作为独立产品名称。
+- **APP 管理员**：调用管理类接口（如 `10009`）的后台管理角色。
+- **APP 业务服务器**：调用业务扩展接口（如 `10008`）的应用服务端。
+
+## 二、版本与分支策略
+
+- `main`：开发版分支，用于持续集成未发布变更，不建议直接用于生产环境。
+- `vX.Y.Z...`：稳定版发布版本命名。
+- 生产环境建议优先使用 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布版**。
+- 如需问题复现、灰度回滚或多环境统一，请固定到明确的稳定版本 tag。
+
+## 三、环境要求
 
 | 注意事项 | 详细说明 | 补充说明 |
 | --- | --- | --- |
@@ -20,14 +36,14 @@ sidebar_position: 1
 | Docker | `v24.0.5` 或更高版本 | 自带 `compose` 功能 |
 | Git | `v2.17.1` 或更高版本 | [安装参考](https://git-scm.com/downloads) |
 
-## 二、外部组件要求
+## 四、外部组件要求
 
-| 存储组件 | 建议版本 | 支持模式 | 支持云服务 |
-| --- | --- | --- | --- |
-| MongoDB | `v7.0` | 单机、分片集群 | 支持 |
-| Redis | `v7.0.0` | 单机、分片集群 | 支持 |
-| Etcd | `v3.5.13` | 单机、分片集群 | 不支持 |
-| Kafka | `v3.5.1` | 单机、分布式集群 | 支持 |
-| MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机 | S3 兼容存储系统（`cos`、`oss`、`kodo`、`aws`） |
+| 组件 | 建议版本 | OpenIMServer 支持模式 | ChatServer 接入方式 | 支持云服务 / 备注 |
+| --- | --- | --- | --- | --- |
+| MongoDB | `v7.0` | `standalone`、`replicaSet` | `address` 或 `uri` | 支持；如接副本集，建议优先使用 `uri` |
+| Redis | `v7.0.0` | `standalone`、`cluster`、`sentinel` | `standalone`、`clusterMode` | 支持；`sentinel` 仅在 OpenIMServer 配置层有显式支持 |
+| Etcd | `v3.5.13` | 单机、多节点集群 | 多地址接入 | 不支持云服务 |
+| Kafka | `v3.5.1` | 单机、分布式集群 | 不直接依赖 | 支持；需按文档预建 topic |
+| MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机 | 不直接依赖 | 可替换为 S3 兼容存储（`COS`、`OSS`、`Kodo`、`AWS S3`） |
 
 ---

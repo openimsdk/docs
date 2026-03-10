@@ -120,17 +120,17 @@ http {
     }
 
     upstream im_api {
-        # OpenIMServer API 地址，可根据部署情况指定多个
+        # OpenIMServer API addresses; add more upstreams if needed
         server IP_A:10002;
         server IP_B:10002;
     }
 
     server {
         listen       443 ssl;
-        server_name  yourhost.com;  # 替换为您的域名
+        server_name  yourhost.com;  # Replace with your domain
 
-        ssl_certificate     /usr/local/nginx/conf/ssl/your_host_bundle.pem;  # 替换为您的证书路径
-        ssl_certificate_key /usr/local/nginx/conf/ssl/your_host.key;        # 替换为您的证书密钥路径
+        ssl_certificate     /usr/local/nginx/conf/ssl/your_host_bundle.pem;  # Replace with your certificate path
+        ssl_certificate_key /usr/local/nginx/conf/ssl/your_host.key;        # Replace with your private key path
 
         location ^~ /api/ {
             proxy_http_version 1.1;
@@ -152,10 +152,10 @@ http {
         }
     }
 
-    # 可选: HTTP 重定向到 HTTPS
+    # Optional: redirect HTTP to HTTPS
     server {
         listen 80;
-        server_name yourhost.com;  # 替换为您的域名
+        server_name yourhost.com;  # Replace with your domain
 
         return 301 https://$host$request_uri;
     }

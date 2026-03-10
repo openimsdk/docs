@@ -3,7 +3,7 @@ title: '源码部署'
 sidebar_position: 3
 ---
 
-# OpenIMSDK 服务端生产环境源码部署（单机）
+# OpenIMServer 与 ChatServer 生产环境源码部署（单机）
 
 ## 一、环境及组件要求
 
@@ -23,7 +23,7 @@ git checkout "$LATEST_STABLE_TAG"
 echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
 ```
 
-> 这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。当前该仓库会把 `v3.8.3-patch.12` 识别为最新正式版，而不会误选 `v3.8.4-alpha.1` 这类预发布版本。
+> 这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。`main` 为开发版分支，生产环境不要直接使用 `main`。
 
 > 注意：后续所有命令都在 OpenIMServer 项目根目录执行。
 
@@ -109,9 +109,9 @@ mage
 
 > 首次启动后建议等待 `20-30s` 再执行 `mage check` 或接口验证，避免把启动过程中的短暂连接失败误判为最终异常。
 
-## 四、获取 Chat
+## 四、获取 ChatServer
 
-> 如果已有自有账号系统，可不部署 ChatServer。
+> 如果已有自有账号体系，可不部署 ChatServer。
 
 同样建议拉取后切到 GitHub Releases 页面绿色 **Latest** 对应的**最新正式发布 tag**：
 
@@ -162,7 +162,7 @@ mage
 
 ## 七、关于离线推送
 
-- 个推：开源版对个推支持不够精细，需按业务自行调试。
+- 个推：支持个推离线推送，按个推官方申请 `AppID`、`AppKey`、`MasterSecret` 后接入即可。
 - Firebase：修改 `config/openim-push.yml` 中 `fcm.filepath`。
 
 ## 八、服务实例个数修改（可选）
@@ -176,7 +176,40 @@ mage
 
 ## 九、监控告警（可选）
 
-可按需启用服务器资源与 OpenIMServer/ChatServer 指标监控、仪表盘展示与告警通知。
+### 9.1 组件组成
+
+- `Prometheus`：采集 OpenIMServer 暴露的 Prometheus 指标。
+- `Alertmanager`：处理规则命中后的告警路由与通知。
+- `Grafana`：展示仪表盘。
+- `node-exporter`：采集主机 CPU、内存、磁盘、网络等资源指标。
+
+### 9.2 启动方式
+
+在 `open-im-server` 目录执行：
+
+```bash
+docker compose --profile m up -d
+```
+
+### 9.3 关键配置文件
+
+- `config/prometheus.yml`：Prometheus 抓取配置
+- `config/instance-down-rules.yml`：实例存活告警规则
+- `config/alertmanager.yml`：Alertmanager 路由配置
+- `config/email.tmpl`：邮件告警模板
+
+### 9.4 默认端口
+
+- `19091`：Prometheus
+- `19093`：Alertmanager
+- `13000`：Grafana
+- `19100`：node-exporter
+
+### 9.5 使用建议
+
+- 先确保 OpenIMServer 已正常启动并能访问 `10002`，再启动监控栈。
+- 如需邮件告警，请先补齐 `config/alertmanager.yml` 中的收件人与 SMTP 信息。
+- ChatServer 需要统一纳入监控时，建议沿用现有 Prometheus 体系继续扩展抓取配置。
 
 ## 十、重要指引
 
@@ -204,4 +237,4 @@ mage
 
 ### 10.3 单机生产环境数据备份及恢复
 
-请参考：[单机生产环境数据备份及恢复](./faultRecovery.mdx)
+请参考：[单机生产环境数据备份及恢复](production.md)

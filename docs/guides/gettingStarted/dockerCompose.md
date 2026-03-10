@@ -19,7 +19,7 @@ git checkout "$LATEST_STABLE_TAG"
 echo "using openim-docker stable release tag: $LATEST_STABLE_TAG"
 ```
 
-> 这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
+> 这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。`main` 为开发版分支，生产环境不要直接使用 `main`。
 
 ### 2.2 配置修改 🔧
 
@@ -57,6 +57,21 @@ docker compose down
 ```bash
 docker logs -f openim-server
 ```
+
+### 2.4 监控告警（可选）
+
+如需同时启动 `Prometheus`、`Alertmanager`、`Grafana`、`node-exporter`，可执行：
+
+```bash
+docker compose --profile m up -d
+```
+
+默认端口以当前 `.env` 为准，常用值如下：
+
+- `19090`：Prometheus
+- `19093`：Alertmanager
+- `13000`：Grafana
+- `19100`：node-exporter
 
 ## 3. 快速体验 ⚡
 

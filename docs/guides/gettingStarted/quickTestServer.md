@@ -36,16 +36,16 @@ docker ps | grep -E 'openim-server|openim-chat'
 如果是源码部署，可执行：
 
 ```bash
-# 在 open-im-server 目录执行
+# Run in the open-im-server directory
 mage check
 
-# 在 chat 目录执行
+# Run in the chat directory
 mage check
 ```
 
 ## 📌 五、域名与网关验证
 
-使用域名和 SSL 时，建议直接调用实际接口确认 OpenIMServer 与 ChatServer 网关路由可达。
+使用域名和 SSL 时，建议直接调用实际接口确认 OpenIMServer 与 ChatServer（APP 业务服务器）网关路由可达。
 
 ```bash
 curl -sS -X POST "https://your_domain/api/auth/get_admin_token" \
@@ -93,4 +93,4 @@ curl -sS -X POST "http://your_server_ip:10008/application/latest_version" \
   -d '{}'
 ```
 
-> ChatServer 的 POST 接口同样要求 `operationID` 请求头；缺少该请求头会直接返回参数错误。
+> ChatServer（APP 业务服务器）的 POST 接口同样要求 `operationID` 请求头；缺少该请求头会直接返回参数错误。

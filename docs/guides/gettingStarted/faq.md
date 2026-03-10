@@ -61,7 +61,7 @@ sidebar_position: 10
     mage start
     ```
 
-5. **如果部署了 ChatServer，也建议同步升级到对应 tag 后再重启 Chat 服务。**
+5. **如果部署了 ChatServer，也建议同步升级到对应 tag 后再重启 ChatServer。**
 
 > 说明：这里的 latest 指 GitHub Releases 页面绿色 Latest 的**正式发布版**，不包含 alpha/beta/rc 等预发布版本。
 
@@ -80,8 +80,8 @@ docker compose down
 源码部署：
 
 ```sh
-mage stop  # 关闭服务
-docker compose down  # 关闭组件
+mage stop  # Stop services
+docker compose down  # Stop components
 ```
 
 然后移动整个文件夹到数据目录，修改.env文件中DATA_DIR的值为新数据目录，再启动服务和组件：
@@ -89,14 +89,14 @@ docker compose down  # 关闭组件
 `docker`部署：
 
 ```sh
-docker compose up -d  # 启动组件
+docker compose up -d  # Start components
 ```
 
 源码部署：
 
 ```sh
-docker compose up -d  # 启动组件
-mage start  # 启动服务
+docker compose up -d  # Start components
+mage start  # Start services
 ```
 
 ---
@@ -113,8 +113,8 @@ docker compose down
 源码部署：
 
 ```sh
-mage stop  # 关闭服务
-docker compose down  # 关闭组件
+mage stop  # Stop services
+docker compose down  # Stop components
 ```
 
 然后删除当前部署仓库下的 `components` 文件夹。
@@ -125,15 +125,16 @@ docker compose down  # 关闭组件
 ## 四、 发送文本消息正常，但发送图片失败
 
 一般发送图片失败是由于没有配置第三方存储的原因。默认使用的第三方存储为`minio`，需修改相关配置
-```
-源码部署：
-修改 config/minio.yml 文件，配置 MinIO 外网 IP，以支持发送图片和文件，其中 `your-server-ip` 为服务端外网 IP
+
+源码部署：修改 `config/minio.yml`，将 `externalAddress` 改为外网 IP 或域名路径。
+
+```yaml
 externalAddress: http://your-server-ip:10005
 ```
 
-```
-docker部署
-修改 .env 文件，配置 MinIO 外网 IP，以支持发送图片和文件，其中 `your-server-ip` 为服务端外网 IP
+Docker 部署：修改 `.env`，将 `MINIO_EXTERNAL_ADDRESS` 改为外网 IP 或域名路径。
+
+```dotenv
 MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 ```
 ---
@@ -149,7 +150,7 @@ MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 ```yml
   mongo:
     environment:
-    - wiredTigerCacheSizeGB=0.5  # 修改为适当的值，单位GB
+    - wiredTigerCacheSizeGB=0.5  # Adjust to an appropriate value, unit: GB
 ```
 
 `kafka`：
@@ -157,7 +158,7 @@ MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 ```yml
   kafka:
     environment:
-      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"  # 添加该限制
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx256m"  # Add this memory limit
 ```
 
 ---

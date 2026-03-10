@@ -18,21 +18,21 @@ sidebar_position: 7
 
 ## 2. Nginx 配置模板
 
-> 请替换为你的实际域名、证书路径与服务地址。
+> 请替换为你的实际域名、证书路径与服务地址。下面的注释说明了每一段配置的作用，建议直接按注释逐项替换。
 
 ```nginx
 upstream msg_gateway {
-    # OpenIMServer message gateway
+    # OpenIMServer WebSocket gateway
     server 127.0.0.1:10001;
 }
 
 upstream im_api {
-    # OpenIMServer API
+    # OpenIMServer REST API
     server 127.0.0.1:10002;
 }
 
 upstream im_chat_api {
-    # ChatServer API
+    # ChatServer (APP business server) API
     server 127.0.0.1:10008;
 }
 
@@ -42,13 +42,16 @@ upstream minio_s3 {
 }
 
 server {
+    # Unified external HTTPS entry
     listen 443 ssl;
     server_name im.yourhost.com;
 
+    # SSL certificate and private key paths
     ssl_certificate /usr/local/nginx/conf/ssl/im.yourhost.com_bundle.pem;
     ssl_certificate_key /usr/local/nginx/conf/ssl/im.yourhost.com.key;
 
     location /msg_gateway {
+        # OpenIMServer WebSocket reverse proxy; keep the Upgrade headers
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -58,6 +61,7 @@ server {
     }
 
     location ^~ /api/ {
+        # OpenIMServer REST API reverse proxy
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -68,6 +72,7 @@ server {
     }
 
     location ^~ /chat/ {
+        # ChatServer (APP business server) API reverse proxy
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -77,6 +82,7 @@ server {
     }
 
     location ^~ /im-minio-api/ {
+        # MinIO file access reverse proxy; keep it consistent with externalAddress
         proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -129,5 +135,7 @@ wsAddr: wss://im.yourhost.com/msg_gateway
 - OpenIMSDK：项目整体名称。
 - OpenIMClientSDK：客户端 SDK。
 - OpenIMServer：IM 基础服务。
-- ChatServer：业务扩展服务。
+- ChatServer：业务扩展服务，即 APP 业务服务器。
 - 管理类 REST API 调用账号统一称为 APP 管理员。
+
+> 当前模板仅覆盖 OpenIMServer 与 ChatServer（APP 业务服务器）的常用对外入口；如果你需要将 APP 管理员接口统一走域名入口，请额外为 `10009` 配置对应的 `upstream` 和 `location`。

@@ -14,10 +14,10 @@ sidebar_position: 6
 | OpenIMServer | TCP:10001 | ws 协议，消息端口，用于 OpenIMClientSDK | 端口放行 |
 | OpenIMServer | TCP:10002 | api 端口，如用户、好友、群组、消息等接口 | 端口放行 |
 | OpenIMServer | TCP:10005 | MinIO 作为对象存储 | 端口放行 |
-| ChatServer | TCP:10008 | 业务系统，如注册、登录等 | 端口放行 |
-| ChatServer | TCP:10009 | 管理后台，如统计、封号等 | 端口放行 |
+| ChatServer | TCP:10008 | APP 业务服务器接口，如注册、登录等 | 端口放行 |
+| ChatServer | TCP:10009 | APP 管理员接口，如统计、封号等 | 端口放行 |
 | Web 前端（可选） | TCP:11001 | PC Web 前端，快速验证页面访问时需要放行 | 按需放行 |
-| Admin 前端（可选） | TCP:11002 | 管理后台前端页面 | 按需放行 |
+| Admin 前端（可选） | TCP:11002 | APP 管理员前端页面 | 按需放行 |
 
 在客户端 SDK 中，初始化参数如下：
 
