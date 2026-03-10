@@ -91,7 +91,42 @@ const config = {
 
 
   markdown: {
-    format: 'detect',
+    format: 'mdx',
+    mdx1Compat: {
+      comments: true,
+      admonitions: true,
+      headingIds: true,
+    },
+    preprocessor: ({filePath, fileContent}) => {
+      // Escape {WEBHOOK_ADDRESS} globally - MDX treats it as a JSX expression
+      let content = fileContent.replace(/\{WEBHOOK_ADDRESS\}/g, '&#123;WEBHOOK_ADDRESS&#125;');
+      // Escape autolink URLs <http://...> and <https://...> - MDX treats as JSX
+      content = content.replace(/<(https?:\/\/[^>]+)>/g, '[$1]($1)');
+      // Escape bare < > in table rows and type annotation lines
+      const lines = content.split('\n');
+      let inCode = false;
+      const typePattern = /(?:Promise|OnBase|List|NSArray|OIMSimpleResultInfo|Map|HashMap)<(?!\/?(?:Tabs|TabItem)[\s/>])/;
+      const result = lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('```')) {
+          inCode = !inCode;
+          return line;
+        }
+        if (inCode) return line;
+        const isTable = trimmed.startsWith('|');
+        const hasTypeAngle = typePattern.test(line);
+        if (!isTable && !hasTypeAngle) return line;
+        if (isTable && /^\|[\s\-:|]+\|$/.test(trimmed)) return line;
+        let result = line;
+        result = result.replace(/\\>/g, '&gt;');
+        result = result.replace(/<(?!\/?(?:Tabs|TabItem)[\s/>])/g, '&lt;');
+        if (isTable) {
+          result = result.replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
+        }
+        return result;
+      });
+      return result.join('\n');
+    },
     hooks: {
       onBrokenMarkdownLinks: 'throw',
     },

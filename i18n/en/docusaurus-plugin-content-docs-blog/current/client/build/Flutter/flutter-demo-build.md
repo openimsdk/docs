@@ -12,8 +12,8 @@ This article will guide you from zero to quickly building and running an instant
 
 OpenIMSDK is an open-source IM SDK that delivers highly controlled server deployment and data handling, catering to contexts that require optimal security and autonomy. Using OpenIMSDK, developers can launch applications similar to WeChat, Slack, or Zoom, supporting features ranging from text chats to audio/video calls.
 
-import demo_preview1 from './assets/preveiw1.zh-CN.jpeg';
-import demo_preview2 from './assets/preveiw2.zh-CN.jpeg';
+import demo_preview1 from './assets/preview1.jpeg';
+import demo_preview2 from './assets/preview2.jpeg';
 
 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
   <img src={demo_preview1} alt="Preview" width="32%" />

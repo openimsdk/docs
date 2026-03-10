@@ -45,8 +45,8 @@ values={[
 ### 返回结果
 
 | 参数名称 | 参数类型                                                            | 描述 |
-| -------- | ------------------------------------------------------------------- | ---- | --- |
-| listener | [ConversationListener](/listener/conversationListener.md) | 是   |     |
+| -------- | ------------------------------------------------------------------- | ---- |
+| listener | [ConversationListener](/listener/conversationListener.md) | 是   |
 
 ### 代码示例
 
@@ -69,8 +69,8 @@ values={[
 ### 返回结果
 
 | 参数名称 | 参数类型                                                                   | 描述 |
-| -------- | -------------------------------------------------------------------------- | ---- | --- |
-| listener | id < [ConversationListener](/listener/conversationListener.md) > | 是   |     |
+| -------- | -------------------------------------------------------------------------- | ---- |
+| listener | id < [ConversationListener](/listener/conversationListener.md) > | 是   |
 
 ### 代码示例
 
@@ -93,8 +93,8 @@ values={[
 ### 返回结果
 
 | 参数名称 | 参数类型                                                            | 描述 |
-| -------- | ------------------------------------------------------------------- | ---- | --- |
-| listener | [ConversationListener](/listener/conversationListener.md) | 是   |     |
+| -------- | ------------------------------------------------------------------- | ---- |
+| listener | [ConversationListener](/listener/conversationListener.md) | 是   |
 
 ### 代码示例
 
@@ -175,8 +175,8 @@ public static void SetConversationListener(IConversationListener l)
 ### 返回结果
 
 | 参数名称 | 参数类型                                                            | 描述 |
-| -------- | ------------------------------------------------------------------- | ---- | --- |
-| l | [IConversationListener](/listener/conversationListener.md) | 是   |     |
+| -------- | ------------------------------------------------------------------- | ---- |
+| l | [IConversationListener](/listener/conversationListener.md) | 是   |
 
 ### 代码示例
 

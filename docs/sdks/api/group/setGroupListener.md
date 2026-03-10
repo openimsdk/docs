@@ -45,8 +45,8 @@ values={[
 ### 返回结果
 
 | 参数名称 | 参数类型                                                | 描述 |
-| -------- | ------------------------------------------------------- | ---- | --- |
-| listener | [OnGroupListener](/listener/groupListener.md) | 是   |     |
+| -------- | ------------------------------------------------------- | ---- |
+| listener | [OnGroupListener](/listener/groupListener.md) | 是   |
 
 ### 代码示例
 
@@ -80,8 +80,8 @@ values={[
 ### 返回结果
 
 | 参数名称 | 参数类型                                                     | 描述 |
-| -------- | ------------------------------------------------------------ | ---- | --- |
-| listener | id < [GroupListener](/listener/groupListener.md) > | 是   |     |
+| -------- | ------------------------------------------------------------ | ---- |
+| listener | id < [GroupListener](/listener/groupListener.md) > | 是   |
 
 ### 代码示例
 

@@ -45,8 +45,8 @@ values={[
 ### 返回结果
 
 | 参数名称 | 参数类型                                                            | 描述 |
-| -------- | ------------------------------------------------------------------- | ---- | --- |
-| listener | [OnAdvancedMsgListener](/listener/advancedMsgListener.md) | 是   |     |
+| -------- | ------------------------------------------------------------------- | ---- |
+| listener | [OnAdvancedMsgListener](/listener/advancedMsgListener.md) | 是   |
 
 ### 代码示例
 
@@ -79,8 +79,8 @@ OpenIM.iMManager.messageManager.setAdvancedMsgListener(OnAdvancedMsgListener(
 ### 返回结果
 
 | 参数名称 | 参数类型                                                                    | 描述 |
-| -------- | --------------------------------------------------------------------------- | ---- | --- |
-| listener | id < [OIMAdvancedMsgListener](/listener/advancedMsgListener.md) > | 是   |     |
+| -------- | --------------------------------------------------------------------------- | ---- |
+| listener | id < [OIMAdvancedMsgListener](/listener/advancedMsgListener.md) > | 是   |
 
 ### 代码示例
 
@@ -103,8 +103,8 @@ OpenIM.iMManager.messageManager.setAdvancedMsgListener(OnAdvancedMsgListener(
 ### 输入参数
 
 | 参数名称 | 参数类型                                                            | 描述 |
-| -------- | ------------------------------------------------------------------- | ---- | --- |
-| listener | [OnAdvancedMsgListener](/listener/advancedMsgListener.md) | 是   |     |
+| -------- | ------------------------------------------------------------------- | ---- |
+| listener | [OnAdvancedMsgListener](/listener/advancedMsgListener.md) | 是   |
 
 ### 代码示例
 
@@ -204,8 +204,8 @@ public static void SetAdvancedMsgListener(IAdvancedMsgListener l)
 ### 输入参数
 
 | 参数名称 | 参数类型                                                            | 描述 |
-| -------- | ------------------------------------------------------------------- | ---- | --- |
-| l | [OnAdvancedMsgListener](/listener/advancedMsgListener.md) | 是   |     |
+| -------- | ------------------------------------------------------------------- | ---- |
+| l | [OnAdvancedMsgListener](/listener/advancedMsgListener.md) | 是   |
 
 ### 代码示例
 
