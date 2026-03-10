@@ -38,9 +38,9 @@ type CatchResponse = {
 ### 字段说明
 
 | 字段名称 | 字段类型 | 描述                     |
-| -------- | -------- | ------------------------ | --- |
+| -------- | -------- | ------------------------ |
 | errCode  | number   | 调用失败时的错误码       |
-| errMsg   | string   | 调用失败时的错误描述信息 |     |
+| errMsg   | string   | 调用失败时的错误描述信息 |
 
 </TabItem>
 
@@ -95,11 +95,11 @@ type WsResponse<T = unknown> = {
 ### 字段说明
 
 | 字段名称    | 字段类型 | 描述                           |
-| ----------- | -------- | ------------------------------ | --- |
+| ----------- | -------- | ------------------------------ |
 | errCode     | number   | 调用失败时的错误码             |
-| errMsg      | string   | 调用失败时的错误描述信息       |     |
-| operationID | string   | 调用时传入的 operationID       |     |
-| data        | T        | 调用成功时的返回结果，作为泛型 |     |
+| errMsg      | string   | 调用失败时的错误描述信息       |
+| operationID | string   | 调用时传入的 operationID       |
+| data        | T        | 调用成功时的返回结果，作为泛型 |
 
 ### WSEvent
 
@@ -118,12 +118,12 @@ type WSEvent<T = unknown> = {
 ### 字段说明
 
 | 字段名称    | 字段类型 | 描述               |
-| ----------- | -------- | ------------------ | --- |
+| ----------- | -------- | ------------------ |
 | event       | CbEvents | 监听事件           |
 | data        | T        | 回调结果，作为泛型 |
 | errCode     | number   | 错误码             |
-| errMsg      | string   | 错误描述信息       |     |
-| operationID | string   | 唯一操作 id        |     |
+| errMsg      | string   | 错误描述信息       |
+| operationID | string   | 唯一操作 id        |
 
 </TabItem>
 

@@ -88,7 +88,7 @@ values={[
 ### ConversationInfo
 
 | Field Name          | Field Type                                           | Description                                                                        |
-| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------------- | --- |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------------- |
 | conversationID    | String                                             | Conversation ID                                                                     |
 | conversationType  | int                                                | Conversation type [ConversationType](/enum/conversationType.md)            |
 | userID            | String                                             | User ID                                                                     |
@@ -98,7 +98,7 @@ values={[
 | recvMsgOpt        | int                                                | Message receive opt 0: Normal; 1: Do not accept messages; 2: Accept online messages but not offline messages |
 | unreadCount       | int                                                | Unread count                                                                      |
 | groupAtType       | int                                                | @ type [GroupAtType](/enum/groupAtType.md)                         |
-| latestMsgSendTime | int                                                | Latest message send time (milliseconds)                                                    |     |
+| latestMsgSendTime | int                                                | Latest message send time (milliseconds)                                                    |
 | isPinned          | boolean                                            | Pinned or not                                                                    |
 | isPrivateChat     | boolean                                            | Whether burn after reading is turned on                                                          |
 | burnDuration      | int                                                | Burn after reading duration (seconds)                                                          |

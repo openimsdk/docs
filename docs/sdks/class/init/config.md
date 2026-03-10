@@ -107,12 +107,12 @@ values={[
 ### InitAndLoginConfig
 
 | 字段名称            | 字段类型                                 | 是否必填 | 描述                                                                 |
-| ------------------- | ---------------------------------------- | -------- | -------------------------------------------------------------------- | --- |
+| ------------------- | ---------------------------------------- | -------- | -------------------------------------------------------------------- |
 | platformID          | [Platform](/enum/platform.md) | 是       | 平台号: iOS 1, Android 2, Windows 3, OSX 4, WEB/小程序 5，linux 7 |
 | apiAddr             | string                                   | 是       | IM api 地址，一般为`http://xxx:10002`或`https://xxx/api`             |
 | wsAddr              | string                                   | 是       | IM ws 地址，一般为`ws://xxx:10001`或`wss://xxx/msg_gateway`          |
 | userID              | string                                   | 是       | IM 用户 ID                                                       |
-| token               | string                                   | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，调用 IM 服务端 API 获取  |     |
+| token               | string                                   | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，调用 IM 服务端 API 获取  |
 | logLevel            | [LogLevel](/enum/logLevel.md) | 否       | SDK 日志打印级别                                                     |
 | isLogStandardOutput | boolean                                  | 否       | 是否输入日志到控制台                                                 |
 | tryParse            | boolean                                  | 否       | 是否自动 parse 返回值，默认为 true                                   |

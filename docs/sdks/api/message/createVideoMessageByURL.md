@@ -158,11 +158,11 @@ IMSDK.createFileMessageByURL({
 ### 输入参数
 
 | 参数名称       | 参数类型 | 是否必填 | 描述                                                                                                                                        |
-| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | videoPath      | string   | 是       | 文件路径，传空字符串即可                                                                                                                    |
 | duration       | number   | 是       | 视频时长                                                                                                                                    |
 | videoType      | string   | 是       | 文件类型，一般为后缀名                                                                                                                      |
-| snapshotPath   | string   | 是       |                                                                                                                                             | 视频封面图路径，传空字符串即可 |
+| snapshotPath   | string   | 是       |                                                                                                                                             |
 | videoUUID      | string   | 是       | 视频文件唯一 id                                                                                                                             |
 | videoUrl       | string   | 是       | 视频下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串       |
 | videoSize      | number   | 是       | 文件大小                                                                                                                                    |
@@ -171,7 +171,7 @@ IMSDK.createFileMessageByURL({
 | snapshotUrl    | string   | 是       | 视频封面图下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串 |
 | snapshotWidth  | number   | 是       | 视频缩略图宽度                                                                                                                              |
 | snapshotHeight | number   | 是       | 视频缩略图高度                                                                                                                              |
-| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |                                |
+| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |
 
 ### 返回结果
 
@@ -244,12 +244,12 @@ IMSDK.asyncApi('createVideoMessageByURL', operationID: string, {
 ### 输入参数
 
 | 参数名称       | 参数类型 | 是否必填 | 描述                                                                                                                                        |
-| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | operationID    | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数                                                                                     |
 | videoPath      | string   | 是       | 文件路径，传空字符串即可                                                                                                                    |
 | duration       | number   | 是       | 视频时长                                                                                                                                    |
 | videoType      | string   | 是       | 文件类型，一般为后缀名                                                                                                                      |
-| snapshotPath   | string   | 是       |                                                                                                                                             | 视频封面图路径，传空字符串即可 |
+| snapshotPath   | string   | 是       |                                                                                                                                             |
 | videoUUID      | string   | 是       | 视频文件唯一 id                                                                                                                             |
 | videoUrl       | string   | 是       | 视频下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串       |
 | videoSize      | number   | 是       | 文件大小                                                                                                                                    |
@@ -258,7 +258,7 @@ IMSDK.asyncApi('createVideoMessageByURL', operationID: string, {
 | snapshotUrl    | string   | 是       | 视频封面图下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串 |
 | snapshotWidth  | number   | 是       | 视频缩略图宽度                                                                                                                              |
 | snapshotHeight | number   | 是       | 视频缩略图高度                                                                                                                              |
-| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |                                |
+| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |
 
 ### 返回结果
 
@@ -323,11 +323,11 @@ OpenIMSDK.createVideoMessageByURL({
 ### 输入参数
 
 | 参数名称       | 参数类型 | 是否必填 | 描述                                                                                                                                        |
-| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | videoPath      | string   | 是       | 文件路径，传空字符串即可                                                                                                                    |
 | duration       | number   | 是       | 视频时长                                                                                                                                    |
 | videoType      | string   | 是       | 文件类型，一般为后缀名                                                                                                                      |
-| snapshotPath   | string   | 是       | 视频缩略图，可以是空字符串                                                                                                                                            | 视频封面图路径，传空字符串即可 |
+| snapshotPath   | string   | 是       | 视频缩略图，可以是空字符串                                                                                                                                            |
 | videoUUID      | string   | 是       | 视频文件唯一 id                                                                                                                             |
 | videoUrl       | string   | 是       | 视频下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串       |
 | videoSize      | number   | 是       | 文件大小                                                                                                                                    |
@@ -336,7 +336,7 @@ OpenIMSDK.createVideoMessageByURL({
 | snapshotUrl    | string   | 是       | 视频封面图下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串 |
 | snapshotWidth  | number   | 是       | 视频缩略图宽度                                                                                                                              |
 | snapshotHeight | number   | 是       | 视频缩略图高度                                                                                                                              |
-| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |                                |
+| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |
 | operationID    | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数                                                                                     |
 
 ### 返回结果

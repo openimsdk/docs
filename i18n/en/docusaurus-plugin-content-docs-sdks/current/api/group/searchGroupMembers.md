@@ -99,7 +99,7 @@ Future<List<GroupMembersInfo>> searchGroupMembers({
 ### Input Parameters
 
 | Parameter Name         | Parameter Type        | Required | Description                                           |
-| ---------------------- | --------------------- | -----------------------| - |----------------------- |
+| ---------------------- | --------------------- | -----------------------| - |
 | SearchGroupMembersParam.groupID                | NSString              | Yes | Group ID                                          |
 | SearchGroupMembersParam.keywordList            | NSArray< NSString \*> | Yes | Search keywords, currently only supports one keyword search, cannot be empty |
 | SearchGroupMembersParam.isSearchUserID         | BOOL                  | No  | Whether to search by UserID                        |

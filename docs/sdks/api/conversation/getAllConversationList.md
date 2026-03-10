@@ -110,8 +110,8 @@ values={[
 ### 输入参数
 
 | 名称     | 类型                                                                                                                 | 描述 |
-| -------- | -------------------------------------------------------------------------------------------------------------------- | ---- | -------- |
-| callBack | [OnBase](/callback/onBase.md)<List<[ConversationInfo](/class/conversation/conversationInfo.md)>> | 是   | 回调接口 |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ---- |
+| callBack | [OnBase](/callback/onBase.md)<List<[ConversationInfo](/class/conversation/conversationInfo.md)>> | 是   |
 
 ### 代码示例
 
@@ -263,8 +263,8 @@ public static void GetAllConversationList(OnBase<List<Conversation>> cb)
 ### 输入参数
 
 | 名称     | 类型                                                                                                                 | 描述 |
-| -------- | -------------------------------------------------------------------------------------------------------------------- | ---- | -------- |
-| cb | [OnBase](/callback/onBase.md)<List<[Conversation](/class/conversation/conversationInfo.md)>> | 是   | 回调函数 |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | ---- |
+| cb | [OnBase](/callback/onBase.md)<List<[Conversation](/class/conversation/conversationInfo.md)>> | 是   |
 
 ### 代码示例
 

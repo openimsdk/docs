@@ -270,7 +270,7 @@ OpenIMSDK.createSoundMessageByURL({
 ### Input Parameters
 
 | Parameter Name    | Parameter Type | Required | Description                                                                                                                                    |
-| ----------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |                                                                      |
+| ----------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | soundPath   | string   | Yes      | File path, empty string is fine                                                                                                                |
 | duration    | number   | Yes      | Recording duration                                                                                                                                |
 | uuid        | string   | Yes      | Unique file ID                                                                                                                             |

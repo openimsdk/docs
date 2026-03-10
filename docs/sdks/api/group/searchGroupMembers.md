@@ -99,7 +99,7 @@ Future<List<GroupMembersInfo>> searchGroupMembers({
 ### 输入参数
 
 | 字段名称               | 字段类型              | 是否必填 |描述                                           |
-| ---------------------- | --------------------- | -----------------------| - |----------------------- |
+| ---------------------- | --------------------- | -----------------------| - |
 | SearchGroupMembersParam.groupID                | NSString              | 是 |群ID                                          |
 | SearchGroupMembersParam.keywordList            | NSArray< NSString \*> | 是 |搜索关键词，目前仅支持一个关键词搜索，不能为空 |
 | SearchGroupMembersParam.isSearchUserID         | BOOL                  | 否 |是否以关键词搜索 UserID                        |

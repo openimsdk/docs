@@ -106,6 +106,28 @@ const config = {
       const lines = content.split('\n');
       let inCode = false;
       const typePattern = /(?:Promise|OnBase|List|NSArray|OIMSimpleResultInfo|Map|HashMap)<(?!\/?(?:Tabs|TabItem)[\s/>])/;
+
+      // Validate markdown table column consistency
+      const countCols = (row) => row.trim().split('|').length - 2;
+      const isSepRow = (row) => /^\|[\s\-:|]+\|$/.test(row.trim());
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (trimmed.startsWith('```')) { inCode = !inCode; continue; }
+        if (inCode) continue;
+        if (trimmed.startsWith('|') && i + 1 < lines.length && isSepRow(lines[i + 1])) {
+          const headerCols = countCols(lines[i]);
+          const sepCols = countCols(lines[i + 1]);
+          if (headerCols > 0 && sepCols !== headerCols) {
+            throw new Error(
+              `Markdown table column mismatch in ${filePath} at line ${i + 1}: ` +
+              `header has ${headerCols} columns but separator has ${sepCols} columns. ` +
+              `Please fix the table to have consistent column counts.`
+            );
+          }
+        }
+      }
+
+      inCode = false;
       const result = lines.map(line => {
         const trimmed = line.trim();
         if (trimmed.startsWith('```')) {

@@ -88,7 +88,7 @@ values={[
 ### ConversationInfo
 
 | 字段名称          | 字段类型                                           | 描述                                                                        |
-| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------------- | --- |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------------- |
 | conversationID    | String                                             | 会话 ID                                                                     |
 | conversationType  | int                                                | 会话类型 [ConversationType](/enum/conversationType.md)            |
 | userID            | String                                             | 用户 ID                                                                     |
@@ -98,7 +98,7 @@ values={[
 | recvMsgOpt        | int                                                | 消息免打扰状态 免打扰 0：正常；1：不接受消息；2：接受在线消息不接受离线消息 |
 | unreadCount       | int                                                | 未读数                                                                      |
 | groupAtType       | int                                                | @类型 [GroupAtType](/enum/groupAtType.md)                         |
-| latestMsgSendTime | int                                                | 最新消息发送时间（毫秒）                                                    |     |
+| latestMsgSendTime | int                                                | 最新消息发送时间（毫秒）                                                    |
 | isPinned          | boolean                                            | 是否置顶                                                                    |
 | isPrivateChat     | boolean                                            | 是否开启了阅后即焚                                                          |
 | burnDuration      | int                                                | 阅后即焚时间（秒）                                                          |

@@ -132,7 +132,7 @@ values={[
 ### Message
 
 | 字段名称             | 字段类型                                                         | 描述                                                             |
-| -------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- | --- |
+| -------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------- |
 | clientMsgID          | String                                                           | 客户端消息唯一 ID，推荐使用                                      |
 | serverMsgID          | String                                                           | 服务端消息唯一 ID，内部使用                                      |
 | createTime           | int                                                              | 创建时间                                                         |
@@ -164,7 +164,7 @@ values={[
 | customElem           | [CustomElem](/class/message/customElem.md)             | 自定义                                                           |
 | notificationElem     | [NotificationElem](/class/message/notificationElem.md) | 通知详情                                                             |
 | faceElem             | [FaceElem](/class/message/faceElem.md)                 | 自定义表情                                                       |
-| attachedInfoElem     | [AttachedInfoElem](/class/message/attachedInfoElem.md) | 附加信息                                                         |     |
+| attachedInfoElem     | [AttachedInfoElem](/class/message/attachedInfoElem.md) | 附加信息                                                         |
 | hasReadTime          | int                                                              | 单聊已读时间戳                                                         |
 | isReact              | boolean                                                          | 暂未使用                                                                 |
 | isExternalExtensions | boolean                                                          | 暂未使用
