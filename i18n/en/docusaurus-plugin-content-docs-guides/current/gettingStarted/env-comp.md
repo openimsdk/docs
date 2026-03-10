@@ -16,7 +16,6 @@ Applies to the OpenIMServer and ChatServer deployment documents under `docs/guid
 - **OpenIMServer**: The IM core server.
 - **ChatServer**: The business extension server. This documentation no longer uses `Chat` as a standalone product name.
 - **APP Administrator**: The backend management role that calls management APIs such as `10009`.
-- **APP Business Server**: The application-side server that calls business extension APIs such as `10008`.
 
 ## 2. Version and Branch Strategy
 
@@ -40,7 +39,7 @@ Applies to the OpenIMServer and ChatServer deployment documents under `docs/guid
 
 | Component | Recommended Version | Supported Modes in OpenIMServer | ChatServer Access Mode | Cloud Support / Notes |
 | --- | --- | --- | --- | --- |
-| MongoDB | `v7.0` | `standalone`, `replicaSet` | `address` or `uri` | Supported; for replica sets, `uri` is preferred |
+| MongoDB | `v7.0` | `standalone`, `replicaSet` | `address` or `uri` | Supported; for replica sets or sharded clusters, `uri` is preferred |
 | Redis | `v7.0.0` | `standalone`, `cluster`, `sentinel` | `standalone`, `clusterMode` | Supported; `sentinel` is explicitly supported only in OpenIMServer config |
 | Etcd | `v3.5.13` | Single node, multi-node cluster | Multi-address access | No managed cloud support |
 | Kafka | `v3.5.1` | Single node, distributed cluster | Not directly used by ChatServer | Supported; required topics must be created in advance |

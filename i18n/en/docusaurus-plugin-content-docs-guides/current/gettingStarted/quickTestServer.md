@@ -3,8 +3,6 @@ title: 'Quick Verification'
 sidebar_position: 9
 ---
 
-import Image3 from './assets/pc-web.png';
-
 ## 📌 1. Deploy the Server
 
 Refer to [Docker Deployment](./dockerCompose) or [Source Code Deployment](./imSourceCodeDeployment).
@@ -21,7 +19,7 @@ Refer to [Ports and Firewall](./ports).
 Enter `http://your_server_ip:11001` in your browser to access PC Web. `your_server_ip` is the server IP where the frontend is deployed.
 :::
 
-<img src={Image3} width="700" alt="PC Web Interface" />
+![PC Web Interface](./assets/pc-web.png)
 
 ## 📌 4. Service Process Verification
 

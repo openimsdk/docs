@@ -3,8 +3,6 @@ title: '快速验证'
 sidebar_position: 9
 ---
 
-import Image3 from './assets/pc-web.png';
-
 ## 📌 一、部署服务端
 
 请参考 [docker部署](./dockerCompose) 或 [源码部署](./imSourceCodeDeployment) 来进行部署。
@@ -21,7 +19,7 @@ import Image3 from './assets/pc-web.png';
 在浏览器中输入 `http://your_server_ip:11001` 来访问 PC Web。`your_server_ip` 为部署前端服务的服务器 IP 地址。
 :::
 
-<img src={Image3} width="700" alt="PC Web Interface" />
+![PC Web Interface](./assets/pc-web.png)
 
 ## 📌 四、服务进程验证
 

@@ -32,7 +32,7 @@ upstream im_api {
 }
 
 upstream im_chat_api {
-    # ChatServer (APP business server) API
+    # ChatServer API
     server 127.0.0.1:10008;
 }
 
@@ -72,7 +72,7 @@ server {
     }
 
     location ^~ /chat/ {
-        # ChatServer (APP business server) API reverse proxy
+        # ChatServer API reverse proxy
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";

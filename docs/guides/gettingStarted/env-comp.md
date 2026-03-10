@@ -16,7 +16,6 @@ sidebar_position: 1
 - **OpenIMServer**：IM 基础服务端。
 - **ChatServer**：业务扩展服务端，文档中不再使用 `Chat` 作为独立产品名称。
 - **APP 管理员**：调用管理类接口（如 `10009`）的后台管理角色。
-- **APP 业务服务器**：调用业务扩展接口（如 `10008`）的应用服务端。
 
 ## 二、版本与分支策略
 
@@ -38,12 +37,12 @@ sidebar_position: 1
 
 ## 四、外部组件要求
 
-| 组件 | 建议版本 | OpenIMServer 支持模式 | ChatServer 接入方式 | 支持云服务 / 备注 |
-| --- | --- | --- | --- | --- |
-| MongoDB | `v7.0` | `standalone`、`replicaSet` | `address` 或 `uri` | 支持；如接副本集，建议优先使用 `uri` |
+| 组件 | 建议版本 | OpenIMServer 支持模式                 | ChatServer 接入方式 | 支持云服务 / 备注 |
+| --- | --- |-----------------------------------| --- | --- |
+| MongoDB | `v7.0` | `standalone`、`replicaSet`、`sharded` | `address` 或 `uri` | 支持；如接副本集或分片集群，建议优先使用 `uri` |
 | Redis | `v7.0.0` | `standalone`、`cluster`、`sentinel` | `standalone`、`clusterMode` | 支持；`sentinel` 仅在 OpenIMServer 配置层有显式支持 |
-| Etcd | `v3.5.13` | 单机、多节点集群 | 多地址接入 | 不支持云服务 |
-| Kafka | `v3.5.1` | 单机、分布式集群 | 不直接依赖 | 支持；需按文档预建 topic |
-| MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机 | 不直接依赖 | 可替换为 S3 兼容存储（`COS`、`OSS`、`Kodo`、`AWS S3`） |
+| Etcd | `v3.5.13` | 单机、多节点集群                          | 多地址接入 | 不支持云服务 |
+| Kafka | `v3.5.1` | 单机、分布式集群                          | 不直接依赖 | 支持；需按文档预建 topic |
+| MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机                                | 不直接依赖 | 可替换为 S3 兼容存储（`COS`、`OSS`、`Kodo`、`AWS S3`） |
 
 ---
