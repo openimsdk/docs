@@ -7,7 +7,7 @@ title: 常用字段说明
 | 字段名         | 类型   | 字符串长度限制 | 说明                                                         | 取值说明                                                     |
 | -------------- | ------ | -------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | secret         | string | 32             | 服务端秘钥         | 字符串                                                       |
-| platformID     | int    |                | 用户登录时的终端类型                                         | 1:iOS, 2:Android, 3:Windows, 4:OSX, 5:Web, 6:MiniWeb, 7:Linux, 8:APad, 9:IPad, 10:Admin, 11:HarmonyOS|
+| platformID     | int    |                | 用户登录时的终端类型                                         | 1:iOS, 2:Android, 3:Windows, 4:OSX, 5:Web, 6:MiniWeb, 7:Linux, 8:APad, 9:IPad, 10:Admin, 11:HarmonyOS，12:Bot|
 | userID         | string | 64             | 用户ID，保证唯一，不能包含特殊字符                                     | 字符串                                                       |
 | nickname       | string | 255            | 昵称                                                         | 字符串                                                       |
 | faceURL        | string | 255            | 头像URL                                                      | URL 链接                                                     |

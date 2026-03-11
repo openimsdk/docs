@@ -1,10 +1,10 @@
 ---
-title: 'OpenClaw 接入 OpenIM 快速指南'
+title: '如何接入OpenClaw'
 sidebar_position: 8
 
 ---
 
-# OpenClaw 接入 OpenIM 快速指南
+# 如何接入OpenClaw
 
 本文面向使用 OpenIM 的用户，说明如何通过 OpenClaw Gateway 接入 OpenIM，并完成“发送第一条消息”的验证。
 
@@ -19,34 +19,23 @@ sidebar_position: 8
 
 ## 2. 准备用户 Token
 
-插件配置中的 `token` 使用“用户 Token”，用于以指定 `userID` 的身份发送消息。
+### 1.注册用户
 
-用户 Token 需要通过 OpenIM REST API 获取，且依赖管理员 Token。
+登陆管理后台，默认地址为`http://server_ip:11002`，`server_ip`为`open-im-server`部署地址ip。
 
-### 2.1 获取管理员 Token（Admin Token）
+选择 用户管理->用户列表，点击右边**创建新用户**：
+![image-20260310115043272](./openclaw.assets/1.png)
 
-- 方法：`POST`
-- 路径：`{API_ADDRESS}/auth/get_admin_token`
-- Header：
-  - `operationID`：必填，用于全局链路追踪，建议使用时间戳
-- Body：
-  - `secret`：必填，服务端密钥（来自 `config/share.yaml` 的 `secret`，需要 `md5` 编码后传输）
-  - `userID`：必填，APP 管理员 ID（默认 `imAdmin`）
-- 返回：`data.token`（管理员 Token）
+输入账号相关信息：
+![image-20260311110212683](./openclaw.assets/2.png)
 
-### 2.2 获取用户 Token（User Token）
+### 获取管理员token
 
-- 方法：`POST`
-- 路径：`{API_ADDRESS}/auth/get_user_token`
-- Header：
-  - `operationID`：必填，用于全局链路追踪，建议使用时间戳
-  - `token`：必填，管理员 Token（即上一步返回的 `data.token`）
-- Body：
-  - `platformID`：必填，用户登录时的终端类型（需与后续插件配置中的 `platformID` 保持一致）
-  - `userID`：必填，需要签发 Token 的目标用户 ID
-- 返回：`data.token`（用户 Token）
+参考 [获取管理员 Token](../../restapi/apis/authenticationManagement/getAdminToken) 文档获取管理员 token。
 
-将“获取用户 Token”接口返回的 `data.token` 填入本指南第 4 节的 `channels.openim.accounts.<id>.token`。
+### 获取用户token
+
+拿到管理员 token 后，参考 [获取用户 Token](../../restapi/apis/authenticationManagement/getUserToken) 文档为指定用户签发登录 token。userID填写刚刚注册的用户的userID，platformID建议填写12。
 
 ## 3. 安装 OpenIM Channel 插件
 
@@ -54,11 +43,7 @@ sidebar_position: 8
 openclaw plugins install @openim/openclaw-channel
 ```
 
-如需从本地路径安装（例如本地开发或离线环境）：
-
-```bash
-openclaw plugins install /path/to/openclaw-openim
-```
+插件地址：https://www.npmjs.com/package/@openim/openclaw-channel
 
 ## 4. 启用插件并配置 OpenIM Channel
 
@@ -68,15 +53,11 @@ openclaw plugins install /path/to/openclaw-openim
 openclaw openim setup
 ```
 
-按提示填入 `userID`、`token`、`wsAddr`、`apiAddr`、`platformID` 等信息。
+按提示填入 `token`、`wsAddr`、`apiAddr` 等信息。
 
 ### 方式 B：直接编辑配置文件
 
 编辑：`~/.openclaw/openclaw.json`
-
-> 说明：
-> - `channel id` 为 `openim`（配置路径 `channels.openim`）。
-> - `plugin id` 为 `openclaw-channel`（用于 `plugins.entries` 与 `plugins.allow`）。
 
 示例：
 
@@ -87,12 +68,9 @@ openclaw openim setup
       "accounts": {
         "default": {
           "enabled": true,
-          "userID": "user_10001",
           "token": "your_token",
           "wsAddr": "ws://127.0.0.1:10001",
-          "apiAddr": "http://127.0.0.1:10002",
-          "platformID": 5,
-          "requireMention": true
+          "apiAddr": "http://127.0.0.1:10002"
         }
       }
     }
@@ -100,26 +78,13 @@ openclaw openim setup
 }
 ```
 
-配置说明：
-- `requireMention`：用于群聊触发策略；如仅希望在群聊中被 @ 才触发，可设为 `true`。
-
-### 方式 C：使用环境变量（默认账号）
-
-默认账号支持从环境变量读取配置（适用于容器部署或不便直接编辑配置文件的场景）：
-
-- `OPENIM_USER_ID`
-- `OPENIM_TOKEN`
-- `OPENIM_WS_ADDR`
-- `OPENIM_API_ADDR`
-- `OPENIM_PLATFORM_ID`
-
-完成配置后，重启 OpenClaw Gateway（或重启运行 OpenClaw 的进程）以使配置生效。
-
 ## 5. 验证：发送第一条消息
 
-使用 OpenIM 对机器人账号发送一条消息，验证是否能够自动回复。
+使用 OpenIM 通过userID搜索对应的机器人账号，对机器人账号发送一条消息，验证是否能够自动回复。
 
 若对方成功收到消息，则说明 OpenClaw 已完成 OpenIM 接入。
+
+![image-20260311115813414](/Users/a1234/Project/docs/docs/guides/solution/openclaw.assets/3.png)
 
 ## 6. 常见问题
 
