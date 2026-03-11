@@ -10,11 +10,11 @@ sidebar_position: 8
 
 ## 1. 前置条件
 
-- 你已部署并启动 OpenClaw Gateway，并能在运行 Gateway 的机器上执行 `openclaw` 命令。
+- 你已经[部署了OpenIMServer 和 ChatServer](../gettingStarted/dockerCompose.md)，已部署并启动 OpenClaw Gateway，并能在运行 Gateway 的机器上执行 `openclaw` 命令。
 
-## 2. 准备用户 Token
+## 2. 注册OpenClaw用户
 
-### 1.注册OpenClaw用户
+### 1.注册用户
 
 登陆管理后台，默认地址为`http://server_ip:11002`，`server_ip`为`open-im-server`部署地址ip。
 
