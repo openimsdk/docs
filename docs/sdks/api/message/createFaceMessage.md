@@ -140,7 +140,7 @@ OIMMessageInfo *message = [OIMMessageInfo createFaceMessageWithIndex:0 data:@""]
 ```ts showLineNumbers
 IMSDK.createFaceMessage({
   index: number;
-  dataStr: string;
+  data: string;
 }, operationID?: string): Promise<WsResponse<MessageItem>>
 ```
 
@@ -149,7 +149,7 @@ IMSDK.createFaceMessage({
 | 参数名称 | 参数类型 | 是否必填 | 描述 |
 | -------- | -------- | -------- | ---- |
 | index    | number   | 是       | 索引 |
-| dataStr  | string   | 是       | 内容 |
+| data     | string   | 是       | 内容 |
 
 ### 返回结果
 
@@ -174,7 +174,7 @@ const IMSDK = getSDK();
 
 IMSDK.createFaceMessage({
   index: 0,
-  dataStr: 'https://xxx/xxx/xx.png',
+  data: 'https://xxx/xxx/xx.png',
 })
   .then(({ data }) => {
     // 调用成功
@@ -240,7 +240,7 @@ IMSDK.asyncApi('createFaceMessage', IMSDK.uuid(), {
 ```ts showLineNumbers
 OpenIMSDK.createFaceMessage({
   index: number;
-  dataStr: string;
+  data: string;
 }, operationID?: string): Promise<MessageItem>
 ```
 
@@ -249,7 +249,7 @@ OpenIMSDK.createFaceMessage({
 | 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
 | ----------- | -------- | -------- | ------------------------------------------------------- |
 | index       | number   | 是       | 索引                                                    |
-| dataStr     | string   | 是       | 内容                                                    |
+| data        | string   | 是       | 内容                                                    |
 | operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
 
 ### 返回结果
@@ -267,7 +267,7 @@ import OpenIMSDK from "@openim/rn-client-sdk";
 
 OpenIMSDK.createFaceMessage({
   index: 0,
-  dataStr: 'https://xxx/xxx/xx.png',
+  data: 'https://xxx/xxx/xx.png',
 })
   .then((data) => {
     // 调用成功
