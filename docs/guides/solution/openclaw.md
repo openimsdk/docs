@@ -6,20 +6,15 @@ sidebar_position: 8
 
 # 如何接入OpenClaw
 
-本文面向使用 OpenIM 的用户，说明如何通过 OpenClaw Gateway 接入 OpenIM，并完成“发送第一条消息”的验证。
+本文面向使用 OpenIMSDK 的用户，说明如何通过 OpenClaw Gateway 接入 OpenIMServer，并完成“发送第一条消息”的验证。
 
 ## 1. 前置条件
 
 - 你已部署并启动 OpenClaw Gateway，并能在运行 Gateway 的机器上执行 `openclaw` 命令。
-- 你已从管理员/运维/业务系统获取以下 OpenIM 连接信息：
-  - `userID`：OpenClaw 在 OpenIM 中使用的用户 ID
-  - `wsAddr`：OpenIM SDK WebSocket 地址（例如：`ws://127.0.0.1:10001`）
-  - `apiAddr`：OpenIM REST API 地址（例如：`http://127.0.0.1:10002`）
-  - `platformID`：平台 ID（需与签发该 Token 时使用的 platformID 一致）
 
 ## 2. 准备用户 Token
 
-### 1.注册用户
+### 1.注册OpenClaw用户
 
 登陆管理后台，默认地址为`http://server_ip:11002`，`server_ip`为`open-im-server`部署地址ip。
 
@@ -40,7 +35,7 @@ sidebar_position: 8
 
 ### 获取用户token
 
-拿到管理员 token 后，参考 [获取用户 Token](../../restapi/apis/authenticationManagement/getUserToken) 文档为指定用户签发登录 token。userID填写刚刚注册的用户的userID，platformID建议填写12。
+拿到管理员 token 后，参考 [获取用户 Token](../../restapi/apis/authenticationManagement/getUserToken) 文档为指定用户签发登录 token。userID填写刚刚注册的用户的userID，platformID填写12（表示bot）。
 
 ## 3. 安装 OpenIM Channel 插件
 
