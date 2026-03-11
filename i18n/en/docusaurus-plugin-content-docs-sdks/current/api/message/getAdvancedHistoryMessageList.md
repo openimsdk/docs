@@ -275,10 +275,10 @@ IMSDK.asyncApi('getAdvancedHistoryMessageList', IMSDK.uuid(), {
 
 ```ts showLineNumbers
 OpenIMSDK.getAdvancedHistoryMessageList({
-  lastMinSeq: number;
-  count: number;
-  startClientMsgID: string;
   conversationID: string;
+  startClientMsgID: string;
+  count: number;
+  viewType: ViewType
 }, operationID?: string): Promise<AdvancedGetMessageResult>
 ```
 
@@ -302,13 +302,13 @@ OpenIMSDK.getAdvancedHistoryMessageList({
 ### Code Example
 
 ```js showLineNumbers
-import OpenIMSDK from "@openim/rn-client-sdk";
+import OpenIMSDK, { ViewType } from "@openim/rn-client-sdk";
 
 OpenIMSDK.getAdvancedHistoryMessageList({
-  lastMinSeq: 0,
-  count: 20,
-  startClientMsgID: '',
   conversationID: 'conversationID',
+  startClientMsgID: '',
+  count: 20,
+  viewType: ViewType.History,
 })
   .then((data) => {
     // Call successful

@@ -140,7 +140,7 @@ OIMMessageInfo *message = [OIMMessageInfo createFaceMessageWithIndex:0 data:@""]
 ```ts showLineNumbers
 IMSDK.createFaceMessage({
   index: number;
-  dataStr: string;
+  data: string;
 }, operationID?: string): Promise<WsResponse<MessageItem>>
 ```
 
@@ -149,7 +149,7 @@ IMSDK.createFaceMessage({
 | Parameter Name | Parameter Type | Required | Description |
 | -------- | -------- | -------- | ---- |
 | index    | number   | Yes      | Index |
-| dataStr  | string   | Yes      | Content |
+| data     | string   | Yes      | Content |
 
 ### Return Result
 
@@ -174,7 +174,7 @@ const IMSDK = getSDK();
 
 IMSDK.createFaceMessage({
   index: 0,
-  dataStr: 'https://xxx/xxx/xx.png',
+  data: 'https://xxx/xxx/xx.png',
 })
   .then(({ data }) => {
     // Call successful
@@ -240,7 +240,7 @@ IMSDK.asyncApi('createFaceMessage', IMSDK.uuid(), {
 ```ts showLineNumbers
 OpenIMSDK.createFaceMessage({
   index: number;
-  dataStr: string;
+  data: string;
 }, operationID?: string): Promise<MessageItem>
 ```
 
@@ -249,7 +249,7 @@ OpenIMSDK.createFaceMessage({
 | Parameter Name    | Parameter Type | Required | Description                                                    |
 | ----------- | -------- | -------- | ------------------------------------------------------- |
 | index       | number   | Yes      | Index                                                    |
-| dataStr     | string   | Yes      | Content                                                    |
+| data        | string   | Yes      | Content                                                    |
 | operationID | string   | No       | Operation ID, used to pinpoint issues, keep unique, prefer time+random |
 
 ### Return Result
@@ -267,7 +267,7 @@ import OpenIMSDK from "@openim/rn-client-sdk";
 
 OpenIMSDK.createFaceMessage({
   index: 0,
-  dataStr: 'https://xxx/xxx/xx.png',
+  data: 'https://xxx/xxx/xx.png',
 })
   .then((data) => {
     // Call successful
