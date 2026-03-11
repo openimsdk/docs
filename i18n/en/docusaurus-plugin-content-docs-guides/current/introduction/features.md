@@ -8,14 +8,22 @@ sidebar_position: 4
 
 ## 1. What the Open Source Edition Includes
 
-| Component | Positioning | Open Source Status / Notes |
-| --- | --- | --- |
-| OpenIMClientSDK | Client SDK | Open source; provides client-side communication capabilities such as messages, conversations, groups, and contacts, and must be integrated into your own application |
-| OpenIMServer | IM core server | Open source; provides the core IM pipeline, message synchronization, REST APIs, Webhook capabilities, and more |
-| ChatServer | Business extension server | Open source; provides business extension capabilities such as registration, login, and APP management; if you already have your own account system, you can integrate it as needed or skip deployment |
-| Client Demo / Sample UI | SDK integration example | Sample code is provided to demonstrate how to integrate OpenIMClientSDK, but it is not a complete production-ready client |
-| Full Client UI | Complete end-user product interface | Not open source; developers need to design and implement it themselves |
-| Admin Frontend | Backend page used by APP Administrators | Not currently open source; if you need management capabilities, you can build your own frontend on top of the APP Administrator APIs |
+### Core Components
+
+| Component | License | Positioning | Description |
+| --- | --- | --- | --- |
+| OpenIMClientSDK | `AGPL-3.0` | Client SDK | Responsible for client-side communication capabilities such as messages, conversations, groups, and friends, and needs to be integrated into your own application |
+| OpenIMServer | `Apache-2.0` | IM core server | Responsible for core instant messaging links, message synchronization, REST APIs, Webhook capabilities, and more |
+| ChatServer | `Apache-2.0` | Business extension server | Responsible for business extension capabilities such as registration, login, and APP management; if you already have your own account system, you can integrate it as needed or skip deployment |
+| Client Demo / Sample UI | `AGPL-3.0` | SDK integration example | Provides sample code to demonstrate how to integrate OpenIMClientSDK, and does not represent a complete production-ready client |
+
+### Extended Components
+
+| Component | License | Positioning | Description |
+| --- | --- | --- | --- |
+| Pure JS SDK | `ARR` (closed source) | Pure JavaScript client SDK | Generally used for mini program development |
+| Web Client | `ARR` (closed source, free to use) | Complete end-user product interface | Ready to use out of the box |
+| Admin Frontend | `ARR` (closed source, free to use) | Backend page used by APP Administrators | If you need management capabilities, you can also build your own frontend based on the APP Administrator APIs |
 
 ## 2. Open Source Capabilities of OpenIMClientSDK + OpenIMServer
 
