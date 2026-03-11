@@ -4,135 +4,102 @@ hide_title: true
 sidebar_position: 4
 ---
 
-## Open Source Edition Feature Details
+# Open Source Feature Details
 
-The open-source edition includes the following components, each with specific capabilities described below:
+## 1. Terminology
 
-### 1. IM SDK / IM Server
+- **OpenIMSDK**: The overall project name, including OpenIMClientSDK and OpenIMServer.
+- **OpenIMClientSDK**: The client SDK.
+- **OpenIMServer**: The IM core server.
+- **ChatServer**: The business extension server. This documentation no longer uses `Chat` as a standalone product name.
+- **APP Administrator**: The backend management role that calls management APIs such as `10009`.
 
-- **Description:**
-  - Provides the core functionality for instant messaging.
-  - Comprises the client-side IMSDK and the server-side IMServer.
-- **Features:**
-  - Does not include a user interface (UI) — developers must integrate it into their applications.
-  - Supports core features such as message sending, receiving, and management.
+## 2. What the Open Source Edition Includes
 
-### 2. Client UI
+| Component | Positioning | Open Source Status / Notes |
+| --- | --- | --- |
+| OpenIMClientSDK | Client SDK | Open source; provides client-side communication capabilities such as messages, conversations, groups, and contacts, and must be integrated into your own application |
+| OpenIMServer | IM core server | Open source; provides the core IM pipeline, message synchronization, REST APIs, Webhook capabilities, and more |
+| ChatServer | Business extension server | Open source; provides business extension capabilities such as registration, login, and APP management; if you already have your own account system, you can integrate it as needed or skip deployment |
+| Client Demo / Sample UI | SDK integration example | Sample code is provided to demonstrate how to integrate OpenIMClientSDK, but it is not a complete production-ready client |
+| Full Client UI | Complete end-user product interface | Not open source; developers need to design and implement it themselves |
+| Admin Frontend | Backend page used by APP Administrators | Not currently open source; if you need management capabilities, you can build your own frontend on top of the APP Administrator APIs |
 
-- **Description:**
-  - Provides a demo for demonstrating how to import and use the client SDK.
-- **Features:**
-  - Offers basic UI examples to help developers understand SDK integration.
-  - Does not include full application functionality — must be extended as needed.
-  - The complete client UI is not open source.
+## 3. Open Source Capabilities of OpenIMClientSDK + OpenIMServer
 
-### 3. Audio/Video Calls
+This section focuses on the core capabilities already provided by the open-source edition of OpenIMClientSDK and OpenIMServer.
 
-- **Description:**
-  - Supports one-on-one audio and video calls.
-- **Features:**
-  - Provides basic audio/video call interfaces.
-  - Group audio/video calls and video conferencing are not open source.
+### 1. Friends and Relationships
 
-### 4. Admin Dashboard Frontend
+- Supports finding, requesting, adding, and deleting friends.
+- Supports accepting and rejecting friend requests.
+- Supports friend remarks.
+- Supports settings for whether friend requests are allowed.
+- Friend lists and friend profiles support real-time synchronization.
 
-- **Description:**
-  - Frontend interface for managing and monitoring the IM system.
-- **Features:**
-  - Provides basic management features such as user management and message management.
-  - Frontend code is not open source.
----
+### 2. Blocklist
 
+- Supports restricting messages and audio/video calls.
+- The blocklist synchronizes in real time.
+- Supports adding and removing blocked users.
 
+### 3. Groups
 
-## IMSDK/IMServer Feature Reference
+- Supports creating and dissolving groups.
+- Supports join requests, invitations, leaving groups, and removing group members.
+- Supports real-time notifications and synchronization for group names, avatars, and profile changes.
+- Supports join verification settings.
+- Supports group ownership transfer.
+- Supports settings that prevent viewing other group members' profiles or adding them as contacts.
+- Supports appointing and removing group administrators.
+- Supports searching group members and setting member-specific group profiles.
+- Supports muting everyone or muting designated group members.
+- Supports publishing group announcements.
 
-This document provides a detailed description of all features available in the IMSDK/IMServer open-source edition.
+### 4. Messages
 
-### Contacts
+- Supports text, image, video, emoji, file, voice, contact card, location, custom, and group announcement messages.
+- Supports offline messages, roaming messages, multi-device messages, and message history.
+- Supports forwarding a single selected message and merged forwarding for multiple selected messages.
+- Supports deleting, clearing, copying, and recalling messages.
+- Supports editing messages after recall.
+- Supports group @mentions, typing indicators in one-to-one chats, burn after reading, do-not-disturb for new messages, clearing chat history, allowing new members to view group history, and new message alerts.
+- Supports local message search.
 
-- **Basic Operations**
-  - Search, request, find, add, and delete contacts.
-- **Friend Requests**
-  - Accept or reject friend requests.
-- **Contact Alias**
-  - Users can set alias names for their contacts.
-- **Add Contact Permissions**
-  - Configure whether to allow friend requests.
-- **Real-Time Sync**
-  - Contact list and contact profiles support real-time synchronization.
+### 5. Conversations
 
-### Blocklist
-  - Blocks messages and audio/video calls from blocked users.
-  - Blocklist synchronizes in real time.
-  - Add and remove users from the blocklist.
+- Supports pinned conversations.
+- Supports deleting conversations.
+- Supports searching local conversations.
+- Supports conversation read state.
+- Supports conversation do-not-disturb.
 
-### Groups
+### 6. Server-Side Open Capabilities
 
-- **Group Management**
-  - Create and dissolve groups.
-- **Member Management**
-  - Request to join, invite members, leave groups, and remove members.
-- **Group Profile Sync**
-  - Group name, avatar changes, and profile updates are notified and synchronized in real time.
-- **Join Verification**
-  - Configure group join verification settings.
-- **Ownership**
-  - Transfer group ownership.
-- **Member Permission Settings**
-  - Restrict viewing other members' profiles or adding other members as contacts.
-  - Appoint and remove group administrators.
-  - Search group members and set member-specific group profiles.
-- **Muting**
-  - Group-wide mute and individual member muting.
-- **Announcements**
-  - Publish group announcements.
+- Provides REST APIs for authentication management, user management, relationship management, group management, conversation management, and message management.
+- Provides Webhook capabilities such as group callbacks, message callbacks, push callbacks, relationship callbacks, and user callbacks.
 
-### Messages
-- **Message Types**
-  - Text, image, video, emoji, file, voice, contact card, location, custom messages, and group announcements.
-- **Message Management**
-  - Offline messages, roaming messages, multi-device sync messages, and message history.
-  - Single message forwarding and multi-message merge forwarding.
-  - Delete, clear, copy, and recall messages.
-  - Edit after recall.
-- **Message Interactions**
-  - Group @mentions, typing indicator in private chats, burn after reading, do not disturb for new messages, clear chat history, allow new members to view group history, new message alerts.
-  - Local message search.
+### 7. Capacity and Deployment
 
-### Conversations
-- **Pin conversations**
-- **Delete conversations**
-- **Search local conversations**
-- **Mark conversations as read**
-- **Conversation do-not-disturb**
+- Supports up to 3,000 contacts.
+- Supports groups with up to 100,000 members.
+- Supports second-level synchronization.
+- Supports cluster deployment from source code.
 
-### REST API
-- **Authentication Management**
-- **User Management**
-- **Relationship Management**
-- **Group Management**
-- **Conversation Management**
-- **Message Management**
+### 8. Multi-Device Login Policy
 
-### Webhooks
-- **Supports group callbacks, message callbacks, push callbacks, relationship callbacks, and user callbacks**
+- Supports no forced logout across platforms.
+- Supports one logged-in device per platform.
+- Supports one logged-in device each on PC, mobile, tablet, web, and mini program.
 
-### Capacity & Performance
+### 9. Audio and Video Capabilities
 
-- **Contact Capacity**
-  - Supports up to 3,000 contacts.
-- **Group Capacity**
-  - Supports large groups with up to 100,000 members.
-- **Sync Speed**
-  - Second-level synchronization.
-- **Deployment**
-  - Supports cluster deployment from source code.
+- Supports basic one-to-one audio/video call capabilities.
+- Group audio/video calls and video conferencing are not open source.
+- When integrating one-to-one audio/video calls, business details such as unanswered timeout and cancellation need to be implemented by developers themselves.
 
-### Multi-Device Login Policy
-- **All platforms — no mutual kick-off**
-- **One device per platform**
-- **PC, Mobile, Pad, Web, and Mini Program — one device each**
+## 4. How to Understand the Open Source Scope of OpenIMSDK
 
-### Audio/Video Calls
-- **One-on-one audio/video calls. Developers need to implement additional logic such as timeout handling, cancellation, etc.**
+- If you only need core IM capabilities, focus on integrating OpenIMClientSDK and deploying OpenIMServer.
+- If you also need business extension capabilities such as registration, login, and APP management, deploy ChatServer as needed.
+- If you need a complete end-user product interface or an APP Administrator backend page, you need to implement it yourself based on the SDK, REST APIs, and your business requirements.
