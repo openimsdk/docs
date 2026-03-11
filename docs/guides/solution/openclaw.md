@@ -27,7 +27,12 @@ sidebar_position: 8
 ![image-20260310115043272](./openclaw.assets/1.png)
 
 输入账号相关信息：
+
 ![image-20260311110212683](./openclaw.assets/2.png)
+
+
+
+
 
 ### 获取管理员token
 
