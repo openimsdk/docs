@@ -84,7 +84,7 @@ openclaw openim setup
 
 若对方成功收到消息，则说明 OpenClaw 已完成 OpenIM 接入。
 
-![image-20260311115813414](/Users/a1234/Project/docs/docs/guides/solution/openclaw.assets/3.png)
+![image-20260311115813414](./openclaw.assets/3.png)
 
 ## 6. 常见问题
 
