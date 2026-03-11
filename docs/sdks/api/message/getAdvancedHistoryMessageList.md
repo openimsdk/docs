@@ -1,0 +1,351 @@
+---
+sidebar_position: 29
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# getAdvancedHistoryMessageList
+
+## 功能介绍
+
+:::info 说明
+
+按照时间从新到老，获取会话中的历史聊天记录，如向上滚动时加载历史消息。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<AdvancedMessage> getAdvancedHistoryMessageList({
+    String? conversationID,
+    int? lastMinSeq,
+    Message? startMsg,
+    int? count,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型                                           | 是否必填 | 描述                                                                                                           |
+| -------------- | -------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| conversationID | Sting                                              | 是       | 会话 ID                                                                                                        |
+| startMsg       | [Message](/class/message/messageInfo.md) | 是       | 从这条消息开始查询[count]条，获取的列表 index==length-1 为最新消息，所以获取下一页历史记录 startMsg=list.first |
+| count          | int                                                | 是       | 数量                                                                                                           |
+| lastMinSeq     | int                                                | 是       | 第一页消息不用传，获取第二页开始必传 跟[startMsg]一样                                                          |
+
+### 返回结果
+
+| 名称 | 类型                                                               | 描述     |
+| ---- | ------------------------------------------------------------------ | -------- |
+| ~    | [AdvancedMessage](/class/message/advancedHistoryInfo.md) | 成功返回 |
+
+### 代码示例
+
+```dart showLineNumbers
+    AdvancedMessage am = await OpenIM.iMManager.messageManager.getAdvancedHistoryMessageList(
+      conversationID: '',
+    );
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)getAdvancedHistoryMessageList:(OIMGetAdvancedHistoryMessageListParam *)opts
+                            onSuccess:(nullable OIMGetAdvancedHistoryMessageListCallback)onSuccess
+                            onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称              | 参数类型                              | 是否必填 | 描述                                                                 |
+| --------------------- | ------------------------------------- | -------- | -------------------------------------------------------------------- |
+| OIMGetAdvancedHistoryMessageListParam.conversationID   | NSSting                               | 是       | 会话 ID，如果不为空则以会话 ID 获取，否则通过 userID 和 groupID 获取 |
+| OIMGetAdvancedHistoryMessageListParam.startClientMsgID | NSString                              | 是       | 起始的消息 clientMsgID，第一次拉取为""                               |
+| OIMGetAdvancedHistoryMessageListParam.count            | NSInteger                             | 是       | 一次拉取的数量                                                                 |
+| OIMGetAdvancedHistoryMessageListParam.lastMinSeq       | NSInteger                             | 是       | lastMinSeq 是上一次拉取回调给的值，上下文，第二次拉取需要回传        |
+
+### 返回结果
+
+| 名称      | 类型                                                                                                  | 描述     |
+| --------- | ----------------------------------------------------------------------------------------------------- | -------- |
+| onSuccess | NSArray< [OIMGetAdvancedHistoryMessageListInfo](/class/message/advancedHistoryInfo.md) \* > | 成功返回 |
+| onFailure | OIMFailureCallback                                                  | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMGetAdvancedHistoryMessageListParam *opts = [OIMGetAdvancedHistoryMessageListParam new];
+opts.conversationID = @"";
+opts.count = 30;
+opts.lastMinSeq = @"";
+
+[OIMManager.manager getAdvancedHistoryMessageList:opts
+                                        onSuccess:^(OIMGetAdvancedHistoryMessageListInfo * _Nullable result) {
+
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+    public void getAdvancedHistoryMessageList(OnBase<AdvancedMessage> callBack, String conversationID, Message startMsg, int count, ViewType viewType)
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型                                                                   | 是否必填 | 描述                                                                                                           |
+| -------------- | -------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------|
+| callBack       | OnBase<[AdvancedMessage](/class/message/advancedHistoryInfo.md)> | 是       | 回调接口                                                                                                       |
+| conversationID | Sting                                                                      | 是       | 会话 ID                                                                                                        |
+| startMsg       | [Message](/class/message/messageInfo.md)                         | 是       | 从这条消息开始查询[count]条，获取的列表 index==length-1 为最新消息，所以获取下一页历史记录 startMsg=list.first       |
+| count          | int                                                                        | 是       | 数量                                                                                                           |
+| viewType       | [ViewType](/enum/viewType.md)                                    | 是       | 为History时表示当前在获取历史消息，为Search时表示在执行搜索消息操作                                                 |
+
+### 代码示例
+
+```java showLineNumbers
+        OpenIMClient.getInstance().messageManager. getAdvancedHistoryMessageList(new OnBase<AdvancedMessage>() {
+            @Override
+            public void onError(int code, String error) {
+
+            }
+
+            @Override
+            public void onSuccess(AdvancedMessage data) {
+
+            }
+        } conversationID,  startMsg,  count, ViewType.History);
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+enum ViewType {
+  History = 0,
+  Search = 1,
+}
+IMSDK.getAdvancedHistoryMessageList({
+  viewType: ViewType;
+  count: number;
+  startClientMsgID: string;
+  conversationID: string;
+}, operationID?: string): Promise<WsResponse<AdvancedGetMessageResult>>
+```
+
+### 输入参数
+
+| 参数名称         | 参数类型 | 是否必填 | 描述                                                                                 |
+| ---------------- | -------- | -------- | ------------------------------------------------------------------------------------ |
+| conversationID   | string   | 是       | 会话 ID                                                                              |
+| startClientMsgID | string   | 是       | 起始的消息 clientMsgID，第一次拉取为""，后续为上一次拉取的最后一条消息的 clientMsgID |
+| count            | number   | 是       | 一次拉取的数量                                                                       |
+| viewType        | ViewType   | 是       | 判断为正常拉取聊天记录，还是搜索后获取消息上下文，开源版仅支持拉取聊天记录（viewType 为 0）                        |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                                          | 描述         |
+| --------------- | ------------------------------------------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<WsResponse<[AdvancedGetMessageResult](/class/message/advancedHistoryInfo.md)>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                                              | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK, ViewType } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.getAdvancedHistoryMessageList({
+  viewType: ViewType.History,
+  count: 20,
+  startClientMsgID: '',
+  conversationID: 'conversationID',
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('getAdvancedHistoryMessageList', operationID: string, {
+  lastMinSeq: number;
+  count: number;
+  startClientMsgID: string;
+  conversationID: string;
+}): Promise<AdvancedGetMessageResult>
+```
+
+### 输入参数
+
+| 参数名称         | 参数类型 | 是否必填 | 描述                                                                                 |
+| ---------------- | -------- | -------- | ------------------------------------------------------------------------------------ |
+| operationID      | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数                              |
+| conversationID   | string   | 是       | 会话 ID                                                                              |
+| startClientMsgID | string   | 是       | 起始的消息 clientMsgID，第一次拉取为""，后续为上一次拉取的最后一条消息的 clientMsgID |
+| count            | number   | 是       | 一次拉取的数量                                                                       |
+| lastMinSeq       | number   | 是       | lastMinSeq 是上一次拉取回调给的值，上下文，第二次拉取需要回传                        |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                                             | 描述         |
+| --------------- | ------------------------------------------------------------------------------------ | ------------ |
+| Promise.then()  | Promise<[AdvancedGetMessageResult](/class/message/advancedHistoryInfo.md)> | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\>                              | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('getAdvancedHistoryMessageList', IMSDK.uuid(), {
+  lastMinSeq: 0,
+  count: 20,
+  startClientMsgID: '',
+  conversationID: 'conversationID',
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.getAdvancedHistoryMessageList({
+  lastMinSeq: number;
+  count: number;
+  startClientMsgID: string;
+  conversationID: string;
+}, operationID?: string): Promise<AdvancedGetMessageResult>
+```
+
+### 输入参数
+
+| 参数名称         | 参数类型 | 是否必填 | 描述                                                                                 |
+| ---------------- | -------- | -------- | ------------------------------------------------------------------------------------ |
+| conversationID   | string   | 是       | 会话 ID                                                                              |
+| startClientMsgID | string   | 是       | 起始的消息 clientMsgID，第一次拉取为""，后续为上一次拉取的最后一条消息的 clientMsgID |
+| count            | number   | 是       | 一次拉取的数量                                                                       |
+| viewType        | [ViewType](/enum/viewType.md)   | 是      | 判断为正常拉取聊天记录，还是搜索后获取消息上下文            |
+| operationID      | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数                              |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                             | 描述         |
+| --------------- | ------------------------------------------------------------------------------------ | ------------ |
+| Promise.then()  | Promise<[AdvancedGetMessageResult](/class/message/advancedHistoryInfo.md)> | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\>                              | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.getAdvancedHistoryMessageList({
+  lastMinSeq: 0,
+  count: 20,
+  startClientMsgID: '',
+  conversationID: 'conversationID',
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void GetAdvancedHistoryMessageList(OnBase<AdvancedMessage> cb, GetAdvancedHistoryMessageListParams getMessageOptions)
+
+```
+
+### 输入参数
+| 参数名称       | 参数类型                                                                   | 是否必填 | 描述                                                                                                           |
+| -------------- | -------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| cb | OnBase<[AdvancedMessage](/class/message/advancedHistoryInfo.md)> | 是       | 回调接口                                                                                                       |
+| getMessageOptions | [GetAdvancedHistoryMessageListParams](/class/message/GetAdvancedHistoryMessageListParams.md) | 是       |  选项                                                                                                        |
+
+### 代码示例
+
+```C# showLineNumbers
+IMSDK.GetAdvancedHistoryMessageList((advanceMessage,errCode,errMsg)=>{
+
+},new GetAdvancedHistoryMessageListParams(){
+
+});
+```
+
+</TabItem>
+
+</Tabs>

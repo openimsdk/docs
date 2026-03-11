@@ -1,0 +1,365 @@
+---
+sidebar_position: 8
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# setGroupInfo
+
+## 功能介绍
+
+:::info 说明
+
+设置群信息，包括群头像、名称、公告、简介、扩展字段等。
+
+:::
+
+:::caution 注意
+
+管理员和群主才有设置权限。
+
+**相关回调**:  
+[onGroupInfoChanged](../../callback/onGroupInfoChanged)  
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Natvie', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<dynamic> setGroupInfo(GroupInfo groupInfo,{
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型                                         | 是否必填 | 描述    |
+| --------- | ------------------------------------------------ | -------- | ------- |
+| groupID   | NSString                                         | 是       | 群 ID   |
+| groupInfo | [GroupInfo](/class/group/groupInfo.md) | 是       | 群 信息 |
+
+### 返回结果
+
+| 参数名称 | 参数类型 | 描述                 |
+| -------- | -------- | -------------------- |
+| ~        | ~        | 无异常抛出则操作成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+    await OpenIM.iMManager.groupManager.setGroupInfo();
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)setGroupInfo:(OIMGroupInfo *)groupInfo
+           onSuccess:(nullable OIMSuccessCallback)onSuccess
+           onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型                                            | 是否必填 | 描述    |
+| --------- | --------------------------------------------------- | -------- | ------- |
+| groupID   | NSString                                            | 是       | 群 ID   |
+| groupInfo | [OIMGroupInfo](/class/group/groupInfo.md) | 是       | 群 信息 |
+
+### 返回结果
+
+| 参数名称  | 参数类型           | 描述     |
+| --------- | ------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+OIMGroupInfo *param = [OIMGroupInfo new];
+param.introduction = @"";
+
+[OIMManager.manager setGroupInfo:param
+                        onSuccess:^(NSString * _Nullable data) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+public void setGroupInfo(GroupInfo groupInfo, OnBase<String> callBack)
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型                                         | 是否必填 | 描述     |
+| --------- | ------------------------------------------------ | -------- | -------- |
+| callBack  | [OnBase](/callback/onBase.md)          | 是       | 回调接口 |
+| groupInfo | [GroupInfo](/class/group/groupInfo.md) | 是       | 群 信息  |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+OpenIMClient.getInstance().groupManager.setGroupInfo(groupInfo, new OnBase<String>() {
+    @Override
+    public void onError(int code, String error) {
+      // todo: 处理错误信息
+    }
+    @Override
+    public void onSuccess(String data) {
+      // todo: 请求成功
+    }
+});
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.setGroupInfo({
+  groupID: string;
+  faceURL?: string;
+  groupName?: string;
+  introduction?: string;
+  notification?: string;
+  needVerification?: GroupVerificationType;
+  applyMemberFriend?: AllowType;
+  lookMemberInfo?: AllowType;
+  ex?: string;
+}, operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+| 参数名称          | 参数类型                                                  | 是否必填 | 描述                 |
+| ----------------- | --------------------------------------------------------- | -------- | -------------------- |
+| groupID           | string                                                    | 是       | 群组 ID              |
+| faceURL           | string                                                    | 否       | 群头像               |
+| groupName         | string                                                    | 否       | 群名称               |
+| notification      | string                                                    | 否       | 群公告               |
+| introduction      | string                                                    | 否       | 群简介               |
+| needVerification  | [GroupVerification](/enum/groupVerification.md) | 否       | 进群验证方式         |
+| lookMemberInfo    | [AllowType](/enum/allowType.md)                 | 否       | 是否允许查看成员资料 |
+| applyMemberFriend | [AllowType](/enum/allowType.md)                 | 否       | 是否允许群内添加好友 |
+| ex                | string                                                    | 否       | 扩展字段             |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.setGroupInfo({
+  groupID: 'groupID',
+  groupName: 'new name',
+})
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('setGroupInfo', operationID: string, {
+  groupID: string;
+  faceURL?: string;
+  groupName?: string;
+  introduction?: string;
+  notification?: string;
+  needVerification?: GroupVerificationType;
+  applyMemberFriend?: AllowType;
+  lookMemberInfo?: AllowType;
+  ex?: string;
+}): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                      | 是否必填 | 描述                                                    |
+| ----------- | ------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                                        | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| groupID           | string                                                    | 是       | 群组 ID              |
+| faceURL           | string                                                    | 否       | 群头像               |
+| groupName         | string                                                    | 否       | 群名称               |
+| notification      | string                                                    | 否       | 群公告               |
+| introduction      | string                                                    | 否       | 群简介               |
+| needVerification  | [GroupVerification](/enum/groupVerification.md) | 否       | 进群验证方式         |
+| lookMemberInfo    | [AllowType](/enum/allowType.md)                 | 否       | 是否允许查看成员资料 |
+| applyMemberFriend | [AllowType](/enum/allowType.md)                 | 否       | 是否允许群内添加好友 |
+| ex                | string                                                    | 否       | 扩展字段             |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('setGroupInfo', IMSDK.uuid(), {
+  groupID: 'groupID',
+  groupName: 'new name',
+})
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.setGroupInfo({
+  groupID: string;
+  faceURL?: string;
+  groupName?: string;
+  introduction?: string;
+  notification?: string;
+  needVerification?: GroupVerificationType;
+  applyMemberFriend?: AllowType;
+  lookMemberInfo?: AllowType;
+  ex?: string;
+}, operationID?: string): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                                      | 是否必填 | 描述                                                    |
+| ----------- | ------------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                                        | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| groupID           | string                                                    | 是       | 群组 ID              |
+| faceURL           | string                                                    | 否       | 群头像               |
+| groupName         | string                                                    | 否       | 群名称               |
+| notification      | string                                                    | 否       | 群公告               |
+| introduction      | string                                                    | 否       | 群简介               |
+| needVerification  | [GroupVerification](/enum/groupVerification.md) | 否       | 进群验证方式         |
+| lookMemberInfo    | [AllowType](/enum/allowType.md)                 | 否       | 是否允许查看成员资料 |
+| applyMemberFriend | [AllowType](/enum/allowType.md)                 | 否       | 是否允许群内添加好友 |
+| ex                | string                                                    | 否       | 扩展字段             |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from '@openim/rn-client-sdk';
+
+OpenIMSDK.setGroupInfo(
+  {
+    groupID: 'groupID',
+    groupName: 'new name',
+  }
+)
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void SetGroupInfo(OnBase<bool> cb, GroupInfo groupInfo)
+
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型                                            | 是否必填 | 描述     |
+| --------- | --------------------------------------------------- | -------- | -------- |
+| cb        | [onBase](/callback/onBase.md) | 是       | 回调|
+| groupInfo | [GroupInfo](/class/group/groupInfo.md)    | 是       | 群 信息  |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+IMSDK.SetGroupInfo((suc,errCode,errMsg)=>{
+
+},new GroupInfo(){
+
+});
+```
+
+</TabItem>
+
+</Tabs>

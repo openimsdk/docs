@@ -1,0 +1,108 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# onRecvOfflineNewMessages
+
+## 功能介绍
+
+:::info
+
+当应用在后台运行，接收到新消息时，会收到该回调，回调中可能会携带多条消息。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 返回原型
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 返回原型
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 参数详解
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onRecvOfflineNewMessages(data: WSEvent<MessageItem[]>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                              | 描述   |
+| ---- | ------------------------------------------------------------------------------------------------- | ------ |
+| data | [WSEvent](/class/response.md)<[MessageItem](/class/message/messageInfo.md)[]> | 新消息 |
+
+### 调用示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnRecvOfflineNewMessages, ({ data }) => {
+  // data 新离线消息列表
+});
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 返回原型
+
+```ts showLineNumbers
+
+onRecvOfflineNewMessages(data: WSEvent<MessageItem[]>): void;
+
+```
+
+### 返回结果
+
+| 名称 | 类型                                                                                              | 描述   |
+| ---- | ------------------------------------------------------------------------------------------------- | ------ |
+| data | [WSEvent](/class/response.md)<[MessageItem](/class/message/messageInfo.md)[]> | 新消息 |
+
+### 调用示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.subscribe(IMSDK.IMEvents.OnRecvOfflineNewMessages, ({ data }) => {
+  // data 新离线消息列表
+});
+```
+
+</TabItem>
+
+</Tabs>

@@ -1,0 +1,296 @@
+---
+sidebar_position: 24
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# isJoinGroup
+
+
+## 功能介绍
+
+:::info 说明
+
+当前用户是否加入某个群组
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<bool> isJoinedGroup({
+    required String groupID,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型 | 是否必填 | 描述  |
+| -------- | -------- | -------- | ----- |
+| groupID  | String   | 是       | 群ID |
+
+### 返回结果
+
+| 参数名称 | 参数类型 | 描述                 |
+| -------- | -------- | -------------------- |
+| ~        | ~        | 无异常抛出则操作成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+   await OpenIM.iMManager.groupManager.isJoinedGroup(
+      groupID: 'groupID',
+    );
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)isJoinedGroup:(NSString *)groupID
+            onSuccess:(nullable OIMBoolCallback)onSuccess
+            onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型 | 是否必填 | 描述  |
+| -------- | -------- | -------- | ----- |
+| groupID  | NSString | 是       | 群ID |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                               | 描述     |
+| --------- | ------------------------------------------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback   | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager isJoinedGroup:@""
+                       onSuccess:^(NSString * _Nullable data) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+
+ public void isJoinGroup(OnBase<Bool> callBack)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述     |
+| -------- | --------------------------------------- | -------- | -------- |
+| callBack | [OnBase](/callback/onBase.md) | 是       | 回调接口 |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+
+   OpenIMClient.getInstance().groupManager.dismissGroup(new OnBase<Bool>() {
+            @Override
+            public void onError(int code, String error) {
+
+            }
+
+            @Override
+            public void onSuccess(Bool data) {
+
+            }
+        },gid);
+
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.isJoinGroup(groupID: string, operationID?: string): Promise<WsResponse<boolean>>
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型 | 是否必填 | 描述    |
+| -------- | -------- | -------- | ------- |
+| groupID  | string   | 是       | 群ID |
+| operationID    | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)<boolean\>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.isJoinGroup('groupID')
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('isJoinGroup', operationID: string, groupID: string): Promise<boolean>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| groupID     | string   | 是       | 群ID                                                 |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<boolean\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('isJoinGroup', IMSDK.uuid(), 'groupID')
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.isJoinGroup(groupID: string, operationID?: string): Promise<boolean>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| groupID     | string   | 是       | 群ID                                                 |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<boolean\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.isJoinGroup('groupID')
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void IsJoinGroup(OnBase<bool> cb, string groupId)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述     |
+| -------- | --------------------------------------- | -------- | -------- |
+| cb | [OnBase](/callback/onBase.md) | 是       | 回调函数 |
+| groupId      | string                                  | 是       | 群ID    |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.DismissGroup((suc,errCode,errMsg)=>{
+
+},groupID);
+
+```
+
+</TabItem>
+
+</Tabs>

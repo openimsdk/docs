@@ -1,0 +1,232 @@
+---
+sidebar_position: 16
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# hideAllConversation
+
+## 功能介绍
+
+:::info 说明
+
+隐藏本地所有会话，不会删除会话内的消息，收到新消息时此会话会展现。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+  Future<dynamic> deleteAllConversationFromLocal({
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+无
+
+### 返回结果
+
+| 名称 | 类型 | 描述                 |
+| ---- | ---- | -------------------- |
+| ~    | ~    | 无异常抛出则操作成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+    await OpenIM.iMManager.conversationManager.deleteAllConversationFromLocal();
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)deleteAllConversationFromLocalWithOnSuccess:(nullable OIMSuccessCallback)onSuccess
+                                          onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+无
+
+### 返回结果
+
+| 名称      | 类型                                                   | 描述     |
+| --------- | ------------------------------------------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback   | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager deleteAllConversationFromLocalWithOnSuccess:^(NSString * _Nullable data) {
+
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+
+  public void deleteAllConversationFromLocal(OnBase<String> base)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述     |
+| -------- | --------------------------------------- | -------- | -------- |
+| base     | [OnBase](/callback/onBase.md) | 是       | 回调接口 |
+
+### 代码示例
+
+```java showLineNumbers
+        OpenIMClient.getInstance().messageManager.deleteAllMsgFromLocalAndSvr(new OnBase<String>() {
+                        @Override
+                        public void onError(int code, String error) {
+
+                        }
+
+                        @Override
+                        public void onSuccess(String data) {
+
+                        }
+                    });
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.deleteAllConversationFromLocal(operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+无
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+IMSDK.deleteAllConversationFromLocal()
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.hideAllConversations(operationID?: string): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.hideAllConversations()
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void HideAllConversations(OnBase<bool> cb)
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述     |
+| -------- | --------------------------------------- | -------- | -------- |
+| cb | [OnBase](/callback/onBase.md) | 是       | 回调接口 |
+
+### 代码示例
+
+```C# showLineNumbers
+IMSDK.HideAllConversations((suc,errCode,errMsg)=>{
+
+});
+```
+
+</TabItem>
+
+</Tabs>

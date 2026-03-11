@@ -1,0 +1,122 @@
+---
+sidebar_position: 11
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# createVideoMessageByFile
+
+## 功能介绍
+
+:::info 说明
+
+根据文件对象创建视频消息。
+
+:::
+
+:::caution 注意
+
+仅 web 端支持，且最好不要用于大文件上传，大于1G的文件上传，建议使用[createVideoMessageByURL](/api/message/createVideoMessageByURL.md)接口
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+]
+}>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.createVideoMessageByFile({
+  videoPath: string;
+  duration: number;
+  videoType: string;
+  snapshotPath: string;
+  videoUUID: string;
+  videoUrl: string;
+  videoSize: number;
+  snapshotUUID: string;
+  snapshotSize: number;
+  snapshotUrl: string;
+  snapshotWidth: number;
+  snapshotHeight: number;
+  snapShotType: string;
+  videoFile: File;
+  snapshotFile: File;
+}, operationID?: string): Promise<WsResponse<MessageItem>>
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型 | 是否必填 | 描述                                                                                                                                        |
+| -------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| videoPath      | string   | 是       | 文件绝对路径，如果没有传空字符即可                                                                                                          |
+| duration       | number   | 是       | 视频时长                                                                                                                                    |
+| videoType      | string   | 是       | 文件类型，一般为后缀名                                                                                                                      |
+| snapshotPath   | string   | 是       |                                                                                                                                             |
+| videoUUID      | string   | 是       | 视频文件唯一 ID                                                                                                                             |
+| videoUrl       | string   | 是       | 视频下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串       |
+| videoSize      | number   | 是       | 文件大小                                                                                                                                    |
+| snapshotUUID   | string   | 是       | 视频封面唯一 ID                                                                                                                             |
+| snapshotSize   | number   | 是       | 视频封面图大小                                                                                                                              |
+| snapshotUrl    | string   | 是       | 视频封面图下载地址，自行上传并通过[sendMessageNotOss](/api/message/sendMessageNotOss.md) 发送时，需要传入远程 url，否则为空字符串 |
+| snapshotWidth  | number   | 是       | 视频缩略图宽度                                                                                                                              |
+| snapshotHeight | number   | 是       | 视频缩略图高度                                                                                                                              |
+| snapShotType   | string   | 是       | 视频缩略图类型，一般为后缀名                                                                                                                |
+| videoFile      | File     | 是       | 视频文件对象                                                                                                                                |
+| snapshotFile   | File     | 是       | 视频封面图文件对象                                                                                                                          |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                     | 描述         |
+| --------------- | ---------------------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<WsResponse<[MessageItem](/class/message/messageInfo.md)>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                         | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.createVideoMessageByFile({
+  videoPath: videoFile.path,
+  duration: 6,
+  videoType: videoFile.type,
+  snapshotPath: snapshotFile.path,
+  videoUUID: '',
+  videoUrl: '',
+  videoSize: videoFile.size,
+  snapshotUUID: '',
+  snapshotSize: snapshotFile.size,
+  snapshotUrl: '',
+  snapshotWidth: 1024,
+  snapshotHeight: 1024,
+  snapShotType: snapshotFile.type,
+  videoFile,
+  snapshotFile,
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+</Tabs>

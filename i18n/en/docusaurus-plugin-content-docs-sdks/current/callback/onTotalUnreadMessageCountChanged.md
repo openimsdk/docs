@@ -1,0 +1,152 @@
+---
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# onTotalUnreadMessageCountChanged
+
+## Description
+
+:::info
+
+Callback when the total unread conversation count changes.
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### Return Prototype
+
+```dart showLineNumbers
+  Function(int count)? onTotalUnreadMessageCountChanged;
+```
+
+### Return Results
+
+| Name  | Type | Description |
+| ----- | ---- | ---------- |
+| count | int  | Unread count |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### Return Prototype
+
+```swift showLineNumbers
+
+- (void)onTotalUnreadMessageCountChanged:(NSInteger)totalUnreadCount;
+
+```
+
+### Return Results
+
+| Name             | Type      | Description |
+| ---------------- | --------- | ---------- |
+| totalUnreadCount | NSInteger | Unread count |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### Return Prototype
+
+```java showLineNumbers
+void onTotalUnreadMessageCountChanged(int count)
+```
+
+### Return Results
+
+| Name  | Type | Description |
+| ----- | ---- | ---------- |
+| count | int  | Unread count change |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### Return Prototype
+
+```ts showLineNumbers
+
+onTotalUnreadMessageCountChanged(data: WSEvent<number>): void;
+
+```
+
+### Return Results
+
+| Name | Type | Description |
+| ---- | ---- | ------ |
+| data | [WSEvent](/class/response.md)<number\> | Unread count |
+
+### Call Example
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+IMSDK.on(CbEvents.OnTotalUnreadMessageCountChanged, ({ data }) => {
+  // data: message unread count
+});
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### Return Prototype
+
+```ts showLineNumbers
+
+onTotalUnreadMessageCountChanged(data: WSEvent<number>): void;
+
+```
+
+### Return Results
+
+| Name | Type | Description |
+| ---- | ---- | ------ |
+| data | [WSEvent](/class/response.md)<number\> | Unread count |
+
+### Call Example
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.subscribe(IMSDK.IMEvents.OnTotalUnreadMessageCountChanged, ({ data }) => {
+  // data: message unread count
+});
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### Return Prototype
+
+```C# showLineNumbers
+void OnTotalUnreadMessageCountChanged(int count);
+```
+
+### Return Results
+
+| Name  | Type | Description |
+| ----- | ---- | ---------- |
+| count | int  | Unread count |
+
+</TabItem>
+
+</Tabs>

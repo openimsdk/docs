@@ -1,0 +1,328 @@
+---
+sidebar_position: 4
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# updateFriends
+
+## 功能介绍
+
+:::info 说明
+
+修改好友信息，包括置顶，备注，ex 字段。
+
+:::
+
+:::caution 注意
+
+**相关回调**:  
+[onFriendInfoChanged](../../callback/onFriendInfoChanged)  
+[onConversationChanged](../../callback/onConversationChanged)
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+### 函数原型
+
+```dart showLineNumbers
+Future updateFriends(
+    UpdateFriendsReq req, {
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称         | 参数类型                                                          | 是否必填 | 描述         |
+| ---------------- | ----------------------------------------------------------------- | -------- | ------------ |
+| updateFriendsReq | [UpdateFriendsReq](/class/relation/updateFriendsReq.md) | 是       | 变更的结构体 |
+
+### 返回结果
+
+| 名称 | 类型 | 描述                 |
+| ---- | ---- | -------------------- |
+| ~    | ~    | 无异常抛出则操作成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+    await OpenIM.iMManager.conversationManager.updateFriends(req);
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)updateFriends:(OIMUpdateFriendsReq *)req
+                   onSuccess:(nullable OIMSuccessCallback)onSuccess
+                   onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称 | 参数类型                                                          | 是否必填 | 描述         |
+| -------- | ----------------------------------------------------------------- | -------- | ------------ |
+| req      | [UpdateFriendsReq](/class/relation/updateFriendsReq.md) | 是       | 变更的结构体 |
+
+### 返回结果
+
+| 名称      | 类型               | 描述     |
+| --------- | ------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager updateFriends:req
+                               onSuccess:^(NSString * _Nullable data) {
+
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+```java showLineNumbers
+public void updateFriendsReq(OnBase<String> base, UpdateFriendsReq updateFriendsReq)
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型 | 是否必填 | 描述    |
+| -------------- | -------- | -------- | ------- |
+| updateFriendsReq      | [UpdateFriendsReq](/class/relation/updateFriendsReq.md)   | 是       | 变更的结构体    |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+OpenIMClient.getInstance().friendshipManager.updateFriendsReq(new OnBase<String>() {
+    @Override
+    public void onError(int code, String error) {
+      // todo: 处理错误信息
+    }
+    @Override
+    public void onSuccess(String data) {
+      // todo: 请求成功
+    }
+}, updateFriendsReq);
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.updateFriends({
+  friendUserIDs: string[];
+  isPinned?: boolean;
+  remark?: boolean;
+  ex?: boolean;
+},operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+| 参数名称      | 参数类型 | 是否必填 | 描述           |
+| ------------- | -------- | -------- | -------------- |
+| friendUserIDs | string[] | 是       | 好友 ID 列表   |
+| isPinned      | boolean  | 否       | 是否为星标好友 |
+| remark        | string   | 否       | 好友备注       |
+| ex            | string   | 否       | ex 字段        |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.updateFriends({
+  friendUserIDs: ['userID'],
+  remark: "new remark"
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('updateFriends', operationID: string, {
+  friendUserIDs: string[];
+  isPinned?: boolean;
+  remark?: boolean;
+  ex?: boolean;
+}): Promise<FullUserItem[]>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| friendUserIDs | string[] | 是       | 好友 ID 列表   |
+| isPinned      | boolean  | 否       | 是否为星标好友 |
+| remark        | string   | 否       | 好友备注       |
+| ex            | string   | 否       | ex 字段        |
+
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\>    | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('updateFriends', IMSDK.uuid(), {
+  friendUserIDs: ['userID'],
+  remark: "new remark"
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.updateFriends({
+  friendUserIDs: string[];
+  isPinned?: boolean;
+  remark?: boolean;
+  ex?: boolean;
+}, operationID?: string): Promise<FullUserItem[]>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| friendUserIDs | string[] | 是       | 好友 ID 列表   |
+| isPinned      | boolean  | 否       | 是否为星标好友 |
+| remark        | string   | 否       | 好友备注       |
+| ex            | string   | 否       | ex 字段        |
+
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\>    | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from '@openim/rn-client-sdk';
+
+OpenIMSDK.updateFriends({
+  friendUserIDs: ['userID'],
+  remark: "new remark"
+})
+  .then((data) => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+```C# showLineNumbers
+
+public static void UpdateFriends(OnBase<bool> cb, UpdateFriendsReq req);
+
+```
+
+### 输入参数
+
+| 参数名称       | 参数类型 | 是否必填 | 描述    |
+| -------------- | -------- | -------- | ------- |
+| cb | [OnBase](/callback/onBase.md) | 是       | 回调|
+| updateFriendsReq      | [UpdateFriendsReq](/class/relation/updateFriendsReq.md)   | 是       | 变更的结构体    |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.UpdateFriends((suc,errCode,errMsg)=>{
+
+}
+, updateFriendsReq);
+
+```
+
+</TabItem>
+
+</Tabs>

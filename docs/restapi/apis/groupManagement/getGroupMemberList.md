@@ -1,0 +1,161 @@
+---
+sidebar_position: 7
+title: 获取群成员列表
+hide_title: true
+---
+
+<center>
+
+## 获取群成员列表
+
+</center>
+
+### 简要描述
+- 分页获取群成员列表，按照群主，管理员，普通排序
+### 请求方式
+- `post` 
+### 请求URL
+- `{API_ADDRESS}/group/get_group_member_list`
+
+
+### Header
+|header名|示例值|选填|类型|说明|
+|:----    |:-------    |:--- |---|------      |
+|operationID|1646445464564|必填|string|用于全局链路追踪，建议使用时间戳，在每个请求中独立|
+|token|eyJhbxxxx3Xs|必填|string|[管理员 token](/apis/authenticationManagement/getAdminToken.md)|
+
+
+### 请求参数示例
+
+
+```json
+{
+  "groupID": "2559217223",
+  "keyword":"userID",
+  "pagination": {
+    "pageNumber": 1,
+    "showNumber": 100
+  }
+}
+```
+|字段名|选填|类型|说明|
+|:----    |:-------    |:--- |---|
+|groupID|必填|string|群ID|
+|keyword|选填|string|群成员的 userID 或 nickname，不填时返回对应分页的数据|
+|pagination|必填|object|分页参数结构体|
+|pagination.pageNumber|必填|int|当前页码，从1开始|
+|pagination.showNumber|必填|int|当前页请求数量|
+### 成功返回示例
+
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "total": 5,
+    "members": [
+      {
+        "groupID": "2559217223",
+        "userID": "3034068043",
+        "roleLevel": 20,
+        "joinTime": 1687762198048,
+        "nickname": "OK",
+        "faceURL": "http://203.56.175.233:10002/third/object?name=%2Fdata%2Fuser%2F0%2Fcn.rentsoft.flutter.openim.consumer%2Fcache%2Fimage_cropper_1687330588901.jpg",
+        "appMangerLevel": 0,
+        "joinSource": 2,
+        "operatorUserID": "4771680259",
+        "ex": "",
+        "muteEndTime": 0,
+        "inviterUserID": "4771680259"
+      },
+      {
+        "groupID": "2559217223",
+        "userID": "3645617224",
+        "roleLevel": 60,
+        "joinTime": 1687762198048,
+        "nickname": "Huo",
+        "faceURL": "http://203.56.175.233:10002/third/object?name=%2Fdata%2Fuser%2F0%2Fcn.rentsoft.flutter.openim.consumer%2Fcache%2Fimage_cropper_1687846002615.jpg",
+        "appMangerLevel": 0,
+        "joinSource": 2,
+        "operatorUserID": "4771680259",
+        "ex": "",
+        "muteEndTime": 0,
+        "inviterUserID": "4771680259"
+      },
+      {
+        "groupID": "2559217223",
+        "userID": "3791793226",
+        "roleLevel": 20,
+        "joinTime": 1687760824107,
+        "nickname": "Wo",
+        "faceURL": "",
+        "appMangerLevel": 0,
+        "joinSource": 2,
+        "operatorUserID": "4771680259",
+        "ex": "",
+        "muteEndTime": 0,
+        "inviterUserID": "4771680259"
+      },
+      {
+        "groupID": "2559217223",
+        "userID": "4771680259",
+        "roleLevel": 100,
+        "joinTime": 1687760824107,
+        "nickname": "Lumia",
+        "faceURL": "http://203.56.175.233:10002/third/object?name=%2Fdata%2Fuser%2F0%2Fcn.rentsoft.flutter.openim.consumer%2Fcache%2Fimage_cropper_1687330764676.jpg",
+        "appMangerLevel": 0,
+        "joinSource": 2,
+        "operatorUserID": "4771680259",
+        "ex": "",
+        "muteEndTime": 0,
+        "inviterUserID": "4771680259"
+      },
+      {
+        "groupID": "2559217223",
+        "userID": "7117248489",
+        "roleLevel": 20,
+        "joinTime": 1687762198048,
+        "nickname": "Hello",
+        "faceURL": "",
+        "appMangerLevel": 0,
+        "joinSource": 2,
+        "operatorUserID": "4771680259",
+        "ex": "",
+        "muteEndTime": 0,
+        "inviterUserID": "4771680259"
+      }
+    ]
+  }
+}
+```
+### 成功返回示例的参数说明
+
+
+|参数名|类型|说明|
+|:----    |:-------    |:--- |
+|errCode|int|错误码，0表示成功|
+|errMsg|string|错误简要信息，为空|
+|errDlt|errDlt|错误详细信息，为空|
+|data|object|通用数据对象，具体结构见下方|
+|total|int|群成员总数|
+|members|array|[群成员信息](/commonFields.md#groupmemberinfo)列表|
+### 失败返回示例
+
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+### 失败返回示例的参数说明
+
+
+|参数名|类型|说明|
+|:----    |:-------    |:--- |
+|errCode|int|错误码，具体查看全局错误码文档|
+|errMsg|string|错误简要信息|
+|errDlt|errDlt|错误详细信息|

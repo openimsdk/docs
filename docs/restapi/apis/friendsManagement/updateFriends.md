@@ -1,0 +1,87 @@
+---
+sidebar_position: 2
+title: 修改好友信息
+hide_title: true
+---
+
+<center>
+
+## 修改好友信息
+
+</center>
+
+### 简要描述
+
+- 修改指定用户（ownerUserID）的某个好友（friendUserID）的备注、星标信息。仅传需要修改的字段，也支持零值。
+
+### 请求方式
+
+- `post`
+
+### 请求 URL
+
+- `{API_ADDRESS}/friend/update_friends`
+
+### Header
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | 用于全局链路追踪，建议使用时间戳，在每个请求中独立 |
+| token       | eyJhbxxxx3Xs  | 必填 | string | [管理员 token](/apis/authenticationManagement/getAdminToken.md)                 |
+
+### 请求参数示例
+
+```json
+{
+  "ownerUserID": "11111111",
+  "friendUserIDs": ["1112"],
+  "remark": "remark",
+  "isPinned": true,
+  "ex": "ex"
+}
+```
+
+| 字段名       | 选填 | 类型    | 说明                   |
+| :----------- | :--- | :------ | ---------------------- |
+| ownerUserID  | 必填 | string  | 为该用户的好友设置字段 |
+| friendUserID | 必填 | string  | 需要设置字段的好友     |
+| remark       | 选填 | string  | 备注内容               |
+| isPinned     | 选填 | boolean | 是否星标               |
+| ex           | 选填 | string  | 扩展字段               |
+
+### 成功返回示例
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": ""
+}
+```
+
+### 成功返回示例的参数说明
+
+| 参数名  | 类型   | 说明                         |
+| :------ | :----- | :--------------------------- |
+| errCode | int    | 错误码，0 表示成功            |
+| errMsg  | string | 错误简要信息，为空    |
+| errDlt  | errDlt | 错误详细信息，为空    |
+
+
+### 失败返回示例
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+
+### 失败返回示例的参数说明
+
+| 参数名  | 类型   | 说明                          |
+| :------ | :----- | :---------------------------- |
+| errCode | int    | 错误码，具体查看全局错误码文档 |
+| errMsg  | string | 错误简要信息                  |
+| errDlt  | errDlt | 错误详细信息                  |

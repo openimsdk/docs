@@ -1,0 +1,101 @@
+---
+sidebar_position: 5
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# createImageMessageByFile
+
+## 功能介绍
+
+:::info 说明
+
+根据文件对象创建图片消息。
+
+:::
+
+:::caution 注意
+
+仅 web 端支持
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+]
+}>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.createImageMessageByFile({
+  sourcePicture: PicBaseInfo;
+  bigPicture: PicBaseInfo;
+  snapshotPicture: PicBaseInfo;
+  sourcePath: string;
+  file: File;
+}, operationID?: string): Promise<WsResponse<MessageItem>>
+```
+
+### 输入参数
+
+| 参数名称        | 参数类型                                               | 是否必填 | 描述                                       |
+| --------------- | ------------------------------------------------------ | -------- | ------------------------------------------ |
+| sourcePicture   | [PicBaseInfo](/class/message/pictureInfo.md) | 是       | 原图相关信息                               |
+| bigPicture      | [PicBaseInfo](/class/message/pictureInfo.md) | 是       | 大图相关信息                               |
+| snapshotPicture | [PicBaseInfo](/class/message/pictureInfo.md) | 是       | 缩略图相关信息                             |
+| sourcePath      | string                                                 | 是       | 图片在本机的绝对路径，如果没有传空字符即可 |
+| file            | File                                                   | 是       | 文件对象                                   |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                                     | 描述         |
+| --------------- | ---------------------------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<WsResponse<[MessageItem](/class/message/messageInfo.md)>\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\>                         | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+const picBaseInfo = {
+  uuid: "uuid",
+  type: imageFile.type,
+  size: imageFile.size,
+  width: 1024,
+  height: 1024,
+  url: "",
+}
+
+IMSDK.createImageMessageByFile({
+  sourcePicture: picBaseInfo;
+  bigPicture: picBaseInfo;
+  snapshotPicture: picBaseInfo;
+  sourcePath: imageFile.path;
+  file: imageFile
+})
+  .then(({ data }) => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+</Tabs>

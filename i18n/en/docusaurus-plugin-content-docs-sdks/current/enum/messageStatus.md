@@ -1,0 +1,121 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# MessageStatus
+
+:::info
+
+Message status.
+
+:::
+
+## Message Status
+
+| Enum Value | Description               |
+| ---------- | ------------------------- |
+| 1          | Sending                   |
+| 2          | Sent successfully         |
+| 3          | Send failed               |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### MessageStatus
+
+| Enum Name   | Enum Value |
+| ----------- | ---------- |
+| sending     | 1          |
+| sendSuccess | 2          |
+| sendFailure | 3          |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMConversationType
+
+| Enum Name                   | Enum Value |
+| --------------------------- | ---------- |
+| OIMMessageStatusSending     | 1          |
+| OIMMessageStatusSendSuccess | 2          |
+| OIMMessageStatusSendFailure | 3          |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### MessageStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| SENDING   | 1          |
+| SUCCEEDED | 2          |
+| FAILED    | 3          |
+
+
+</TabItem>
+
+<TabItem value="Web">
+
+### MessageStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Sending   | 1          |
+| Succeed   | 2          |
+| Failed    | 3          |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### MessageStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Sending   | 1          |
+| Succeed   | 2          |
+| Failed    | 3          |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### MessageStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Sending   | 1          |
+| Succeed   | 2          |
+| Failed    | 3          |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### MessageStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Sending   | 1          |
+| Succeed   | 2          |
+| Failed    | 3          |
+
+</TabItem>
+
+</Tabs>

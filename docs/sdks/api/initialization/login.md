@@ -1,0 +1,366 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# login
+
+## 功能介绍
+
+:::info 说明
+
+用户登录，需等待成功回调（而非成功返回）后再调用其他接口。
+您需要在以下场景调用 login 接口：  
+（1）APP 启动后，从服务端重新获取 token后；  
+（2）登录后 token 过期，从服务端重新获取 token后；  
+（3）被强制APP管理员下线，从服务端重新获取 token后；  
+（4）用户主动退出登录，从服务端重新获取 token后。  
+
+以下场景无需调用 login 接口：  
+（1）用户的网络断开并重新连接；  
+（2）当一个登录过程还未完成。 
+
+:::
+
+:::caution 注意
+
+（1）如出现失败回调，重试是无意义的，查看错误信息、检查参数后调整代码再继续；  
+（2）在一个 App 中，SDK 不支持多个帐号同时登录，需先调用退出登录，才能登录其他帐号；  
+（3）除设置监听和初始化以及获取登录状态之外的所有接口，必须在 SDK 登录回调成功后才能调用；    
+（4）登录回调成功可能不代表IM真的登陆成功，需要观察IM的连接状态回调，收到[onConnectSuccess](/callback/onConnectSuccess.md) 时才表示登录并且连接IM成功。
+
+**相关回调**：      
+[onConnectFailed](/callback/onConnectFailed.md)   
+[onConnecting](/callback/onConnecting.md)   
+[onConnectSuccess](/callback/onConnectSuccess.md)   
+[onUserTokenExpired](/callback/onUserTokenExpired.md)
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<UserInfo> login({
+    required String userID,
+    required String token,
+    String? operationID,
+    Future<UserInfo> Function()? defaultValue,
+  })
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                                |
+| ----------- | -------- | -------- | ------------------------------------------------------------------- |
+| operationID | String?  | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数             |
+| userID      | String   | 是       | IM 用户 userID                                                      |
+| token       | String   | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 user_token 来获取 |
+
+### 返回结果
+
+| 名称 | 字段类型                                      | 描述           |
+| ---- | --------------------------------------------- | -------------- |
+| ~    | [UserInfo](/class/user/userInfo.md) | 当前登陆者信息 |
+
+### 代码示例
+
+```dart showLineNumbers
+   UserInfo userInfo = await OpenIM.iMManager.login(userID: '', token: '');
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+- (void)login:(NSString *)userID
+        token:(NSString *)token
+    onSuccess:(nullable OIMSuccessCallback)onSuccess
+    onFailure:(nullable OIMFailureCallback)onFailure;
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                                |
+| ----------- | -------- | -------- | ------------------------------------------------------------------- |
+| operationID | NSString | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数             |
+| userID      | NSString | 是       | IM 用户 userID                                                      |
+| token       | NSString | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 user_token 来获取 |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                               | 描述     |
+| --------- | ------------------------------------------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback   | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager login:@"" // userID来自于自身业务服务器
+                    token:@""  // token需要业务服务器向OpenIM服务端交换获取
+                onSuccess:^(NSString * _Nullable data) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+     public void login(@NotNull final OnBase<String> callBack, String uid, String token)
+```
+
+### 参数详解
+
+| 参数名称 | 参数类型                                | 是否必填 | 描述                                                                |
+| -------- | --------------------------------------- | -------- | ------------------------------------------------------------------- |
+| callBack | [OnBase](/callback/onBase.md) | 是       | 回调接口                                                            |
+| userID   | String                                  | 是       | IM 用户 userID                                                      |
+| token    | String                                  | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 user_token 来获取 |
+
+### 代码示例
+
+```java showLineNumbers
+     OpenIMClient.getInstance().login(new OnBase<String>() {
+                        @Override
+                        public void onError(int code, String error) {
+
+                        }
+
+                        @Override
+                        public void onSuccess(String data) {
+
+                        }
+                    }, userID, imToken);
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+:::caution 注意
+
+`@openim/wasm-client-sdk`是针对大部分浏览器场景下的使用方案，会对历史消息等进行存储，而`@openim/client-sdk`是更轻量级的方案，没有任何存储，同时支持在小程序使用。
+
+:::
+
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.login(config: InitAndLoginConfig, operationID?: string): Promise<WsResponse>
+```
+
+- 使用ffi引入方式，在electron中调用时
+```ts showLineNumbers
+IMSDK.login(config: { userID: string; token: string }, operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数（Browser/MiniProgram）
+
+| 参数名称    | 参数类型                                              | 是否必填 | 描述                                                    |
+| ----------- | ----------------------------------------------------- | -------- | ------------------------------------------------------- |
+| config      | [InitAndLoginConfig](/class/init/config.md) | 是       | 初始化、登录参数                                        |
+| operationID | string                                                | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+
+### 输入参数（Electron）
+
+| 参数名称    | 参数类型                                              | 是否必填 | 描述                                                    |
+| ----------- | ----------------------------------------------------- | -------- | ------------------------------------------------------- |
+| userID | string                                                | 是       | IM 用户 userID |
+| token | string                                                | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 user_token 来获取 |
+
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+const config = {
+    userID: string;       // IM 用户 userID
+    token: string;        // IM 用户令牌
+    platformID: number;   // 当前登录平台号
+    apiAddr: string;   // IM api 地址，一般为`http://your-server-ip:10002`或`https://your-server-ip/api
+    wsAddr: string;    // IM ws 地址，一般为`ws://your-server-ip:10001`或`wss://your-server-ip/msg_gateway
+}
+IMSDK.login(config)
+  .then(() => {
+    // 登录成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 登录失败
+  });
+```
+
+- 使用ffi引入方式，在electron中调用时
+
+```js showLineNumbers
+import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+
+const { instance: IMSDK } = getWithRenderProcess();
+
+await IMSDK.login({
+  userID: 'your-user-id',
+  token: 'your-token',
+});
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('login', operationID: string, {
+  userID: string,
+  token: string
+}): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                                       |
+| ----------- | -------- | -------- | -------------------------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数                    |
+| userID      | string   | 是       | IM 用户 userID                                                             |
+| token       | string   | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 `auth/user_token` 来获取 |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('login', IMSDK.uuid(), {
+  userID: '',
+  token: '',
+})
+  .then(() => {
+    // 登录成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 登录失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### 函数原型
+
+```js showLineNumbers
+OpenIMSDK.login({
+  userID:string, 
+  token:string
+}, operationID?: string): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                                |
+| ----------- | -------- | -------- | ------------------------------------------------------------------- |
+| userID      | String   | 是       | IM 用户 userID                                                      |
+| token       | String   | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 user_token 来获取 |
+| operationID | String   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数             |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from '@openim/rn-client-sdk';
+
+OpenIMSDK.login({
+  userID: 'IM user ID',
+  token: 'IM user token',
+})
+  .then(() => {
+    // 登录成功
+  })
+  .catch((error) => {
+    // 登录失败
+  });
+```
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void Login(OnBase<bool> cb, string uid, string token)
+
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                                |
+| ----------- | -------- | -------- | ------------------------------------------------------------------- |
+| cb          | [OnBase](/callback/onBase.md)| 是       | 登录成功或失败回调 |
+| uid         | string   | 是       | IM 用户 userID                                                      |
+| token       | string   | 是       | OpenIM 用户令牌，业务后台验证用户账号密码后，通过 user_token 来获取 |
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.Login((suc, errCode, errMsg) =>
+{
+},userId, token);
+
+```
+</TabItem>
+
+</Tabs>

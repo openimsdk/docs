@@ -31,14 +31,14 @@ export default function HeroSection() {
             </Translate>
           </p>
           <div className="mt-8 flex flex-col gap-4 lg:flex-row">
-            <Link
+            <a
               href="#start-building"
               className="rounded-sm bg-primary px-12 py-2.5 text-center font-semibold text-white hover:text-white"
             >
               <Translate id="homepage.heroSection.buildLink">
                 Start building
               </Translate>
-            </Link>
+            </a>
             <Link
               href="/guides/introduction"
               className="rounded-sm border border-solid border-primary bg-primary/10 px-12 py-2.5 text-center font-semibold text-primary hover:text-primary dark:border-primary-100 dark:text-primary-100"

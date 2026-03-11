@@ -1,0 +1,20 @@
+---
+sidebar_position: 7
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# BatchMsgListener
+
+## 模块概览
+
+:::info
+
+批量消息监听器，当收到新消息时回调。设置后[`AdvancedMsgListener`](/listener/advancedMsgListener.md)中的`onRecvNewMessage`和`onRecvOfflineNewMessage`回调不再触发。
+
+:::
+
+| 模块名称                                                                    | 模块功能简介     |
+| --------------------------------------------------------------------------- | ---------------- |
+| [onRecvNewMessages](/callback/onRecvNewMessages.md)               | 新消息批量回调   |
+| [onRecvOfflineNewMessages](/callback/onRecvOfflineNewMessages.md) | 离线消息批量回调 |

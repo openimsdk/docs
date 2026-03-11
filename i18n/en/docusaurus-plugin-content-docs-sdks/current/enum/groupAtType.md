@@ -1,0 +1,136 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# GroupAtType
+
+:::info
+
+@Mention type.
+
+:::
+
+## @Mention Type Options {#GroupAtType}
+
+| Enum Value | Description             |
+| ---------- | ----------------------- |
+| 0          | No @mention             |
+| 1          | @Me                     |
+| 2          | @All                    |
+| 3          | @All and @Me            |
+| 4          | Group announcement      |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### GroupAtType
+
+| Enum Name         | Enum Value |
+| ----------------- | ---------- |
+| atNormal          | 0          |
+| atMe              | 1          |
+| atAll             | 2          |
+| atAllAtMe         | 3          |
+| groupNotification | 4          |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMGroupType
+
+| Enum Name                       | Enum Value |
+| ------------------------------- | ---------- |
+| OIMGroupAtTypeAtNormal          | 0          |
+| OIMGroupAtTypeAtMe              | 1          |
+| OIMGroupAtTypeAtAll             | 2          |
+| OIMGroupAtTypeAtAllAtMe         | 3          |
+| OIMGroupAtTypeGroupNotification | 4          |
+
+</TabItem>
+
+<TabItem value="Android">
+
+###  GroupAtType
+
+| Enum Name          | Enum Value |
+| ------------------ | ---------- |
+| AT_NORMAL          | 0          |
+| AT_ME              | 1          |
+| AT_ALL             | 2          |
+| AT_ALL_AT_ME       | 3          |
+| GROUP_NOTIFICATION | 4          |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### GroupAtType
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| AtNormal      | 0          |
+| AtMe          | 1          |
+| AtAll         | 2          |
+| AtAllAtMe     | 3          |
+| AtGroupNotice | 4          |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### GroupAtType
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| AtNormal      | 0          |
+| AtMe          | 1          |
+| AtAll         | 2          |
+| AtAllAtMe     | 3          |
+| AtGroupNotice | 4          |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### GroupAtType
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| AtNormal      | 0          |
+| AtMe          | 1          |
+| AtAll         | 2          |
+| AtAllAtMe     | 3          |
+| AtGroupNotice | 4          |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### GroupAtType
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| AtNormal      | 0          |
+| AtMe          | 1          |
+| AtAll         | 2          |
+| AtAllAtMe     | 3          |
+| AtGroupNotice | 4          |
+
+</TabItem>
+
+</Tabs>

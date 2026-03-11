@@ -1,0 +1,352 @@
+---
+sidebar_position: 11
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# acceptGroupApplication
+
+## 功能介绍
+
+:::info 说明
+
+群主或管理员同意进群申请。
+
+:::
+
+:::caution 注意
+
+进群请求被同意后，管理员和群主无法再操作。
+
+**相关回调**:    
+[onGroupApplicationAccepted](../../callback/onGroupApplicationAccepted)  
+[onGroupMemberAdded](../../callback/onGroupMemberAdded)    
+[onJoinedGroupAdded](../../callback/onJoinedGroupAdded)    
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+ Future<dynamic> acceptGroupApplication({
+    required String groupID,
+    required String userID,
+    String? handleMsg,
+    String? operationID,
+  })
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型 | 是否必填 | 描述            |
+| --------- | -------- | -------- | --------------- |
+| groupID   | String   | 是       | 群ID           |
+| userID    | Sting    | 是       | 申请发起者用户 ID |
+| handleMsg | Sting    | 否       | 备注            |
+
+### 返回结果
+
+| 参数名称 | 参数类型 | 描述             |
+| -------- | -------- | ---------------- |
+| ~        | ~        | 无异常抛出则成功 |
+
+### 代码示例
+
+```dart showLineNumbers
+    await OpenIM.iMManager.groupManager.acceptGroupApplication(
+      groupID: 'groupID',
+      userID: 'userID',
+      handleMsg: 'haha',
+    );
+    // todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)acceptGroupApplication:(NSString *)groupID
+                    fromUserId:(NSString *)fromUserID
+                     handleMsg:(NSString * _Nullable)handleMsg
+                     onSuccess:(nullable OIMSuccessCallback)onSuccess
+                     onFailure:(nullable OIMFailureCallback)onFailure;
+
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型 | 是否必填 | 描述    |
+| ---------- | -------- | -------- | ------- |
+| groupID    | NSString | 是       | 群ID   |
+| fromUserID | NSSting  | 是       | 申请发起者用户 ID |
+| handleMsg  | NSSting  | 否       | 信息    |
+
+### 返回结果
+
+| 参数名称  | 参数类型                                               | 描述     |
+| --------- | ------------------------------------------------------ | -------- |
+| onSuccess | OIMSuccessCallback | 成功返回 |
+| onFailure | OIMFailureCallback   | 失败返回 |
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager acceptGroupApplication:@""
+                                fromUserId:@""
+                                handleMsg:@""
+                                onSuccess:^(NSString * _Nullable data) {
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+}];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+
+public void acceptGroupApplication(OnBase<String> callBack, String gid, String uid, String handleMsg)
+
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型                                | 是否必填 | 描述     |
+| --------- | --------------------------------------- | -------- | -------- |
+| callBack  | [OnBase](/callback/onBase.md) | 是       | 回调接口 |
+| gid       | String                                  | 是       | 群ID    |
+| uid       | String                                  | 是       | 用户 ID  |
+| handleMsg | String                                  | 否       | 信息     |
+
+### 返回结果
+
+### 代码示例
+
+```java showLineNumbers
+  OpenIMClient.getInstance().groupManager.acceptGroupApplication(new OnBase<String>() {
+            @Override
+            public void onError(int code, String error) {
+
+            }
+
+            @Override
+            public void onSuccess(String data) {
+
+            }
+        },gid,uid,handleMsg)
+
+```
+
+</TabItem>
+
+<TabItem value="Web">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.acceptGroupApplication({
+    groupID: string;
+    fromUserID: string;
+    handleMsg: string;
+}, operationID?: string): Promise<WsResponse>
+```
+
+### 输入参数
+
+| 参数名称   | 参数类型 | 是否必填 | 描述              |
+| ---------- | -------- | -------- | ----------------- |
+| groupID    | string   | 是       | 群ID           |
+| fromUserID | string   | 是       | 申请发起者用户 ID |
+| handleMsg  | string   | 是       | 操作信息          |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                             | 描述         |
+| --------------- | ---------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<[WsResponse](/class/response.md)\> | 调用成功回调 |
+| Promise.catch() | Promise<[WsResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import { getSDK } from '@openim/wasm-client-sdk';
+const IMSDK = getSDK();
+
+// use in electron with ffi
+// import { getWithRenderProcess } from '@openim/electron-client-sdk/lib/render';
+// const { instance: IMSDK } = getWithRenderProcess();
+
+// use in mini program
+// import { getSDK } from '@openim/client-sdk';
+// const IMSDK = getSDK();
+
+IMSDK.acceptGroupApplication({
+  groupID: '',
+  fromUserID: '',
+  handleMsg: '',
+})
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi('acceptGroupApplication', operationID: string, {
+  groupID: string;
+  fromUserID: string;
+  handleMsg: string;
+}): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| operationID | string   | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+| groupID     | string   | 是       | 群ID                                                 |
+| fromUserID  | string   | 是       | 申请发起者用户 ID                                       |
+| handleMsg   | string   | 是       | 操作信息                                                |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('acceptGroupApplication', IMSDK.uuid(), {
+  groupID: '',
+  fromUserID: '',
+  handleMsg: '',
+})
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.acceptGroupApplication({
+  groupID: string,
+  fromUserID: string,
+  handleMsg: string,
+}, operationID?: string): Promise<void>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型 | 是否必填 | 描述                                                    |
+| ----------- | -------- | -------- | ------------------------------------------------------- |
+| groupID     | string   | 是       | 群ID                                                 |
+| fromUserID  | string   | 是       | 申请发起者用户 ID                                       |
+| handleMsg   | string   | 是       | 操作信息                                                |
+| operationID | string   | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述         |
+| --------------- | ------------------------------------------------------- | ------------ |
+| Promise.then()  | Promise<void\>                                          | 调用成功回调 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调 |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.acceptGroupApplication({
+  groupID: '',
+  fromUserID: '',
+  handleMsg: '',
+})
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void AcceptGroupApplication(OnBase<bool> cb, string groupId, string fromUserId, string handleMsg)
+
+```
+
+### 输入参数
+
+| 参数名称  | 参数类型                                | 是否必填 | 描述     |
+| --------- | --------------------------------------- | -------- | -------- |
+| cb | [OnBase](/callback/onBase.md) | 是       | 回调接口 |
+| groupID       | string                                  | 是       | 群ID    |
+| fromUserID   | string                                  | 是       | 用户 ID  |
+| handleMsg | string                                  | 否       | 信息     |
+
+### 返回结果
+
+### 代码示例
+
+```C# showLineNumbers
+IMSDK.AcceptGroupApplication((suc,errCode,errMsg)=>{
+
+},gid,uid,handleMsg);
+
+```
+
+</TabItem>
+
+
+</Tabs>
+

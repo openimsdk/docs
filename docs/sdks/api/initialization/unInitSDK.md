@@ -1,0 +1,200 @@
+---
+sidebar_position: 6
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# unInitSDK
+
+## 功能介绍
+
+:::info 说明
+
+反初始化SDK,反初始化成功后可以重新初始化，设置新的IM连接信息。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### 函数原型
+
+```dart showLineNumbers
+  Future<dynamic> unInitSDK()
+```
+
+### 输入参数
+
+无
+
+### 返回结果
+
+无
+
+### 代码示例
+
+```dart showLineNumbers
+    await OpenIM.iMManager.unInitSDK();
+    //todo
+```
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### 函数原型
+
+```swift showLineNumbers
+
+- (void)unInitSDK;
+
+```
+
+### 输入参数
+
+无
+
+### 返回结果
+
+无
+
+### 代码示例
+
+```swift showLineNumbers
+
+[OIMManager.manager unInitSDK];
+
+```
+
+</TabItem>
+
+<TabItem value="Android">
+
+### 函数原型
+
+```java showLineNumbers
+ public void unInit()
+```
+### 输入参数
+
+无
+
+### 返回结果
+
+无
+
+### 代码示例
+
+```java showLineNumbers
+OpenIMClient.getInstance().unInit();
+```
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### 函数原型
+
+```ts showLineNumbers
+IMSDK.asyncApi("unInitSDK",operationID: string): Promise<boolean>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                      | 是否必填 | 描述                                                    |
+| ----------- | --------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                        | 是       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+> 通过`openim-uniapp-polyfill`包将函数 Promise 化，调用时需要使用`then`和`catch`判断并处理成功和失败回调。
+
+| 参数名称        | 参数类型                                                | 描述           |
+| --------------- | ------------------------------------------------------- | -------------- |
+| Promise.then()  | Promise<void\>                                       | 是否反初始化成功 |
+| Promise.catch() | Promise<[CatchResponse](/class/response.md)\> | 调用失败回调   |
+
+### 代码示例
+
+```js showLineNumbers
+// App.vue
+import IMSDK from 'openim-uniapp-polyfill';
+
+IMSDK.asyncApi('unInitSDK', IMSDK.uuid(), config)
+  .then(() => {
+    // 调用成功
+  })
+  .catch(({ errCode, errMsg }) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+<TabItem value="React-Native">
+
+### 函数原型
+
+```ts showLineNumbers
+OpenIMSDK.unInitSDK(operationID?: string): Promise<boolean>
+```
+
+### 输入参数
+
+| 参数名称    | 参数类型                                      | 是否必填 | 描述                                                    |
+| ----------- | --------------------------------------------- | -------- | ------------------------------------------------------- |
+| operationID | string                                        | 否       | 操作 ID，用于定位问题，保持唯一，建议用当前时间和随机数 |
+
+### 返回结果
+
+| 参数名称        | 参数类型                                                | 描述           |
+| --------------- | ------------------------------------------------------- | -------------- |
+| Promise.then()  | Promise<void\>                                       | 是否反初始化成功 |
+| Promise.catch() | Promise<[OpenIMApiError](/class/response.md)\> | 调用失败回调   |
+
+### 代码示例
+
+```js showLineNumbers
+import OpenIMSDK from "@openim/rn-client-sdk";
+
+OpenIMSDK.unInitSDK()
+  .then(() => {
+    // 调用成功
+  })
+  .catch((error) => {
+    // 调用失败
+  });
+```
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### 函数原型
+
+```C# showLineNumbers
+
+public static void UnInitSDK()
+
+```
+
+### 代码示例
+
+```C# showLineNumbers
+
+IMSDK.UnInitSDK();
+
+```
+
+</TabItem>
+</Tabs>

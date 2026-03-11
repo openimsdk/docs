@@ -1,0 +1,144 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# GroupMemberFilter
+
+:::info
+
+Filter member type.
+
+:::
+
+## Filter Member Options {#GroupMemberFilter}
+
+| Enum Value | Description                          |
+| ---------- | ------------------------------------ |
+| 0          | All members                          |
+| 1          | Group owner                          |
+| 2          | Group administrator                  |
+| 3          | Ordinary group member                |
+| 4          | Administrator and ordinary member    |
+| 5          | Group owner and administrator        |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### GroupMemberFilter
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| all           | 0          |
+| owner         | 1          |
+| admin         | 2          |
+| member        | 3          |
+| adminAndNomal | 4          |
+| adminAndOwner | 5          |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMGroupMemberRole
+
+| Enum Name                          | Enum Value |
+| ---------------------------------- | ---------- |
+| OIMGroupMemberFilterAll            | 0          |
+| OIMGroupMemberFilterOwner          | 1          |
+| OIMGroupMemberFilterAdmin          | 2          |
+| OIMGroupMemberFilterMember         | 3          |
+| OIMGroupMemberFilterAdminAndMember | 4          |
+| OIMGroupMemberFilterSuperAndAdmin  | 5          |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### GroupMemberFilter
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| All           | 0          |
+| Owner         | 1          |
+| Admin         | 2          |
+| Nomal         | 3          |
+| AdminAndNomal | 4          |
+| AdminAndOwner | 5          |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### GroupMemberFilter
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| All           | 0          |
+| Owner         | 1          |
+| Admin         | 2          |
+| Nomal         | 3          |
+| AdminAndNomal | 4          |
+| AdminAndOwner | 5          |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### GroupMemberFilter
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| All           | 0          |
+| Owner         | 1          |
+| Admin         | 2          |
+| Nomal         | 3          |
+| AdminAndNomal | 4          |
+| AdminAndOwner | 5          |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### GroupMemberFilter
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| All           | 0          |
+| Owner         | 1          |
+| Admin         | 2          |
+| Nomal         | 3          |
+| AdminAndNomal | 4          |
+| AdminAndOwner | 5          |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### GroupMemberFilter
+
+| Enum Name     | Enum Value |
+| ------------- | ---------- |
+| All           | 0          |
+| Owner         | 1          |
+| Admin         | 2          |
+| Nomal         | 3          |
+| AdminAndNomal | 4          |
+| AdminAndOwner | 5          |
+
+</TabItem>
+
+</Tabs>

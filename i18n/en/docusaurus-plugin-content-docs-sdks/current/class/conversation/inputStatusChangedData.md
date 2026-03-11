@@ -1,0 +1,95 @@
+---
+sidebar_position: 7
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# inputStatusChangedData
+
+## Description
+
+:::info
+
+Input status change information
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### InputStatusChangedData
+
+| Field Name          | Field Type                                           | Description                                                                  |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
+| userID          | String                                               | User ID                                                              |
+| conversationID     | String                                               | Conversation ID                                                   |
+| platformIDs      | List< int >                                                | Platform IDs                                                    |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMInputStatusChangedData
+
+| Field Name          | Field Type                                           | Description                                                                  |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
+| userID          | NSString                                               | User ID                                                              |
+| conversationID     | NSString                                               | Conversation ID                                                   |
+| platformIDs      | List< NSInteger >                                                | Platform IDs                                                    |
+
+</TabItem>
+
+<TabItem value="Android">
+
+</TabItem>
+
+
+<TabItem value="uni-app">
+
+### InputStatusChangedData
+
+| Field Name          | Field Type                                           | Description                                                                  |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
+| userID          | string                                               | User ID                                                              |
+| conversationID     | string                                               | Conversation ID                                                   |
+| platformIDs      | number[]                                              | Platform IDs                                                    |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### InputStatusChangedData
+
+| Field Name          | Field Type                                           | Description                                                                  |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
+| userID          | string                                               | User ID                                                              |
+| conversationID     | string                                               | Conversation ID                                                   |
+| platformIDs      | number[]                                              | Platform IDs                                                    |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### InputStatusChangedData
+
+| Field Name          | Field Type                                           | Description                                                                  |
+| ----------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
+| userID          | string                                               | User ID                                                              |
+| conversationID     | string                                               | Conversation ID                                                   |
+| platformIDs      | number[]                                              | Platform IDs                                                    |
+
+</TabItem>
+
+
+</Tabs>

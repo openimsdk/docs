@@ -1,0 +1,110 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# QuoteElem
+
+## 功能介绍
+
+:::info
+
+引用信息。
+
+:::
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### QuoteElem
+
+| 字段名称     | 字段类型                                           | 描述           |
+| ------------ | -------------------------------------------------- | -------------- |
+| text         | String                                             | 回复的消息内容 |
+| quoteMessage | [Message](/class/message/messageInfo.md) | 被引用的消息   |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### OIMQuoteElem
+
+| 字段名称          | 字段类型                                                                    | 描述           |
+| ----------------- | --------------------------------------------------------------------------- | -------------- |
+| text              | NSString                                                                    | 回复的消息内容 |
+| quoteMessage      | [OIMMessageInfo](/class/message/messageInfo.md)                   | 被引用的消息   |
+| messageEntityList | - |                |暂未使用
+
+</TabItem>
+
+<TabItem value="Android">
+
+### QuoteElem
+
+| 字段名称     | 字段类型                                           | 描述           |
+| ------------ | -------------------------------------------------- | -------------- |
+| text         | String                                             | 回复的消息内容 |
+| quoteMessage | [Message](/class/message/messageInfo.md) | 被引用的消息   |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### QuoteElem
+
+| 字段名称          | 字段类型                                                     | 描述           |
+| ----------------- | ------------------------------------------------------------ | -------------- |
+| text              | string                                                       | 回复的消息内容 |
+| quoteMessage      | [MessageItem](/class/message/messageInfo.md)       | 被引用的消息   |
+| messageEntityList | - |       暂未使用         |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### QuoteElem
+
+| 字段名称          | 字段类型                                                     | 描述           |
+| ----------------- | ------------------------------------------------------------ | -------------- |
+| text              | string                                                       | 回复的消息内容 |
+| quoteMessage      | [MessageItem](/class/message/messageInfo.md)       | 被引用的消息   |
+| messageEntityList | - |     暂未使用           |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### QuoteElem
+
+| 字段名称          | 字段类型                                                     | 描述           |
+| ----------------- | ------------------------------------------------------------ | -------------- |
+| text              | string                                                       | 回复的消息内容 |
+| quoteMessage      | [MessageItem](/class/message/messageInfo.md)       | 被引用的消息   |
+| messageEntityList | - |     暂未使用           |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### QuoteElem
+
+| 字段名称     | 字段类型                                           | 描述           |
+| ------------ | -------------------------------------------------- | -------------- |
+| Text         | string                                             | 回复的消息内容 |
+| QuoteMessage | [Message](/class/message/messageInfo.md) | 被引用的消息   |
+
+</TabItem>
+</Tabs>

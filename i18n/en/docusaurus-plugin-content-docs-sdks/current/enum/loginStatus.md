@@ -1,0 +1,120 @@
+---
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 2
+---
+
+# LoginStatus
+
+:::info
+
+User login status.
+
+:::
+
+## User Login Status
+
+| Enum Value | Description   |
+| ---------- | ------------- |
+| 1          | Not logged in |
+| 2          | Logging in    |
+| 3          | Logged in     |
+
+<Tabs
+groupId="sdks-language"
+values={[
+{ label: 'iOS', value: 'iOS', },
+{ label: 'Android', value: 'Android', },
+{ label: 'Flutter', value: 'Flutter', },
+{ label: 'uni-app', value: 'uni-app', },
+{ label: 'Browser/Electron/MiniProgram', value: 'Web', },
+{ label: 'React-Native', value: 'React-Native', },
+{ label: 'Unity', value: 'Unity', },
+]
+}>
+
+<TabItem value="Flutter">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+<TabItem value="iOS">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+<TabItem value="Android">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+<TabItem value="Web">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+<TabItem value="uni-app">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+<TabItem value="React-Native">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+<TabItem value="Unity">
+
+### LoginStatus
+
+| Enum Name | Enum Value |
+| --------- | ---------- |
+| Logout    | 1          |
+| Logging   | 2          |
+| Logged    | 3          |
+
+</TabItem>
+
+</Tabs>

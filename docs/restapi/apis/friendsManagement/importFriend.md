@@ -1,0 +1,80 @@
+---
+sidebar_position: 1
+title: 导入好友
+hide_title: true
+---
+
+<center>
+
+## 导入好友
+
+</center>
+
+### 简要描述
+
+- 让指定用户（ownerUserID）和多个用户（friendUserIDs）建立双向好友关系。
+
+### 请求方式
+
+- `post`
+
+### 请求 URL
+
+- `{API_ADDRESS}/friend/import_friend`
+
+### Header
+
+| header 名   | 示例值        | 选填 | 类型   | 说明                         |
+| :---------- | :------------ | :--- | ------ | ---------------------------- |
+| operationID | 1646445464564 | 必填 | string | 用于全局链路追踪，建议使用时间戳，在每个请求中独立 |
+| token       | eyJhbxxxx3Xs  | 必填 | string | [管理员 token](/apis/authenticationManagement/getAdminToken.md)                 |
+
+### 请求参数示例
+
+```json
+{
+  "ownerUserID": "2778222451",
+  "friendUserIDs": ["4776986466"]
+}
+```
+
+| 字段名        | 选填 | 类型   | 说明               |
+| :------------ | :--- | :----- | ------------------ |
+| ownerUserID   | 必填 | string | 指定的用户 ID      |
+| friendUserIDs | 必填 | string | 指定的好友 ID 列表 |
+
+### 成功返回示例
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": ""
+}
+```
+
+### 成功返回示例的参数说明
+
+| 参数名  | 类型   | 说明                         |
+| :------ | :----- | :--------------------------- |
+| errCode | int    | 错误码，0 表示成功            |
+| errMsg  | string | 错误简要信息，为空    |
+| errDlt  | errDlt | 错误详细信息，为空    |
+
+### 失败返回示例
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+
+### 失败返回示例的参数说明
+
+| 参数名  | 类型   | 说明                          |
+| :------ | :----- | :---------------------------- |
+| errCode | int    | 错误码，具体查看全局错误码文档 |
+| errMsg  | string | 错误简要信息                  |
+| errDlt  | errDlt | 错误详细信息                  |

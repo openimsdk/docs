@@ -1,0 +1,90 @@
+---
+sidebar_position: 11
+title: 修改群成员信息
+hide_title: true
+---
+
+<center>
+
+## 修改群成员信息
+
+</center>
+
+### 简要描述
+- 修改群成员信息，roleLevel字段不能设置为100（即群主），如需转让群主，请使用[转让群主](/apis/groupManagement/transferGroup.md)。
+### 请求方式
+- `post` 
+### 请求URL
+- `{API_ADDRESS}/group/set_group_member_info`
+
+
+### Header
+|header名|示例值|选填|类型|说明|
+|:----    |:-------    |:--- |---|------      |
+|operationID|1646445464564|必填|string|用于全局链路追踪，建议使用时间戳，在每个请求中独立|
+|token|eyJhbxxxx3Xs|必填|string|[管理员 token](/apis/authenticationManagement/getAdminToken.md)|
+
+
+### 请求参数示例
+
+
+```json
+{
+  "members": [
+    { 
+      "groupID": "2137448827",
+      "userID": "2699373280",
+      "nickName": "newName",
+      "faceURL": "new faceURL",
+      "roleLevel": 60,
+      "ex":""
+    }
+  ]
+}
+```
+|字段名|选填|类型|说明|
+|:----    |:-------    |:--- |---|
+|members|必填|array|群成员对象列表|
+|members.groupID|必填|string|群ID|
+|members.userID|必填|string|群成员ID|
+|members.nickName|选填|string|群成员昵称|
+|members.faceURL|选填|string|群成员头像|
+|members.roleLevel|选填|int|群成员等级，100：群主，60：管理员，20：普通成员 |
+|members.ex|选填|string|群成员扩展字段|
+### 成功返回示例
+
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": ""
+}
+```
+### 成功返回示例的参数说明
+
+
+|参数名|类型|说明|
+|:----    |:-------    |:--- |
+|errCode|int|错误码，0表示成功|
+|errMsg|string|错误简要信息，为空|
+|errDlt|errDlt|错误详细信息，为空|
+|data|object|通用数据对象，具体结构见下方|
+### 失败返回示例
+
+
+```json
+{
+  "errCode": 1004,
+  "errMsg": "RecordNotFoundError",
+  "errDlt": ": [1004]RecordNotFoundError"
+}
+```
+### 失败返回示例的参数说明
+
+
+|参数名|类型|说明|
+|:----    |:-------    |:--- |
+|errCode|int|错误码，具体查看全局错误码文档|
+|errMsg|string|错误简要信息|
+|errDlt|errDlt|错误详细信息|
