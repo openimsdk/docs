@@ -9,6 +9,10 @@ We strongly recommend running our framework-specific [DEMO](https://github.com/o
 
 ## Important Notes ❗️
 
+- **Android 16KB page-size support:** Starting from `v3.8.3-patch.12`, the Android core dependency is upgraded to `io.openim:core-sdk:3.8.3-patch12+1`, adding compatibility for devices using 16KB memory page size.
+
+- **Expo support:** Expo development build (custom dev client) is supported from `v3.8.3-patch.10.3` and later.
+
 - Starting from version `v3.8.3-patch.10`, the package name changed from `open-im-sdk-rn` to `@openim/rn-client-sdk`.
 
 - Starting from version `v3.8.3-patch.10.2`, the `operationID` parameter is optional (if not provided, the SDK will auto-generate one). In earlier versions, this parameter was required and had to be passed explicitly. (operationID is used for backend log queries)
@@ -21,8 +25,31 @@ We strongly recommend running our framework-specific [DEMO](https://github.com/o
 
 ### 1. Add Dependency
 
+#### Install with React Native CLI
+
 ```sh
-yarn add @openim/rn-client-sdk
+# install the SDK
+npm install @openim/rn-client-sdk
+
+# iOS native dependencies
+cd ios && pod install && cd ..
+```
+
+#### Install with Expo
+
+`v3.8.3-patch.10.3` and later support Expo. Because this package bridges native modules, you must use a development build (custom dev client); Expo Go is not supported.
+
+```sh
+# install the SDK
+npm install @openim/rn-client-sdk
+
+# generate native projects and run
+npx expo prebuild
+npx expo run:android
+npx expo run:ios
+
+# optional: Expo Go–like dev client experience
+npx expo install expo-dev-client
 ```
 
 ### 2. Initialize SDK
@@ -34,7 +61,6 @@ import RNFS from 'react-native-fs';
 RNFS.mkdir(RNFS.DocumentDirectoryPath + '/tmp');
 
 OpenIMSDK.initSDK({
-  platformID: 2,  // 1: iOS, 2: Android
   apiAddr: 'http://your-server-ip:10002',
   wsAddr: 'ws://your-server-ip:10001',
   dataDir: RNFS.DocumentDirectoryPath + '/tmp',
