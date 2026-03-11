@@ -6,26 +6,26 @@ sidebar_position: 4
 
 # 开源功能明细
 
-## 一、名词约定
+## 一、开源版包含什么
 
-- **OpenIMSDK**：项目统称，包含 OpenIMClientSDK 与 OpenIMServer。
-- **OpenIMClientSDK**：客户端 SDK。
-- **OpenIMServer**：IM 基础服务端。
-- **ChatServer**：业务扩展服务端，文档中不再使用 `Chat` 作为独立产品名称。
-- **APP 管理员**：调用管理类接口（如 `10009`）的后台管理角色。
+### 核心组件
 
-## 二、开源版包含什么
+| 组件 | 协议              | 定位 | 说明 |
+| --- |-----------------| --- | --- |
+| OpenIMClientSDK | `AGPL-3.0`      | 客户端 SDK | 负责消息、会话、群组、好友等客户端通信能力，需要开发者集成到自己的应用 |
+| OpenIMServer | `Apache-2.0`    | IM 基础服务端 | 负责即时通讯核心链路、消息同步、REST API、Webhook 等能力 |
+| ChatServer | `Apache-2.0`    | 业务扩展服务端 | 负责注册、登录、APP 管理等业务扩展能力；如果你已有自有账号体系，可按需接入或不部署 |
+| 客户端 Demo / 示例 UI | `AGPL-3.0`      | SDK 集成示例 | 提供示例代码，用于演示如何接入 OpenIMClientSDK，不代表完整商用客户端 |
 
-| 组件 | 定位 | 开源情况 / 说明 |
-| --- | --- | --- |
-| OpenIMClientSDK | 客户端 SDK | 开源；负责消息、会话、群组、好友等客户端通信能力，需要开发者集成到自己的应用中 |
-| OpenIMServer | IM 基础服务端 | 开源；负责即时通讯核心链路、消息同步、REST API、Webhook 等能力 |
-| ChatServer | 业务扩展服务端 | 开源；负责注册、登录、APP 管理等业务扩展能力；如果你已有自有账号体系，可按需接入或不部署 |
-| 客户端 Demo / 示例 UI | SDK 集成示例 | 提供示例代码，用于演示如何接入 OpenIMClientSDK，不代表完整商用客户端 |
-| 完整客户端 UI | 面向终端用户的完整产品界面 | 不开源，需开发者自行设计和实现 |
-| 管理后台前端 | APP 管理员使用的后台页面 | 当前不开源；如需管理能力，可基于 APP 管理员接口自行构建 |
+### 扩展组件
 
-## 三、OpenIMClientSDK + OpenIMServer 开源能力明细
+| 组件 | 协议             | 定位 | 说明 |
+| --- |----------------| --- | --- |
+| 纯 JS SDK | `ARR`(闭源)      | 纯 JS 的客户端 SDK | 一般用于小程序开发 |
+| Web客户端 | `ARR`(闭源，可免费使用) | 面向终端用户的完整产品界面 | 开箱即用 |
+| 管理后台前端 | `ARR`(闭源，可免费使用) | APP 管理员使用的后台页面 | 如需管理能力，可基于 APP 管理员接口自行构建 |
+
+## 二、OpenIMClientSDK + OpenIMServer 开源能力明细
 
 本文重点说明 OpenIMClientSDK 与 OpenIMServer 在开源版中已经提供的核心能力。
 
@@ -98,7 +98,7 @@ sidebar_position: 4
 - 群组音视频通话或视频会议能力不开源。
 - 一对一音视频通话接入时，超时未接通、取消等业务细节需开发者自行完善。
 
-## 四、如何理解 OpenIMSDK 的开源范围
+## 三、如何理解 OpenIMSDK 的开源范围
 
 - 如果你只需要即时通讯核心能力，重点集成 OpenIMClientSDK，并部署 OpenIMServer。
 - 如果你还需要注册、登录、APP 管理等业务扩展能力，再按需部署 ChatServer。

@@ -6,15 +6,7 @@ sidebar_position: 4
 
 # Open Source Feature Details
 
-## 1. Terminology
-
-- **OpenIMSDK**: The overall project name, including OpenIMClientSDK and OpenIMServer.
-- **OpenIMClientSDK**: The client SDK.
-- **OpenIMServer**: The IM core server.
-- **ChatServer**: The business extension server. This documentation no longer uses `Chat` as a standalone product name.
-- **APP Administrator**: The backend management role that calls management APIs such as `10009`.
-
-## 2. What the Open Source Edition Includes
+## 1. What the Open Source Edition Includes
 
 | Component | Positioning | Open Source Status / Notes |
 | --- | --- | --- |
@@ -25,7 +17,7 @@ sidebar_position: 4
 | Full Client UI | Complete end-user product interface | Not open source; developers need to design and implement it themselves |
 | Admin Frontend | Backend page used by APP Administrators | Not currently open source; if you need management capabilities, you can build your own frontend on top of the APP Administrator APIs |
 
-## 3. Open Source Capabilities of OpenIMClientSDK + OpenIMServer
+## 2. Open Source Capabilities of OpenIMClientSDK + OpenIMServer
 
 This section focuses on the core capabilities already provided by the open-source edition of OpenIMClientSDK and OpenIMServer.
 
@@ -98,7 +90,7 @@ This section focuses on the core capabilities already provided by the open-sourc
 - Group audio/video calls and video conferencing are not open source.
 - When integrating one-to-one audio/video calls, business details such as unanswered timeout and cancellation need to be implemented by developers themselves.
 
-## 4. How to Understand the Open Source Scope of OpenIMSDK
+## 3. How to Understand the Open Source Scope of OpenIMSDK
 
 - If you only need core IM capabilities, focus on integrating OpenIMClientSDK and deploying OpenIMServer.
 - If you also need business extension capabilities such as registration, login, and APP management, deploy ChatServer as needed.
