@@ -10,7 +10,7 @@ sidebar_position: 8
 
 ## 1. 前置条件
 
-- 你已经[部署了OpenIMServer 和 ChatServer](../gettingStarted/dockerCompose.md)，已部署并启动 OpenClaw Gateway，并能在运行 Gateway 的机器上执行 `openclaw` 命令。
+- 你已经[部署了OpenIMServer 和 ChatServer](../gettingStarted/dockerCompose)，已部署并启动 OpenClaw Gateway，并能在运行 Gateway 的机器上执行 `openclaw` 命令。
 
 ## 2. 注册OpenClaw用户
 
@@ -24,8 +24,6 @@ sidebar_position: 8
 输入账号相关信息：
 
 ![image-20260311110212683](./openclaw.assets/2.png)
-
-
 
 
 
