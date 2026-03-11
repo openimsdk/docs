@@ -38,7 +38,7 @@ sidebar_position: 1
 | MongoDB | `v7.0` | `standalone`、`replicaSet`、`sharded` | 支持；如接副本集或分片集群，建议优先使用 `uri`                                          |
 | Redis | `v7.0.0` | `standalone`、`cluster`、`sentinel`  | 支持                                                                  |
 | Etcd | `v3.5.13` | 单机、多节点集群                        | 不支持云服务                                                              |
-| Kafka | `v3.5.1` | 单机、分布式集群                           | 支持；需[按文档预建 topic](./imSourceCodeDeployment#2.2-自行部署组件或使用云服务时的初始化要求) |
+| Kafka | `v3.5.1` | 单机、分布式集群                           | 支持；需[按文档预建 topic](./imSourceCodeDeployment#22-自行部署组件或使用云服务时的初始化要求) |
 | MinIO | `RELEASE.2024-01-11T07-46-16Z` | 单机                             | 可替换为 S3 兼容存储（`COS`、`OSS`、`Kodo`(社区维护)、`AWS S3`）                     |
 
 ---
