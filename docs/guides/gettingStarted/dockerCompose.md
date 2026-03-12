@@ -55,7 +55,7 @@ docker compose down
 - 查看日志：
 
 ```bash
-docker logs -f openim-server
+docker compose logs -f openim-server openim-chat
 ```
 
 ### 2.4 监控告警（可选）
@@ -77,14 +77,11 @@ docker compose --profile m up -d
 
 快速体验 OpenIMSDK 核心能力，并测试 OpenIMServer/ChatServer 部署是否正常，请参考[快速验证](./quickTestServer)。
 
-> 补充（基于当前项目目录）：如果你是按 `open-im-server` + `chat` 两个源码仓库部署，`open-im-server/docker-compose.yml` 主要用于依赖组件，ChatServer 仍需在 `chat` 目录执行 `mage start`。可参考[源码部署](./imSourceCodeDeployment)。
-
-
 ## 4. 常见问题
 
 ### unhealthy定位
-1. 执行 `docker exec -it openim-server mage check` 确认是否超过一分钟；
-2. 执行 docker logs -f openim-server 查看日志；
+1. 执行 `docker exec -it openim-server mage check` 与 `docker exec -it openim-chat mage check`，确认是否持续超过一分钟；
+2. 执行 `docker compose logs -f openim-server openim-chat` 查看日志；
 3. 如果 `openim-chat` 在启动初期短暂报 `connect: connection refused`，先等待 `30-60s` 后再复查健康状态；这通常是依赖 `openim-server` 尚未完全就绪导致的启动时序现象。
 
 ### 配置项修改

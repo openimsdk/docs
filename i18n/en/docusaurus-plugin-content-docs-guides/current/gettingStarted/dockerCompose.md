@@ -52,7 +52,7 @@ docker compose down
 - View logs:
 
 ```bash
-docker logs -f openim-server
+docker compose logs -f openim-server openim-chat
 ```
 
 ### 2.4 Monitoring & Alerting (Optional)
@@ -74,13 +74,11 @@ Default ports follow the current `.env`. Common values are:
 
 To quickly experience core OpenIMSDK capabilities and verify whether OpenIMServer / ChatServer deployment is working, refer to [Quick Verification](./quickTestServer).
 
-> Additional note for the current project layout: if you deploy from the two source repositories `open-im-server` and `chat`, `open-im-server/docker-compose.yml` is mainly used for dependency components, and ChatServer still needs to be started with `mage start` in the `chat` directory. See [Source Code Deployment](./imSourceCodeDeployment).
-
 ## 4. FAQ
 
 ### Troubleshooting `unhealthy`
-1. Run `docker exec -it openim-server mage check` and confirm whether the state lasts longer than one minute.
-2. Run `docker logs -f openim-server` to inspect logs.
+1. Run `docker exec -it openim-server mage check` and `docker exec -it openim-chat mage check`, then confirm whether either state lasts longer than one minute.
+2. Run `docker compose logs -f openim-server openim-chat` to inspect logs.
 3. If `openim-chat` briefly reports `connect: connection refused` during startup, wait `30-60s` and check again. This is usually a startup ordering issue while `openim-server` is still becoming ready.
 
 ### Configuration Changes
