@@ -6,127 +6,44 @@ sidebar_position: 5
 
 # Version Notes
 
+## 1. Production Version Selection Recommendations
 
+For production, use the latest stable release published on GitHub, which means the latest official release marked with GitHub Releases' green **Latest** badge.
 
-**OpenIMSDK** maintains long-term support for the following versions:
+| Component | Version Source |
+| --- | --- |
+| OpenIMServer | Use the official release marked with the green **Latest** badge on the [OpenIMServer Releases](https://github.com/openimsdk/open-im-server/releases) page |
+| ChatServer | Use the official release marked with the green **Latest** badge on the [ChatServer Releases](https://github.com/openimsdk/chat/releases) page |
+| OpenIMClientSDK | Use the official release marked with the green **Latest** badge on the Releases page of the client SDK repository you actually integrate |
 
-- **SDK** v3.8 series
-- **Server** v3.8 series
-- **Chat** v1.8 series
+- Always use an explicit stable `tag` instead of relying only on branch names or guessing version order manually.
+- If you need issue reproduction, staged rollback, or multi-environment consistency, pin an explicit official `tag`.
+- When deploying OpenIMServer and ChatServer together, choose the corresponding official `tag`s according to the release notes.
+- When integrating OpenIMClientSDK, also check the target server-side version range and the corresponding release notes to avoid cross-version capability differences.
 
-Within the same major version, data is compatible across different minor versions. We recommend upgrading to the latest minor version, and using **tags** to ensure version accuracy and stability.
+## 2. How to Check the Current Latest Stable Release
 
-Due to limited maintenance resources, other versions will no longer be supported. Please upgrade as soon as possible to benefit from the latest features and optimizations.
+You can resolve the current official `tag` directly through GitHub's `releases/latest` redirect:
 
-## Current Latest Stable Versions
+```bash
+SERVER_LATEST_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+echo "$SERVER_LATEST_TAG"
 
-- **Server**: v3.8.3-patch.3
-- **SDK**: v3.8.3-patch.3
-- **Chat**: v1.8.4-patch.2
+CHAT_LATEST_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/chat/releases/latest)")
+echo "$CHAT_LATEST_TAG"
+```
 
----
+## 3. Where to Read Release Notes
 
-# Changelog
+- OpenIMServer: see [OpenIMServer Releases](https://github.com/openimsdk/open-im-server/releases)
+- ChatServer: see [ChatServer Releases](https://github.com/openimsdk/chat/releases)
+- OpenIMClientSDK: see the Releases page and corresponding release notes of the client SDK repository you actually use
 
-# v3.8.3-patch (2025-3-7)
+If you need to maintain a long-lived version, record the exact `tag` in your deployment docs, build scripts, and rollback plan.
 
-## Server v3.8.3-patch.3
+## 4. Current Latest Stable Versions
 
-| **Category**         | **Description**                                                                          |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| **Bug Fixes**        | Fixed seq conversion tool not exiting correctly on failure.                               |
-|                      | Fixed incorrect KickedToken setting.                                                     |
-|                      | Fixed timed message destruction errors.                                                  |
-|                      | Fixed abnormal messages missing timestamps, causing SDK exceptions.                      |
-|                      | Fixed crash when recalling messages from members who already left the group.              |
-|                      | Fixed incorrect time unit for user-set timed message destruction.                        |
-|                      | Fixed seq conversion tool not being read correctly in Docker environments.                |
-|                      | Fixed offline push errors and missing badge counts.                                      |
-|                      | Fixed group info changes not being notified to the SDK correctly.                        |
-|                      | Fixed incorrect sorting after admin changes.                                             |
-|                      | Fixed incorrect notification type for group join events.                                 |
-| **Improvements**     | Optimized sendNotification parameter passing to optionally include sender identification. |
-|                      | Mapped Mongo backup folder in Docker and improved log output.                            |
-|                      | Optimized batch incremental group member retrieval.                                      |
-
-## SDK v3.8.3-patch.3
-
-| **Category**         | **Description**                                                         |
-| -------------------- | ----------------------------------------------------------------------- |
-| **Bug Fixes**        | Fixed potential message duplication under poor network conditions.       |
-|                      | Fixed conversation ID serialization errors.                             |
-|                      | Fixed message gaps caused by server crashes or request cache expiration. |
-|                      | Fixed conversation avatars not updating when user changes their avatar.  |
-|                      | Fixed sync failures when seq is 0.                                      |
-|                      | Fixed group member info retrieval failures.                             |
-|                      | Fixed duplicate messages when pulling directly from the server.         |
-| **Improvements**     | Optimized performance when handling large numbers of friend/group requests. |
-
-## Chat v1.8.4-patch.2
-
-| **Category**         | **Description**                                                    |
-| -------------------- | ------------------------------------------------------------------ |
-| **Bug Fixes**        | Fixed infinite loop in user attribute migration tool.              |
-|                      | Fixed potential deadlock when getting cached AdminToken.            |
-| **Improvements**     | Optimized proto gen and adopted new version of gRPC generation tool. |
-
----
-
-# v3.8.3 (2025-1-10)
-
-## Server v3.8.3
-
-| **Category**         | **Description**                                                                                    |
-| -------------------- | -------------------------------------------------------------------------------------------------- |
-| **New Features**     | Implemented GetLastMessage API.                                                                    |
-|                      | Implemented syncing max/min seq from seq_user to the conversation collection for isEnd evaluation.  |
-| **Improvements**     | Optimized Crontask scheduled message deletion implementation.                                       |
-|                      | Changed upload log API `systemType` field to `AppFramework`.                                       |
-|                      | Optimized common RPC call methods.                                                                 |
-|                      | Optimized message caching logic.                                                                   |
-|                      | Optimized log output functions.                                                                    |
-|                      | Added `AppMangerLevel` field to the NotificationAccountInfo struct.                                |
-| **Bug Fixes**        | Fixed group member avatar setting not taking effect.                                               |
-|                      | Fixed log.ZPanic printing issues.                                                                  |
-|                      | Fixed Server returning isEnd to control message pulling by SDK.                                    |
-|                      | Fixed RPC panic recovery.                                                                          |
-|                      | Fixed other fields not taking effect when setting IsPrivateChat.                                   |
-|                      | Fixed occasional deletion of original messages when quoting messages.                              |
-|                      | Fixed new members being able to read the last history message when `EnableHistoryForNewMembers` is disabled. |
-|                      | Fixed incorrect KickTokens persistence.                                                            |
-|                      | Fixed forwarding @messages to other groups causing abnormal conversation creation.                 |
-|                      | Fixed online status errors.                                                                        |
-|                      | Fixed service discovery and automatic port assignment errors.                                      |
-|                      | Fixed GetUsersOnline returning incorrect online user list.                                         |
-| **Other**            | Updated frontend image versions.                                                                   |
-
-## SDK v3.8.3
-
-| **Category**         | **Description**                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| **Improvements**     | Added parameters for message positioning and directional pulling, avoiding UI data interference. |
-|                      | Optimized message retrieval logic.                                                         |
-| **Bug Fixes**        | Fixed index creation error when chatlog table name contains `-`.                           |
-|                      | Fixed current user info potentially being empty after reinstalling the app.                |
-|                      | Fixed voice messages not being filtered when searching with empty keywords.                |
-|                      | Fixed quoted messages not correctly switching to recalled state when app resumes from background. |
-
-## Chat v1.8.4
-
-| **Category**         | **Description**                                            |
-| -------------------- | ---------------------------------------------------------- |
-| **New Features**     | Implemented admin dashboard configuration center features. |
-| **Improvements**     | Optimized Kubernetes adaptation and service image builds.  |
-|                      | Optimized message retrieval logic.                         |
-| **Bug Fixes**        | Fixed gRPC connection memory leak on Windows.              |
-|                      | Fixed error stack printing issues.                         |
-
----
-
-# Version Compatibility
-
-| Module     | Version | Compatible Versions              |
-| ---------- | ------- | -------------------------------- |
-| **SDK**    | v3.8.3  | Server v3.8.3                    |
-| **Server** | v3.8.3  | SDK v3.8.2, SDK v3.8.3           |
-| **Chat**   | v1.8.4  | Server v3.8.2, Server v3.8.3    |
+- **OpenIMServer** `v3.8.3-patch.12` `2025-10-24`
+  - [changelog](https://github.com/openimsdk/open-im-server/releases/tag/v3.8.3-patch.12)
+- **ChatServer** `v1.8.4-patch.3` `2025-07-29`
+  - [changelog](https://github.com/openimsdk/chat/releases/tag/v1.8.4-patch.3)
