@@ -21,6 +21,10 @@ sidebar_position: 9
 
 ![PC Web Interface](./assets/pc-web.png)
 
+如果需要在 PC Web 上注册账号，默认配置下可直接使用验证码 `666666`。
+
+> 该值来自 `chat/config/chat-rpc-chat.yml` 中的 `verifyCode.superCode`；默认 `phone.use` 和 `mail.use` 也都是 `superCode`。如果你已经修改过配置，请以实际部署值为准。
+
 ## 📌 四、服务进程验证
 
 确认 OpenIMServer 与 ChatServer 进程状态正常。

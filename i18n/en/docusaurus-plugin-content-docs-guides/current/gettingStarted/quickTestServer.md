@@ -21,6 +21,10 @@ Enter `http://your_server_ip:11001` in your browser to access PC Web. `your_serv
 
 ![PC Web Interface](./assets/pc-web.png)
 
+If you need to register an account on PC Web, the default verification code is `666666`.
+
+> This value comes from `verifyCode.superCode` in `chat/config/chat-rpc-chat.yml`. By default, both `phone.use` and `mail.use` are also set to `superCode`. If you have changed the configuration, use the actual deployed value.
+
 ## 📌 4. Service Process Verification
 
 Confirm that OpenIMServer and ChatServer are running normally.
