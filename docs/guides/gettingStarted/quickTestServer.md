@@ -21,6 +21,14 @@ sidebar_position: 9
 
 ![PC Web Interface](./assets/pc-web.png)
 
+如果还没有测试账号，可按以下步骤完成注册：
+
+1. 在登录页底部点击 `立即注册`；
+2. 按页面提示填写注册信息；如果当前部署启用了注册验证码，还需完成对应验证码校验；
+3. 注册成功后返回登录页，使用新账号登录，再继续后续验证。
+
+> 如果当前部署关闭了自助注册，请改用已有测试账号进行验证。
+
 如果需要在 PC Web 上注册账号，默认配置下可直接使用验证码 `666666`。
 
 > 该值来自 `chat/config/chat-rpc-chat.yml` 中的 `verifyCode.superCode`；默认 `phone.use` 和 `mail.use` 也都是 `superCode`。如果你已经修改过配置，请以实际部署值为准。
@@ -29,13 +37,15 @@ sidebar_position: 9
 
 确认 OpenIMServer 与 ChatServer 进程状态正常。
 
+### Docker部署
+
 ```bash
 docker ps | grep -E 'openim-server|openim-chat'
 ```
 
 > `docker部署` 场景下，`openim-server` 与 `openim-chat` 在启动初期可能先显示 `health: starting`；建议等待 `20-30s`，确认状态进入 `healthy` 后再继续接口验证。
 
-如果是源码部署，可执行：
+### 源码部署
 
 ```bash
 # Run in the open-im-server directory

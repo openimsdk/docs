@@ -21,6 +21,14 @@ Enter `http://your_server_ip:11001` in your browser to access PC Web. `your_serv
 
 ![PC Web Interface](./assets/pc-web.png)
 
+If you do not have a test account yet, complete registration with the following steps:
+
+1. Click the registration entry at the bottom of the login page.
+2. Fill in the required registration information. If registration verification codes are enabled in the current deployment, complete that verification as well.
+3. After registration succeeds, return to the login page, sign in with the new account, and continue the remaining verification steps.
+
+> If self-service registration is disabled in the current deployment, use an existing test account instead.
+
 If you need to register an account on PC Web, the default verification code is `666666`.
 
 > This value comes from `verifyCode.superCode` in `chat/config/chat-rpc-chat.yml`. By default, both `phone.use` and `mail.use` are also set to `superCode`. If you have changed the configuration, use the actual deployed value.
@@ -29,13 +37,15 @@ If you need to register an account on PC Web, the default verification code is `
 
 Confirm that OpenIMServer and ChatServer are running normally.
 
+### Docker Deployment
+
 ```bash
 docker ps | grep -E 'openim-server|openim-chat'
 ```
 
 > In the `docker deployment` scenario, `openim-server` and `openim-chat` may initially show `health: starting`. Wait `20-30s` until they become `healthy` before continuing with API verification.
 
-If you use source deployment, run:
+### Source Code Deployment
 
 ```bash
 # Run in the open-im-server directory
