@@ -1,12 +1,14 @@
 ---
 title: 'Docker Deployment'
 sidebar_position: 2
-
 ---
+
 ## 1. Environment Preparation 🌍
+
 For server hardware, software, operating system, and dependent components, please refer to [this document](./env-comp).
 
 ## 2. Deploy OpenIMServer
+
 ### 2.1 Clone the Repository 🗂️
 
 Use the latest official release tag marked with the green **Latest** badge on the GitHub Releases page. Do not sort tags manually, and do not use pre-release versions such as alpha or rc.
@@ -63,12 +65,23 @@ If you also want to start `Prometheus`, `Alertmanager`, `Grafana`, and `node-exp
 docker compose --profile m up -d
 ```
 
+Here, `m` is the monitoring profile defined by `openim-docker` in `docker-compose.yaml`. Enabling it starts these extra services:
+
+- `Prometheus`: metrics collection
+- `Alertmanager`: alert routing
+- `Grafana`: monitoring dashboards
+- `node-exporter`: host metrics collection
+
 Default ports follow the current `.env`. Common values are:
 
 - `19090`: Prometheus
 - `19093`: Alertmanager
 - `13000`: Grafana
 - `19100`: node-exporter
+
+> For production environments, it is recommended to enable monitoring and alerting, which means starting the `m` profile with `docker compose --profile m up -d`. `openim-docker` already includes Prometheus scrape configuration, Alertmanager configuration, and basic alert rules for cases such as instance failures, database exceptions, low registrations, and low message volume.
+
+> To actually receive alert notifications, complete the `Alertmanager` notification configuration for your environment, such as SMTP settings.
 
 ## 3. Quick Experience ⚡
 
@@ -77,10 +90,12 @@ To quickly experience core OpenIMSDK capabilities and verify whether OpenIMServe
 ## 4. FAQ
 
 ### Troubleshooting `unhealthy`
+
 1. Run `docker exec -it openim-server mage check` and `docker exec -it openim-chat mage check`, then confirm whether either state lasts longer than one minute.
 2. Run `docker compose logs -f openim-server openim-chat` to inspect logs.
 3. If `openim-chat` briefly reports `connect: connection refused` during startup, wait `30-60s` and check again. This is usually a startup ordering issue while `openim-server` is still becoming ready.
 
 ### Configuration Changes
+
 Editing files under the container `config` directory does not work.
 Configuration changes must be made through environment variables. See the [environment variable guide](https://github.com/openimsdk/openim-docker/issues/136).

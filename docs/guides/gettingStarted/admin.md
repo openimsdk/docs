@@ -1,80 +1,89 @@
 ---
-title: '运维系统'
-sidebar_position: 11
+title: '管理后台'
+sidebar_position: 10
 ---
 
+## 📌 一、访问地址
 
+管理后台默认地址为 `http://your_server_ip:11002`，其中 `your_server_ip` 为部署管理后台前端页面的服务器 IP。
 
-## 组件说明
+:::tip
+`11002` 属于可选开放端口。仅在需要通过浏览器访问管理后台时，才需要对外放行该端口。
+:::
 
-| 组件名称       | 组件说明                                      | 部署说明                                    |
-|-------------|-----------------------------------------|--------------------------------------|
-| prometheus  | 用于收集和存储指标数据的监控系统组件                     | 需手动启用                 |
-| alertmanager | 管理和发送告警的组件                               | 需手动启用                 |
-| grafana     | 用于展示监控数据的仪表板组件                         | 需手动启用         |
-| node-exporter | 用于采集节点（如服务器）指标信息 | 需手动启用         |
+![管理后台登录页](./admin.assets/login.png)
 
-## 启动监控
+## 📌 二、登录后台
 
-### 1.启动组件
+1. 在浏览器中访问 `http://your_server_ip:11002`；
+2. 确认页面已正常展示 `账号`、`密码` 输入框，以及协议勾选项；
+3. 默认部署下，可先使用账号 `chatAdmin`、密码 `chatAdmin` 登录；如果你已经修改过配置，请以实际部署值为准。
 
-目前`OpenIM`使用的监控告警组件为`prometheus`、`alertmanager`、`grafana`、`node_exporter`。在使用`docker compose up -d`启动组件时，默认**不会**启动监控组件。如需启动监控组件，需要使用命令为：
+> 如果 `chatAdmin / chatAdmin` 无法登录，优先回查你自己的部署是否已经修改了默认管理后台凭据。
 
-```sh
-docker compose --profile m up -d
-```
+> `imAdmin` 是 OpenIM 内置的 APP 管理员 `userID`，主要用于获取管理员 token 并调用管理类 REST API；不要直接把它理解为管理后台页面的默认登录密码。
 
-> 注意：以上方式不适用于windows系统。如果需要在windows系统中启用监控组件，需要自行修改docker-compose.yml中监控组件的网络模式，并映射相应的端口，最后将prometheus.yml中的`127.0.0.1`替换为内网ip地址。
+## 📌 三、首次登录后立即修改密码
 
-### 2.Grafana导入OpenIM主要指标数据
+建议在首次登录后，立即执行以下操作：
 
-#### 登录grafana
+1. 打开左侧 `账号设置 -> 修改密码`；
+2. 在 `当前密码` 中填写默认密码 `chatAdmin`；
+3. 在 `新密码` 中填写新的强密码；
+4. 点击 `保存`；
+5. 根据页面提示重新登录。
 
-先登录管理后台，再点击左侧数据监控菜单，输入默认用户名(admin)和密码(admin)登入grafana.
+![管理后台修改密码页](./admin.assets/change-password.png)
 
-也可以直接访问`your_ip:13000`进行访问，将`youre_ip`改为部署机器的ip地址。
+> 如果你已经修改成功，后续文档中的 `chatAdmin / chatAdmin` 只可作为默认部署下的首次登录参考，不应继续用于长期使用。
 
-![PC Web Interface](./assets/login1.png)
+## 📌 四、登录后可见的主要页面入口
 
-#### 添加Prometheus数据源
+按当前 `http://localhost:11002/` 实际登录结果，成功登录后会进入 `业务系统 -> 用户管理 -> 用户列表` 页面。左侧导航可见以下模块：
 
-如下图，在左侧菜单栏找到`Connections/Add new connection`，在输入框内输入`prometheus`添加数据源，并输入Prometheus数据源的URL: http://your_ip:19090 (19090为Prometheus默认端口)  ，点击"Save and Test"保存.
-![PC Web Interface](./assets/database.png)
+- 数据监控；
+- 业务系统：
+    - 用户管理：`用户列表`、`封禁列表`
+    - 注册管理：`默认好友`、`默认群组`
+- IM 系统：
+    - 用户管理：`用户列表`
+    - 群组管理：`群组列表`
+    - 消息管理：`用户消息`、`群组消息`
+    - 日志管理：`日志列表`（客户端上传日志后，可在这个条目中查看对应记录）
+    - 通知管理：`通知账号`、`发送通知`
+- 账号设置：`个人信息`、`修改密码`
 
-![PC Web Interface](./assets/database2.png)
+![管理后台登录后的用户列表页](./admin.assets/user-list.png)
 
-#### **导入dashboard**
+> 上图为实际登录后的页面截图。当前环境下，默认会落到 `用户列表`，页面提供按 `用户ID/手机号` 查询，以及 `创建新用户` 入口。
 
-在左侧菜单栏选择`Dashboards`，点击`Create Dashboard`按钮，再点击`Import dashboard`导入仪表盘。
+## 📌 五、监控仪表板
 
-![dashboard1](./assets/dashboard.png)
+![Grafana 监控页示例](./admin.assets/dashboard.png)
 
-有两种方式导入`OpenIM`默认的仪表盘：
+管理后台中的 `数据监控` 依赖 `Grafana` 提供监控面板，用于监控 OpenIMServer 与 ChatServer 的运行状态、数据库状态、注册量、消息量等指标。
 
-1. 拷贝 https://github.com/openimsdk/open-im-server/tree/main/config/grafana-template/Demo.json 内容到`Import via dashboard JSON model`区域。
-2. 点击`Upload dashboard JSON file`，上传`open-im-server/config/grafana-template/Demo.json`文件。
+具体部署请参考：[数据监控](./monitoring)
 
-接着点击load按钮
+## 📌 六、联动服务检查
 
-![dashboard2](./assets/dashboard2.png)
+如果登录页可以打开，但登录后页面为空白、列表加载失败，或通知/群组/消息等页面无法使用，优先检查以下三项：
 
-选择刚刚添加的 Data Source，再点击`Import` 即可导入指标信息，如下图
+1. `11002` 管理后台前端端口是否可达；
+2. `10009` APP 管理员接口是否正常；
+3. ChatServer 的 `admin-api`、`admin-rpc` 是否运行正常；
+4. 如果只有 `数据监控` 页面异常，再额外检查 `Grafana` 直连访问、`GRAFANA_URL` 配置，以及浏览器侧跨域 / 嵌入访问限制。
 
-![dashboard3](./assets/dashboard3.png)
+可结合以下文档继续排查：
 
-至此，`OpenIM`的主要监控指标配置完毕。
+- [端口开放](./ports)
+- [快速验证](./quickTestServer)
+- [生产环境](./production)
 
-### 3.Grafana导入node exporter指标数据
+## 📌 七、需要直接调用管理接口时
 
-点击左侧菜单栏的`Dashboard`，选择右侧`New`下拉框中的`Import`。
+如果你当前只需要获取管理员 token，或单独调试管理类 REST API，也可以暂时不依赖管理后台页面，直接参考以下文档：
 
-![image-20260320173607074](./assets/dashboard4.png)
+- [获取管理员 token](../../restapi/apis/authenticationManagement/getAdminToken)
 
-在`Grafana.com dashboard URL or ID`输入框中填入`1860`，点击右边的`Load`，再点击`Import`。
-
-![image-20260320174708460](./assets/dashboard5.png)
-
-node-exporter指标信息，如下图
-![image-20260320175028356](./assets/dashboard6.png)
-
-
+当你通过管理员 token 调通接口后，再回到管理后台页面验证对应功能，会更容易定位是前端访问问题，还是后端服务问题。

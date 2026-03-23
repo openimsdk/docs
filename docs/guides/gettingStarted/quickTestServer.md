@@ -5,7 +5,7 @@ sidebar_position: 9
 
 ## 📌 一、部署服务端
 
-请参考 [docker部署](./dockerCompose) 或 [源码部署](./imSourceCodeDeployment) 来进行部署。
+请参考 [docker 部署](./dockerCompose) 或 [源码部署](./imSourceCodeDeployment) 来进行部署。
 
 ---
 
@@ -13,7 +13,7 @@ sidebar_position: 9
 
 参考 [端口和防火墙](./ports)
 
-## 📌 三、PC Web验证
+## 📌 三、PC Web 验证
 
 :::tip
 在浏览器中输入 `http://your_server_ip:11001` 来访问 PC Web。`your_server_ip` 为部署前端服务的服务器 IP 地址。
@@ -33,11 +33,13 @@ sidebar_position: 9
 
 > 该值来自 `chat/config/chat-rpc-chat.yml` 中的 `verifyCode.superCode`；默认 `phone.use` 和 `mail.use` 也都是 `superCode`。如果你已经修改过配置，请以实际部署值为准。
 
+如果你还需要启用和配置监控告警，可继续参考 [监控告警](./monitoring)。
+
 ## 📌 四、服务进程验证
 
 确认 OpenIMServer 与 ChatServer 进程状态正常。
 
-### Docker部署
+### Docker 部署
 
 ```bash
 docker ps | grep -E 'openim-server|openim-chat'
@@ -84,6 +86,7 @@ wss://your_domain/msg_gateway
 ```
 
 > 建议在生产环境统一通过 `443` 端口访问，OpenIMClientSDK 初始化时使用：
+>
 > - `apiAddr`: `https://your_domain/api`
 > - `wsAddr`: `wss://your_domain/msg_gateway`
 

@@ -33,6 +33,8 @@ If you need to register an account on PC Web, the default verification code is `
 
 > This value comes from `verifyCode.superCode` in `chat/config/chat-rpc-chat.yml`. By default, both `phone.use` and `mail.use` are also set to `superCode`. If you have changed the configuration, use the actual deployed value.
 
+If you also need to enable and configure monitoring and alerting, continue with [Monitoring & Alerting](./monitoring).
+
 ## 📌 4. Service Process Verification
 
 Confirm that OpenIMServer and ChatServer are running normally.
@@ -84,6 +86,7 @@ wss://your_domain/msg_gateway
 ```
 
 > In production, it is recommended to access everything through port `443`. OpenIMClientSDK should use:
+>
 > - `apiAddr`: `https://your_domain/api`
 > - `wsAddr`: `wss://your_domain/msg_gateway`
 
