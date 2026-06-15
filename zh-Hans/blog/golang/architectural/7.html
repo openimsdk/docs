@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-Hans" dir="ltr" class="docs-wrapper plugin-docs plugin-id-blog docs-version-current docs-doc-page docs-doc-id-golang/architectural/7" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.9.2">
+<title data-rh="true">写扩散同步 | OpenIM Docs</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://docs.openim.io/zh-Hans/blog/golang/architectural/7"><meta data-rh="true" property="og:locale" content="zh_Hans"><meta data-rh="true" property="og:locale:alternate" content="en_GB"><meta data-rh="true" name="docusaurus_locale" content="zh-Hans"><meta data-rh="true" name="docsearch:language" content="zh-Hans"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-blog-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-blog-current"><meta data-rh="true" property="og:title" content="写扩散同步 | OpenIM Docs"><meta data-rh="true" name="description" content="说明：写扩散同步是高级版 3.8.6 新增能力，开源免费版本不支持。需要同时使用支持该能力的服务端和 SDK，才能获得完整的同步优化效果。"><meta data-rh="true" property="og:description" content="说明：写扩散同步是高级版 3.8.6 新增能力，开源免费版本不支持。需要同时使用支持该能力的服务端和 SDK，才能获得完整的同步优化效果。"><link data-rh="true" rel="icon" href="/zh-Hans/favicon.ico"><link data-rh="true" rel="canonical" href="https://docs.openim.io/zh-Hans/blog/golang/architectural/7"><link data-rh="true" rel="alternate" href="https://docs.openim.io/zh-Hans/blog/golang/architectural/7" hreflang="zh-Hans"><link data-rh="true" rel="alternate" href="https://docs.openim.io/blog/golang/architectural/7" hreflang="en-GB"><link data-rh="true" rel="alternate" href="https://docs.openim.io/blog/golang/architectural/7" hreflang="x-default"><link data-rh="true" rel="preconnect" href="https://J7HMRSX31W-dsn.algolia.net" crossorigin="anonymous"><link rel="search" type="application/opensearchdescription+xml" title="OpenIM Docs" href="/zh-Hans/opensearch.xml"><link rel="stylesheet" href="/zh-Hans/assets/css/styles.02a4b92d.css">
+<script src="/zh-Hans/assets/js/runtime~main.a8ee3917.js" defer="defer"></script>
+<script src="/zh-Hans/assets/js/main.1edd51e7.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"dark"),document.documentElement.setAttribute("data-theme-choice",t||"dark")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="跳到主要内容"><a class="skipToContent_PWKa" href="#__docusaurus_skipToContent_fallback">跳到主要内容</a></div><nav aria-label="主导航" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="切换导航栏" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/zh-Hans/"><div class="navbar__logo"><img src="/zh-Hans/logo/light.png" alt="OpenIM Docs" class="logo-icon themedComponent_bt78 themedComponent--light_w8pl" width="107.5px"><img src="/zh-Hans/logo/dark.png" alt="OpenIM Docs" class="logo-icon themedComponent_bt78 themedComponent--dark_qIjY" width="107.5px"></div></a><a class="navbar__item navbar__link" href="/zh-Hans/guides/introduction">Guides</a><a class="navbar__item navbar__link" href="/zh-Hans/sdks/introduction">Client SDKs</a><a class="navbar__item navbar__link" href="/zh-Hans/restapi/apis/introduction">Server APIs</a><a class="navbar__item navbar__link" href="/zh-Hans/blog/introduction">Blog</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbarSearchContainer_qTXi"><div class="relative flex items-center gap-2"><button type="button" class="DocSearch DocSearch-Button" aria-label="搜索 (Meta+k)" aria-keyshortcuts="Meta+k" id="search-bar"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" fill="none" stroke-width="1.4"></circle><path d="m21 21-4.3-4.3" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">搜索</span></span><span class="DocSearch-Button-Keys"></span></button></div></div><a href="https://github.com/OpenIMSDK" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link dev-portal-signup dev-portal-link header-github-link">Github<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_iGaW"><use href="#theme-svg-external-link"></use></svg></a><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href="#" aria-haspopup="true" aria-expanded="false" role="button" class="navbar__link"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class="iconLanguage_xKhf"><path fill="currentColor" d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"></path></svg>简体中文</a><ul class="dropdown__menu"><li><a href="/zh-Hans/blog/golang/architectural/7" target="_self" rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang="zh-Hans">简体中文</a></li><li><a href="/blog/golang/architectural/7" target="_self" rel="noopener noreferrer" class="dropdown__link" lang="en-GB">English</a></li></ul></div><div class="toggle_eoLm colorModeToggle_ypD0"><button class="clean-btn toggleButton_dumA toggleButtonDisabled_S_b0" type="button" disabled="" title="system mode" aria-label="切换浅色/暗黑模式（当前为system mode）"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_Gq4z lightToggleIcon_pkfm"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_Gq4z darkToggleIcon_MdPg"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_Gq4z systemToggleIcon_iHjC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_rZj1"><div class="docsWrapper_Vn3o"><button aria-label="回到顶部" class="clean-btn theme-back-to-top-button backToTopButton_TQW5" type="button"></button><div class="docRoot_VMKo"><aside class="theme-doc-sidebar-container docSidebarContainer_MakP"><div class="sidebarViewport_d1pd"><div class="sidebar_mhZE"><nav aria-label="文档侧边栏" class="menu thin-scrollbar menu_yy2S"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/zh-Hans/blog/introduction"><span title="introduction" class="linkLabel_XYga">introduction</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_TxJp menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" href="/zh-Hans/blog/golang/architectural/example"><span title="IMSDK/Server" class="categoryLinkLabel_Pe1i">IMSDK/Server</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class="menu__list-item-collapsible"><a class="categoryLink_TxJp menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role="button" aria-expanded="true" tabindex="0" href="/zh-Hans/blog/golang/architectural/example"><span title="架构设计" class="categoryLinkLabel_Pe1i">架构设计</span></a></div><ul class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link" tabindex="0" href="/zh-Hans/blog/golang/architectural/example"><span title="服务端整体架构" class="linkLabel_XYga">服务端整体架构</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link" tabindex="0" href="/zh-Hans/blog/golang/architectural/2"><span title="消息系统" class="linkLabel_XYga">消息系统</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link" tabindex="0" href="/zh-Hans/blog/golang/architectural/3"><span title="文件存储" class="linkLabel_XYga">文件存储</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link" tabindex="0" href="/zh-Hans/blog/golang/architectural/4"><span title="mage跨平台构建说明" class="linkLabel_XYga">mage跨平台构建说明</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link" tabindex="0" href="/zh-Hans/blog/golang/architectural/6"><span title="增量版本同步" class="linkLabel_XYga">增量版本同步</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/zh-Hans/blog/golang/architectural/7"><span title="写扩散同步" class="linkLabel_XYga">写扩散同步</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link" tabindex="0" href="/zh-Hans/blog/golang/architectural/5"><span title="OpenIM 如何保证10万人大群客户端数据和服务器的一致性" class="linkLabel_XYga">OpenIM 如何保证10万人大群客户端数据和服务器的一致性</span></a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_TxJp menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" tabindex="0" href="/zh-Hans/blog/golang/optimization/example"><span title="系统优化" class="categoryLinkLabel_Pe1i">系统优化</span></a></div></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_TxJp menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/zh-Hans/blog/client/build/Electron/electron-demo-build"><span title="Client" class="categoryLinkLabel_Pe1i">Client</span></a></div></li></ul></nav><button type="button" title="收起侧边栏" aria-label="收起侧边栏" class="button button--secondary button--outline collapseSidebarButton_uyI5"><svg width="20" height="20" aria-hidden="true" class="collapseSidebarButtonIcon_fEap"><g fill="#7a7a7a"><path d="M9.992 10.023c0 .2-.062.399-.172.547l-4.996 7.492a.982.982 0 01-.828.454H1c-.55 0-1-.453-1-1 0-.2.059-.403.168-.551l4.629-6.942L.168 3.078A.939.939 0 010 2.528c0-.548.45-.997 1-.997h2.996c.352 0 .649.18.828.45L9.82 9.472c.11.148.172.347.172.55zm0 0"></path><path d="M19.98 10.023c0 .2-.058.399-.168.547l-4.996 7.492a.987.987 0 01-.828.454h-3c-.547 0-.996-.453-.996-1 0-.2.059-.403.168-.551l4.625-6.942-4.625-6.945a.939.939 0 01-.168-.55 1 1 0 01.996-.997h3c.348 0 .649.18.828.45l4.996 7.492c.11.148.168.347.168.55zm0 0"></path></g></svg></button></div></div></aside><main class="docMainContainer_DCay"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_liBz"><div class="docItemContainer_Btut"><article><div class="tocCollapsible_Xwog theme-doc-toc-mobile tocMobile_YrtH"><button type="button" class="clean-btn tocCollapsibleButton_BrSn">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>写扩散同步能力介绍</h1></header>
+<blockquote>
+<p>说明：写扩散同步是高级版 3.8.6 新增能力，开源免费版本不支持。需要同时使用支持该能力的服务端和 SDK，才能获得完整的同步优化效果。</p>
+</blockquote>
+<p>在 IM 系统里，会话同步是一条非常核心的链路。用户登录、断线重连、应用从后台回到前台、多端切换时，SDK 都需要确认本地会话状态是否和服务端一致。</p>
+<p>传统的增量版本同步已经能避免很多全量拉取，但当用户会话数量很多、群消息活跃、未读数和会话排序频繁变化时，客户端仍然可能需要比较较多会话状态。对于大型组织、客服场景、运营账号、机器人账号以及多群活跃用户来说，这类同步成本会被进一步放大。</p>
+<p>写扩散同步就是为了解决这个问题：在服务端写入消息或会话状态发生变化时，提前把“哪些用户的哪些会话发生变化”记录下来。客户端同步时，不再优先扫描和比较完整会话集合，而是直接领取自己需要处理的变化清单。</p>
+<p>简单来说，过去更像是“客户端问服务端：我有哪些会话变了？”，现在变成“服务端在变化发生时就把结果记好，客户端上线后直接拿走”。这让同步数据量进一步减少，同步速度也更快。</p>
+<p>这项能力依赖服务端写入侧的变更标记、写扩散同步服务、消息写入链路、长连接混合同步入口，以及 SDK 本地快速同步处理。它不是单个接口或单个配置项，而是一套服务端与 SDK 协同的同步方案。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="它解决了什么问题">它解决了什么问题<a href="#它解决了什么问题" class="hash-link" aria-label="它解决了什么问题的直接链接" title="它解决了什么问题的直接链接" translate="no">​</a></h2>
+<p>会话列表看起来只是一个列表，但它背后包含很多需要同步的状态：</p>
+<ul>
+<li class="">会话是否有新消息。</li>
+<li class="">当前会话最新消息序号。</li>
+<li class="">会话最新活跃时间。</li>
+<li class="">已读序号和未读数。</li>
+<li class="">会话是否置顶。</li>
+<li class="">会话所在分组或相关用户模块是否变化。</li>
+</ul>
+<p>在普通账号上，这些同步压力可能不明显。但在以下场景中，成本会迅速上升：</p>
+<ul>
+<li class="">一个用户加入大量群。</li>
+<li class="">一个企业账号拥有大量会话。</li>
+<li class="">大群消息非常活跃。</li>
+<li class="">用户长时间离线后重新登录。</li>
+<li class="">多端频繁切换，多个终端都需要追赶状态。</li>
+<li class="">会话列表很长，但真正变化的只是少数几个会话。</li>
+</ul>
+<p>如果每次都围绕完整会话集合做比较，很多计算和数据传输其实是重复的。写扩散同步的价值，就是把同步目标从“检查所有会话”收缩到“处理已经确认发生变化的会话”。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="写扩散的核心思路">写扩散的核心思路<a href="#写扩散的核心思路" class="hash-link" aria-label="写扩散的核心思路的直接链接" title="写扩散的核心思路的直接链接" translate="no">​</a></h2>
+<p>写扩散同步的核心是“变化发生时就标记”。</p>
+<p>当服务端处理消息写入、通知写入、已读序号变化或用户会话关系变化时，会把变化扩散到用户维度的同步记录中。这个记录并不是完整会话数据，而是轻量的变化索引：某个用户的某个会话需要同步。</p>
+<p>这样一来，SDK 下次同步时可以直接按用户读取变化索引。服务端再根据这些变化会话返回必要的会话同步状态。客户端只处理这批会话，不需要为了少量变化重新比较完整列表。</p>
+<p>这是一种非常适合 IM 的优化方式。因为 IM 的会话总量可能很大，但单次真正变化的会话通常很少。写扩散同步正是利用了这个特点。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="服务端侧能力">服务端侧能力<a href="#服务端侧能力" class="hash-link" aria-label="服务端侧能力的直接链接" title="服务端侧能力的直接链接" translate="no">​</a></h2>
+<p>服务端在写扩散同步里承担“提前记录变化”的角色。</p>
+<p>当消息进入存储链路后，服务端会识别消息所属会话和通知会话，并将这些会话作为同步变化写入写扩散链路。对于单聊、普通会话和适合写扩散的群会话，服务端可以将变化标记到相关用户名下。</p>
+<p>对于群会话，服务端还会结合会话同步策略判断是否采用写扩散。小群或活跃度适中的群更适合写扩散，因为把变化提前标记给成员，后续每个成员同步时都可以直接拿到自己的变化清单。</p>
+<p>服务端还提供了独立的写扩散同步服务，用来保存和读取用户维度的会话变化。它会维护每个用户的同步版本和变化集合，并在变化过多、版本不连续或同步状态不可靠时让客户端进入完整校准流程。</p>
+<p>这样设计有几个明显好处：</p>
+<ul>
+<li class="">写入时就沉淀变化，减少后续读侧计算。</li>
+<li class="">同步时只返回变化会话，减少传输数据。</li>
+<li class="">每个用户都有自己的同步游标，适合多端独 立追赶。</li>
+<li class="">异常情况下仍然可以回到完整校准，保证正确性。</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="sdk-侧能力">SDK 侧能力<a href="#sdk-侧能力" class="hash-link" aria-label="SDK 侧能力的直接链接" title="SDK 侧能力的直接链接" translate="no">​</a></h2>
+<p>SDK 在写扩散同步里承担“快速消费变化”的角色。</p>
+<p>SDK 本地会保存会话同步状态，包括本地已经同步到的写扩散版本、会话同步元数据和待处理会话队列。当用户登录、重连或触发快速同步时，SDK 会通过混合同步链路一次性处理多类同步信息。</p>
+<p>这条混合同步链路会尽量把多个同步动作合并在一次往返里完成，例如：</p>
+<ul>
+<li class="">拉取写扩散会话变化。</li>
+<li class="">同步用户模块变化。</li>
+<li class="">获取置顶会话信息。</li>
+<li class="">必要时进行快照校准。</li>
+</ul>
+<p>当服务端返回写扩散变化后，SDK 会把变化会话写入本地待处理队列，再由后续消息同步和会话刷新流程消费。已经成功处理的会话会被确认，失败的会话会保留为待重试状态，避免因为网络中断或进程退出导致同步丢失。</p>
+<p>这让 SDK 的同步行为更轻、更快，也更稳定。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="与普通增量同步的区别">与普通增量同步的区别<a href="#与普通增量同步的区别" class="hash-link" aria-label="与普通增量同步的区别的直接链接" title="与普通增量同步的区别的直接链接" translate="no">​</a></h2>
+<p>普通增量同步的重点是“按版本拉差异”。它已经比全量同步轻很多，但在会话规模很大时，仍然可能需要服务端根据版本、快照或本地状态做较多判断。</p>
+<p>写扩散同步更进一步，把差异生成的时机提前到了写入阶段。</p>
+<p>可以这样理解：</p>
+<ul>
+<li class="">普通增量同步：读的时候  计算或查询差异。</li>
+<li class="">写扩散同步：写的时候记录差异，读的时候直接领取。</li>
+</ul>
+<p>这个变化带来的收益很直接。对于客户端来说，同步请求返回的数据更少；对于服务端来说，登录和重连时的读侧压力更低；对于用户来说，会话刷新速度更快。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="混合同步不只是一条写扩散">混合同步：不只是一条写扩散<a href="#混合同步不只是一条写扩散" class="hash-link" aria-label="混合同步：不只是一条写扩散的直接链接" title="混合同步：不只是一条写扩散的直接链接" translate="no">​</a></h2>
+<p>这套会话同步并不是只依赖写扩散。它采用的是混合同步思路：能走写扩散就优先走写扩散，写扩散不够时再使用快照 hash、分页校准和完整校准作为兜底。</p>
+<p>这套组合可以覆盖更多真实场景：</p>
+<ul>
+<li class="">写扩散有连续版本时，直接同步少量变化会话。</li>
+<li class="">本地会话状态可能偏离时，用快照校准恢复一致。</li>
+<li class="">会话数量很大时，用分段 hash 判断哪一段发生变化，只拉变化区域。</li>
+<li class="">新安装或本地数据异常时，走完整校准重新建立本地状态。</li>
+</ul>
+<p>因此，写扩散同步并不是牺牲正确性换速度。它是在正常场景下尽量少同步，在异常场景下仍然能够回到可靠的恢复路径。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="大群场景下的策略切换">大群场景下的策略切换<a href="#大群场景下的策略切换" class="hash-link" aria-label="大群场景下的策略切换的直接链接" title="大群场景下的策略切换的直接链接" translate="no">​</a></h2>
+<p>写扩散并不适合所有群会话。</p>
+<p>对于小群或中等规模群，把变化写给每个成员是划算的。成员数量有限，服务端写入时多做一点标记，换来的是每个成  员后续同步都更快。</p>
+<p>但对于特别大的群，如果每条消息都向所有成员写扩散，写入成本可能过高。这时系统会根据群规模、近期活跃度、消息量等因素切换同步策略。</p>
+<p>大体上可以理解为：</p>
+<ul>
+<li class="">适合写扩散的会话：写入时标记到用户，用户同步时直接拿变化。</li>
+<li class="">超大或高活跃会话：减少写入侧扩散压力，更多依赖读侧校准和快照能力。</li>
+<li class="">活跃度下降后：可以再回到写扩散模式，让后续同步更轻。</li>
+</ul>
+<p>这种策略切换让系统可以在“写入成本”和“同步速度”之间动态平衡，而不是对所有群采用同一种固定方案。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="为什么同步数据量会进一步减少">为什么同步数据量会进一步减少<a href="#为什么同步数据量会进一步减少" class="hash-link" aria-label="为什么同步数据量会进一步减少的直接链接" title="为什么同步数据量会进一步减少的直接链接" translate="no">​</a></h2>
+<p>写扩散同步减少数据量的原因主要有三点。</p>
+<p>第一，变化范围更小。<br>
+<!-- -->客户端不再围绕完整会话集合做同步，而是优先处理服务端已经标记好的变化会话。一个用户有几千个会话，但本轮只变了几个会话时，同步数据量可以明显下降。</p>
+<p>第二，变化内容更轻。<br>
+<!-- -->写扩散记录本身是轻量索引，真正返回给 SDK 的也是必要的会话同步状态，而不是完整会话列表或大量无变化数据。</p>
+<p>第三，兜底更精细。<br>
+<!-- -->即使需要校准，也不一定全量拉取。SDK 可以通过分段 hash 判断本地和服务端哪些区域一致，只有不一致的区域才需要进一步拉取。</p>
+<p>这三个因素叠加后，登录、重连、前后台切换、多端追赶等场景都会更轻。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="对用户体验的提升">对用户体验的提升<a href="#对用户体验的提升" class="hash-link" aria-label="对用户体验的提升的直接链接" title="对用户体验的提升的直接链接" translate="no">​</a></h2>
+<p>写扩散同步最终改善的是用户能感知到的体验。</p>
+<p>用户打开应用时，会话列表可以更快恢复到最新状态。网络不稳定时，SDK 不需要反复拉取大量会话数据。长时间离线后重新上线，客户端也可以优先追赶实际变化的会话，而不是对所有会话重新做一轮重比较。</p>
+<p>对于大型企业用户，这种体验尤其明显：</p>
+<ul>
+<li class="">登录后会话列表刷新更快。</li>
+<li class="">未读数和最新消息状态更新更及时。</li>
+<li class="">多端切换后状态追赶更平滑。</li>
+<li class="">大量会话账号不容易在同步阶段卡顿。</li>
+<li class="">弱网下不必要的数据传输更少。</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="对服务端的价值">对服务端的价值<a href="#对服务端的价值" class="hash-link" aria-label="对服务端的价值的直接链接" title="对服务端的价值的直接链接" translate="no">​</a></h2>
+<p>写扩散同步不仅优化客户端，也优化服务端。</p>
+<p>传统同步压力往往集中在用户上线、重连、批量登录或网络恢复时。大量客户端同时询问“我有哪些会话变了”，服务端需要做比较、查询和组装结果。</p>
+<p>写扩散把一部分工作前移到写入阶段，让读侧同步请求变得更简单。服务端可以直接根据用户维度的变化记录返回结果，从而降低同步高峰时的数据库和计算压力。</p>
+<p>同时，服务端通过同步策略控制哪些会话适合写扩散，哪些会话更适合读侧校准，避免在超大群场景下把写入链路压得过重。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="异常恢复能力">异常恢复能力<a href="#异常恢复能力" class="hash-link" aria-label="异常恢复能力的直接链接" title="异常恢复能力的直接链接" translate="no">​</a></h2>
+<p>写扩散同步必须保证一件事：快，但不能丢正确性。</p>
+<p>因此，这套能力保留了多层兜底：</p>
+<ul>
+<li class="">版本不连续时，进入完整校准。</li>
+<li class="">写扩散变化过多时，回退到快照同步。</li>
+<li class="">本地会话状态不可信时，使用快照校准修正。</li>
+<li class="">同步过程中失败的会话会进入待重试队列。</li>
+<li class="">下游处理成功后才确认状态，避免中途失败导致数据丢失。</li>
+</ul>
+<p>这让写扩散同步具备自我修复能力。它不是只在理想网络下有效，而是能适应移动端常见的断网、重启、切后台和多端并发使用。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="适用场景">适用场景<a href="#适用场景" class="hash-link" aria-label="适用场景的直接链接" title="适用场景的直接链接" translate="no">​</a></h2>
+<p>写扩散同步尤其适合以下场景：</p>
+<ul>
+<li class="">企业组织会话数量多。</li>
+<li class="">用户加入大量群。</li>
+<li class="">账号经常多端登录。</li>
+<li class="">会话列表很长，但单次变化很少。</li>
+<li class="">客服、运营、机器人等账号需要快速追赶会话状态。</li>
+<li class="">私有化部署中需要降低登录和重连同步压力。</li>
+<li class="">对弱网恢复速度和会话一致性要求较高。</li>
+</ul>
+<p>如果业务规模较小，普通增量同步已经可以满足大多数需求。但当会话规模、群规模和多端使用频率上来后，写扩散同步的收益会更加明显。</p>
+<h2 class="anchor anchorTargetStickyNavbar_nJi9" id="总结">总结<a href="#总结" class="hash-link" aria-label="总结的直接链接" title="总结的直接链接" translate="no">​</a></h2>
+<p>写扩散同步是在原有增量版本同步基础上的进一步升级。它把“差异发现 ”从读侧前移到写侧，让服务端在消息和会话变化发生时就记录用户维度的变化索引，SDK 同步时直接领取并处理。</p>
+<p>它的核心价值包括：</p>
+<ul>
+<li class="">进一步减少同步数据量。</li>
+<li class="">加快登录、重连和前后台恢复时的会话同步速度。</li>
+<li class="">降低服务端同步高峰压力。</li>
+<li class="">支持大规模会话和多端追赶。</li>
+<li class="">对异常场景保留快照、分页校准和完整校准兜底。</li>
+<li class="">通过策略切换兼顾小群写扩散效率和大群写入成本。</li>
+</ul>
+<p>对于需要支撑大组织、大量会话、多端登录和更快同步体验的企业级场景，这项能力可以显著提升会话同步效率和系统稳定性。</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_feMV"><a href="https://github.com/OpenIMSDK/docs/tree/main/docs/blog/golang/architectural/7.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_3bP8" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>编辑此页</a></div><div class="col lastUpdated_vIlW"><span class="theme-last-updated">最后<!-- -->于 <b><time datetime="2026-06-15T10:00:23.000Z" itemprop="dateModified">2026年6月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="文档分页导航"><a class="pagination-nav__link pagination-nav__link--prev" href="/zh-Hans/blog/golang/architectural/6"><div class="pagination-nav__sublabel">上一页</div><div class="pagination-nav__label">增量版本同步</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/zh-Hans/blog/golang/architectural/5"><div class="pagination-nav__sublabel">下一页</div><div class="pagination-nav__label">OpenIM 如何保证10万人大群客户端数据和服务器的一致性</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_a4HA thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#它解决了什么问题" class="table-of-contents__link toc-highlight">它解决了什么问题</a></li><li><a href="#写扩散的核心思路" class="table-of-contents__link toc-highlight">写扩散的核心思路</a></li><li><a href="#服务端侧能力" class="table-of-contents__link toc-highlight">服务端侧能力</a></li><li><a href="#sdk-侧能力" class="table-of-contents__link toc-highlight">SDK 侧能力</a></li><li><a href="#与普通增量同步的区别" class="table-of-contents__link toc-highlight">与普通增量同步的区别</a></li><li><a href="#混合同步不只是一条写扩散" class="table-of-contents__link toc-highlight">混合同步：不只是一条写扩散</a></li><li><a href="#大群场景下的策略切换" class="table-of-contents__link toc-highlight">大群场景下的策略切换</a></li><li><a href="#为什么同步数据量会进一步减少" class="table-of-contents__link toc-highlight">为什么同步数据量会进一步减少</a></li><li><a href="#对用户体验的提升" class="table-of-contents__link toc-highlight">对用户体验的提升</a></li><li><a href="#对服务端的价值" class="table-of-contents__link toc-highlight">对服务端的价值</a></li><li><a href="#异常恢复能力" class="table-of-contents__link toc-highlight">异常恢复能力</a></li><li><a href="#适用场景" class="table-of-contents__link toc-highlight">适用场景</a></li><li><a href="#总结" class="table-of-contents__link toc-highlight">总结</a></li></ul></div></div></div></div></main></div></div></div><footer class="footer"><div class="container-fluid container"><div class="margin-bottom--sm"><a class="footerLogoLink_DDai" href="/zh-Hans/"><img src="/zh-Hans/logo/light.png" alt="OpenIM Docs" class="footer__logo themedComponent_bt78 themedComponent--light_w8pl" height="38px"><img src="/zh-Hans/logo/dark.png" alt="OpenIM Docs" class="footer__logo themedComponent_bt78 themedComponent--dark_qIjY" height="38px"></a></div><p class="footer__description">OpenIM是由IM技术专家打造的开源的即时通讯组件。OpenIM包括IM服务端和客户端SDK，实现了高性能、轻量级、易扩展等重要特性。开发者通过集成OpenIM组件，并私有化部署服务端，可以将即时通讯、实时网络能力快速集成到自身应用中，并确保业务数据的安全性和私密性。</p><div class="footer__row"><div class="footer__data"><div class="footer__cta"><p>加入Slack频道与大家交流讨论！</p><a href="https://join.slack.com/t/openimsdk/shared_invite/zt-2hljfom5u-9ZuzP3NfEKW~BJKbpLm0Hw" target="_blank" rel="noopener noreferrer">加入</a></div></div><div class="links"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title">产品</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://openim.io/commercial" target="_blank" rel="noopener noreferrer" class="footer__link-item">商业版本</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">公司</div><ul class="footer__items clean-list"><li class="footer__item"><a href="https://openim.io" target="_blank" rel="noopener noreferrer" class="footer__link-item">关于我们</a></li><li class="footer__item"><a href="mailto:contact@openim.io" target="_blank" rel="noopener noreferrer" class="footer__link-item">联系我们</a></li></ul></div><div class="theme-layout-footer-column col footer__col"><div class="footer__title">资源</div><ul class="footer__items clean-list"><li class="footer__item"><a class="footer__link-item" href="/zh-Hans/guides/introduction">文档</a></li><li class="footer__item"><a href="https://join.slack.com/t/openimsdk/shared_invite/zt-2hljfom5u-9ZuzP3NfEKW~BJKbpLm0Hw" target="_blank" rel="noopener noreferrer" class="footer__link-item">社区</a></li></ul></div></div></div></div><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © OpenIM since 2023. All rights reserved.</div></div></div></footer></div>
+</body>
+</html>
