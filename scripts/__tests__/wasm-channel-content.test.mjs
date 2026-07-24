@@ -48,9 +48,7 @@ test('setConversationDraft remains a dedicated documented workflow', () => {
 });
 
 test('group join example uses the pinned GroupJoinSource declaration', () => {
-  const source = read(
-    '/sdk/wasm/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group',
-  );
+  const source = read('/sdk/wasm/group/join-group');
 
   assert.match(source, /GroupJoinSource\.Search/);
   assert.doesNotMatch(source, /joinSource:\s*3/);

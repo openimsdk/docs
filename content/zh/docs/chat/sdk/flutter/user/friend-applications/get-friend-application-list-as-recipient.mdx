@@ -1,0 +1,34 @@
+---
+title: '获取收到的好友申请'
+description: '分页查询 Flutter 当前用户收到的好友申请。'
+sourcePath: '/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+```dart
+final items = await OpenIM.iMManager.friendshipManager
+    .getFriendApplicationListAsRecipient(
+  req: GetFriendApplicationListAsRecipientReq(offset: 0, count: 20),
+);
+```
+
+请求中的 `handleResults` 可筛选处理状态；固定 Flutter SDK 没有公开对应 Dart 枚举，只传服务端契约明确的值。`offset` 和 `count` 控制分页。
+
+Future 返回当前页 `List<FriendApplicationInfo>`。查询只建立快照，不触发申请事件。
+
+## 同步好友申请变化
+
+本页是好友申请 listener 的状态处理归属页。申请使用 `fromUserID:toUserID` 定位：
+
+```dart
+void handleFriendApplicationChanged(FriendApplicationInfo item) {
+  mergeFriendApplication(item);
+}
+
+void handleFriendApplicationDeleted(FriendApplicationInfo item) {
+  removeFriendApplication(item.fromUserID, item.toUserID);
+}
+```
+
+在应用唯一的 `OnFriendshipListener` 中，将 `onFriendApplicationAdded`、`onFriendApplicationAccepted` 和 `onFriendApplicationRejected` 交给 `handleFriendApplicationChanged`，将 `onFriendApplicationDeleted` 交给 `handleFriendApplicationDeleted`。完整组合入口见[事件概览](/sdk/flutter/events/overview-events)。
+
+按 `toUserID == currentUserID` 区分收到和发出的申请。Flutter SDK 没有公开删除申请记录的方法，不应使用拒绝申请或删除好友关系模拟删除。

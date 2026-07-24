@@ -1,0 +1,32 @@
+---
+title: '反向加载历史消息'
+description: '从消息锚点向较新消息方向分页读取历史记录。'
+sourcePath: '/sdk/wasm/message/retrieving-messages/load-newer-messages'
+---
+
+已经持有消息锚点，需要补齐它之后的消息时，使用反向历史接口：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 要读取消息的会话 ID。 |
+| `startClientMsgID` | `string` | 是 | 向较新方向读取时使用的锚点消息 ID。 |
+| `count` | `number` | 是 | 本次读取的消息数量。 |
+| `viewType` | `ViewType` | 是 | 消息查看方向；读取历史时使用 `ViewType.History`。 |
+
+```ts
+import { ViewType } from '@openim/wasm-client-sdk';
+
+const { data: page } =
+  await openimsdk.getAdvancedHistoryMessageListReverse({
+    conversationID,
+    startClientMsgID: anchorMessage.clientMsgID,
+    count: 30,
+    viewType: ViewType.History,
+  });
+```
+
+Promise 成功后，`data` 是 `AdvancedGetMessageResult`。字段含义和结果状态处理见[加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)；本页的 `isEnd` 表示向较新消息方向是否已经到达边界。
+
+不要在同一个滚动边界混用两个读取方向；合并时按 `conversationID:clientMsgID` 去重。

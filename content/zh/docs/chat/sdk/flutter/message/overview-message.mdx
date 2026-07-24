@@ -88,7 +88,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 历史消息通过 `getAdvancedHistoryMessageList()` 按 `conversationID` 分页读取。第一页不传 `startMsg`；继续加载时使用边界消息作为下一页起点。历史结果与 listener 可能包含同一消息，必须使用相同的 `clientMsgID` 去重规则。
 
-读取列表见[获取消息历史](/sdk/flutter/message/retrieving-messages/retrieve-message-history)，定位单条消息见[按 ID 定位消息](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)。
+读取列表见[加载历史消息](/sdk/flutter/message/retrieving-messages/load-older-messages)，定位单条消息见[按 ID 定位消息](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)。
 
 ### 搜索消息
 
@@ -100,13 +100,13 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 已发送消息可以按实际能力执行转发、合并、删除、撤回、修改、置顶和清空历史，也可以插入只供本地展示的消息或发送输入状态。删除、撤回和修改事件都应按 `conversationID:clientMsgID` 更新原消息；置顶列表按 `conversationID` 替换，再按 `clientMsgID` 去重。
 
-相关能力见[转发或合并消息](/sdk/flutter/message/managing-messages/forward-or-merge-a-message)、[删除消息](/sdk/flutter/message/managing-messages/delete-a-message)、[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)、[修改消息](/sdk/flutter/message/managing-messages/modify-a-message)、[置顶会话中的消息](/sdk/flutter/message/managing-messages/pin-conversation-messages)、[插入本地消息](/sdk/flutter/message/managing-messages/insert-a-local-message)、[清空消息历史](/sdk/flutter/message/managing-messages/clear-message-history)和[管理输入状态](/sdk/flutter/message/composing-messages/manage-typing-status)。
+相关能力见[转发或合并消息](/sdk/flutter/message/managing-messages/forward-or-merge-a-message)、[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)、[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)、[修改消息](/sdk/flutter/message/managing-messages/modify-a-message)、[置顶或取消置顶消息](/sdk/flutter/message/managing-messages/set-message-pinned)、[插入本地单聊消息](/sdk/flutter/message/managing-messages/insert-local-single-message)、[清理全部本地消息](/sdk/flutter/message/managing-messages/clear-all-local-messages)和[上报输入状态](/sdk/flutter/message/composing-messages/update-typing-status)。
 
 ### 标记已读
 
 会话未读数通过 `markConversationMessageAsRead()` 清理。固定 Flutter SDK 支持接收单聊已读回执，但没有 WASM 的群消息成员级已读回执上报、已读／未读成员查询和群回执 listener，不能根据会话未读数推断群成员阅读情况。
 
-相关能力见[管理会话已读状态](/sdk/flutter/conversation/managing-conversations/manage-read-status)和[管理消息已读回执](/sdk/flutter/message/managing-read-status/manage-message-read-receipts)。
+单聊已读回执的处理也归入[标记会话已读](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)。
 
 ### 提及其他用户
 
@@ -118,7 +118,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 会话列表、总未读数和 @ 提醒来自会话 API 与 `OnConversationListener`。会话层按 `conversationID` 合并变化，并使用最新总未读计数更新全局角标；消息页面不应设置第二个会话 listener。
 
-相关能力见[管理会话已读状态](/sdk/flutter/conversation/managing-conversations/manage-read-status)。
+相关能力见[维护总未读数](/sdk/flutter/conversation/managing-conversations/get-total-unread-count)。
 
 ### 自定义消息与扩展数据
 
@@ -134,7 +134,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 ### 事件归属
 
-消息事件按职责分散在对应能力页，概览页只说明导航和归属：新消息和离线同步见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)，上传进度见[上传文件并跟踪进度](/sdk/flutter/message/sending-messages/upload-files-and-track-progress)，删除见[删除消息](/sdk/flutter/message/managing-messages/delete-a-message)，撤回见[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)，修改见[修改消息](/sdk/flutter/message/managing-messages/modify-a-message)，置顶见[置顶会话中的消息](/sdk/flutter/message/managing-messages/pin-conversation-messages)，已读回执和输入状态分别见各自能力页。会话变化的完整监听见[获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)。
+消息事件按职责分散在对应能力页，概览页只说明导航和归属：新消息和离线同步见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)，删除见[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)，撤回见[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)，修改见[修改消息](/sdk/flutter/message/managing-messages/modify-a-message)，置顶见[置顶或取消置顶消息](/sdk/flutter/message/managing-messages/set-message-pinned)，单聊已读回执见[标记会话已读](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)，输入状态见[上报输入状态](/sdk/flutter/message/composing-messages/update-typing-status)。会话变化的完整监听见[获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)。
 
 创建消息对象和纯查询 API 直接使用 Future 返回值建立对象或快照，不应描述为触发共享事件。会改变状态的调用应分别处理 Future 结果、事件增量与重新查询校准。
 

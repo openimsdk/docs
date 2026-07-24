@@ -288,7 +288,8 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     title: 'Message state and UX',
-    description: 'Keep unread counts, read receipts, typing indicators, and message extras in sync.',
+    description:
+      'Keep unread counts, read receipts, typing indicators, and message extras in sync.',
     links: [
       {
         title: 'Unread counts',
@@ -360,12 +361,13 @@ const featureGroups: FeatureGroup[] = [
       {
         title: 'Delete or revoke messages',
         href: '/sdk/wasm/message/managing-messages/delete-a-message',
-        description: 'Delete messages locally or on the server, or revoke them for conversation members.',
+        description:
+          'Delete messages locally or on the server, or revoke them for conversation members.',
         meta: 'Delete',
       },
       {
         title: 'Conversation groups',
-        href: '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups',
+        href: '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups',
         description: 'Organize conversations into user-defined groups and keep changes in sync.',
         meta: 'Group',
       },

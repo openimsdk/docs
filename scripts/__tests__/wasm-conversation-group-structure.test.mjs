@@ -4,30 +4,15 @@ import test from 'node:test';
 
 import { buildWasmLegacyRedirects } from '../lib/wasm-legacy-redirects.mjs';
 
-const conversationPages = [
-  '/sdk/wasm/conversation/overview-conversation',
-  '/sdk/wasm/conversation/retrieving-conversations/retrieve-a-conversation',
-  '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list',
-  '/sdk/wasm/conversation/managing-conversations/set-conversation-settings',
-  '/sdk/wasm/conversation/managing-conversations/set-conversation-draft',
-  '/sdk/wasm/conversation/managing-conversations/manage-read-status',
-  '/sdk/wasm/conversation/managing-conversations/hide-a-conversation',
-  '/sdk/wasm/conversation/managing-conversations/delete-or-clear-conversation',
-  '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups',
-];
-
-const groupPages = [
-  '/sdk/wasm/group/overview-group',
-  '/sdk/wasm/group/creating-and-updating-groups/create-or-update-a-group',
-  '/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups',
-  '/sdk/wasm/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group',
-  '/sdk/wasm/group/managing-group-applications/manage-group-applications',
-  '/sdk/wasm/group/retrieving-group-members/retrieve-group-members',
-  '/sdk/wasm/group/managing-group-members/invite-or-remove-group-members',
-  '/sdk/wasm/group/managing-group-members/update-group-member-info',
-  '/sdk/wasm/group/managing-group-members/transfer-group-owner',
-  '/sdk/wasm/group/moderating-groups/mute-a-group-or-member',
-];
+const activeWasmRoutes = JSON.parse(readFileSync('src/generated/routes.json', 'utf8')).filter(
+  (route) => route.contextKey === 'chat/sdk/wasm',
+);
+const conversationPages = activeWasmRoutes
+  .map((route) => route.path)
+  .filter((path) => path.includes('/conversation/'));
+const groupPages = activeWasmRoutes
+  .map((route) => route.path)
+  .filter((path) => path.includes('/group/'));
 
 const conversationMethods = [
   'addConversationsToGroups',
@@ -114,6 +99,32 @@ const conversationEvents = [
   'OnTotalUnreadMessageCountChanged',
 ];
 
+const conversationGroupMethodPages = {
+  createConversationGroup:
+    '/sdk/wasm/conversation/managing-conversation-groups/create-conversation-group',
+  getConversationGroups:
+    '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-groups',
+  getConversationGroupInfoWithConversations:
+    '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations',
+  getConversationGroupIDsByConversationID:
+    '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id',
+  updateConversationGroup:
+    '/sdk/wasm/conversation/managing-conversation-groups/update-conversation-group',
+  setConversationGroupOrder:
+    '/sdk/wasm/conversation/managing-conversation-groups/set-conversation-group-order',
+  addConversationsToGroups:
+    '/sdk/wasm/conversation/managing-conversation-groups/add-conversations-to-groups',
+  removeConversationsFromGroups:
+    '/sdk/wasm/conversation/managing-conversation-groups/remove-conversations-from-groups',
+  deleteConversationGroup:
+    '/sdk/wasm/conversation/managing-conversation-groups/delete-conversation-group',
+};
+
+const conversationGroupOverview =
+  '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups';
+const removedConversationGroupAggregate =
+  '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups';
+
 const groupEvents = [
   'OnGroupApplicationAccepted',
   'OnGroupApplicationAdded',
@@ -139,48 +150,17 @@ const unsupportedLegacyPages = [
 ];
 
 const migratedLegacyPages = {
-  '/sdk/wasm/channel/overview-channel':
-    '/sdk/wasm/conversation/overview-conversation',
-  '/sdk/wasm/channel/creating-a-channel/create-a-channel':
-    '/sdk/wasm/group/creating-and-updating-groups/create-or-update-a-group',
-  '/sdk/wasm/channel/inviting-users-to-a-group-channel/accept-or-decline-an-invitation':
-    '/sdk/wasm/group/managing-group-applications/manage-group-applications',
-  '/sdk/wasm/channel/inviting-users-to-a-group-channel/invite-users-as-members':
-    '/sdk/wasm/group/managing-group-members/invite-or-remove-group-members',
-  '/sdk/wasm/channel/joining-and-leaving-a-channel/join-and-leave-a-group-channel':
-    '/sdk/wasm/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group',
-  '/sdk/wasm/channel/managing-channels/delete-a-channel':
-    '/sdk/wasm/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group',
+  '/sdk/wasm/channel/overview-channel': '/sdk/wasm/conversation/overview-conversation',
   '/sdk/wasm/channel/managing-channels/hide-or-archive-a-group-channel-from-a-list-of-channels':
     '/sdk/wasm/conversation/managing-conversations/hide-a-conversation',
-  '/sdk/wasm/channel/managing-channels/refresh-all-data-related-to-a-group-channel':
-    '/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups',
   '/sdk/wasm/conversation/synchronizing-conversations/synchronize-conversation-data':
     '/sdk/wasm/conversation/overview-conversation',
-  '/sdk/wasm/group/synchronizing-groups/synchronize-group-data':
-    '/sdk/wasm/group/overview-group',
-  '/sdk/wasm/calling/synchronizing-calls/synchronize-call-events':
-    '/sdk/wasm/calling/managing-calls/start-or-handle-a-call',
-  '/sdk/wasm/channel/managing-operators/register-and-remove-operators':
-    '/sdk/wasm/group/managing-group-members/update-group-member-info',
   '/sdk/wasm/channel/managing-operators/transfer-group-owner':
     '/sdk/wasm/group/managing-group-members/transfer-group-owner',
-  '/sdk/wasm/channel/moderating-a-channel/freeze-and-unfreeze-a-channel':
-    '/sdk/wasm/group/moderating-groups/mute-a-group-or-member',
-  '/sdk/wasm/channel/retrieving-channels/retrieve-a-channel-by-url':
-    '/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups',
   '/sdk/wasm/channel/retrieving-channels/retrieve-a-list-of-channels':
     '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list',
-  '/sdk/wasm/channel/retrieving-channels/retrieve-group-members':
-    '/sdk/wasm/group/retrieving-group-members/retrieve-group-members',
-  '/sdk/wasm/channel/searching-channels/search-group-channels-by-name-url-or-other-filters':
-    '/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups',
   '/sdk/wasm/conversations/configuring-message-destruction':
-    '/sdk/wasm/conversation/managing-conversations/set-conversation-settings',
-  '/sdk/wasm/groups/retrieving-members/filter-members-by-join-time':
-    '/sdk/wasm/group/retrieving-group-members/retrieve-group-members',
-  '/sdk/wasm/groups/retrieving-members/retrieve-owner-and-administrators':
-    '/sdk/wasm/group/retrieving-group-members/retrieve-group-members',
+    '/sdk/wasm/conversation/managing-conversations/set-message-destruct',
 };
 
 function readJson(path) {
@@ -255,6 +235,47 @@ test('domain event coverage assigns all Conversation and Group events', () => {
     conversationEvents,
   );
   assert.deepEqual(coverage.domains.group.events.map((item) => item.name).sort(), groupEvents);
+});
+
+test('conversation groups use a second-level menu with one documented method per API page', () => {
+  const sidebar = readJson('data/structure/wasm-sidebar.json');
+  const conversation = sidebar.nodes.find((node) => node.id === 'conversation');
+  const folder = conversation.children.find(
+    (node) => typeof node === 'object' && node.id === 'conversation/conversation-groups',
+  );
+  assert.deepEqual(folder.children.map((entry) => entry.path ?? entry), [
+    conversationGroupOverview,
+    ...Object.values(conversationGroupMethodPages),
+  ]);
+
+  const coverage = readJson('data/structure/wasm-domain-api-coverage.json');
+  const methods = coverage.domains.conversation.methods.filter((item) =>
+    Object.hasOwn(conversationGroupMethodPages, item.name),
+  );
+  assert.equal(methods.length, Object.keys(conversationGroupMethodPages).length);
+  for (const item of methods) {
+    assert.equal(item.status, 'documented', item.name);
+    assert.equal(item.page, conversationGroupMethodPages[item.name], item.name);
+  }
+
+  const events = coverage.domains.conversation.events.filter((item) =>
+    item.name.startsWith('OnConversationGroup'),
+  );
+  assert.equal(events.length, 5);
+  assert.ok(events.every((item) => item.page === conversationGroupOverview));
+});
+
+test('the removed conversation-group aggregate has no route or redirect', () => {
+  const routes = readJson('src/generated/routes.json');
+  const redirects = readJson('data/structure/wasm-legacy-redirects.json');
+  assert.equal(
+    routes.some((route) => route.path === removedConversationGroupAggregate),
+    false,
+  );
+  assert.equal(
+    redirects.some((entry) => entry.source === removedConversationGroupAggregate),
+    false,
+  );
 });
 
 test('legacy Channel audit records are migrated or removed', () => {

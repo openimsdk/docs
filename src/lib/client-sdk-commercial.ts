@@ -53,12 +53,12 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
     Open_im_sdkAddConversationsToGroups: 'addConversationsToGroups',
     Open_im_sdkCreateConversationGroup: 'createConversationGroup',
     Open_im_sdkDeleteConversationGroup: 'deleteConversationGroup',
-    Open_im_sdkGetConversationGroupByConversationID:
-      'getConversationGroupIDsByConversationID',
+    Open_im_sdkGetConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
     Open_im_sdkGetConversationGroupInfoWithConversations:
       'getConversationGroupInfoWithConversations',
     Open_im_sdkGetConversationGroups: 'getConversationGroups',
     Open_im_sdkRemoveConversationsFromGroups: 'removeConversationsFromGroups',
+    Open_im_sdkSetConversationGroupListener: 'createConversationGroup',
     Open_im_sdkSetConversationGroupOrder: 'setConversationGroupOrder',
     Open_im_sdkSpeechToText: 'speechToText',
     Open_im_sdkSpeechToTextCapabilities: 'speechToTextCapabilities',

@@ -18,26 +18,45 @@ OpenIMSDK 的多人聊天使用群组承载共享资料、成员关系和权限�
 
 ## 群资料和生命周期
 
-- [创建或更新群组](/sdk/ios/group/creating-and-updating-groups/create-or-update-a-group)
-- [获取和搜索群组](/sdk/ios/group/retrieving-groups/retrieve-and-search-groups)
-- [加入、退出或解散群组](/sdk/ios/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group)
+- [创建群组](/sdk/ios/group/create-group)
+- [更新群名称、简介和头像](/sdk/ios/group/update-group-profile)
+- [发布或更新群公告](/sdk/ios/group/set-group-announcement)
+- [设置入群验证方式](/sdk/ios/group/set-group-join-verification)
+- [设置成员资料查看权限](/sdk/ios/group/set-group-member-profile-access)
+- [设置群内添加好友权限](/sdk/ios/group/set-group-member-friend-permission)
+- [设置群组扩展字段](/sdk/ios/group/set-group-extension)
+- [申请加入群组](/sdk/ios/group/join-group)
+- [退出群组](/sdk/ios/group/quit-group)
+- [解散群组](/sdk/ios/group/dismiss-group)
+- [查询和搜索群组](/sdk/ios/group/retrieving-groups/get-specified-groups-info)
 
 ## 群成员和申请
 
-- [处理入群申请](/sdk/ios/group/managing-group-applications/manage-group-applications)
-- [获取群成员](/sdk/ios/group/retrieving-group-members/retrieve-group-members)
-- [邀请或移除群成员](/sdk/ios/group/managing-group-members/invite-or-remove-group-members)
-- [更新群成员资料和角色](/sdk/ios/group/managing-group-members/update-group-member-info)
-- [转让群主](/sdk/ios/group/managing-group-members/transfer-group-owner)
+- [入群申请](/sdk/ios/group/group-applications/overview-group-applications)
+- [查询群成员](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)
+- [管理群成员](/sdk/ios/group/managing-group-members/invite-user-to-group)
 
 ## 群组管控
 
-- [禁言群组或群成员](/sdk/ios/group/moderating-groups/mute-a-group-or-member)
+- [设置群组全员禁言](/sdk/ios/group/change-group-mute)
+- [设置群成员禁言](/sdk/ios/group/managing-group-members/change-group-member-mute)
 
 ## 状态更新
 
-群组事件由对应数据页面统一监听：群资料、当前用户加入或退出以及群组解散见[获取和搜索群组](/sdk/ios/group/retrieving-groups/retrieve-and-search-groups)；成员新增、删除和资料变化见[获取群成员](/sdk/ios/group/retrieving-group-members/retrieve-group-members)；入群申请变化见[处理入群申请](/sdk/ios/group/managing-group-applications/manage-group-applications)。
+本页是群资料、当前用户加入或退出以及群组解散事件的完整归属页：
 
-概览页只说明事件归属，不重复注册 delegate。群组写操作的成功 callback、delegate 增量和重新查询校准应分别处理；重新登录后的群组变化由 delegate 同步，必要时重新查询群资料、成员或申请列表校准页面状态。
+```objc
+- (void)startGroupEvents { [[OIMManager callbacker] addGroupListener:self]; }
+- (void)stopGroupEvents { [[OIMManager callbacker] removeGroupListener:self]; }
+
+- (void)onJoinedGroupAdded:(OIMGroupInfo *)group { [self upsertGroup:group]; }
+- (void)onJoinedGroupDeleted:(OIMGroupInfo *)group { [self removeGroupID:group.groupID]; }
+- (void)onGroupInfoChanged:(OIMGroupInfo *)group { [self upsertGroup:group]; }
+- (void)onGroupDismissed:(OIMGroupInfo *)group { [self markDismissed:group.groupID]; }
+```
+
+应用应强引用稳定的 `OIMGroupListener` 对象，并使用同一实例添加和移除。事件按 `groupID` 幂等合并；成功 callback、delegate 增量和重新查询校准应分别处理。
+
+成员事件归属[查询群成员概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)，申请事件归属[入群申请概览](/sdk/ios/group/group-applications/overview-group-applications)。
 
 OpenIM iOS SDK 的群组 API 只处理 OpenIMSDK 群资料、成员关系和权限。公开发现、复杂目录和大规模群聊的容量治理属于业务后端与 OpenIMServer 配置，不应扩写成不存在的客户端群组类型。

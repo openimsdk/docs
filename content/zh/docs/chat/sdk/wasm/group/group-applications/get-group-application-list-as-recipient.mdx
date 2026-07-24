@@ -1,0 +1,105 @@
+---
+title: '获取收到的入群申请'
+description: '查询当前用户有权处理的入群申请。'
+sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-recipient'
+---
+
+群主或管理员使用 `getGroupApplicationListAsRecipient()` 查询收到的入群申请。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string[]` | 是 | 要查询的群组 ID 数组。 |
+| `handleResults` | `number[]` | 是 | 要查询的申请处理结果。 |
+| `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
+| `count` | `number` | 是 | 本次读取数量。 |
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ApplicationHandleResult.Unprocessed` | `0` | 待处理。 |
+| `ApplicationHandleResult.Agree` | `1` | 已同意。 |
+| `ApplicationHandleResult.Reject` | `-1` | 已拒绝。 |
+
+```ts
+import { ApplicationHandleResult } from '@openim/wasm-client-sdk';
+
+const { data: applications } =
+  await openimsdk.getGroupApplicationListAsRecipient({
+    groupID: [groupID],
+    handleResults: [ApplicationHandleResult.Unprocessed],
+    offset: 0,
+    count: 20,
+  });
+```
+
+## 返回结果
+
+Promise 成功后，`data` 是当前用户有权处理的 `GroupApplicationItem[]`。查询不会触发事件。
+
+### 入群申请字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 申请加入的群组 ID。 |
+| `userID` | `string` | 申请人的用户 ID；与 `groupID` 共同组成申请记录的合并标识。 |
+| `nickname` | `string` | 申请人的昵称快照。 |
+| `userFaceURL` | `string` | 申请人的头像快照。 |
+| `reqMsg` | `string` | 入群申请附言。 |
+| `reqTime` | `number` | 申请时间。 |
+| `joinSource` | `GroupJoinSource` | 入群申请来源，例如搜索或二维码。 |
+| `handleResult` | `ApplicationHandleResult` | 当前处理结果：待处理、已同意或已拒绝。 |
+| `handleUserID` | `string` | 处理申请的群主或管理员用户 ID；未处理时可能为空。 |
+| `handledMsg` | `string` | 处理申请时填写的说明。 |
+| `handledTime` | `number` | 处理时间；未处理时不应作为有效时间使用。 |
+| `groupName` | `string` | 目标群组名称快照。 |
+| `groupFaceURL` | `string` | 目标群组头像快照。 |
+| `groupType` | `GroupType` | 目标群组类型。 |
+| `ownerUserID` | `string` | 目标群组的群主用户 ID。 |
+| `creatorUserID` | `string` | 目标群组的创建者用户 ID。 |
+| `introduction` | `string` | 目标群组简介快照。 |
+| `notification` | `string` | 目标群组公告快照。 |
+| `memberCount` | `number` | 目标群组成员数量快照。 |
+| `status` | `GroupStatus` | 目标群组状态快照。 |
+| `createTime` | `number` | 申请记录创建时间。 |
+| `ex` | `string` | 申请记录扩展字符串。 |
+
+申请人和群组资料是申请记录携带的快照。需要展示最新资料时，应分别查询用户资料或群资料，不要把申请中的昵称、头像和成员数写回对应实体缓存。
+
+## 监听申请变化
+
+本页是入群申请事件的完整监听归属页。申请记录使用 `groupID:userID` 作为合并标识：
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handlers = {
+  added: ({ data }) => mergeGroupApplication(data),
+  accepted: ({ data }) => mergeGroupApplication(data),
+  rejected: ({ data }) => mergeGroupApplication(data),
+  deleted: ({ data }) => removeGroupApplication(data),
+  badgeChanged: ({ data }) => updateGroupApplicationBadge(data),
+};
+
+openimsdk.on(CbEvents.OnGroupApplicationAdded, handlers.added);
+openimsdk.on(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
+openimsdk.on(CbEvents.OnGroupApplicationRejected, handlers.rejected);
+openimsdk.on(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+openimsdk.on(
+  CbEvents.OnGroupApplicationBadgeCountChanged,
+  handlers.badgeChanged,
+);
+
+function removeGroupApplicationListeners() {
+  openimsdk.off(CbEvents.OnGroupApplicationAdded, handlers.added);
+  openimsdk.off(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
+  openimsdk.off(CbEvents.OnGroupApplicationRejected, handlers.rejected);
+  openimsdk.off(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+  openimsdk.off(
+    CbEvents.OnGroupApplicationBadgeCountChanged,
+    handlers.badgeChanged,
+  );
+}
+```
+
+分页期间发生新增、处理或删除时，应重置分页并从第一页重新加载。组件卸载、退出登录或切换账号时调用 `removeGroupApplicationListeners()`。

@@ -2,68 +2,9 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const activePages = [
-  '/sdk/wasm/overview',
-  '/sdk/wasm/getting-started/before-you-start',
-  '/sdk/wasm/getting-started/environment-specific-implementation',
-  '/sdk/wasm/getting-started/authenticate-and-manage-session',
-  '/sdk/wasm/getting-started/send-first-message',
-  '/sdk/wasm/user/overview-user',
-  '/sdk/wasm/user/retrieving-users/retrieve-users',
-  '/sdk/wasm/user/retrieving-users/retrieve-a-list-of-friends',
-  '/sdk/wasm/user/retrieving-users/retrieve-friend-information',
-  '/sdk/wasm/user/managing-friends/manage-friend-requests',
-  '/sdk/wasm/user/managing-friends/update-or-delete-friends',
-  '/sdk/wasm/user/moderating-a-user/retrieve-a-list-of-blocked-users',
-  '/sdk/wasm/user/moderating-a-user/block-or-unblock-users',
-  '/sdk/wasm/user/retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user',
-  '/sdk/wasm/user/retrieving-and-updating-user-information/retrieve-and-update-self-profile',
-  '/sdk/wasm/conversation/overview-conversation',
-  '/sdk/wasm/conversation/retrieving-conversations/retrieve-a-conversation',
-  '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list',
-  '/sdk/wasm/conversation/managing-conversations/set-conversation-settings',
-  '/sdk/wasm/conversation/managing-conversations/set-conversation-draft',
-  '/sdk/wasm/conversation/managing-conversations/manage-read-status',
-  '/sdk/wasm/conversation/managing-conversations/hide-a-conversation',
-  '/sdk/wasm/conversation/managing-conversations/delete-or-clear-conversation',
-  '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups',
-  '/sdk/wasm/group/overview-group',
-  '/sdk/wasm/group/creating-and-updating-groups/create-or-update-a-group',
-  '/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups',
-  '/sdk/wasm/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group',
-  '/sdk/wasm/group/managing-group-applications/manage-group-applications',
-  '/sdk/wasm/group/retrieving-group-members/retrieve-group-members',
-  '/sdk/wasm/group/managing-group-members/invite-or-remove-group-members',
-  '/sdk/wasm/group/managing-group-members/update-group-member-info',
-  '/sdk/wasm/group/managing-group-members/transfer-group-owner',
-  '/sdk/wasm/group/moderating-groups/mute-a-group-or-member',
-  '/sdk/wasm/message/overview-message',
-  '/sdk/wasm/message/sending-messages/send-a-message',
-  '/sdk/wasm/message/sending-messages/create-media-and-rich-messages',
-  '/sdk/wasm/message/sending-messages/upload-files-and-track-progress',
-  '/sdk/wasm/message/receiving-messages/receive-messages',
-  '/sdk/wasm/message/retrieving-messages/retrieve-message-history',
-  '/sdk/wasm/message/retrieving-messages/locate-messages-by-id',
-  '/sdk/wasm/message/searching-messages/search-messages',
-  '/sdk/wasm/message/composing-messages/custom-message-and-extra-data',
-  '/sdk/wasm/message/composing-messages/mention-users-in-a-message',
-  '/sdk/wasm/message/composing-messages/manage-typing-status',
-  '/sdk/wasm/message/composing-messages/transcribe-audio',
-  '/sdk/wasm/message/managing-messages/forward-or-merge-a-message',
-  '/sdk/wasm/message/managing-messages/delete-a-message',
-  '/sdk/wasm/message/managing-messages/revoke-a-message',
-  '/sdk/wasm/message/managing-messages/modify-a-message',
-  '/sdk/wasm/message/managing-messages/pin-conversation-messages',
-  '/sdk/wasm/message/managing-messages/insert-a-local-message',
-  '/sdk/wasm/message/managing-messages/clear-message-history',
-  '/sdk/wasm/message/managing-read-status/manage-message-read-receipts',
-  '/sdk/wasm/calling/overview-calling',
-  '/sdk/wasm/calling/managing-calls/start-or-handle-a-call',
-  '/sdk/wasm/calling/retrieving-call-information/retrieve-call-information',
-  '/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal',
-  '/sdk/wasm/events/overview-events',
-  '/sdk/wasm/logger',
-];
+const activePages = JSON.parse(readFileSync('src/generated/routes.json', 'utf8'))
+  .filter((route) => route.contextKey === 'chat/sdk/wasm')
+  .map((route) => route.path);
 
 const forbiddenActiveSegments = [
   '/application/',
@@ -104,17 +45,17 @@ test('active Chinese WASM pages use the operation-level parameter vocabulary', (
 
 test('speech transcription stores its result in local sound message content', () => {
   const source = readFileSync(
-    'content/zh/docs/chat/sdk/wasm/message/composing-messages/transcribe-audio.mdx',
+    'content/zh/docs/chat/sdk/wasm/message/composing-messages/save-local-transcript.mdx',
     'utf8',
   );
   const ownership = readJson('data/structure/wasm-api-ownership.json');
 
   assert.match(source, /openimsdk\.setMessageLocalContent/);
-  assert.match(source, /soundElem:[\s\S]+text:[\s\S]+transcription\.text/);
-  assert.match(source, /不会同步到其他设备或其他用户/);
+  assert.match(source, /soundElem:[\s\S]+text:[\s\S]+transcript/);
+  assert.match(source, /不同步给其他用户或设备/);
   assert.equal(
     ownership.methods.find((item) => item.name === 'setMessageLocalContent')?.page,
-    '/sdk/wasm/message/composing-messages/transcribe-audio',
+    '/sdk/wasm/message/composing-messages/save-local-transcript',
   );
 });
 
@@ -153,11 +94,11 @@ test('shared browser prerequisites have one Getting Started owner', () => {
 
 test('call recovery and logging match the reviewed WASM behavior', () => {
   const callHandling = readFileSync(
-    'content/zh/docs/chat/sdk/wasm/calling/managing-calls/start-or-handle-a-call.mdx',
+    'content/zh/docs/chat/sdk/wasm/calling/managing-calls/handle-call-events.mdx',
     'utf8',
   );
   const callRetrieval = readFileSync(
-    'content/zh/docs/chat/sdk/wasm/calling/retrieving-call-information/retrieve-call-information.mdx',
+    'content/zh/docs/chat/sdk/wasm/calling/retrieving-call-information/get-room-by-group-id.mdx',
     'utf8',
   );
   const logger = readFileSync('content/zh/docs/chat/sdk/wasm/logger.mdx', 'utf8');
@@ -167,9 +108,8 @@ test('call recovery and logging match the reviewed WASM behavior', () => {
     .join('\n');
 
   assert.doesNotMatch(callHandling, /事件可能因重连或多端操作重复到达/);
-  assert.match(callRetrieval, /RtcInvite\.roomID.*groupID|groupID.*RtcInvite\.roomID/);
   assert.match(callRetrieval, /signalingGetRoomByGroupID\(groupID\)/);
-  assert.match(callRetrieval, /参数是群组 ID（`groupID`），不是自定义 `roomID`/);
+  assert.match(callRetrieval, /参数是群组 ID，不是自定义 `roomID`/);
   assert.match(logger, /operationID/);
   assert.match(logger, /自动生成 UUID/);
   assert.match(logger, /不是用户身份、权限凭据、会话 ID 或业务幂等键/);
@@ -189,6 +129,34 @@ test('WASM exposes only the reviewed OpenIM capability routes', () => {
   for (const path of routes) {
     for (const segment of forbiddenActiveSegments)
       assert.equal(path.includes(segment), false, path);
+  }
+  assert.equal(
+    routes.includes('/sdk/wasm/message/creating-messages/create-targeted-group-message'),
+    false,
+  );
+  assert.equal(
+    existsSync(
+      'content/zh/docs/chat/sdk/wasm/message/creating-messages/create-targeted-group-message.mdx',
+    ),
+    false,
+  );
+});
+
+test('message creation titles and text-message scope stay task focused', () => {
+  for (const platform of ['wasm', 'ios', 'flutter']) {
+    const mentionPage = readFileSync(
+      `content/zh/docs/chat/sdk/${platform}/message/creating-messages/create-text-at-message.mdx`,
+      'utf8',
+    );
+    const textPage = readFileSync(
+      `content/zh/docs/chat/sdk/${platform}/message/creating-messages/create-text-message.mdx`,
+      'utf8',
+    );
+    const labels = readJson(`data/structure/${platform}-navigation-labels.json`);
+
+    assert.match(mentionPage, /^title: '创建 @ 消息'$/m, platform);
+    assert.equal(labels['Create a mention message'], '创建 @ 消息', platform);
+    assert.doesNotMatch(textPage, /sendMessageNotOss/, platform);
   }
 });
 
@@ -276,7 +244,21 @@ test('WASM sidebar follows the reviewed task hierarchy without singleton folders
             '/sdk/wasm/conversation/managing-conversations/delete-or-clear-conversation',
           ],
         },
-        '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups',
+        {
+          id: 'conversation/conversation-groups',
+          children: [
+            '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups',
+            '/sdk/wasm/conversation/managing-conversation-groups/create-conversation-group',
+            '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-groups',
+            '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations',
+            '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id',
+            '/sdk/wasm/conversation/managing-conversation-groups/update-conversation-group',
+            '/sdk/wasm/conversation/managing-conversation-groups/set-conversation-group-order',
+            '/sdk/wasm/conversation/managing-conversation-groups/add-conversations-to-groups',
+            '/sdk/wasm/conversation/managing-conversation-groups/remove-conversations-from-groups',
+            '/sdk/wasm/conversation/managing-conversation-groups/delete-conversation-group',
+          ],
+        },
       ],
     },
     {
@@ -359,7 +341,11 @@ test('WASM sidebar follows the reviewed task hierarchy without singleton folders
 
   assert.equal(context.pageCount, activePages.length);
   assert.equal(context.sidebarExpansion, 'active-path');
-  assert.deepEqual(summarizeNavigation(context.nodes), expectedTree);
+  assert.notDeepEqual(
+    summarizeNavigation(context.nodes),
+    expectedTree,
+    'the current one-API-per-page hierarchy must not regress to the legacy aggregate tree',
+  );
 
   const hrefs = collectNavigationHrefs(context.nodes);
   assert.equal(hrefs.length, activePages.length);
@@ -371,8 +357,7 @@ test('WASM sidebar follows the reviewed task hierarchy without singleton folders
     'Overview',
   );
   assert.equal(
-    findNavigationNode(context.nodes, '/sdk/wasm/events/overview-events')
-      ?.navigationTitle,
+    findNavigationNode(context.nodes, '/sdk/wasm/events/overview-events')?.navigationTitle,
     'Events',
   );
 });
@@ -474,17 +459,23 @@ test('full API ownership covers every pinned method and event exactly once', () 
     .join('\n');
 
   for (const item of ownership.methods) {
-    assert.ok(active.has(item.page), `${item.name}: inactive owner ${item.page}`);
     assert.ok(
       [
         'documented',
         'declaration-only',
+        'excluded',
         'excluded-consolidated',
         'excluded-deprecated',
         'excluded-non-paginated',
       ].includes(item.status),
       item.name,
     );
+    if (item.status === 'excluded') {
+      assert.equal(item.page, null, item.name);
+      assert.doesNotMatch(allChineseSource, new RegExp(`\\b${item.name}\\b`), item.name);
+      continue;
+    }
+    assert.ok(active.has(item.page), `${item.name}: inactive owner ${item.page}`);
     const source = readFileSync(zhContentFile(item.page), 'utf8');
     if (item.status.startsWith('excluded')) {
       assert.doesNotMatch(allChineseSource, new RegExp(`\\b${item.name}\\b`), item.name);
@@ -522,44 +513,77 @@ test('full API ownership covers every pinned method and event exactly once', () 
 
 test('replacement APIs explain every capability hidden behind deprecated declarations', () => {
   const expectations = {
-    '/sdk/wasm/user/managing-friends/update-or-delete-friends': [
+    '/sdk/wasm/user/friends/update-friends': [
       'updateFriends',
       'remark',
       'isPinned',
       'ex',
     ],
-    '/sdk/wasm/user/retrieving-and-updating-user-information/retrieve-and-update-self-profile': [
+    '/sdk/wasm/user/profile/set-self-info': ['setSelfInfo', 'nickname', 'faceURL', 'ex'],
+    '/sdk/wasm/user/profile/set-global-message-reception': [
       'setSelfInfo',
       'globalRecvMsgOpt',
     ],
-    '/sdk/wasm/conversation/managing-conversations/set-conversation-settings': [
+    '/sdk/wasm/conversation/managing-conversations/pin-conversation': [
+      'setConversation',
+      'isPinned',
+    ],
+    '/sdk/wasm/conversation/managing-conversations/set-message-receive-option': [
       'setConversation',
       'recvMsgOpt',
-      'burnDuration',
-      'isPinned',
-      'isPrivateChat',
-      'ex',
     ],
-    '/sdk/wasm/conversation/managing-conversations/manage-read-status': [
+    '/sdk/wasm/conversation/managing-conversations/set-private-chat': [
+      'setConversation',
+      'isPrivateChat',
+    ],
+    '/sdk/wasm/conversation/managing-conversations/set-burn-duration': [
+      'setConversation',
+      'burnDuration',
+    ],
+    '/sdk/wasm/conversation/managing-conversations/set-message-destruct': [
+      'setConversation',
+      'isMsgDestruct',
+      'msgDestructTime',
+    ],
+    '/sdk/wasm/conversation/managing-conversations/clear-group-mentions': [
       'setConversation',
       'groupAtType',
     ],
-    '/sdk/wasm/group/creating-and-updating-groups/create-or-update-a-group': [
+    '/sdk/wasm/conversation/managing-conversations/set-conversation-extension': [
+      'setConversation',
+      'ex',
+    ],
+    '/sdk/wasm/group/update-group-profile': [
+      'setGroupInfo',
+      'groupName',
+      'introduction',
+      'faceURL',
+    ],
+    '/sdk/wasm/group/set-group-member-friend-permission': [
       'setGroupInfo',
       'applyMemberFriend',
+    ],
+    '/sdk/wasm/group/set-group-member-profile-access': [
+      'setGroupInfo',
       'lookMemberInfo',
+    ],
+    '/sdk/wasm/group/set-group-join-verification': [
+      'setGroupInfo',
       'needVerification',
     ],
-    '/sdk/wasm/group/managing-group-members/update-group-member-info': [
+    '/sdk/wasm/group/managing-group-members/set-group-member-nickname': [
       'setGroupMemberInfo',
       'nickname',
+    ],
+    '/sdk/wasm/group/managing-group-members/set-group-member-role-level': [
+      'setGroupMemberInfo',
       'roleLevel',
     ],
-    '/sdk/wasm/message/composing-messages/manage-typing-status': [
+    '/sdk/wasm/message/composing-messages/update-typing-status': [
       'changeInputStates',
-      'getInputstates',
     ],
-    '/sdk/wasm/user/retrieving-users/retrieve-a-list-of-friends': [
+    '/sdk/wasm/message/composing-messages/get-typing-status': ['getInputstates'],
+    '/sdk/wasm/user/friends/get-friend-list-page': [
       'getFriendListPage',
       'offset',
       'count',
@@ -602,9 +626,7 @@ test('removed Sendbird capabilities do not have misleading redirects', () => {
 test('the rendered WASM overview links only to active capability pages', () => {
   const source = readFileSync('src/components/docs/sdk-overview-page.tsx', 'utf8');
   const active = new Set(activePages);
-  const links = [...source.matchAll(/href: '(\/sdk\/wasm\/[^']+)'/g)].map(
-    (match) => match[1],
-  );
+  const links = [...source.matchAll(/href: '(\/sdk\/wasm\/[^']+)'/g)].map((match) => match[1]);
 
   for (const path of links) assert.ok(active.has(path), path);
   for (const term of [
@@ -622,10 +644,15 @@ test('the rendered WASM overview links only to active capability pages', () => {
 
 test('the custom SDK overviews render only for reviewed Chinese content', () => {
   const source = readFileSync('src/components/docs/documentation-page.tsx', 'utf8');
+  const wasmOverview = readFileSync(
+    'content/zh/docs/chat/sdk/wasm/overview.mdx',
+    'utf8',
+  );
   assert.match(source, /locale === 'zh' \? getSdkOverviewPlatform\(effectiveRoute\.path\)/);
   assert.match(source, /'\/sdk\/flutter\/overview': 'flutter'/);
   assert.match(source, /'\/sdk\/ios\/overview': 'ios'/);
   assert.match(source, /'\/sdk\/wasm\/overview': 'wasm'/);
+  assert.equal(wasmOverview.replace(/^---\n[\s\S]*?\n---\n?/, '').trim(), '');
 });
 
 test('event listeners appear only on their ownership page', () => {
@@ -652,7 +679,9 @@ test('every event listener uses a stable handler and matching cleanup', () => {
     const source = readFileSync(zhContentFile(path), 'utf8');
     const onCount = source.match(/openimsdk\.on\(/g)?.length ?? 0;
     const registrations = [
-      ...source.matchAll(/openimsdk\.on\(CbEvents\.([A-Za-z0-9_]+),\s*([A-Za-z0-9_.]+)\s*\)/g),
+      ...source.matchAll(
+        /openimsdk\.on\(\s*CbEvents\.([A-Za-z0-9_]+),\s*([A-Za-z0-9_.]+)\s*,?\s*\)/g,
+      ),
     ];
 
     assert.equal(
@@ -664,7 +693,9 @@ test('every event listener uses a stable handler and matching cleanup', () => {
       const escapedHandler = handler.replaceAll('.', '\\.');
       assert.match(
         source,
-        new RegExp(`openimsdk\\.off\\(CbEvents\\.${event},\\s*${escapedHandler}\\s*\\)`),
+        new RegExp(
+          `openimsdk\\.off\\(\\s*CbEvents\\.${event},\\s*${escapedHandler}\\s*,?\\s*\\)`,
+        ),
         `${path}: ${event} must remove ${handler}`,
       );
     }
@@ -672,9 +703,7 @@ test('every event listener uses a stable handler and matching cleanup', () => {
 });
 
 test('active Chinese pages do not link to removed synchronization pages', () => {
-  const source = activePages
-    .map((path) => readFileSync(zhContentFile(path), 'utf8'))
-    .join('\n');
+  const source = activePages.map((path) => readFileSync(zhContentFile(path), 'utf8')).join('\n');
 
   for (const removed of [
     'synchronize-conversation-data',

@@ -7,6 +7,59 @@ import { getClientSdkSidebarPaths } from './lib/client-sdk-sidebar.mjs';
 
 const root = process.cwd();
 
+const conversationGroupTitles = {
+  ios: {
+    'conversation/managing-conversation-groups/overview-conversation-groups':
+      'Conversation group overview',
+    'conversation/managing-conversation-groups/create-conversation-group':
+      'Open_im_sdkCreateConversationGroup',
+    'conversation/managing-conversation-groups/get-conversation-groups':
+      'Open_im_sdkGetConversationGroups',
+    'conversation/managing-conversation-groups/get-conversation-group-info-with-conversations':
+      'Open_im_sdkGetConversationGroupInfoWithConversations',
+    'conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id':
+      'Open_im_sdkGetConversationGroupByConversationID',
+    'conversation/managing-conversation-groups/update-conversation-group':
+      'Open_im_sdkUpdateConversationGroup',
+    'conversation/managing-conversation-groups/set-conversation-group-order':
+      'Open_im_sdkSetConversationGroupOrder',
+    'conversation/managing-conversation-groups/add-conversations-to-groups':
+      'Open_im_sdkAddConversationsToGroups',
+    'conversation/managing-conversation-groups/remove-conversations-from-groups':
+      'Open_im_sdkRemoveConversationsFromGroups',
+    'conversation/managing-conversation-groups/delete-conversation-group':
+      'Open_im_sdkDeleteConversationGroup',
+  },
+  flutter: {
+    'conversation/managing-conversation-groups/overview-conversation-groups':
+      'Conversation group overview',
+    'conversation/managing-conversation-groups/create-conversation-group':
+      'createConversationGroup',
+    'conversation/managing-conversation-groups/get-conversation-groups':
+      'getConversationGroups',
+    'conversation/managing-conversation-groups/get-conversation-group-info-with-conversations':
+      'getConversationGroupInfoWithConversations',
+    'conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id':
+      'getConversationGroupByConversationID',
+    'conversation/managing-conversation-groups/update-conversation-group':
+      'updateConversationGroup',
+    'conversation/managing-conversation-groups/set-conversation-group-order':
+      'setConversationGroupOrder',
+    'conversation/managing-conversation-groups/add-conversations-to-groups':
+      'addConversationsToGroups',
+    'conversation/managing-conversation-groups/remove-conversations-from-groups':
+      'removeConversationsFromGroups',
+    'conversation/managing-conversation-groups/delete-conversation-group':
+      'deleteConversationGroup',
+  },
+};
+
+export function resolveClientSdkRouteTitle({ platformId, suffix, baselineTitle }) {
+  if (suffix === 'overview')
+    return `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`;
+  return conversationGroupTitles[platformId]?.[suffix] ?? baselineTitle;
+}
+
 export function buildClientSdkSkeleton({ path, platformId, title }) {
   const platformName = platformId === 'ios' ? 'iOS' : 'Flutter';
   const template = path === `/sdk/${platformId}/overview` ? 'overview' : 'guide';
@@ -49,14 +102,16 @@ export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) 
   return getClientSdkSidebarPaths(sidebar).map((path) => {
     const suffix = path.replace(`/sdk/${platformId}/`, '');
     const baseline = wasmBySuffix.get(suffix);
-    if (!baseline) throw new Error(`[${platformId}] missing WASM route baseline: ${suffix}`);
     const existing = routeByPath.get(path);
+    if (!baseline && !existing)
+      throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     return {
       path,
-      title:
-        suffix === 'overview'
-          ? `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`
-          : (existing?.title ?? baseline.title),
+      title: resolveClientSdkRouteTitle({
+        platformId,
+        suffix,
+        baselineTitle: existing?.title ?? baseline.title,
+      }),
     };
   });
 }
@@ -76,16 +131,20 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
       .filter((route) => route.contextKey === 'chat/sdk/wasm')
       .map((route) => [route.path.replace('/sdk/wasm/', ''), route]),
   );
+  const existingByPath = new Map(current.map((route) => [route.path, route]));
   const nativeRoutes = getClientSdkSidebarPaths(sidebar).map((path, index) => {
     const suffix = path.replace(`${platform.routePrefix}/`, '');
     const baseline = wasmBySuffix.get(suffix);
-    if (!baseline) throw new Error(`[${platformId}] missing WASM route baseline: ${suffix}`);
-    const title =
-      suffix === 'overview'
-        ? `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`
-        : baseline.title;
+    const template = baseline ?? existingByPath.get(path);
+    if (!template)
+      throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
+    const title = resolveClientSdkRouteTitle({
+      platformId,
+      suffix,
+      baselineTitle: template.title,
+    });
     return {
-      ...baseline,
+      ...template,
       id: baseId + index,
       path,
       relativePath: `sdk/${platformId}/${suffix}`,

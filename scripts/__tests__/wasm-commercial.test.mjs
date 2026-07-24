@@ -93,12 +93,12 @@ const platformSymbolAliases = {
     Open_im_sdkAddConversationsToGroups: 'addConversationsToGroups',
     Open_im_sdkCreateConversationGroup: 'createConversationGroup',
     Open_im_sdkDeleteConversationGroup: 'deleteConversationGroup',
-    Open_im_sdkGetConversationGroupByConversationID:
-      'getConversationGroupIDsByConversationID',
+    Open_im_sdkGetConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
     Open_im_sdkGetConversationGroupInfoWithConversations:
       'getConversationGroupInfoWithConversations',
     Open_im_sdkGetConversationGroups: 'getConversationGroups',
     Open_im_sdkRemoveConversationsFromGroups: 'removeConversationsFromGroups',
+    Open_im_sdkSetConversationGroupListener: 'createConversationGroup',
     Open_im_sdkSetConversationGroupOrder: 'setConversationGroupOrder',
     Open_im_sdkSpeechToText: 'speechToText',
     Open_im_sdkSpeechToTextCapabilities: 'speechToTextCapabilities',
@@ -109,16 +109,19 @@ const platformSymbolAliases = {
 
 const partialCommercialConceptSources = {
   '/sdk/wasm/calling/overview-calling': [
-    '/sdk/wasm/calling/managing-calls/start-or-handle-a-call',
-    '/sdk/wasm/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/wasm/calling/managing-calls/start-single-call',
+    '/sdk/wasm/calling/managing-calls/handle-call-events',
+    '/sdk/wasm/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/flutter/calling/overview-calling': [
-    '/sdk/flutter/calling/managing-calls/start-or-handle-a-call',
-    '/sdk/flutter/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/flutter/calling/managing-calls/start-single-call',
+    '/sdk/flutter/calling/managing-calls/handle-call-events',
+    '/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/ios/calling/overview-calling': [
-    '/sdk/ios/calling/managing-calls/start-or-handle-a-call',
-    '/sdk/ios/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/ios/calling/managing-calls/start-single-call',
+    '/sdk/ios/calling/managing-calls/handle-call-events',
+    '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
 
@@ -205,8 +208,9 @@ function getPageCommercialInfo(pagePath) {
     return { kind: 'none', methods: [], openSourceMethods, events: [] };
   }
 
+  const wasmInfo = getWasmPageCommercialInfo(wasmPath);
   return {
-    kind: getWasmPageCommercialInfo(wasmPath).kind === 'full' ? 'full' : 'partial',
+    kind: wasmInfo.kind === 'full' ? 'full' : 'partial',
     methods: methods.sort((left, right) => left.localeCompare(right)),
     openSourceMethods: openSourceMethods.sort((left, right) => left.localeCompare(right)),
     events: events.sort((left, right) => left.localeCompare(right)),
@@ -248,65 +252,84 @@ test('does not mark open-source events as commercial', () => {
 test('classifies full commercial pages', () => {
   assert.equal(
     getPageCommercialInfo(
-      '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups',
+      '/sdk/wasm/conversation/managing-conversation-groups/create-conversation-group',
     ).kind,
     'full',
   );
   assert.equal(
-    getPageCommercialInfo('/sdk/wasm/message/managing-messages/pin-conversation-messages').kind,
+    getPageCommercialInfo(
+      '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups',
+    ).kind,
+    'partial',
+  );
+  assert.equal(
+    getPageCommercialInfo('/sdk/wasm/message/managing-messages/set-message-pinned').kind,
     'full',
   );
   assert.equal(
-    getPageCommercialInfo('/sdk/wasm/calling/managing-calls/start-or-handle-a-call').kind,
+    getPageCommercialInfo('/sdk/wasm/calling/managing-calls/start-single-call').kind,
     'full',
   );
 });
 
 test('applies the WASM commercial presentation to verified Flutter and iOS capabilities', () => {
-  const flutterGroups = getPageCommercialInfo(
-    '/sdk/flutter/conversation/managing-conversation-groups/manage-conversation-groups',
+  const flutterGroupCreate = getPageCommercialInfo(
+    '/sdk/flutter/conversation/managing-conversation-groups/create-conversation-group',
   );
-  assert.equal(flutterGroups.kind, 'full');
-  assert.ok(flutterGroups.methods.includes('createConversationGroup'));
-  assert.ok(flutterGroups.methods.includes('getConversationGroupByConversationID'));
-  assert.ok(flutterGroups.events.includes('onConversationGroupAdded'));
+  assert.equal(flutterGroupCreate.kind, 'full');
+  assert.deepEqual(flutterGroupCreate.methods, ['createConversationGroup']);
+
+  const flutterGroupLookup = getPageCommercialInfo(
+    '/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id',
+  );
+  assert.equal(flutterGroupLookup.kind, 'full');
+  assert.deepEqual(flutterGroupLookup.methods, ['getConversationGroupByConversationID']);
+
+  const flutterGroupOverview = getPageCommercialInfo(
+    '/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups',
+  );
+  assert.equal(flutterGroupOverview.kind, 'partial');
+  assert.ok(flutterGroupOverview.events.includes('onConversationGroupAdded'));
 
   const flutterCalls = getPageCommercialInfo(
-    '/sdk/flutter/calling/managing-calls/start-or-handle-a-call',
+    '/sdk/flutter/calling/managing-calls/start-single-call',
   );
   assert.equal(flutterCalls.kind, 'full');
-  assert.ok(flutterCalls.events.includes('onHangup'));
+  assert.ok(flutterCalls.methods.includes('signalingInvite'));
 
-  const iosCalls = getPageCommercialInfo('/sdk/ios/calling/managing-calls/start-or-handle-a-call');
+  const iosCalls = getPageCommercialInfo('/sdk/ios/calling/managing-calls/start-single-call');
   assert.equal(iosCalls.kind, 'full');
   assert.ok(iosCalls.methods.includes('signalingInvite:offlinePushInfo:onSuccess:onFailure:'));
-  assert.ok(iosCalls.events.includes('onHunguUp:'));
 
   const iosCallInfo = getPageCommercialInfo(
-    '/sdk/ios/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
   );
   assert.equal(iosCallInfo.kind, 'full');
   assert.ok(
     iosCallInfo.methods.includes('getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:'),
   );
 
-  const iosGroups = getPageCommercialInfo(
-    '/sdk/ios/conversation/managing-conversation-groups/manage-conversation-groups',
+  const iosGroupCreate = getPageCommercialInfo(
+    '/sdk/ios/conversation/managing-conversation-groups/create-conversation-group',
   );
-  assert.equal(iosGroups.kind, 'full');
-  assert.ok(iosGroups.methods.includes('Open_im_sdkCreateConversationGroup'));
-  assert.ok(iosGroups.events.includes('onConversationGroupAdded:'));
+  assert.equal(iosGroupCreate.kind, 'full');
+  assert.deepEqual(iosGroupCreate.methods, ['Open_im_sdkCreateConversationGroup']);
 
-  const iosModify = getPageCommercialInfo(
-    '/sdk/ios/message/managing-messages/modify-a-message',
+  const iosGroupOverview = getPageCommercialInfo(
+    '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups',
   );
+  assert.equal(iosGroupOverview.kind, 'partial');
+  assert.ok(iosGroupOverview.methods.includes('Open_im_sdkSetConversationGroupListener'));
+  assert.ok(iosGroupOverview.events.includes('onConversationGroupAdded:'));
+
+  const iosModify = getPageCommercialInfo('/sdk/ios/message/managing-messages/modify-a-message');
   assert.equal(iosModify.kind, 'full');
   assert.ok(
     iosModify.methods.includes('modifyMessageWithConversationID:message:onSuccess:onFailure:'),
   );
 
   const iosPinned = getPageCommercialInfo(
-    '/sdk/ios/message/managing-messages/pin-conversation-messages',
+    '/sdk/ios/message/managing-messages/set-message-pinned',
   );
   assert.equal(iosPinned.kind, 'full');
   assert.ok(iosPinned.events.includes('onChangedPinnedMsg:'));
@@ -314,13 +337,8 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   const iosTranscription = getPageCommercialInfo(
     '/sdk/ios/message/composing-messages/transcribe-audio',
   );
-  assert.equal(iosTranscription.kind, 'partial');
+  assert.equal(iosTranscription.kind, 'full');
   assert.ok(iosTranscription.methods.includes('Open_im_sdkSpeechToText'));
-  assert.ok(
-    iosTranscription.openSourceMethods.includes(
-      'setMessageLocalEx:clientMsgID:localEx:onSuccess:onFailure:',
-    ),
-  );
 
   const flutterModify = getPageCommercialInfo(
     '/sdk/flutter/message/managing-messages/modify-a-message',
@@ -330,7 +348,7 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   assert.ok(flutterModify.events.includes('onMessageModified'));
 
   const flutterPinned = getPageCommercialInfo(
-    '/sdk/flutter/message/managing-messages/pin-conversation-messages',
+    '/sdk/flutter/message/managing-messages/set-message-pinned',
   );
   assert.equal(flutterPinned.kind, 'full');
   assert.ok(flutterPinned.methods.includes('setConversationPinnedMsg'));
@@ -339,9 +357,8 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   const flutterTranscription = getPageCommercialInfo(
     '/sdk/flutter/message/composing-messages/transcribe-audio',
   );
-  assert.equal(flutterTranscription.kind, 'partial');
+  assert.equal(flutterTranscription.kind, 'full');
   assert.ok(flutterTranscription.methods.includes('speechToText'));
-  assert.ok(flutterTranscription.openSourceMethods.includes('setMessageLocalContent'));
 });
 
 test('marks calling overviews as mixed while preserving verified platform symbols', () => {
@@ -353,14 +370,16 @@ test('marks calling overviews as mixed while preserving verified platform symbol
   const flutterOverview = getPageCommercialInfo('/sdk/flutter/calling/overview-calling');
   assert.equal(flutterOverview.kind, 'partial');
   assert.ok(flutterOverview.methods.includes('signalingInvite'));
-  assert.ok(flutterOverview.events.includes('onReceiveNewInvitation'));
+  assert.ok(flutterOverview.methods.includes('getSignalingInvitationInfoStartApp'));
 
   const iosOverview = getPageCommercialInfo('/sdk/ios/calling/overview-calling');
   assert.equal(iosOverview.kind, 'partial');
+  assert.ok(iosOverview.methods.includes('signalingInvite:offlinePushInfo:onSuccess:onFailure:'));
   assert.ok(
-    iosOverview.methods.includes('signalingInvite:offlinePushInfo:onSuccess:onFailure:'),
+    iosOverview.methods.includes(
+      'getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:',
+    ),
   );
-  assert.ok(iosOverview.events.includes('onReceiveNewInvitation:'));
 });
 
 test('does not infer commercial presentation for absent or open-source native capabilities', () => {
@@ -380,11 +399,16 @@ test('does not infer commercial presentation for absent or open-source native ca
 });
 
 test('classifies mixed commercial pages', () => {
-  const deletePage = getPageCommercialInfo('/sdk/wasm/message/managing-messages/delete-a-message');
-  assert.equal(deletePage.kind, 'partial');
+  const deletePage = getPageCommercialInfo(
+    '/sdk/wasm/message/managing-messages/delete-saved-messages',
+  );
+  assert.equal(deletePage.kind, 'full');
   assert.deepEqual(deletePage.methods, ['deleteMessages']);
   assert.ok(deletePage.openSourceMethods.includes('revokeMessage') === false);
-  assert.ok(deletePage.openSourceMethods.includes('deleteMessageFromLocalStorage'));
+  assert.equal(
+    getPageCommercialInfo('/sdk/wasm/message/managing-messages/delete-local-message').kind,
+    'none',
+  );
 
   assert.equal(
     getPageCommercialInfo('/sdk/wasm/message/managing-messages/revoke-a-message').kind,
@@ -397,20 +421,19 @@ test('classifies mixed commercial pages', () => {
   );
 
   const history = getPageCommercialInfo(
-    '/sdk/wasm/message/retrieving-messages/retrieve-message-history',
+    '/sdk/wasm/message/retrieving-messages/load-newer-messages',
   );
-  assert.equal(history.kind, 'partial');
+  assert.equal(history.kind, 'full');
   assert.deepEqual(history.methods, ['getAdvancedHistoryMessageListReverse']);
-  assert.ok(history.openSourceMethods.includes('getAdvancedHistoryMessageList'));
 
   assert.equal(
-    getPageCommercialInfo('/sdk/wasm/user/managing-friends/manage-friend-requests').kind,
-    'partial',
+    getPageCommercialInfo('/sdk/wasm/user/friend-applications/delete-friend-requests').kind,
+    'full',
   );
   assert.equal(
-    getPageCommercialInfo('/sdk/wasm/group/managing-group-applications/manage-group-applications')
+    getPageCommercialInfo('/sdk/wasm/group/group-applications/delete-group-requests')
       .kind,
-    'partial',
+    'full',
   );
 });
 

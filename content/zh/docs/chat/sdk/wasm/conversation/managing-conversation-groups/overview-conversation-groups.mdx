@@ -1,0 +1,105 @@
+---
+title: '会话分组概览'
+description: '了解 WASM SDK 会话分组的数据模型、能力边界和增量事件。'
+sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组用于整理当前登录用户的会话列表，例如“工作”“未读”或“稍后处理”。它管理的是 `conversationID` 与分组的关系，不会创建群组、修改群成员，也不会改变消息的发送目标。
+
+## 分组类型
+
+`ConversationGroupType` 公开三种类型：
+
+| 枚举值                        | 数值 | 含义                                 |
+| ----------------------------- | ---: | ------------------------------------ |
+| `ConversationGroupTypeNormal` |  `0` | 普通自定义分组，可由用户创建和维护。 |
+| `ConversationGroupTypeFilter` |  `1` | 按 SDK 或服务端规则维护的筛选分组。  |
+| `ConversationGroupTypeAll`    |  `2` | 查询全部类型时使用。                 |
+
+普通用户自定义分类应使用 `ConversationGroupTypeNormal`。筛选分组的具体生成规则由当前 OpenIMServer 部署决定，不要仅凭名称在客户端伪造系统分组。
+
+## 分组数据
+
+`ConversationGroup` 表示一个会话分组。客户端合并分组快照和事件增量时，应使用 `conversationGroupID` 作为稳定标识。
+
+| 字段                    | 类型                    | 说明                       |
+| ----------------------- | ----------------------- | -------------------------- |
+| `conversationGroupID`   | `string`                | 会话分组 ID。              |
+| `name`                  | `string`                | 分组名称。                 |
+| `serial`                | `number`                | SDK 返回的分组序号。       |
+| `version`               | `number`                | 分组数据版本。             |
+| `ex`                    | `string`                | 应用约定的扩展字符串。     |
+| `conversationGroupType` | `ConversationGroupType` | 分组类型。                 |
+| `hidden`                | `boolean`               | 分组是否隐藏。             |
+| `unreadCount`           | `number`                | 分组内会话的未读总数快照。 |
+| `conversationIDs`       | `string[]`              | 当前属于该分组的会话 ID。  |
+
+## 可用操作
+
+- [创建会话分组](/sdk/wasm/conversation/managing-conversation-groups/create-conversation-group)
+- [按类型查询会话分组](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-groups)
+- [分页查询分组内的会话](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [查询会话所属的分组](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [更新会话分组](/sdk/wasm/conversation/managing-conversation-groups/update-conversation-group)
+- [设置会话分组顺序](/sdk/wasm/conversation/managing-conversation-groups/set-conversation-group-order)
+- [添加会话到分组](/sdk/wasm/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [从分组移除会话](/sdk/wasm/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [删除会话分组](/sdk/wasm/conversation/managing-conversation-groups/delete-conversation-group)
+
+## 监听分组变化
+
+查询操作用于建立调用时的快照，事件用于合并后续增量。主动调用的 Promise 成功、相关事件到达和重新查询校准是三个不同阶段。
+
+| 事件                               | `data` 类型                                  | 处理方式                            |
+| ---------------------------------- | -------------------------------------------- | ----------------------------------- |
+| `OnConversationGroupAdded`         | `ConversationGroup[]`                        | 合并新增分组。                      |
+| `OnConversationGroupChanged`       | `ConversationGroup[]`                        | 按 `conversationGroupID` 更新分组。 |
+| `OnConversationGroupDeleted`       | `ConversationGroup[]`                        | 移除已删除分组。                    |
+| `OnConversationGroupMemberAdded`   | `ConversationGroupMemberChangedCallbackData` | 合并新增的会话关联和会话详情。      |
+| `OnConversationGroupMemberDeleted` | `ConversationGroupMemberChangedCallbackData` | 移除对应的会话关联。                |
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+function handleConversationGroupAdded({ data }) {
+  mergeConversationGroups(data);
+}
+
+function handleConversationGroupChanged({ data }) {
+  mergeConversationGroups(data);
+}
+
+function handleConversationGroupDeleted({ data }) {
+  for (const group of data) {
+    removeConversationGroup(group.conversationGroupID);
+  }
+}
+
+function handleConversationGroupMemberAdded({ data }) {
+  mergeConversationGroupMembers(
+    data.group.conversationGroupID,
+    data.conversationIDs,
+    data.conversations,
+  );
+}
+
+function handleConversationGroupMemberDeleted({ data }) {
+  removeConversationGroupMembers(data.group.conversationGroupID, data.conversationIDs);
+}
+
+openimsdk.on(CbEvents.OnConversationGroupAdded, handleConversationGroupAdded);
+openimsdk.on(CbEvents.OnConversationGroupChanged, handleConversationGroupChanged);
+openimsdk.on(CbEvents.OnConversationGroupDeleted, handleConversationGroupDeleted);
+openimsdk.on(CbEvents.OnConversationGroupMemberAdded, handleConversationGroupMemberAdded);
+openimsdk.on(CbEvents.OnConversationGroupMemberDeleted, handleConversationGroupMemberDeleted);
+
+function disposeConversationGroupEvents() {
+  openimsdk.off(CbEvents.OnConversationGroupAdded, handleConversationGroupAdded);
+  openimsdk.off(CbEvents.OnConversationGroupChanged, handleConversationGroupChanged);
+  openimsdk.off(CbEvents.OnConversationGroupDeleted, handleConversationGroupDeleted);
+  openimsdk.off(CbEvents.OnConversationGroupMemberAdded, handleConversationGroupMemberAdded);
+  openimsdk.off(CbEvents.OnConversationGroupMemberDeleted, handleConversationGroupMemberDeleted);
+}
+```
+
+事件可能在主动调用完成后再次到达，状态层应按 ID 幂等合并，不能简单追加数组。

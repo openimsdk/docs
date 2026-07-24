@@ -20,70 +20,89 @@ function auditPage(relativePath) {
 }
 
 test('friend request parameters match the pinned WASM declarations', () => {
-  const source = read('managing-friends/manage-friend-requests');
+  const add = read('friend-applications/add-friend');
+  const accept = read('friend-applications/accept-friend-application');
+  const refuse = read('friend-applications/refuse-friend-application');
 
-  assert.match(source, /`reqMsg` 是申请附言/);
-  assert.match(source, /`handleMsg`.*空字符串/);
-  assert.doesNotMatch(source, /\| `ex`\s+\| `string`\s+\|/);
+  assert.match(add, /addFriend\(\{ toUserID, reqMsg \}\)/);
+  assert.match(add, /`reqMsg` 没有内容时传空字符串/);
+  assert.match(accept, /handleMsg: ''/);
+  assert.match(refuse, /handleMsg: ''/);
+  assert.doesNotMatch(add, /\| `ex`\s+\| `string`\s+\|/);
 });
 
 test('friend application events separate received and sent applications', () => {
-  const source = read('managing-friends/manage-friend-requests');
+  const source = read(
+    'friend-applications/get-friend-application-list-as-recipient',
+  );
 
-  assert.match(source, /申请发起者和接收者都会收到/);
-  assert.match(source, /data\.toUserID === currentUserID/);
+  assert.match(source, /fromUserID:toUserID/);
+  assert.match(source, /OnFriendApplicationAdded/);
+  assert.match(source, /OnFriendApplicationAccepted|`Accepted`/);
+  assert.match(source, /OnFriendApplicationRejected|`Rejected`/);
+});
+
+test('friend application list pages include executable examples', () => {
+  const received = read(
+    'friend-applications/get-friend-application-list-as-recipient',
+  );
+  const sent = read(
+    'friend-applications/get-friend-application-list-as-applicant',
+  );
+
+  assert.match(received, /getFriendApplicationListAsRecipient\(\{/);
+  assert.match(received, /ApplicationHandleResult\.Unprocessed/);
+  assert.match(sent, /getFriendApplicationListAsApplicant\(\{/);
+  assert.match(sent, /offset: 0/);
+  assert.match(sent, /count: 20/);
 });
 
 test('friend search documents required switches and the data type', () => {
-  const source = read('retrieving-users/retrieve-a-list-of-friends');
+  const source = read('friends/search-friends');
 
   for (const name of ['isSearchUserID', 'isSearchNickname', 'isSearchRemark']) {
-    assert.match(
-      source,
-      new RegExp(name + '.+boolean.+必填'),
-      name,
-    );
+    assert.match(source, new RegExp(`${name}: true`), name);
   }
-  assert.match(source, /当前只支持一个非空关键词/);
-  assert.match(source, /`data` 是匹配当前关键词的 `SearchedFriendsInfo\[\]`/);
+  assert.match(source, /当前只使用一个非空关键词/);
+  assert.match(source, /结果是 `SearchedFriendsInfo\[\]`/);
   assert.doesNotMatch(source, /WsResponse<SearchedFriendsInfo\[\]>/);
-  assert.match(source, /`relationship`/);
+  assert.match(source, /不要覆盖完整好友列表/);
 });
 
 test('blacklist pages use real fields and explain asymmetric message behavior', () => {
-  const list = read('moderating-a-user/retrieve-a-list-of-blocked-users');
-  const operations = read('moderating-a-user/block-or-unblock-users');
+  const list = read('blacklist/get-black-list');
 
   assert.doesNotMatch(list, /\| `gender`/);
-  assert.match(operations, /对方不能向当前用户发送消息/);
-  assert.match(operations, /当前用户仍可向对方发送消息/);
+  assert.match(list, /对方不能向当前用户发送消息/);
+  assert.match(list, /当前用户仍可向对方发送/);
 });
 
 test('Group pages document mute permissions and normalize mute timestamps', () => {
-  const operations = readWasm('group/moderating-groups/mute-a-group-or-member');
-  const list = readWasm('group/retrieving-group-members/retrieve-group-members');
+  const operations = readWasm('group/managing-group-members/change-group-member-mute');
+  const list = readWasm('group/retrieving-group-members/get-group-member-list');
 
   assert.match(operations, /群主可以禁言管理员和普通成员/);
   assert.match(operations, /管理员只能禁言普通成员/);
-  assert.match(operations, /normalizeMuteEndTime/);
-  assert.match(list, /normalizeMuteEndTime/);
-  assert.match(list, /CbEvents\.OnGroupMemberDeleted/);
+  assert.match(operations, /`muteEndTime`/);
+  assert.match(list, /根据 `muteEndTime` 过滤/);
 });
 
 test('friend deletion removes rather than merges a cached friend', () => {
-  const relationship = read('retrieving-users/retrieve-friend-information');
-  const source = read('managing-friends/update-or-delete-friends');
+  const relationship = read('friends/check-friend');
+  const source = read('friends/get-friend-list-page');
 
   assert.match(relationship, /result.*`1`.*好友/);
-  assert.match(relationship, /黑名单.*非好友/);
-  assert.match(source, /function handleFriendDeleted/);
+  assert.match(relationship, /区分黑名单时另行查询黑名单/);
+  assert.match(source, /const handleFriendDeleted/);
   assert.match(source, /removeFriend\(data\.userID\)/);
 });
 
 test('online status documents subscription without exposing getUserStatus', () => {
-  const source = read(
-    'retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user',
-  );
+  const source = [
+    read('online-status/subscribe-users-status'),
+    read('online-status/get-subscribe-users-status'),
+    read('online-status/unsubscribe-users-status'),
+  ].join('\n');
 
   assert.match(source, /3000/);
   assert.doesNotMatch(source, /getUserStatus/);
@@ -92,48 +111,56 @@ test('online status documents subscription without exposing getUserStatus', () =
 });
 
 test('profile examples cover extension ownership and whole-value replacement', () => {
-  const source = read('retrieving-and-updating-user-information/retrieve-and-update-self-profile');
+  const source = read('profile/set-self-info');
 
-  assert.match(source, /## 更新扩展字段/);
-  assert.match(source, /整体覆盖/);
-  assert.match(source, /可信后端维护/);
+  assert.match(source, /`ex` 是完整字符串/);
+  assert.match(source, /不会自动合并/);
 });
 
 test('profile updates restrict editable fields and separate refresh errors', () => {
-  const source = read('retrieving-and-updating-user-information/retrieve-and-update-self-profile');
+  const source = read('profile/set-self-info');
 
   assert.doesNotMatch(source, /const payload: PartialUserItem/);
-  assert.match(source, /type EditableSelfProfile/);
-  assert.doesNotMatch(source, /await OpenIM\.setSelfInfo[\s\S]*return loadCurrentUser\(\);[\s\S]*setSelfInfo failed/);
+  assert.match(source, /nickname.*faceURL.*ex/);
+  assert.match(source, /设置全局消息接收方式/);
+  assert.match(source, /Promise 成功表示设置请求完成/);
+  assert.match(source, /最终资料通过 `OnSelfInfoUpdated` 或 `getSelfUserInfo\(\)` 校准/);
+});
+
+test('global message reception omits the reserved NotReceive value', () => {
+  const source = read('profile/set-global-message-reception');
+
+  assert.match(source, /MessageReceiveOptType\.Normal.*`0`/s);
+  assert.match(source, /MessageReceiveOptType\.NotNotify.*`2`/s);
+  assert.doesNotMatch(source, /MessageReceiveOptType\.NotReceive/);
+  assert.match(source, /正常接收消息，并允许离线推送或通知/);
+  assert.match(source, /接收消息，但不触发离线推送或通知/);
 });
 
 test('user overview links every user-owned workflow and leaves group moderation to Groups', () => {
   const source = read('overview-user');
 
-  assert.match(source, /管理好友申请/);
-  assert.match(source, /更新或删除好友/);
-  assert.match(source, /获取和更新当前用户资料/);
+  assert.match(source, /好友申请/);
+  assert.match(source, /修改好友资料/);
+  assert.match(source, /当前用户资料/);
   assert.doesNotMatch(source, /查询群内被禁言成员/);
 });
 
-test('exact-ID user lookup has a precise title', () => {
-  const source = read('retrieving-users/retrieve-users');
+test('exact-ID user lookup has a precise Chinese task title', () => {
+  const source = read('profile/get-users-info');
 
-  assert.match(source, /^title: '获取指定用户资料'$/m);
-  assert.match(source, /## 调用结果与资料刷新/);
+  assert.match(source, /^title: '获取用户资料'$/m);
+  assert.match(source, /按 `userID`/);
   assert.match(source, /没有面向任意公开用户资料的通用变更事件/);
 });
 
 test('every user-page event example includes matching cleanup', () => {
   const pages = [
-    'managing-friends/manage-friend-requests',
-    'managing-friends/update-or-delete-friends',
-    'moderating-a-user/block-or-unblock-users',
-    'moderating-a-user/retrieve-a-list-of-blocked-users',
-    'retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user',
-    'retrieving-and-updating-user-information/retrieve-and-update-self-profile',
-    'retrieving-users/retrieve-a-list-of-friends',
-    'retrieving-users/retrieve-friend-information',
+    'friend-applications/get-friend-application-list-as-recipient',
+    'friends/get-friend-list-page',
+    'blacklist/get-black-list',
+    'online-status/subscribe-users-status',
+    'profile/set-self-info',
   ];
 
   for (const page of pages) {
@@ -149,29 +176,24 @@ test('user-page audit records match the reviewed content', () => {
   const mergedLatestInfo = auditPage(
     'retrieving-and-updating-user-information/retrieve-the-latest-information-on-participants',
   );
-  assert.equal(mergedLatestInfo.disposition, 'merge');
-  assert.equal(
-    mergedLatestInfo.redirectTo,
-    '/sdk/wasm/user/retrieving-users/retrieve-users',
-  );
-  assert.ok(mergedLatestInfo.sdkMethods.includes('getUsersInfo'));
+  assert.equal(mergedLatestInfo.disposition, 'remove');
+  assert.equal(mergedLatestInfo.redirectTo, null);
+  assert.deepEqual(mergedLatestInfo.sdkMethods, []);
 
   const redirects = JSON.parse(
     readFileSync('data/structure/wasm-legacy-redirects.json', 'utf8'),
   );
-  assert.deepEqual(
-    redirects.find((entry) => entry.source === mergedLatestInfo.currentPath),
-    {
-      source: mergedLatestInfo.currentPath,
-      destination: '/sdk/wasm/user/retrieving-users/retrieve-users',
-    },
+  assert.equal(
+    redirects.some((entry) => entry.source === mergedLatestInfo.currentPath),
+    false,
   );
 
-  const online = auditPage(
-    'retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user',
-  );
   const ownership = JSON.parse(
     readFileSync('data/structure/wasm-api-ownership.json', 'utf8'),
+  );
+  assert.equal(
+    ownership.methods.find((item) => item.name === 'getUsersInfo')?.page,
+    '/sdk/wasm/user/profile/get-users-info',
   );
   assert.equal(
     ownership.methods.find((item) => item.name === 'getUserStatus')?.status,
@@ -180,12 +202,23 @@ test('user-page audit records match the reviewed content', () => {
 
   const selfInfoPages = [
     'overview-user',
-    'retrieving-and-updating-user-information/retrieve-and-update-self-profile',
+    'profile/set-self-info',
   ];
   for (const path of selfInfoPages) {
     assert.ok(
       auditPage(path).openimSources.some((source) => source.endsWith('/onSelfUserInfoUpdate.md')),
       `${path}: missing immutable OnSelfInfoUpdated source`,
     );
+  }
+
+  for (const path of [
+    'profile/overview-profile',
+    'online-status/overview-online-status',
+    'friends/overview-friends',
+    'friend-applications/overview-friend-applications',
+    'blacklist/overview-blacklist',
+  ]) {
+    assert.equal(auditPage(path).disposition, 'remove');
+    assert.equal(auditPage(path).redirectTo, null);
   }
 });

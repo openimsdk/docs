@@ -1,0 +1,43 @@
+---
+title: '获取收到的好友申请'
+description: '分页查询 iOS 当前用户收到的好友申请。'
+sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+```objc
+GetFriendApplicationListAsRecipientReq *req = [GetFriendApplicationListAsRecipientReq new];
+req.handleResults = @[@(OIMApplicationStatusNormal)];
+req.offset = 0;
+req.count = 20;
+[[OIMManager manager] getFriendApplicationListAsRecipientWithReq:req
+                                                       onSuccess:^(NSArray<OIMFriendApplication *> *items) {
+                                                           [requestStore replaceReceived:items];
+                                                       }
+                                                       onFailure:nil];
+```
+
+`handleResults` 筛选待处理、已同意或已拒绝状态，`offset` 和 `count` 控制分页。成功 callback 返回当前页快照；按 `fromUserID:toUserID` 合并，不触发申请 delegate。
+
+## 同步好友申请变化
+
+本页是 `onFriendApplicationAdded:`、`onFriendApplicationAccepted:`、`onFriendApplicationRejected:` 和 `onFriendApplicationDeleted:` 的完整处理归属页：
+
+```objc
+- (void)onFriendApplicationAdded:(OIMFriendApplication *)item {
+    [requestStore upsertApplication:item];
+}
+
+- (void)onFriendApplicationAccepted:(OIMFriendApplication *)item {
+    [requestStore upsertApplication:item];
+}
+
+- (void)onFriendApplicationRejected:(OIMFriendApplication *)item {
+    [requestStore upsertApplication:item];
+}
+
+- (void)onFriendApplicationDeleted:(OIMFriendApplication *)item {
+    [requestStore removeFromUserID:item.fromUserID toUserID:item.toUserID];
+}
+```
+
+这些方法实现于应用唯一、稳定的 `OIMFriendshipListener` 实例；注册与移除生命周期见[分页获取好友列表](/sdk/ios/user/friends/get-friend-list-page)。按当前用户是否为 `toUserID`，将记录分流到收到或发出的列表。成功 callback、申请 delegate、好友关系 delegate 和重新查询校准是不同阶段。

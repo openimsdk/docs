@@ -1,0 +1,30 @@
+---
+title: '发起单聊通话'
+description: '使用 iOS SDK 发起单聊音视频通话。'
+sourcePath: '/sdk/ios/calling/managing-calls/start-single-call'
+---
+
+`signalingInvite:offlinePushInfo:onSuccess:onFailure:` 发起单聊通话。SDK 负责信令，应用仍需使用成功 callback 返回的凭据连接媒体引擎。
+
+```objc
+OIMInvitationInfo *invitation = [OIMInvitationInfo new];
+invitation.inviteeUserIDList = @[@"user_b"];
+invitation.roomID = NSUUID.UUID.UUIDString.lowercaseString;
+invitation.timeout = 30;
+invitation.mediaType = @"video";
+invitation.groupID = @"";
+
+OIMSignalingInfo *signalingInfo =
+    [[OIMManager manager] signalingInvite:invitation
+                          offlinePushInfo:push
+                                onSuccess:^(OIMInvitationResultInfo * _Nullable credentials) {
+    if (credentials != nil) [self joinMediaRoom:credentials];
+}
+                                 onFailure:^(NSInteger code, NSString * _Nullable message) {
+    [self showCallError:code message:message ?: @"发起通话失败"];
+}];
+```
+
+单聊 `groupID` 传空字符串。SDK 会补充邀请人和会话类型；方法同步返回的 `OIMSignalingInfo` 应保存，供后续取消、挂断和状态合并使用。
+
+成功 callback 返回 `OIMInvitationResultInfo`。取得有效 `token` 和 `roomID` 后再连接媒体房间；成功不表示对方已经接听。

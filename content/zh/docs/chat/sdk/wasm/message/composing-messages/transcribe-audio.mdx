@@ -1,111 +1,17 @@
 ---
-title: '将音频转为文字'
-description: '使用 OpenIMClientSDK 将音频转为文字，并把结果保存到本地语音消息。'
+title: '识别音频文字'
+description: '使用 WASM SDK 将音频识别为文字。'
 sourcePath: '/sdk/wasm/message/composing-messages/transcribe-audio'
 ---
 
-`speechToText()` 把音频内容提交给当前 OpenIMServer 部署配置的语音识别服务，并返回识别文本。调用前先查询服务端能力，不要在客户端写死格式、采样率或大小限制。
-
-## 查询能力
+浏览器端把音频编码为 Base64 字符串再提交；当前包装层会序列化参数，直接传 `ArrayBuffer` 不能可靠保留字节。
 
 ```ts
-const { data: capabilities } = await openimsdk.speechToTextCapabilities();
-```
-
-`SpeechToTextCapabilities` 包含以下字段：
-
-| 字段              | 类型       | 说明                           |
-| ----------------- | ---------- | ------------------------------ |
-| `format`          | `string[]` | 支持的音频格式。               |
-| `sampleRateHz`    | `number`   | 服务要求的采样率。             |
-| `maxRecordTimeMs` | `number`   | 单段音频最长时长，单位为毫秒。 |
-| `maxFileSize`     | `number`   | 单个音频最大字节数。           |
-| `provider`        | `string`   | 当前部署使用的语音识别提供方。 |
-
-录音完成后应同时校验文件扩展名、大小和时长。能力查询失败时，不要继续上传并猜测限制。
-
-## 提交音频
-
-`SpeechToTextParams` 包含 `filename` 和 `data`。类型声明允许 `data` 使用 `string | ArrayBuffer`，但当前 WASM 包装层会先对整个参数对象执行 `JSON.stringify()`；直接传 `ArrayBuffer` 不能可靠保留字节内容。因此应把音频编码为 Base64 字符串后再调用。
-
-### 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `filename` | `string` | 必填 | 文件名，应包含服务能力支持的扩展名。 |
-| `data` | `string \| ArrayBuffer` | 必填 | 音频内容；浏览器调用时应传 Base64 字符串，避免 `ArrayBuffer` 在序列化时丢失字节。 |
-
-```ts
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-
-  return btoa(binary);
-}
-
-const buffer = await audioFile.arrayBuffer();
-
-if (audioFile.size > capabilities.maxFileSize) {
-  throw new Error('音频文件超过当前语音识别服务限制');
-}
-
-const { data: transcription } = await openimsdk.speechToText({
+const { data: result } = await openimsdk.speechToText({
   filename: audioFile.name,
-  data: arrayBufferToBase64(buffer),
+  data: audioBase64,
 });
-
-setTranscript(transcription.text);
+setTranscript(result.text);
 ```
 
-返回值是 `{ text: string }`。空文本表示本次调用没有得到可展示的识别文字，界面应显示空结果；Promise 被拒绝时进入失败处理。在失败日志中记录文件名、格式和大小，不要记录完整音频内容。
-
-## 保存到本地语音消息
-
-`speechToText()` 只返回识别文字，不会自动修改原语音消息。需要在当前设备的消息气泡中长期展示转写结果时，使用 `setMessageLocalContent()` 把结果写入原消息的 `soundElem.text`。
-
-### 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `conversationID` | `string` | 必填 | 原语音消息所在的会话 ID。 |
-| `message` | `MessageItem` | 必填 | 写入转写结果后的完整消息对象，必须保留原消息的 `clientMsgID` 和其他字段。 |
-
-```ts
-if (!message.soundElem) {
-  throw new Error('目标消息不是语音消息');
-}
-
-const messageWithTranscript = {
-  ...message,
-  soundElem: {
-    ...message.soundElem,
-    text: {
-      text: transcription.text,
-      translate: message.soundElem.text?.translate ?? {},
-    },
-  },
-};
-
-await openimsdk.setMessageLocalContent({
-  conversationID,
-  message: messageWithTranscript,
-});
-
-replaceMessage(messageWithTranscript);
-```
-
-`setMessageLocalContent()` 接收完整 `MessageItem`，不是局部更新。构造新对象时只修改 `soundElem.text`，并保留语音地址、时长、大小、消息 ID、发送者和时间等原字段。Promise 成功表示当前设备的本地消息库已经更新；该修改不会上传到服务端，不会同步到其他设备或其他用户，也不会触发新消息或消息修改事件。
-
-如果转写结果需要让其他会话成员看到，应由用户确认后创建并发送一条新的文本消息；不要把本地 `soundElem.text` 当作共享消息内容。
-
-## 调用结果
-
-`speechToTextCapabilities()` 和 `speechToText()` 都是请求型 API，Promise 成功后直接使用 `data` 建立当前结果；查询能力和提交识别都不会触发消息事件。前者返回当前服务能力快照，后者返回本次识别文本，两者都不应等待 `OnRecvNewMessages`。
-
-`setMessageLocalContent()` 是随后的本地写入步骤。它的 Promise 成功只代表当前设备的本地数据库已保存修改后的消息，与语音识别请求完成、共享消息事件到达是三个不同阶段。
-
-如果用户确认后要把文字发到会话中，再单独创建文本消息并调用 `sendMessage()`；该发送流程的 Promise 结果和接收事件见[发送消息](/sdk/wasm/message/sending-messages/send-a-message)与[接收消息](/sdk/wasm/message/receiving-messages/receive-messages)。
+Promise 成功返回 `{ text: string }`，不会自动修改原语音消息，也不触发消息事件。调用前先[查询语音识别能力](/sdk/wasm/message/composing-messages/check-speech-to-text)；需要本地保存结果时见[保存语音转写结果](/sdk/wasm/message/composing-messages/save-local-transcript)。

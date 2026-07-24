@@ -7,6 +7,14 @@ const sdk = JSON.parse(await readFile('data/structure/wasm-sdk-api.json', 'utf8'
 const domainCoverage = JSON.parse(
   await readFile('data/structure/wasm-domain-api-coverage.json', 'utf8'),
 );
+const contentAudit = JSON.parse(
+  await readFile('data/structure/wasm-content-audit.json', 'utf8'),
+);
+const activeRoutes = new Set(
+  JSON.parse(await readFile('src/generated/routes.json', 'utf8'))
+    .filter((route) => route.contextKey === 'chat/sdk/wasm')
+    .map((route) => route.path),
+);
 
 const commercialMethods = new Set([
   'speechToTextCapabilities',
@@ -125,7 +133,6 @@ methods('user/retrieving-and-updating-user-information/retrieve-and-update-self-
 ]);
 
 methods('message/sending-messages/send-a-message', [
-  'createTargetedGroupMessage',
   'createTextMessage',
   'sendMessage',
   'sendMessageNotOss',
@@ -147,13 +154,11 @@ methods('message/sending-messages/upload-files-and-track-progress', [
   'createImageMessageByFile',
   'createSoundMessageByFile',
   'createVideoMessageByFile',
-  'fileMapSet',
   'uploadFile',
 ]);
 methods('message/retrieving-messages/retrieve-message-history', [
   'getAdvancedHistoryMessageList',
   'getAdvancedHistoryMessageListReverse',
-  'getHistoryMessageListReverse',
 ]);
 methods('message/retrieving-messages/locate-messages-by-id', [
   'fetchSurroundingMessages',
@@ -271,8 +276,10 @@ events('message/managing-messages/revoke-a-message', [
 ]);
 events('message/managing-messages/modify-a-message', ['OnMessageModified']);
 events('message/managing-messages/pin-conversation-messages', ['OnChangedPinnedMsg']);
-events('message/managing-read-status/manage-message-read-receipts', [
+events('conversation/managing-conversations/mark-conversation-read', [
   'OnRecvC2CReadReceipt',
+]);
+events('message/managing-read-status/send-group-read-receipts', [
   'OnRecvGroupReadReceipt',
 ]);
 events('calling/sending-custom-signals/send-a-custom-signal', ['OnReceiveCustomSignal']);
@@ -305,8 +312,74 @@ const excludedConsolidated = new Set([
   'exportDB',
   'getUserStatus',
 ]);
+const excludedMethods = new Map([
+  [
+    'createTargetedGroupMessage',
+    'Targeted group messages are intentionally omitted from public documentation.',
+  ],
+  ['fileMapSet', 'Internal file mapping helper; intentionally omitted from public documentation.'],
+  [
+    'getHistoryMessageListReverse',
+    'The target-based history API is intentionally omitted in favor of conversation-based history pagination.',
+  ],
+]);
 const excludedEvents = new Set(['Login', 'OnUploadLogsProgress', 'UnUsedEvent']);
+const reviewedEventPages = new Map([
+  ['OnBlackAdded', page('user/blacklist/get-black-list')],
+  ['OnBlackDeleted', page('user/blacklist/get-black-list')],
+  ['OnFriendAdded', page('user/friends/get-friend-list-page')],
+  [
+    'OnFriendApplicationAccepted',
+    page('user/friend-applications/get-friend-application-list-as-recipient'),
+  ],
+  [
+    'OnFriendApplicationAdded',
+    page('user/friend-applications/get-friend-application-list-as-recipient'),
+  ],
+  [
+    'OnFriendApplicationDeleted',
+    page('user/friend-applications/get-friend-application-list-as-recipient'),
+  ],
+  [
+    'OnFriendApplicationRejected',
+    page('user/friend-applications/get-friend-application-list-as-recipient'),
+  ],
+  ['OnFriendDeleted', page('user/friends/get-friend-list-page')],
+  ['OnFriendInfoChanged', page('user/friends/get-friend-list-page')],
+  ['OnProgress', page('file-uploads/upload-file')],
+  [
+    'OnRecvCustomBusinessMessage',
+    page('message/receiving-messages/receive-custom-business-messages'),
+  ],
+  ['OnSelfInfoUpdated', page('user/profile/set-self-info')],
+  ['OnUserStatusChanged', page('user/online-status/subscribe-users-status')],
+  ['UploadComplete', page('file-uploads/upload-file')],
+]);
+const replacementMethodPages = new Map([
+  ['createAdvancedQuoteMessage', page('message/creating-messages/create-quote-message')],
+  ['createAdvancedTextMessage', page('message/creating-messages/create-custom-message')],
+  ['deleteMessage', page('message/managing-messages/delete-local-message')],
+  ['getFriendList', page('user/friends/get-friend-list-page')],
+  ['getUserStatus', page('user/online-status/subscribe-users-status')],
+  ['pinFriends', page('user/friends/update-friends')],
+  ['setFriendRemark', page('user/friends/update-friends')],
+  ['setFriendsEx', page('user/friends/update-friends')],
+  ['setGlobalRecvMessageOpt', page('user/profile/set-global-message-reception')],
+  ['SetSelfInfoEx', page('user/profile/set-self-info')],
+  ['typingStatusUpdate', page('message/composing-messages/update-typing-status')],
+]);
 const sdkMethods = new Map(sdk.methods.map((item) => [item.name, item]));
+
+applyReviewedPageOwnership(methodOwners, 'sdkMethods');
+applyReviewedPageOwnership(eventOwners, 'sdkEvents');
+for (const [name, ownerPage] of replacementMethodPages) {
+  const owner = methodOwners.get(name);
+  methodOwners.set(name, { page: ownerPage, status: owner?.status ?? 'documented' });
+}
+for (const [name, ownerPage] of reviewedEventPages) {
+  eventOwners.set(name, { page: ownerPage, status: 'documented' });
+}
+for (const name of excludedMethods.keys()) assign(methodOwners, name, null, 'excluded');
 
 validateComplete(
   methodOwners,
@@ -336,6 +409,7 @@ const manifest = {
         page: owner.page,
         status,
         ...(commercialMethods.has(name) ? { commercial: true } : {}),
+        ...(excludedMethods.has(name) ? { reason: excludedMethods.get(name) } : {}),
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name)),
@@ -372,6 +446,18 @@ const manifest = {
   ],
 };
 
+const evidencedPages = new Set(
+  [...manifest.methods, ...manifest.events]
+    .filter((item) => !item.status.startsWith('excluded'))
+    .map((item) => item.page),
+);
+manifest.conceptPages = [
+  ...new Set([
+    ...manifest.conceptPages,
+    ...[...activeRoutes].filter((route) => !evidencedPages.has(route)),
+  ]),
+].sort();
+
 await writeFile(
   'data/structure/wasm-api-ownership.json',
   `${JSON.stringify(manifest, null, 2)}\n`,
@@ -402,5 +488,23 @@ function validateComplete(owners, names, label) {
     throw new Error(
       `${label} ownership mismatch; missing=${missing.join(',')}; unknown=${unknown.join(',')}`,
     );
+  }
+}
+
+function applyReviewedPageOwnership(owners, field) {
+  const candidates = new Map();
+  for (const auditPage of contentAudit.pages) {
+    if (!activeRoutes.has(auditPage.currentPath)) continue;
+    for (const name of auditPage[field] ?? []) {
+      const pages = candidates.get(name) ?? [];
+      pages.push(auditPage.currentPath);
+      candidates.set(name, pages);
+    }
+  }
+
+  for (const [name, pages] of candidates) {
+    const current = owners.get(name);
+    const ownerPage = pages.includes(current?.page) ? current.page : pages[0];
+    owners.set(name, { page: ownerPage, status: current?.status ?? 'documented' });
   }
 }

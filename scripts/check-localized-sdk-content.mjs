@@ -16,6 +16,7 @@ export function validateLocalizedSdkData({
   manualPages,
   auditPages,
   localized,
+  sidebar,
   platform = getClientSdkPlatform('wasm'),
 }) {
   const platformConfig = typeof platform === 'string' ? getClientSdkPlatform(platform) : platform;
@@ -25,6 +26,9 @@ export function validateLocalizedSdkData({
   const generatedPaths = Object.keys(localized?.pages ?? {}).sort();
   const expectedPendingPaths = routePaths.filter((path) => !manualPages.has(path));
   const actualPendingPaths = localized?.pendingPaths ?? [];
+  const sidebarEntries = new Map(
+    flattenSidebarEntries(sidebar?.nodes ?? []).map((entry) => [entry.path, entry]),
+  );
 
   if (!sameArray(generatedPaths, manualPaths)) {
     errors.push(
@@ -86,8 +90,9 @@ export function validateLocalizedSdkData({
 
   for (const route of routes) {
     const path = route.path;
+    const navigationTitle = sidebarEntries.get(path)?.navigationTitle ?? route.title;
     const structuralTitle = resolveLocalizedRouteTitle(
-      route.title,
+      navigationTitle,
       localized?.navigationLabels ?? {},
     );
     if (!/[\u3400-\u9fff]/.test(structuralTitle ?? '')) {
@@ -126,6 +131,7 @@ async function main() {
       manualPages,
       auditPages,
       localized,
+      sidebar,
       platform,
     });
 
@@ -143,6 +149,14 @@ async function main() {
   }
 
   if (failed) process.exitCode = 1;
+}
+
+function flattenSidebarEntries(nodes) {
+  return nodes.flatMap((node) => {
+    if (typeof node === 'string') return [{ path: node }];
+    if (node.path) return [node];
+    return flattenSidebarEntries(node.children ?? []);
+  });
 }
 
 async function readJson(relativePath) {

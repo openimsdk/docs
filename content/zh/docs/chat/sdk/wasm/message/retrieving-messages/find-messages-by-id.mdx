@@ -1,0 +1,32 @@
+---
+title: '按 ID 查找消息'
+description: '使用 WASM SDK 按 conversationID 与 clientMsgID 定位消息。'
+sourcePath: '/sdk/wasm/message/retrieving-messages/find-messages-by-id'
+---
+
+搜索结果、引用消息或通知跳转应保存消息的 `conversationID` 和 `clientMsgID`，再用 `findMessageList()` 取回本地已同步的消息。
+
+## 参数说明
+
+`findMessageList()` 接收查询条件数组，每一项结构如下：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `items[].conversationID` | `string` | 是 | 目标消息所属的会话 ID。 |
+| `items[].clientMsgIDList` | `string[]` | 是 | 要在该会话中查找的消息 ID。 |
+
+```ts
+const { data: result } = await openimsdk.findMessageList([
+  {
+    conversationID,
+    clientMsgIDList: [clientMsgID],
+  },
+]);
+
+const items = result.findResultItems ?? result.searchResultItems ?? [];
+const targetMessage = items[0]?.messageList?.[0];
+```
+
+Promise 成功后，`data` 是 `SearchMessageResult`。本方法主要读取 `findResultItems`；完整返回字段见[搜索消息](/sdk/wasm/message/searching-messages/search-messages)。
+
+一次调用可以包含多个会话条件。不要假设响应项与输入条件数组位置一致，应按结果的 `conversationID` 和消息的 `clientMsgID` 对应。缓存未同步、消息已删除或 ID 不存在时可能没有结果；查询不会触发消息事件。

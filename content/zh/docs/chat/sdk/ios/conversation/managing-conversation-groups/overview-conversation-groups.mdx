@@ -1,0 +1,75 @@
+---
+title: '会话分组概览'
+description: '了解 OpenIM iOS SDK 会话分组的数据边界和 listener 生命周期。'
+sourcePath: '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组用于整理当前登录用户的会话列表。它管理 `conversationID` 与分组的关系，不会创建聊天群组、修改群成员，也不会改变消息发送目标。
+
+iOS enterprise SDK 通过随 `OpenIMSDK` 发布的 `OpenIMCore` Objective-C 函数提供会话分组能力，尚未封装成 `OIMManager` 高阶 model API。请求、返回结果和 listener 载荷都是 JSON `NSString`；应用应使用 `NSJSONSerialization` 解析，不要虚构 `OIMConversationGroup` 类。
+
+## 分组类型
+
+| 数值 | 用途 |
+| ---: | --- |
+| `0` | 普通自定义分组，可由用户创建和维护。 |
+| `1` | 由 SDK 或服务端筛选规则维护的分组。 |
+| `2` | 查询全部类型时使用，不能作为创建类型。 |
+
+普通用户分类使用 `0`。筛选分组的生成规则取决于当前 OpenIMServer 部署。
+
+## 可用操作
+
+- [创建会话分组](/sdk/ios/conversation/managing-conversation-groups/create-conversation-group)
+- [查询会话分组](/sdk/ios/conversation/managing-conversation-groups/get-conversation-groups)
+- [查询分组内的会话](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [查询会话所属的分组](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [更新会话分组](/sdk/ios/conversation/managing-conversation-groups/update-conversation-group)
+- [设置会话分组顺序](/sdk/ios/conversation/managing-conversation-groups/set-conversation-group-order)
+- [添加会话到分组](/sdk/ios/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [从分组移除会话](/sdk/ios/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [删除会话分组](/sdk/ios/conversation/managing-conversation-groups/delete-conversation-group)
+
+## 设置会话分组 listener
+
+`Open_im_sdkSetConversationGroupListener` 只保存一个 `Open_im_sdk_callbackOnConversationGroupListener`。它没有公开的 remove 或 unset 函数，因此应由账号级状态层强引用并集中设置一次。
+
+```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
+@interface ConversationGroupStore () <Open_im_sdk_callbackOnConversationGroupListener>
+@end
+
+@implementation ConversationGroupStore
+
+- (void)startListening {
+    Open_im_sdkSetConversationGroupListener(self);
+}
+
+- (void)onConversationGroupAdded:(NSString * _Nullable)json {
+    [self mergeConversationGroupsJSON:json];
+}
+
+- (void)onConversationGroupChanged:(NSString * _Nullable)json {
+    [self mergeConversationGroupsJSON:json];
+}
+
+- (void)onConversationGroupDeleted:(NSString * _Nullable)json {
+    [self removeConversationGroupsJSON:json];
+}
+
+- (void)onConversationGroupMemberAdded:(NSString * _Nullable)json {
+    [self mergeConversationGroupMembersJSON:json];
+}
+
+- (void)onConversationGroupMemberDeleted:(NSString * _Nullable)json {
+    [self removeConversationGroupMembersJSON:json];
+}
+
+@end
+```
+
+新增、变更和删除载荷是分组 JSON 数组；成员变更载荷包含 `group`、`conversationIDs` 和 `conversations`。分组按 `conversationGroupID` 幂等合并，成员关系再结合 `conversationID`。
+
+切换账号时，应停止旧 listener 向界面分发，再用新账号的完整 listener 覆盖。调用成功、listener 增量到达和重新查询快照是三个独立阶段。

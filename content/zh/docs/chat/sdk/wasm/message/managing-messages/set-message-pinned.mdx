@@ -1,0 +1,33 @@
+---
+title: '置顶或取消置顶消息'
+description: '使用 WASM SDK 置顶或取消置顶一条消息。'
+sourcePath: '/sdk/wasm/message/managing-messages/set-message-pinned'
+---
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 消息所在的会话 ID。 |
+| `clientMsgID` | `string` | 是 | 要置顶或取消置顶的消息 ID。 |
+| `pinned` | `boolean` | 是 | `true` 表示置顶，`false` 表示取消置顶。 |
+
+```ts
+await openimsdk.setConversationPinnedMsg({
+  conversationID,
+  clientMsgID: message.clientMsgID,
+  pinned: true,
+});
+```
+
+权限、消息类型和数量限制由 OpenIMServer 校验。Promise 成功表示置顶请求已完成，不表示变更事件已经到达。
+
+本页唯一归属 `CbEvents.OnChangedPinnedMsg`。处理函数按 `conversationID` 替换置顶集合，并按 `item.msg.clientMsgID` 去重；注册时使用稳定引用并在账号作用域结束时用同一引用调用 `off()`。
+
+```ts
+const handlePinnedChanged = ({ data }) =>
+  replacePinnedMessageDetails(data.conversationID, data.msgs);
+openimsdk.on(CbEvents.OnChangedPinnedMsg, handlePinnedChanged);
+const removePinnedListener = () =>
+  openimsdk.off(CbEvents.OnChangedPinnedMsg, handlePinnedChanged);
+```

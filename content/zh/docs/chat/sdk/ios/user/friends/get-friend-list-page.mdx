@@ -1,0 +1,56 @@
+---
+title: '分页获取好友列表'
+description: '分页获取 iOS 当前用户的好友列表。'
+sourcePath: '/sdk/ios/user/friends/get-friend-list-page'
+---
+
+使用分页 selector 读取 `OIMFriendInfo`，不要一次加载完整好友列表。
+
+```objc
+[[OIMManager manager] getFriendListPageWithOffset:0
+                                             count:50
+                                       filterBlack:YES
+                                         onSuccess:^(NSArray<OIMFriendInfo *> *friends) {
+                                             [friendStore replaceFirstPage:friends];
+                                         }
+                                         onFailure:nil];
+```
+
+`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 决定是否过滤黑名单用户。成功 callback 返回当前页；加载更多时按已请求的条目数增加偏移量，并按 `userID` 去重。
+
+查询只建立快照，不触发好友 delegate。
+
+## 同步好友变化
+
+本页是 `onFriendAdded:`、`onFriendInfoChanged:` 和 `onFriendDeleted:` 的完整处理归属页。应用应强引用同一个 `OIMFriendshipListener` 实例，并用同一实例添加和移除。
+
+```objc
+@interface FriendshipStore () <OIMFriendshipListener>
+@end
+
+@implementation FriendshipStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addFriendListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeFriendListener:self];
+}
+
+- (void)onFriendAdded:(OIMFriendInfo *)info {
+    [friendStore mergeFriend:info];
+}
+
+- (void)onFriendInfoChanged:(OIMFriendInfo *)info {
+    [friendStore mergeFriend:info];
+}
+
+- (void)onFriendDeleted:(OIMFriendInfo *)info {
+    [friendStore removeUserID:info.userID];
+}
+
+@end
+```
+
+查询快照与 delegate 增量分别处理，并始终按 `userID` 合并。退出登录、切换账号或销毁联系人状态层时调用 `stopListening`。

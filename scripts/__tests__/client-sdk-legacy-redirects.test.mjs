@@ -15,17 +15,11 @@ test('maps reviewed WASM redirects only when the native destination is active', 
     aliases: readJson('data/structure/ios-legacy-redirect-aliases.json'),
   });
   assert.ok(
-    entries.some(
-      ({ source, destination }) =>
-        source === '/sdk/ios/channel/creating-a-channel/create-a-channel' &&
-        destination === '/sdk/ios/group/creating-and-updating-groups/create-or-update-a-group',
-    ),
+    !entries.some(({ source }) => source === '/sdk/ios/channel/creating-a-channel/create-a-channel'),
   );
   assert.ok(
-    entries.some(
-      ({ source, destination }) =>
-        source === '/sdk/ios/calling/synchronizing-calls/synchronize-call-events' &&
-        destination === '/sdk/ios/calling/managing-calls/start-or-handle-a-call',
+    !entries.some(
+      ({ source }) => source === '/sdk/ios/calling/synchronizing-calls/synchronize-call-events',
     ),
   );
   assert.ok(

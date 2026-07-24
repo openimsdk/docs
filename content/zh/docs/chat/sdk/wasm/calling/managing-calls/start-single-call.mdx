@@ -1,0 +1,68 @@
+---
+title: '发起单聊通话'
+description: '使用 WASM SDK 发起单聊音视频通话。'
+sourcePath: '/sdk/wasm/calling/managing-calls/start-single-call'
+---
+
+`signalingInvite()` 发起单聊通话。WASM SDK 负责通话信令，应用仍需使用返回的房间凭据接入实时音视频媒体引擎。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `invitation` | `RtcInvite` | 是 | 本次通话邀请。 |
+| `invitation.inviterUserID` | `string` | 是 | 当前登录用户 ID。 |
+| `invitation.inviteeUserIDList` | `string[]` | 是 | 被邀请用户列表；单聊只填写对方一个用户。 |
+| `invitation.groupID` | `string` | 是 | 单聊固定传空字符串。 |
+| `invitation.roomID` | `string` | 是 | 本次通话的唯一房间标识，后续状态按它合并。 |
+| `invitation.timeout` | `number` | 是 | 邀请等待时长，单位为秒。 |
+| `invitation.mediaType` | `string` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |
+| `invitation.sessionType` | `SessionType` | 是 | 单聊使用 `SessionType.Single`。 |
+| `invitation.platformID` | `Platform` | 是 | 当前客户端平台；网页端使用 `Platform.Web`。 |
+| `invitation.customData` | `string` | 否 | 随邀请携带的业务扩展字符串。 |
+| `invitation.initiateTime` | `number` | 否 | 邀请发起时间。通常由信令链路维护，无需手动填写。 |
+| `invitation.busyLineUserIDList` | `string[]` | 否 | 忙线用户列表。发起新邀请时通常不填写。 |
+| `offlinePushInfo` | `OfflinePush` | 否 | 被邀请人离线时使用的推送内容。 |
+| `offlinePushInfo.title` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写推送标题。 |
+| `offlinePushInfo.desc` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写推送正文。 |
+| `offlinePushInfo.ex` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写扩展字符串；没有内容时传空字符串。 |
+| `offlinePushInfo.iOSPushSound` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写 iOS 推送声音。 |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | 条件必填 | 提供 `offlinePushInfo` 时说明是否更新 iOS 角标。 |
+
+```ts
+import { Platform, SessionType } from '@openim/wasm-client-sdk';
+
+const { data: roomCredentials } = await openimsdk.signalingInvite({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: [peerUserID],
+    customData: JSON.stringify({ source: 'contact-card' }),
+    groupID: '',
+    roomID: crypto.randomUUID(),
+    timeout: 30,
+    mediaType: 'video',
+    sessionType: SessionType.Single,
+    platformID: Platform.Web,
+  },
+  offlinePushInfo: {
+    title: '视频通话',
+    desc: '你收到一个视频通话邀请',
+    ex: '',
+    iOSPushSound: 'default',
+    iOSBadgeCount: true,
+  },
+});
+```
+
+## 返回结果
+
+Promise 成功后，`data` 是 `RtcInviteResults`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `roomID` | `string` | 本次通话的媒体房间 ID，应与信令邀请中的房间保持一致。 |
+| `token` | `string` | 加入媒体房间使用的短期凭据，只应保存在内存中。 |
+| `liveURL` | `string` | 媒体服务返回的房间连接地址；是否使用由所接入的媒体引擎决定。 |
+| `busyLineUserIDList` | `string[]`（可选） | 因忙线未能进入本次邀请流程的用户 ID。 |
+
+获取有效的 `token` 和 `roomID` 后再连接媒体房间。Promise 成功只表示信令请求完成并取得房间凭据，不表示对方已经接听；后续状态见[通话事件](/sdk/wasm/calling/managing-calls/handle-call-events)。

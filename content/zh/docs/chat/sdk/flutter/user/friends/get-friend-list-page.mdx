@@ -1,0 +1,34 @@
+---
+title: '分页获取好友列表'
+description: '分页获取 Flutter 当前用户的好友列表。'
+sourcePath: '/sdk/flutter/user/friends/get-friend-list-page'
+---
+
+```dart
+final friends = await OpenIM.iMManager.friendshipManager.getFriendListPage(
+  offset: 0,
+  count: 40,
+  filterBlack: true,
+);
+```
+
+`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 决定是否过滤黑名单用户。Future 成功返回当前页 `List<FriendInfo>`；按 `userID` 追加去重，返回数量小于页大小时通常表示到达末页。
+
+只使用分页 API，不使用非分页的 `getFriendList()`。查询不会触发好友 listener。
+
+## 同步好友变化
+
+本页是 `onFriendAdded`、`onFriendInfoChanged` 和 `onFriendDeleted` 的状态处理归属页：
+
+```dart
+void handleFriendChanged(FriendInfo info) {
+  mergeFriend(info);
+}
+
+void handleFriendDeleted(FriendInfo info) {
+  final userID = info.userID;
+  if (userID != null) removeFriend(userID);
+}
+```
+
+Flutter SDK 只保存一个 `OnFriendshipListener`。把以上函数放入联系人状态层，并在[事件概览](/sdk/flutter/events/overview-events)的应用级组合入口中设置一次；不要让多个 Widget 分别覆盖 listener。快照和增量都按 `userID` 合并。

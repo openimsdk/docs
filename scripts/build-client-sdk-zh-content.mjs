@@ -128,9 +128,11 @@ export function resolvePlatformRoutes({ platform, routesData, sidebar }) {
     const existing = routeByPath.get(path);
     const suffix = path.replace(`${platform.routePrefix}/`, '');
     const baseline = wasmBySuffix.get(suffix);
-    if (!baseline) throw new Error(`[${platform.id}] no structural route baseline for ${path}`);
+    if (!baseline && !existing)
+      throw new Error(`[${platform.id}] no structural route or platform extension for ${path}`);
+    const structuralRoute = baseline ?? existing;
     return {
-      ...baseline,
+      ...structuralRoute,
       ...existing,
       contextKey: platform.contextKey,
       navOrder: index,
@@ -139,9 +141,9 @@ export function resolvePlatformRoutes({ platform, routesData, sidebar }) {
       title:
         suffix === 'overview'
           ? platform.id === 'wasm'
-            ? baseline.title
+            ? structuralRoute.title
             : `OpenIM SDK for ${platform.id === 'ios' ? 'iOS' : 'Flutter'}`
-          : baseline.title,
+          : structuralRoute.title,
     };
   });
 }

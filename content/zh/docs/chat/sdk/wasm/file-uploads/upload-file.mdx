@@ -1,0 +1,56 @@
+---
+title: '上传文件'
+description: '使用 WASM SDK 独立上传文件并取得资源 URL。'
+sourcePath: '/sdk/wasm/file-uploads/upload-file'
+---
+
+`uploadFile()` 是独立上传能力，可用于头像、群头像、资料附件或其他业务文件，不从属于消息，也不会自动创建消息。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `name` | `string` | 是 | 文件名。 |
+| `contentType` | `string` | 是 | MIME 类型。 |
+| `uuid` | `string` | 是 | 本次上传的本地稳定标识。 |
+| `file` | `File` | 条件必填 | 浏览器环境中的文件对象；与 `filepath` 任选其一。 |
+| `filepath` | `string` | 条件必填 | 支持文件路径的运行环境中使用；与 `file` 任选其一。 |
+| `cause` | `string` | 否 | 业务约定的上传原因。 |
+
+```ts
+const { data } = await openimsdk.uploadFile({
+  name: file.name,
+  contentType: file.type || 'application/octet-stream',
+  uuid: crypto.randomUUID(),
+  file,
+  cause: 'user-avatar',
+});
+
+await saveAvatarURL(data.url);
+```
+
+Promise 成功后使用 `data.url` 作为远端资源地址。它只表示上传请求成功，不表示头像资料已经更新，也不表示聊天消息已经创建或发送；后续业务写入必须单独完成。若资源随后用于聊天，应使用返回的 URL 创建对应消息对象，再显式发送。
+
+## 监听上传进度
+
+`CbEvents.OnProgress` 提供上传进度，`CbEvents.UploadComplete` 提供完成信息。处理函数必须保持稳定引用，并在账号或状态层销毁时用同一引用调用 `off()`：
+
+```ts
+function handleUploadProgress({ data }) {
+  updateUploadProgress(data.clientMsgID, data.progress);
+}
+
+function handleUploadComplete({ data }) {
+  completeUpload(data.uuid, data.fileSize, data.streamSize);
+}
+
+openimsdk.on(CbEvents.OnProgress, handleUploadProgress);
+openimsdk.on(CbEvents.UploadComplete, handleUploadComplete);
+
+function removeUploadListeners() {
+  openimsdk.off(CbEvents.OnProgress, handleUploadProgress);
+  openimsdk.off(CbEvents.UploadComplete, handleUploadComplete);
+}
+```
+
+独立上传任务应使用业务生成的稳定 ID 关联状态。不要用文件名或数组位置匹配并行上传。

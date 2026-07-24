@@ -4,30 +4,17 @@ description: '在本地已同步消息中按关键词与会话条件搜索。'
 sourcePath: '/sdk/wasm/message/searching-messages/search-messages'
 ---
 
-OpenIMClientSDK 通过 `searchLocalMessages()` 搜索当前用户本地可见的消息。群组消息搜索的目标参数是群聊对应的 `conversationID`，不是发送消息时使用的 `groupID`。如果界面只保存了 `groupID`，先用 `getConversationIDBySessionType()` 取得群会话 ID。
+WASM SDK 通过 `searchLocalMessages()` 搜索当前用户本地可见的消息。群组消息搜索的目标参数是群聊对应的 `conversationID`，不是发送消息时使用的 `groupID`。如果界面只保存了 `groupID`，先按[获取会话 ID](/sdk/wasm/conversation/retrieving-conversations/get-conversation-id)取得群会话 ID。
 
 搜索范围来自 SDK 已同步到浏览器本地缓存的消息。需要跨用户审计、服务端全量检索、复杂权限过滤或全局排序时，应由后端搜索服务承担，再把命中的 `conversationID` 和 `clientMsgID` 返回给客户端定位。
 
 ## 创建搜索查询
 
-群聊会话使用 `SessionType.WorkingGroup`。拿到 `conversationID` 后，把它和 `groupID` 一起保存在聊天页状态中，后续读取历史、搜索消息和标记已读都可以复用。
-
-```ts
-import { MessageType, SessionType } from '@openim/wasm-client-sdk';
-
-const getGroupConversationID = async (groupID: string) => {
-  const { data } = await openimsdk.getConversationIDBySessionType({
-    sourceID: groupID,
-    sessionType: SessionType.WorkingGroup,
-  });
-
-  return data;
-};
-```
-
 `keywordList` 接收一个或多个关键词。搜索框通常只代表一次用户输入，建议先去掉首尾空格并过滤空值，避免把空关键词传给 SDK。
 
 ```ts
+import { MessageType } from '@openim/wasm-client-sdk';
+
 type SearchGroupMessagesOptions = {
   conversationID: string;
   keyword: string;
@@ -67,7 +54,7 @@ const searchGroupMessagesByKeyword = async ({
 
 ## 高级搜索
 
-`searchLocalMessages()` 支持在关键词之外限制发送者、消息类型和时间窗口。你可以用这些条件实现群成员筛选、只搜文本消息、按时间段缩小范围等高级搜索能力。
+`searchLocalMessages()` 支持在关键词之外限制发送者、消息类型和时间窗口。这些条件可用于按群成员筛选、仅搜索文本消息，或按时间段缩小搜索范围。
 
 ```ts
 const { data } = await openimsdk.searchLocalMessages({
@@ -88,19 +75,36 @@ const { data } = await openimsdk.searchLocalMessages({
 
 | 参数                   | 类型            | 是否必填 | 说明                                                            |
 | ---------------------- | --------------- | -------- | --------------------------------------------------------------- |
-| `conversationID`       | `string`        | 必填     | 要搜索的会话 ID。                                               |
-| `keywordList`          | `string[]`      | 必填     | 关键词列表；单个搜索框通常传入一个清理后的关键词。              |
-| `keywordListMatchType` | `number`        | 可选     | 多关键词匹配方式，使用 SDK 的数字约定；不需要特殊匹配时可省略。 |
-| `senderUserIDList`     | `string[]`      | 可选     | 只搜索这些用户发送的消息。                                      |
-| `messageTypeList`      | `MessageType[]` | 可选     | 只搜索指定类型的消息，例如文本消息和 @ 文本消息。               |
-| `searchTimePosition`   | `number`        | 可选     | 搜索时间窗口的起点时间戳。                                      |
-| `searchTimePeriod`     | `number`        | 可选     | 从 `searchTimePosition` 开始的时间跨度。                        |
-| `pageIndex`            | `number`        | 可选     | 搜索结果页码。                                                  |
-| `count`                | `number`        | 可选     | 每页返回数量。                                                  |
+| `conversationID`       | `string`        | 是       | 要搜索的会话 ID。                                               |
+| `keywordList`          | `string[]`      | 是       | 关键词列表；单个搜索框通常传入一个清理后的关键词。              |
+| `keywordListMatchType` | `number`        | 否       | 多关键词匹配方式，使用 SDK 的数字约定；不需要特殊匹配时可省略。 |
+| `senderUserIDList`     | `string[]`      | 否       | 只搜索这些用户发送的消息。                                      |
+| `messageTypeList`      | `MessageType[]` | 否       | 只搜索指定类型的消息，例如文本消息和 @ 文本消息。               |
+| `searchTimePosition`   | `number`        | 否       | 搜索时间窗口的起点时间戳。                                      |
+| `searchTimePeriod`     | `number`        | 否       | 从 `searchTimePosition` 开始的时间跨度。                        |
+| `pageIndex`            | `number`        | 否       | 搜索结果页码。                                                  |
+| `count`                | `number`        | 否       | 每页返回数量。                                                  |
 
 ## 处理分页结果
 
 返回的 `SearchMessageResult` 包含 `totalCount` 和 `searchResultItems`。每个结果项对应一个会话，并在 `messageList` 中携带匹配到的 `MessageItem[]`。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `totalCount` | `number` | 当前搜索条件下匹配的消息总数。 |
+| `searchResultItems` | `SearchMessageResultItem[]`（可选） | `searchLocalMessages()` 返回的按会话分组结果。 |
+| `findResultItems` | `SearchMessageResultItem[]`（可选） | `findMessageList()` 按 ID 查找时返回的分组结果。 |
+
+每个 `SearchMessageResultItem` 的结构如下：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `string` | 结果所属的会话 ID。 |
+| `conversationType` | `SessionType` | 结果所属的会话类型。 |
+| `showName` | `string` | 会话展示名称快照。 |
+| `faceURL` | `string` | 会话展示头像快照。 |
+| `messageCount` | `number` | 当前结果项中的匹配消息数量。 |
+| `messageList` | `MessageItem[]` | 匹配消息，字段含义见[消息概览](/sdk/wasm/message/overview-message)。 |
 
 ```ts
 import type { SearchMessageResult } from '@openim/wasm-client-sdk';
@@ -123,31 +127,18 @@ const toSearchRows = (result: SearchMessageResult) => {
 
 分页时继续传入相同的 `conversationID`、`keywordList` 和筛选条件，只递增 `pageIndex`。如果用户修改关键词、成员筛选或时间范围，应把 `pageIndex` 重置为 `1`，并清空旧结果，避免不同条件的结果混在一起。
 
-`getConversationIDBySessionType()` 和 `searchLocalMessages()` 的 Promise 成功后，直接使用返回值建立会话 ID 与搜索结果快照。两个查询都不会触发消息事件；同一搜索页内按 `conversationID + clientMsgID` 去重，不要按结果位置保存选中项。
+`searchLocalMessages()` 的 Promise 成功后，使用返回值建立搜索结果快照。查询不会触发消息事件；同一搜索页内按 `conversationID + clientMsgID` 去重，不要按结果位置保存选中项。
 
 ## 处理搜索结果变化
 
-搜索命中的消息可能在页面打开后被撤回、删除或由新同步数据补充。聊天页应按[接收消息](/sdk/wasm/message/receiving-messages/receive-messages)、[删除消息](/sdk/wasm/message/managing-messages/delete-a-message)和[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)中的统一事件处理器更新结果；本页只负责搜索查询和分页，不重复注册消息事件。
+搜索命中的消息可能在页面打开后被撤回、删除，搜索范围也可能因新同步的消息发生变化。聊天页面应通过[接收消息](/sdk/wasm/message/receiving-messages/receive-messages)、[批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)和[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)中的统一事件处理器更新结果；本页只负责搜索查询和分页，不重复注册消息事件。
 
-跳转到某条搜索结果时，使用结果中的 `conversationID` 和 `clientMsgID` 定位目标会话与消息。需要展示该消息前后的聊天记录时，把搜索命中的 `MessageItem` 作为 `startMessage`，调用 `fetchSurroundingMessages()` 读取上下文；不要用 `findMessageList()` 去拼附近的聊天记录。`findMessageList()` 只适合按 ID 取回单条或多条消息本身，周边上下文的参数、示例和返回结构见[按 ID 定位消息](/sdk/wasm/message/retrieving-messages/locate-messages-by-id)。
-
-```ts
-import { ViewType } from '@openim/wasm-client-sdk';
-
-const { data: surrounding } = await openimsdk.fetchSurroundingMessages({
-  startMessage: hit.message,
-  viewType: ViewType.History,
-  before: 20,
-  after: 20,
-});
-
-renderMessages(surrounding.messageList);
-```
+跳转到某条搜索结果时，使用结果中的 `conversationID` 和 `clientMsgID` 定位目标会话与消息。需要展示该消息前后的聊天记录时，把搜索命中的 `MessageItem` 作为起点读取上下文；参数、示例和返回结构见[读取消息上下文](/sdk/wasm/message/retrieving-messages/load-message-context)。不要用 `findMessageList()` 拼接附近的聊天记录。
 
 需要显示当前时刻的搜索结果时，可以用相同条件重新执行当前页搜索。搜索 Promise、消息事件增量和重新查询是三条独立路径，重新登录后的消息变化由事件同步。
 
 ## 相关页面
 
-- [按 ID 定位消息](/sdk/wasm/message/retrieving-messages/locate-messages-by-id)
-- [获取消息历史](/sdk/wasm/message/retrieving-messages/retrieve-message-history)
+- [按 ID 查找消息](/sdk/wasm/message/retrieving-messages/find-messages-by-id)
+- [加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)
 - [接收消息](/sdk/wasm/message/receiving-messages/receive-messages)

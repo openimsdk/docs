@@ -13,6 +13,7 @@ const nextConfig = {
   ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   distDir: process.env.NODE_ENV === 'development' ? '.next-local' : '.next',
   reactStrictMode: true,
+  allowedDevOrigins: ['127.0.0.1'],
   // `npm run check` performs strict TypeScript validation. Skipping the duplicate
   // Next.js build-time pass avoids reparsing the dynamic MDX manifest.
   typescript: { ignoreBuildErrors: true },

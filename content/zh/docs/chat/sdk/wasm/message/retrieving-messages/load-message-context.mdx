@@ -1,0 +1,33 @@
+---
+title: '读取消息上下文'
+description: '使用 WASM SDK 读取一条消息前后的上下文。'
+sourcePath: '/sdk/wasm/message/retrieving-messages/load-message-context'
+---
+
+从搜索结果或引用消息跳入聊天上下文时，把已经取得的 `MessageItem` 作为锚点：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `startMessage` | `MessageItem` | 是 | 已经取得的锚点消息。 |
+| `viewType` | `ViewType` | 是 | 上下文查看方向；历史消息使用 `ViewType.History`。 |
+| `before` | `number` | 是 | 锚点之前最多读取的消息数量。 |
+| `after` | `number` | 是 | 锚点之后最多读取的消息数量。 |
+
+```ts
+import { ViewType } from '@openim/wasm-client-sdk';
+
+const { data: surrounding } = await openimsdk.fetchSurroundingMessages({
+  startMessage: targetMessage,
+  viewType: ViewType.History,
+  before: 20,
+  after: 20,
+});
+
+renderMessages(surrounding.messageList);
+```
+
+Promise 成功后，`data.messageList` 是锚点前后取得的 `MessageItem[]`，消息字段见[消息概览](/sdk/wasm/message/overview-message)。
+
+`before` 和 `after` 分别限制锚点前后的数量。返回结果可能少于请求总数，例如锚点靠近边界或部分消息已删除。按 `conversationID:clientMsgID` 合并，不要依赖固定数组位置。需要先定位消息时见[按 ID 查找消息](/sdk/wasm/message/retrieving-messages/find-messages-by-id)。

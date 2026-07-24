@@ -1,0 +1,53 @@
+---
+title: '处理通话事件'
+description: '集中监听 WASM SDK 的通话邀请、参与者和媒体流事件。'
+sourcePath: '/sdk/wasm/calling/managing-calls/handle-call-events'
+---
+
+通话状态层集中监听邀请生命周期、参与者连接状态和媒体流变化，并按 `roomID` 合并到同一份本地状态。
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handlers = {
+  invitation: ({ data }) => upsertCall({ invitation: data, state: 'ringing' }),
+  accepted: ({ data }) => mergeCallEvent('accepted', data),
+  rejected: ({ data }) => mergeCallEvent('rejected', data),
+  cancelled: ({ data }) => mergeCallEvent('cancelled', data),
+  timeout: ({ data }) => mergeCallEvent('timeout', data),
+  acceptedByOtherDevice: ({ data }) => mergeCallEvent('accepted-by-other-device', data),
+  rejectedByOtherDevice: ({ data }) => mergeCallEvent('rejected-by-other-device', data),
+  hangUp: ({ data }) => finishCall(getCallRoomID(data)),
+  participantConnected: ({ data }) => addParticipant(data),
+  participantDisconnected: ({ data }) => removeParticipant(data),
+  streamChanged: ({ data }) => updateParticipantStream(data),
+};
+
+openimsdk.on(CbEvents.OnReceiveNewInvitation, handlers.invitation);
+openimsdk.on(CbEvents.OnInviteeAccepted, handlers.accepted);
+openimsdk.on(CbEvents.OnInviteeRejected, handlers.rejected);
+openimsdk.on(CbEvents.OnInvitationCancelled, handlers.cancelled);
+openimsdk.on(CbEvents.OnInvitationTimeout, handlers.timeout);
+openimsdk.on(CbEvents.OnInviteeAcceptedByOtherDevice, handlers.acceptedByOtherDevice);
+openimsdk.on(CbEvents.OnInviteeRejectedByOtherDevice, handlers.rejectedByOtherDevice);
+openimsdk.on(CbEvents.OnHangUp, handlers.hangUp);
+openimsdk.on(CbEvents.OnRoomParticipantConnected, handlers.participantConnected);
+openimsdk.on(CbEvents.OnRoomParticipantDisconnected, handlers.participantDisconnected);
+openimsdk.on(CbEvents.OnStreamChange, handlers.streamChanged);
+
+function removeCallListeners() {
+  openimsdk.off(CbEvents.OnReceiveNewInvitation, handlers.invitation);
+  openimsdk.off(CbEvents.OnInviteeAccepted, handlers.accepted);
+  openimsdk.off(CbEvents.OnInviteeRejected, handlers.rejected);
+  openimsdk.off(CbEvents.OnInvitationCancelled, handlers.cancelled);
+  openimsdk.off(CbEvents.OnInvitationTimeout, handlers.timeout);
+  openimsdk.off(CbEvents.OnInviteeAcceptedByOtherDevice, handlers.acceptedByOtherDevice);
+  openimsdk.off(CbEvents.OnInviteeRejectedByOtherDevice, handlers.rejectedByOtherDevice);
+  openimsdk.off(CbEvents.OnHangUp, handlers.hangUp);
+  openimsdk.off(CbEvents.OnRoomParticipantConnected, handlers.participantConnected);
+  openimsdk.off(CbEvents.OnRoomParticipantDisconnected, handlers.participantDisconnected);
+  openimsdk.off(CbEvents.OnStreamChange, handlers.streamChanged);
+}
+```
+
+本页是以上 11 个通话事件的唯一完整监听归属页。参与者状态还要结合用户 ID 更新；不要按事件顺序、展示名称或数组下标合并。退出登录、切换账号或销毁通话状态层时调用 `removeCallListeners()`。

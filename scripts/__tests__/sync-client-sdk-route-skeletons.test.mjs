@@ -6,6 +6,7 @@ import {
   buildClientSdkSkeleton,
   isGeneratedClientSdkSkeleton,
   replaceClientSdkRouteRecords,
+  resolveClientSdkRouteTitle,
   resolveClientSdkSkeletonRoutes,
 } from '../sync-client-sdk-route-skeletons.mjs';
 
@@ -42,7 +43,7 @@ test('replaces legacy platform route records with the reviewed active tree', () 
   const sidebar = readJson('data/structure/ios-sidebar.json');
   const next = replaceClientSdkRouteRecords({ platformId: 'ios', sidebar, routes: original });
   const ios = next.filter((route) => route.contextKey === 'chat/sdk/ios');
-  assert.equal(ios.length, 60);
+  assert.equal(ios.length, getSidebarPathCount(sidebar));
   assert.deepEqual(
     ios.map((route) => route.path),
     resolveClientSdkSkeletonRoutes({ platformId: 'ios', sidebar, routes: original }).map(
@@ -65,11 +66,43 @@ test('resolves every active native suffix against the current WASM routes', () =
   for (const platformId of ['ios', 'flutter']) {
     const sidebar = readJson(`data/structure/${platformId}-sidebar.json`);
     const resolved = resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes });
-    assert.equal(resolved.length, 60);
+    assert.equal(resolved.length, getSidebarPathCount(sidebar));
     assert.equal(resolved[0].path, `/sdk/${platformId}/overview`);
     assert.equal(resolved[0].title, `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`);
   }
 });
+
+test('uses each native SDK method name while preserving the shared WASM route suffix', () => {
+  const suffix =
+    'conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id';
+  assert.equal(
+    resolveClientSdkRouteTitle({
+      platformId: 'ios',
+      suffix,
+      baselineTitle: 'getConversationGroupIDsByConversationID',
+    }),
+    'Open_im_sdkGetConversationGroupByConversationID',
+  );
+  assert.equal(
+    resolveClientSdkRouteTitle({
+      platformId: 'flutter',
+      suffix,
+      baselineTitle: 'getConversationGroupIDsByConversationID',
+    }),
+    'getConversationGroupByConversationID',
+  );
+});
+
+function getSidebarPathCount(sidebar) {
+  const count = (nodes) =>
+    nodes.reduce(
+      (total, node) =>
+        total +
+        (typeof node === 'string' || node.path ? 1 : count(node.children ?? [])),
+      0,
+    );
+  return count(sidebar.nodes);
+}
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));

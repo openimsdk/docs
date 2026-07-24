@@ -1,0 +1,25 @@
+---
+title: '标记会话已读'
+description: '使用 iOS SDK 将指定会话的消息标记为已读。'
+sourcePath: '/sdk/ios/conversation/managing-conversations/mark-conversation-read'
+---
+
+用户打开会话并阅读完当前可见消息后调用：
+
+```objc
+[[OIMManager manager] markConversationMessageAsRead:conversationID
+                                           onSuccess:nil
+                                           onFailure:nil];
+```
+
+不要在只预览通知或后台收到消息时提前标记。成功 callback 表示请求完成，不等于 `onConversationChanged:` 已到达；随后按 `conversationID` 合并最新会话，需要立即确认时重新查询。
+
+对于单聊，当前用户标记会话已读后，对端可通过 `onRecvC2CReadReceipt:` 收到消息已读回执。本页是该 delegate 的正文归属页；先按对端用户定位单聊会话，再按每项 `msgIDList` 中的 `clientMsgID` 更新已读状态。
+
+```objc
+- (void)onRecvC2CReadReceipt:(NSArray<OIMReceiptInfo *> *)items {
+    [self mergeC2CReceipts:items ?: @[]];
+}
+```
+
+承载该回调的稳定 listener 需要成对调用 `addAdvancedMsgListener:` 与 `removeAdvancedMsgListener:`，完整生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。群聊中调用本 API 只清理当前账号的会话未读数；成员级回执另见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。

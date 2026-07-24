@@ -31,17 +31,40 @@ test('registers the supported client SDK platforms and their structure paths', (
   assert.throws(() => getClientSdkPlatform('android'), /Unknown client SDK platform: android/);
 });
 
-test('native sidebars preserve supported WASM route suffixes in order', () => {
+test('native sidebars keep unique platform routes and may extend the WASM structure', () => {
   const wasmPaths = getClientSdkSidebarPaths(wasmSidebar);
+  const wasmSuffixes = new Set(wasmPaths.map((path) => path.replace('/sdk/wasm/', '')));
 
   for (const platform of ['ios', 'flutter']) {
     const sidebar = readJson(`data/structure/${platform}-sidebar.json`);
     const paths = getClientSdkSidebarPaths(sidebar);
-    assert.equal(paths.length, 60, platform);
     assert.equal(new Set(paths).size, paths.length, platform);
-    const wasmSuffixes = new Set(wasmPaths.map((path) => path.replace('/sdk/wasm/', '')));
+    assert.ok(paths.every((path) => path.startsWith(`/sdk/${platform}/`)), platform);
     assert.ok(
-      paths.every((path) => wasmSuffixes.has(path.replace(`/sdk/${platform}/`, ''))),
+      paths.some((path) => !wasmSuffixes.has(path.replace(`/sdk/${platform}/`, ''))),
+      `${platform}: expected at least one platform-specific capability route`,
+    );
+  }
+});
+
+test('native conversation groups keep one API per page and one event overview', () => {
+  for (const platform of ['ios', 'flutter']) {
+    const audit = readJson(`data/structure/${platform}-content-audit.json`);
+    const pages = audit.pages.filter(
+      (page) =>
+        page.disposition !== 'omit' &&
+        page.currentPath.includes('/conversation/managing-conversation-groups/'),
+    );
+    assert.equal(pages.length, 10, platform);
+    const overview = pages.find((page) =>
+      page.currentPath.endsWith('/overview-conversation-groups'),
+    );
+    assert.ok(overview, platform);
+    assert.equal(overview.sdkEvents.length, 5, platform);
+    assert.ok(
+      pages
+        .filter((page) => page !== overview)
+        .every((page) => page.sdkMethods.length === 1 && page.sdkEvents.length === 0),
       platform,
     );
   }
