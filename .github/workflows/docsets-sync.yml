@@ -1,0 +1,174 @@
+name: Docsets sync proposal
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      docset_path:
+        description: 'Optional docset path to check, for example content/docs/chat/sdk/v4/wasm'
+        required: false
+        type: string
+      dry_run:
+        description: 'Collect diffs and run agent, but do not push a branch or open a PR'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docsets-sync-proposal
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MODEL: ${{ vars.MODEL }}
+      OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      PROPOSAL_BRANCH: docsets-sync/proposal
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'latest'
+
+      - name: Setup pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Collect upstream docsets diffs
+        id: collect
+        env:
+          DOCSET_PATH: ${{ inputs.docset_path }}
+        run: |
+          if [ -n "$DOCSET_PATH" ]; then
+            pnpm run docsets-sync:diff -- --path "$DOCSET_PATH"
+          else
+            pnpm run docsets-sync:diff
+          fi
+          echo "summary_sha256=$(sha256sum .docsets-sync/summary.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Log summary when no upstream changes were found
+        if: ${{ steps.collect.outputs.changed != 'true' }}
+        run: cat .docsets-sync/summary.md
+
+      - name: Check existing proposal
+        id: existing
+        if: ${{ steps.collect.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url="$(gh pr list \
+            --state open \
+            --head "$PROPOSAL_BRANCH" \
+            --json url \
+            --jq '.[0].url // ""')"
+          if [ -n "$url" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "url=$url" >> "$GITHUB_OUTPUT"
+            echo "A docsets sync proposal is already open: $url"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare proposal branch
+        if: ${{ steps.collect.outputs.changed == 'true' }}
+        run: git checkout -B "$PROPOSAL_BRANCH"
+
+      - name: Configure Codex multi-agent
+        id: codex_config
+        if: ${{ steps.collect.outputs.changed == 'true' }}
+        run: |
+          codex_home="$RUNNER_TEMP/codex-home"
+          mkdir -p "$codex_home"
+          cat > "$codex_home/config.toml" <<'EOF'
+          [agents]
+          max_depth = 1
+
+          [features.multi_agent_v2]
+          enabled = true
+          max_concurrent_threads_per_session = 16
+          EOF
+          echo "home=$codex_home" >> "$GITHUB_OUTPUT"
+
+      - name: Apply docsets diffs with Agent
+        id: codex
+        if: ${{ steps.collect.outputs.changed == 'true' }}
+        uses: openai/codex-action@v1
+        with:
+          model: ${{ env.MODEL }}
+          openai-api-key: ${{ env.OPENAI_API_KEY }}
+          responses-api-endpoint: ${{ env.OPENAI_BASE_URL }}/responses
+          prompt-file: .docsets-sync/prompt.md
+          codex-version: latest
+          codex-home: ${{ steps.codex_config.outputs.home }}
+
+      - name: Refresh docs and verify
+        if: ${{ steps.collect.outputs.changed == 'true' }}
+        env:
+          EXPECTED_SUMMARY_SHA256: ${{ steps.collect.outputs.summary_sha256 }}
+        run: |
+          echo "$EXPECTED_SUMMARY_SHA256  .docsets-sync/summary.json" | sha256sum --check -
+          pnpm run docsets-sync:verify-paths
+          pnpm run docsets-sync:lint-openapi
+          pnpm run docsets-sync:baseline
+          pnpm run content:sync
+          pnpm exec fumadocs-mdx
+          pnpm run check
+          pnpm run build
+
+      - name: Show dry-run diff
+        if: ${{ steps.collect.outputs.changed == 'true' && inputs.dry_run }}
+        run: |
+          git status --short
+          git diff --stat
+
+      - name: Commit changes
+        if: ${{ steps.collect.outputs.changed == 'true' && !inputs.dry_run }}
+        id: commit
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "docs: propose docsets sync"
+          git push --force-with-lease --set-upstream origin "$PROPOSAL_BRANCH"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update pull request
+        if: ${{ steps.collect.outputs.changed == 'true' && steps.commit.outputs.committed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          completed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          printf '\n---\n\n- Completed at (UTC): `%s`\n- Workflow run: %s\n' \
+            "$completed_at" "$run_url" >> .docsets-sync/summary.md
+
+          if [ "${{ steps.existing.outputs.exists }}" = "true" ]; then
+            gh pr edit "${{ steps.existing.outputs.url }}" \
+              --title "docs: update synced docsets" \
+              --body-file .docsets-sync/summary.md
+          else
+            gh pr create \
+              --base "${GITHUB_REF_NAME}" \
+              --head "$PROPOSAL_BRANCH" \
+              --title "docs: update synced docsets" \
+              --body-file .docsets-sync/summary.md
+          fi

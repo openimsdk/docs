@@ -1,0 +1,78 @@
+post:
+  tags:
+    - 'Statistics'
+  summary: 'StatisticsUserRegister'
+  description: 'OpenIM Server POST route handled by u.UserRegisterCount. It accepts the JSON serialization of user.UserRegisterCountReq. Documented fields reflect the upstream wire types; handler-specific validation may impose additional constraints.'
+  operationId: postStatisticsUserRegister
+  parameters:
+    - $ref: ../../components/common/operation-id.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          description: 'JSON serialization of user.UserRegisterCountReq, matching the upstream wire type.'
+          type: object
+          additionalProperties: false
+          properties:
+            'start':
+              type: integer
+              format: int64
+            'end':
+              type: integer
+              format: int64
+          x-source-schema-status: field-level
+          x-source-schema-kind: protobuf
+          x-source-protobuf-type: 'openim.user.userRegisterCountReq'
+        example:
+          start: 1710000000000
+          end: 1710086400000
+  responses:
+    '200':
+      description: OpenIM result envelope. Inspect errCode; zero indicates success.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: ../../components/common/api-envelope.yaml
+              - type: object
+                properties:
+                  data:
+                    description: User registration statistics result.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      'total':
+                        description: Total registered users returned by the query.
+                        type: integer
+                        format: int64
+                      'before':
+                        description: Registered-user count before the requested period.
+                        type: integer
+                        format: int64
+                      'count':
+                        description: Registration counts keyed by the response aggregation key.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'key':
+                              description: Aggregation key for this registration count.
+                              type: string
+                            'value':
+                              description: Registration count for this aggregation key.
+                              type: integer
+                              format: int64
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.user.userRegisterCountResp.CountEntry'
+                    x-source-schema-status: field-level
+                    x-source-schema-kind: protobuf
+                    x-source-protobuf-type: 'openim.user.userRegisterCountResp'
+  security:
+    - TokenAuth: []
+  x-source-handler: 'https://github.com/openimsdk/open-im-server/blob/v3.8.3-patch.16/internal/api/user.go'
+  x-source-gin-path: '/statistics/user/register'
+  x-source-request-type: 'user.UserRegisterCountReq'
+  x-source-response-type: 'user.UserRegisterCountResp'

@@ -1,0 +1,147 @@
+post:
+  tags:
+    - 'Messages'
+  x-export-category: Public
+  summary: 'MsgBatchSendMsg'
+  description: 'OpenIM Server POST route handled by m.BatchSendMsg. It accepts the JSON serialization of apistruct.BatchSendMsgReq. Documented fields reflect the upstream wire types; handler-specific validation may impose additional constraints.'
+  operationId: postMsgBatchSendMsg
+  parameters:
+    - $ref: ../../components/common/operation-id.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          description: 'JSON serialization of apistruct.BatchSendMsgReq, matching the upstream wire type.'
+          type: object
+          additionalProperties: false
+          properties:
+            'sendID':
+              type: string
+            'groupID':
+              type: string
+            'senderNickname':
+              type: string
+            'senderFaceURL':
+              type: string
+            'senderPlatformID':
+              type: integer
+              format: int32
+            'content':
+              type: object
+              additionalProperties: false
+              properties:
+                'content':
+                  type: string
+              x-source-schema-status: field-level
+              x-source-schema-kind: go
+              x-source-go-type: 'openim.apistruct.JsonObject'
+            'contentType':
+              type: integer
+              format: int32
+            'sessionType':
+              type: integer
+              format: int32
+            'isOnlineOnly':
+              type: boolean
+            'notOfflinePush':
+              type: boolean
+            'sendTime':
+              type: integer
+              format: int64
+            'offlinePushInfo':
+              type: object
+              additionalProperties: false
+              properties:
+                'title':
+                  type: string
+                'desc':
+                  type: string
+                'ex':
+                  type: string
+                'iOSPushSound':
+                  type: string
+                'iOSBadgeCount':
+                  type: boolean
+                'signalInfo':
+                  type: string
+              x-source-schema-status: field-level
+              x-source-schema-kind: protobuf
+              x-source-protobuf-type: 'openim.sdkws.OfflinePushInfo'
+            'ex':
+              type: string
+            'recvIDs':
+              type: array
+              items:
+                type: string
+            'isSendAll':
+              type: boolean
+          x-source-schema-status: field-level
+          x-source-schema-kind: go
+          x-source-go-type: 'openim.apistruct.BatchSendMsgReq'
+        example:
+          sendID: openIMAdmin
+          content:
+            content: Batch message
+          contentType: 101
+          sessionType: 1
+          recvIDs:
+            - user_2002
+            - user_3003
+          isSendAll: false
+  responses:
+    '200':
+      description: OpenIM result envelope. Inspect errCode; zero indicates success.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: ../../components/common/api-envelope.yaml
+              - type: object
+                properties:
+                  data:
+                    description: Batch message send result.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      'results':
+                        description: Per-recipient send results.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'clientMsgID':
+                              description: Client-generated unique message ID.
+                              type: string
+                            'serverMsgID':
+                              description: Server-generated message ID.
+                              type: string
+                            'sendTime':
+                              description: Message send timestamp in milliseconds.
+                              type: integer
+                              format: int64
+                            'errCode':
+                              description: Result code for this recipient.
+                              type: integer
+                              format: int32
+                            'errMsg':
+                              description: Result message for this recipient.
+                              type: string
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: go
+                          x-source-go-type: 'openim.apistruct.SingleReturnResult'
+                      'failedUserIDs':
+                        description: User IDs for which the send operation failed.
+                        type: array
+                        items:
+                          type: string
+                    x-source-schema-status: field-level
+                    x-source-schema-kind: go
+                    x-source-go-type: 'openim.apistruct.BatchSendMsgResp'
+  security:
+    - TokenAuth: []
+  x-source-handler: 'https://github.com/openimsdk/open-im-server/blob/v3.8.3-patch.16/internal/api/msg.go'
+  x-source-gin-path: '/msg/batch_send_msg'
+  x-source-request-type: 'apistruct.BatchSendMsgReq'
+  x-source-response-type: 'apistruct.BatchSendMsgResp'

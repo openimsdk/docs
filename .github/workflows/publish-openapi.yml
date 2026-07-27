@@ -1,0 +1,79 @@
+name: Publish OpenAPI
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openapi-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'docsets-sync/proposal' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout merged revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22.16.0
+
+      - name: Setup pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify OpenAPI
+        run: pnpm run docsets-sync:lint-openapi
+
+      - name: Bundle OpenAPI
+        run: pnpm exec redocly bundle api/chat/platform-api/v3/openapi.yaml --output "$RUNNER_TEMP/platform-api-openapi.json"
+
+      - name: Export Public OpenAPI
+        run: pnpm run platform-api:export -- "$RUNNER_TEMP/platform-api-openapi.json" "$RUNNER_TEMP/platform-api-public.json" --category Public
+
+      - name: Export Full OpenAPI
+        run: pnpm run platform-api:export -- "$RUNNER_TEMP/platform-api-openapi.json" "$RUNNER_TEMP/platform-api-full.json"
+
+      - name: Publish Postman Public
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          POSTMAN_COLLECTION_ID: ${{ vars.POSTMAN_PUBLIC_COLLECTION_ID }}
+        run: pnpm run platform-api:publish-postman -- "$POSTMAN_COLLECTION_ID" "$RUNNER_TEMP/platform-api-public.json"
+
+      - name: Publish Postman Full
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          POSTMAN_COLLECTION_ID: ${{ vars.POSTMAN_FULL_COLLECTION_ID }}
+        run: pnpm run platform-api:publish-postman -- "$POSTMAN_COLLECTION_ID" "$RUNNER_TEMP/platform-api-full.json"
+
+      - name: Publish Apifox Public
+        env:
+          APIFOX_ACCESS_TOKEN: ${{ secrets.APIFOX_ACCESS_TOKEN }}
+          APIFOX_PROJECT_ID: ${{ vars.APIFOX_PROJECT_ID }}
+          APIFOX_MODULE_ID: ${{ vars.APIFOX_PUBLIC_MODULE_ID }}
+        run: pnpm run platform-api:publish-apifox -- "$APIFOX_PROJECT_ID" "$APIFOX_MODULE_ID" "$RUNNER_TEMP/platform-api-public.json"
+
+      - name: Publish Apifox Full
+        env:
+          APIFOX_ACCESS_TOKEN: ${{ secrets.APIFOX_ACCESS_TOKEN }}
+          APIFOX_PROJECT_ID: ${{ vars.APIFOX_PROJECT_ID }}
+          APIFOX_MODULE_ID: ${{ vars.APIFOX_FULL_MODULE_ID }}
+        run: pnpm run platform-api:publish-apifox -- "$APIFOX_PROJECT_ID" "$APIFOX_MODULE_ID" "$RUNNER_TEMP/platform-api-full.json"

@@ -1,0 +1,118 @@
+post:
+  tags:
+    - 'Third-party services'
+  x-export-category: Public
+  summary: 'ThirdLogsSearch'
+  description: 'OpenIM Server POST route handled by t.SearchLogs. It accepts the JSON serialization of third.SearchLogsReq. Documented fields reflect the upstream wire types; handler-specific validation may impose additional constraints.'
+  operationId: postThirdLogsSearch
+  parameters:
+    - $ref: ../../components/common/operation-id.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          description: 'JSON serialization of third.SearchLogsReq, matching the upstream wire type.'
+          type: object
+          additionalProperties: false
+          properties:
+            'keyword':
+              type: string
+            'startTime':
+              type: integer
+              format: int64
+            'endTime':
+              type: integer
+              format: int64
+            'pagination':
+              type: object
+              additionalProperties: false
+              properties:
+                'pageNumber':
+                  type: integer
+                  format: int32
+                'showNumber':
+                  type: integer
+                  format: int32
+              x-source-schema-status: field-level
+              x-source-schema-kind: protobuf
+              x-source-protobuf-type: 'openim.sdkws.RequestPagination'
+          x-source-schema-status: field-level
+          x-source-schema-kind: protobuf
+          x-source-protobuf-type: 'openim.third.SearchLogsReq'
+        example:
+          keyword: connection timeout
+          startTime: 1710000000000
+          endTime: 1710086400000
+          pagination:
+            pageNumber: 1
+            showNumber: 20
+  responses:
+    '200':
+      description: OpenIM result envelope. Inspect errCode; zero indicates success.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: ../../components/common/api-envelope.yaml
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    description: Search-log response payload.
+                    additionalProperties: false
+                    properties:
+                      'logsInfos':
+                        type: array
+                        description: Log records matching the search criteria.
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'userID':
+                              type: string
+                              description: ID of the user associated with the log.
+                            'platform':
+                              type: string
+                              description: Client platform identifier recorded for the log.
+                            'url':
+                              type: string
+                              description: URL associated with the uploaded log file.
+                            'createTime':
+                              type: integer
+                              format: int64
+                              description: Timestamp recorded when the log was created.
+                            'nickname':
+                              type: string
+                              description: Nickname of the user associated with the log.
+                            'logID':
+                              type: string
+                              description: Unique identifier of the log record.
+                            'filename':
+                              type: string
+                              description: Original filename of the uploaded log.
+                            'systemType':
+                              type: string
+                              description: Client system type recorded for the log.
+                            'ex':
+                              type: string
+                              description: Additional metadata recorded for the log.
+                            'version':
+                              type: string
+                              description: Client or application version recorded for the log.
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.third.LogInfo'
+                      'total':
+                        type: integer
+                        format: int32
+                        description: Total number of log records matching the search criteria.
+                    x-source-schema-status: field-level
+                    x-source-schema-kind: protobuf
+                    x-source-protobuf-type: 'openim.third.SearchLogsResp'
+  security:
+    - TokenAuth: []
+  x-source-handler: 'https://github.com/openimsdk/open-im-server/blob/v3.8.3-patch.16/internal/api/third.go'
+  x-source-gin-path: '/third/logs/search'
+  x-source-request-type: 'third.SearchLogsReq'
+  x-source-response-type: 'third.SearchLogsResp'
