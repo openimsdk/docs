@@ -1,22 +1,29 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
 
-import {
-  isChatDocumentationPath,
-  localizedContentFile,
-} from '../lib/chat-content-paths.mjs';
+import { isChatDocumentationPath, localizedContentFile } from '../lib/chat-content-paths.mjs';
 
 const routes = JSON.parse(readFileSync('src/generated/routes.json', 'utf8'));
 const structure = JSON.parse(readFileSync('data/structure/chat-pages.json', 'utf8'));
 const navigation = JSON.parse(readFileSync('src/generated/navigation.json', 'utf8'));
 const redirects = JSON.parse(readFileSync('data/structure/wasm-legacy-redirects.json', 'utf8'));
+const platformCapabilityDiff = JSON.parse(
+  readFileSync('data/structure/platform-sdk-capability-diff.json', 'utf8'),
+);
 
 test('publishes Chat documentation at root-level product routes', () => {
   assert.ok(routes.some((route) => route.path === '/sdk/wasm/overview'));
   assert.ok(routes.some((route) => route.path === '/platform-api/overview'));
-  assert.equal(routes.some((route) => route.path.startsWith('/docs/chat/')), false);
-  assert.equal(structure.some((page) => page.openimPath.startsWith('/docs/chat/')), false);
+  assert.equal(
+    routes.some((route) => route.path.startsWith('/docs/chat/')),
+    false,
+  );
+  assert.equal(
+    structure.some((page) => page.openimPath.startsWith('/docs/chat/')),
+    false,
+  );
 });
 
 test('keeps navigation and redirects out of the removed public prefix', () => {
@@ -51,3 +58,44 @@ test('maps public Chat routes to their retained physical content directories', (
   assert.equal(isChatDocumentationPath('/docs/guides'), false);
   assert.equal(isChatDocumentationPath('/docs/chat/sdk/wasm/overview'), false);
 });
+
+test('keeps SDK document links on current routable addresses', () => {
+  const routePaths = new Set(routes.map((route) => route.path));
+  const oldExternalLinks = [];
+  const unroutableLinks = [];
+
+  for (const root of ['content/docs/chat/sdk', 'content/zh/docs/chat/sdk']) {
+    for (const file of listMdxFiles(root)) {
+      const body = readFileSync(file, 'utf8');
+      for (const match of body.matchAll(/\]\(([^)\s]+)(?:\s+['"][^)]*['"])?\)/g)) {
+        const rawUrl = match[1].replace(/^<|>$/g, '');
+        if (/^https?:\/\/docs\.openim\.io(?:\/|$)/.test(rawUrl)) {
+          oldExternalLinks.push(`${file}: ${rawUrl}`);
+          continue;
+        }
+
+        const path = rawUrl.split(/[?#]/, 1)[0].replace(/^\/zh(?=\/)/, '');
+        if (path.startsWith('/sdk/') && !routePaths.has(path)) {
+          unroutableLinks.push(`${file}: ${rawUrl}`);
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(oldExternalLinks, []);
+  assert.deepEqual(unroutableLinks, []);
+
+  for (const method of platformCapabilityDiff.miniprogram.missingMethods) {
+    for (const path of method.wasmPages) {
+      assert.equal(routePaths.has(path), true, `${method.name}: ${path}`);
+    }
+  }
+});
+
+function listMdxFiles(root) {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return listMdxFiles(path);
+    return path.endsWith('.mdx') ? [path] : [];
+  });
+}
