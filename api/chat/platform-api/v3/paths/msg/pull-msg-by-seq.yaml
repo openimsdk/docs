@@ -1,0 +1,382 @@
+post:
+  tags:
+    - 'Messages'
+  summary: 'MsgPullMsgBySeq'
+  description: 'OpenIM Server POST route handled by m.PullMsgBySeqs. It accepts the JSON serialization of sdkws.PullMessageBySeqsReq. Documented fields reflect the upstream wire types; handler-specific validation may impose additional constraints.'
+  operationId: postMsgPullMsgBySeq
+  parameters:
+    - $ref: ../../components/common/operation-id.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          description: 'JSON serialization of sdkws.PullMessageBySeqsReq, matching the upstream wire type.'
+          type: object
+          additionalProperties: false
+          properties:
+            'userID':
+              type: string
+            'seqRanges':
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  'conversationID':
+                    type: string
+                  'begin':
+                    type: integer
+                    format: int64
+                  'end':
+                    type: integer
+                    format: int64
+                  'num':
+                    type: integer
+                    format: int64
+                x-source-schema-status: field-level
+                x-source-schema-kind: protobuf
+                x-source-protobuf-type: 'openim.sdkws.SeqRange'
+            'order':
+              type: integer
+              format: int32
+              enum:
+                - 0
+                - 1
+          x-source-schema-status: field-level
+          x-source-schema-kind: protobuf
+          x-source-protobuf-type: 'openim.sdkws.PullMessageBySeqsReq'
+        example:
+          userID: user_1001
+          seqRanges:
+            - conversationID: si_1001_2002
+              begin: 101
+              end: 120
+              num: 20
+          order: 0
+  responses:
+    '200':
+      description: OpenIM result envelope. Inspect errCode; zero indicates success.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: ../../components/common/api-envelope.yaml
+              - type: object
+                properties:
+                  data:
+                    description: Messages pulled by conversation and sequence range.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      'msgs':
+                        description: Pulled messages by conversation.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'key':
+                              description: Conversation ID for this pulled-message result.
+                              type: string
+                            'value':
+                              description: Pulled-message result for this conversation.
+                              type: object
+                              additionalProperties: false
+                              properties:
+                                'Msgs':
+                                  description: Messages returned for this conversation.
+                                  type: array
+                                  items:
+                                    type: object
+                                    additionalProperties: false
+                                    properties:
+                                      'sendID':
+                                        description: User ID of the message sender.
+                                        type: string
+                                      'recvID':
+                                        description: User ID of the message recipient.
+                                        type: string
+                                      'groupID':
+                                        description: ID of the message group conversation.
+                                        type: string
+                                      'clientMsgID':
+                                        description: Client-generated unique message ID.
+                                        type: string
+                                      'serverMsgID':
+                                        description: Server-generated message ID.
+                                        type: string
+                                      'senderPlatformID':
+                                        description: Platform identifier of the message sender.
+                                        type: integer
+                                        format: int32
+                                      'senderNickname':
+                                        description: Display name of the message sender.
+                                        type: string
+                                      'senderFaceURL':
+                                        description: Avatar URL of the message sender.
+                                        type: string
+                                      'sessionType':
+                                        description: Conversation type of the message.
+                                        type: integer
+                                        format: int32
+                                      'msgFrom':
+                                        description: Source classification of the message.
+                                        type: integer
+                                        format: int32
+                                      'contentType':
+                                        description: Type code for the message content.
+                                        type: integer
+                                        format: int32
+                                      'content':
+                                        description: Encoded message content payload.
+                                        type: string
+                                        format: byte
+                                      'seq':
+                                        description: Sequence number of the message in its conversation.
+                                        type: integer
+                                        format: int64
+                                      'sendTime':
+                                        description: Message send timestamp in milliseconds.
+                                        type: integer
+                                        format: int64
+                                      'createTime':
+                                        description: Message creation timestamp in milliseconds.
+                                        type: integer
+                                        format: int64
+                                      'status':
+                                        description: Message status code.
+                                        type: integer
+                                        format: int32
+                                      'isRead':
+                                        description: Whether the message has been read.
+                                        type: boolean
+                                      'options':
+                                        description: Message option entries.
+                                        type: array
+                                        items:
+                                          type: object
+                                          additionalProperties: false
+                                          properties:
+                                            'key':
+                                              description: Name of this message option.
+                                              type: string
+                                            'value':
+                                              description: Boolean value of this message option.
+                                              type: boolean
+                                          x-source-schema-status: field-level
+                                          x-source-schema-kind: protobuf
+                                          x-source-protobuf-type: 'openim.sdkws.MsgData.OptionsEntry'
+                                      'offlinePushInfo':
+                                        description: Offline push notification settings.
+                                        type: object
+                                        additionalProperties: false
+                                        properties:
+                                          'title':
+                                            description: Title for the offline push notification.
+                                            type: string
+                                          'desc':
+                                            description: Body text for the offline push notification.
+                                            type: string
+                                          'ex':
+                                            description: Application-defined offline-push extension data.
+                                            type: string
+                                          'iOSPushSound':
+                                            description: iOS sound for the offline push notification.
+                                            type: string
+                                          'iOSBadgeCount':
+                                            description: Whether the offline push increments the iOS app badge.
+                                            type: boolean
+                                          'signalInfo':
+                                            description: Additional offline-push signaling data.
+                                            type: string
+                                        x-source-schema-status: field-level
+                                        x-source-schema-kind: protobuf
+                                        x-source-protobuf-type: 'openim.sdkws.OfflinePushInfo'
+                                      'atUserIDList':
+                                        description: User IDs mentioned by the message.
+                                        type: array
+                                        items:
+                                          type: string
+                                      'attachedInfo':
+                                        description: Attached message metadata.
+                                        type: string
+                                      'ex':
+                                        description: Application-defined extension data.
+                                        type: string
+                                    x-source-schema-status: field-level
+                                    x-source-schema-kind: protobuf
+                                    x-source-protobuf-type: 'openim.sdkws.MsgData'
+                                'isEnd':
+                                  description: Whether the returned messages reach the end of the requested range.
+                                  type: boolean
+                                'endSeq':
+                                  description: Ending sequence number of the returned messages.
+                                  type: integer
+                                  format: int64
+                              x-source-schema-status: field-level
+                              x-source-schema-kind: protobuf
+                              x-source-protobuf-type: 'openim.sdkws.PullMsgs'
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.sdkws.PullMessageBySeqsResp.MsgsEntry'
+                      'notificationMsgs':
+                        description: Pulled notification messages by conversation.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'key':
+                              description: Conversation ID for this notification-message result.
+                              type: string
+                            'value':
+                              description: Pulled notification-message result for this conversation.
+                              type: object
+                              additionalProperties: false
+                              properties:
+                                'Msgs':
+                                  description: Notification messages returned for this conversation.
+                                  type: array
+                                  items:
+                                    type: object
+                                    additionalProperties: false
+                                    properties:
+                                      'sendID':
+                                        description: User ID of the message sender.
+                                        type: string
+                                      'recvID':
+                                        description: User ID of the message recipient.
+                                        type: string
+                                      'groupID':
+                                        description: ID of the message group conversation.
+                                        type: string
+                                      'clientMsgID':
+                                        description: Client-generated unique message ID.
+                                        type: string
+                                      'serverMsgID':
+                                        description: Server-generated message ID.
+                                        type: string
+                                      'senderPlatformID':
+                                        description: Platform identifier of the message sender.
+                                        type: integer
+                                        format: int32
+                                      'senderNickname':
+                                        description: Display name of the message sender.
+                                        type: string
+                                      'senderFaceURL':
+                                        description: Avatar URL of the message sender.
+                                        type: string
+                                      'sessionType':
+                                        description: Conversation type of the message.
+                                        type: integer
+                                        format: int32
+                                      'msgFrom':
+                                        description: Source classification of the message.
+                                        type: integer
+                                        format: int32
+                                      'contentType':
+                                        description: Type code for the message content.
+                                        type: integer
+                                        format: int32
+                                      'content':
+                                        description: Encoded message content payload.
+                                        type: string
+                                        format: byte
+                                      'seq':
+                                        description: Sequence number of the message in its conversation.
+                                        type: integer
+                                        format: int64
+                                      'sendTime':
+                                        description: Message send timestamp in milliseconds.
+                                        type: integer
+                                        format: int64
+                                      'createTime':
+                                        description: Message creation timestamp in milliseconds.
+                                        type: integer
+                                        format: int64
+                                      'status':
+                                        description: Message status code.
+                                        type: integer
+                                        format: int32
+                                      'isRead':
+                                        description: Whether the message has been read.
+                                        type: boolean
+                                      'options':
+                                        description: Message option entries.
+                                        type: array
+                                        items:
+                                          type: object
+                                          additionalProperties: false
+                                          properties:
+                                            'key':
+                                              description: Name of this message option.
+                                              type: string
+                                            'value':
+                                              description: Boolean value of this message option.
+                                              type: boolean
+                                          x-source-schema-status: field-level
+                                          x-source-schema-kind: protobuf
+                                          x-source-protobuf-type: 'openim.sdkws.MsgData.OptionsEntry'
+                                      'offlinePushInfo':
+                                        description: Offline push notification settings.
+                                        type: object
+                                        additionalProperties: false
+                                        properties:
+                                          'title':
+                                            description: Title for the offline push notification.
+                                            type: string
+                                          'desc':
+                                            description: Body text for the offline push notification.
+                                            type: string
+                                          'ex':
+                                            description: Application-defined offline-push extension data.
+                                            type: string
+                                          'iOSPushSound':
+                                            description: iOS sound for the offline push notification.
+                                            type: string
+                                          'iOSBadgeCount':
+                                            description: Whether the offline push increments the iOS app badge.
+                                            type: boolean
+                                          'signalInfo':
+                                            description: Additional offline-push signaling data.
+                                            type: string
+                                        x-source-schema-status: field-level
+                                        x-source-schema-kind: protobuf
+                                        x-source-protobuf-type: 'openim.sdkws.OfflinePushInfo'
+                                      'atUserIDList':
+                                        description: User IDs mentioned by the message.
+                                        type: array
+                                        items:
+                                          type: string
+                                      'attachedInfo':
+                                        description: Attached message metadata.
+                                        type: string
+                                      'ex':
+                                        description: Application-defined extension data.
+                                        type: string
+                                    x-source-schema-status: field-level
+                                    x-source-schema-kind: protobuf
+                                    x-source-protobuf-type: 'openim.sdkws.MsgData'
+                                'isEnd':
+                                  description: Whether the returned messages reach the end of the requested range.
+                                  type: boolean
+                                'endSeq':
+                                  description: Ending sequence number of the returned messages.
+                                  type: integer
+                                  format: int64
+                              x-source-schema-status: field-level
+                              x-source-schema-kind: protobuf
+                              x-source-protobuf-type: 'openim.sdkws.PullMsgs'
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.sdkws.PullMessageBySeqsResp.NotificationMsgsEntry'
+                    x-source-schema-status: field-level
+                    x-source-schema-kind: protobuf
+                    x-source-protobuf-type: 'openim.sdkws.PullMessageBySeqsResp'
+  security:
+    - TokenAuth: []
+  x-source-handler: 'https://github.com/openimsdk/open-im-server/blob/v3.8.3-patch.16/internal/api/msg.go'
+  x-source-gin-path: '/msg/pull_msg_by_seq'
+  x-source-request-type: 'sdkws.PullMessageBySeqsReq'
+  x-source-response-type: 'sdkws.PullMessageBySeqsResp'

@@ -1,0 +1,146 @@
+post:
+  tags:
+    - 'Statistics'
+  summary: 'StatisticsUserActive'
+  description: 'OpenIM Server POST route handled by m.GetActiveUser. It accepts the JSON serialization of msg.GetActiveUserReq. Documented fields reflect the upstream wire types; handler-specific validation may impose additional constraints.'
+  operationId: postStatisticsUserActive
+  parameters:
+    - $ref: ../../components/common/operation-id.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          description: 'JSON serialization of msg.GetActiveUserReq, matching the upstream wire type.'
+          type: object
+          additionalProperties: false
+          properties:
+            'start':
+              type: integer
+              format: int64
+            'end':
+              type: integer
+              format: int64
+            'ase':
+              type: boolean
+            'group':
+              type: boolean
+            'pagination':
+              type: object
+              additionalProperties: false
+              properties:
+                'pageNumber':
+                  type: integer
+                  format: int32
+                'showNumber':
+                  type: integer
+                  format: int32
+              x-source-schema-status: field-level
+              x-source-schema-kind: protobuf
+              x-source-protobuf-type: 'openim.sdkws.RequestPagination'
+          x-source-schema-status: field-level
+          x-source-schema-kind: protobuf
+          x-source-protobuf-type: 'openim.msg.GetActiveUserReq'
+        example:
+          start: 1710000000000
+          end: 1710086400000
+          ase: true
+          group: false
+          pagination:
+            pageNumber: 1
+            showNumber: 20
+  responses:
+    '200':
+      description: OpenIM result envelope. Inspect errCode; zero indicates success.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: ../../components/common/api-envelope.yaml
+              - type: object
+                properties:
+                  data:
+                    description: Active-user statistics result.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      'msgCount':
+                        description: Message count included in these statistics.
+                        type: integer
+                        format: int64
+                      'userCount':
+                        description: Number of active users.
+                        type: integer
+                        format: int64
+                      'dateCount':
+                        description: Counts keyed by date.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'key':
+                              description: Date key for this count.
+                              type: string
+                            'value':
+                              description: Count for this date key.
+                              type: integer
+                              format: int64
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.msg.GetActiveUserResp.DateCountEntry'
+                      'users':
+                        description: Active users returned by the query.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'user':
+                              description: Profile of this active user.
+                              type: object
+                              additionalProperties: false
+                              properties:
+                                'userID':
+                                  description: Unique user ID.
+                                  type: string
+                                'nickname':
+                                  description: User display name.
+                                  type: string
+                                'faceURL':
+                                  description: User avatar URL.
+                                  type: string
+                                'ex':
+                                  description: Application-defined user extension data.
+                                  type: string
+                                'createTime':
+                                  description: User creation timestamp.
+                                  type: integer
+                                  format: int64
+                                'appMangerLevel':
+                                  description: Application manager level.
+                                  type: integer
+                                  format: int32
+                                'globalRecvMsgOpt':
+                                  description: 'Global message receive mode: receive, do not receive, or receive without notification.'
+                                  type: integer
+                                  format: int32
+                              x-source-schema-status: field-level
+                              x-source-schema-kind: protobuf
+                              x-source-protobuf-type: 'openim.sdkws.UserInfo'
+                            'count':
+                              description: Count for this active user.
+                              type: integer
+                              format: int64
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.msg.ActiveUser'
+                    x-source-schema-status: field-level
+                    x-source-schema-kind: protobuf
+                    x-source-protobuf-type: 'openim.msg.GetActiveUserResp'
+  security:
+    - TokenAuth: []
+  x-source-handler: 'https://github.com/openimsdk/open-im-server/blob/v3.8.3-patch.16/internal/api/msg.go'
+  x-source-gin-path: '/statistics/user/active'
+  x-source-request-type: 'msg.GetActiveUserReq'
+  x-source-response-type: 'msg.GetActiveUserResp'

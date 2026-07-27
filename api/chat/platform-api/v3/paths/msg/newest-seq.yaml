@@ -1,0 +1,82 @@
+post:
+  tags:
+    - 'Messages'
+  summary: 'MsgNewestSeq'
+  description: 'OpenIM Server POST route handled by m.GetSeq. It accepts the JSON serialization of sdkws.GetMaxSeqReq. Documented fields reflect the upstream wire types; handler-specific validation may impose additional constraints.'
+  operationId: postMsgNewestSeq
+  parameters:
+    - $ref: ../../components/common/operation-id.yaml
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          description: 'JSON serialization of sdkws.GetMaxSeqReq, matching the upstream wire type.'
+          type: object
+          additionalProperties: false
+          properties:
+            'userID':
+              type: string
+          x-source-schema-status: field-level
+          x-source-schema-kind: protobuf
+          x-source-protobuf-type: 'openim.sdkws.GetMaxSeqReq'
+        example:
+          userID: user_1001
+  responses:
+    '200':
+      description: OpenIM result envelope. Inspect errCode; zero indicates success.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: ../../components/common/api-envelope.yaml
+              - type: object
+                properties:
+                  data:
+                    description: Newest and minimum conversation sequence numbers.
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      'maxSeqs':
+                        description: Newest sequence numbers by conversation.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'key':
+                              description: Conversation ID for this newest sequence.
+                              type: string
+                            'value':
+                              description: Newest message sequence number for this conversation.
+                              type: integer
+                              format: int64
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.sdkws.GetMaxSeqResp.MaxSeqsEntry'
+                      'minSeqs':
+                        description: Minimum retained sequence numbers by conversation.
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            'key':
+                              description: Conversation ID for this minimum sequence.
+                              type: string
+                            'value':
+                              description: Minimum retained message sequence number for this conversation.
+                              type: integer
+                              format: int64
+                          x-source-schema-status: field-level
+                          x-source-schema-kind: protobuf
+                          x-source-protobuf-type: 'openim.sdkws.GetMaxSeqResp.MinSeqsEntry'
+                    x-source-schema-status: field-level
+                    x-source-schema-kind: protobuf
+                    x-source-protobuf-type: 'openim.sdkws.GetMaxSeqResp'
+  security:
+    - TokenAuth: []
+  x-source-handler: 'https://github.com/openimsdk/open-im-server/blob/v3.8.3-patch.16/internal/api/msg.go'
+  x-source-gin-path: '/msg/newest_seq'
+  x-source-request-type: 'sdkws.GetMaxSeqReq'
+  x-source-response-type: 'sdkws.GetMaxSeqResp'
