@@ -208,9 +208,7 @@ export async function renderDocumentationPage(
     ? getPageCommercialInfo(effectiveRoute.path)
     : undefined;
   const commercialNames =
-    commercial && commercial.kind !== 'none'
-      ? getPageCommercialNames(effectiveRoute.path)
-      : undefined;
+    commercial?.kind === 'partial' ? getPageCommercialNames(effectiveRoute.path) : undefined;
 
   const sdkOverviewPlatform =
     locale === 'zh' ? getSdkOverviewPlatform(effectiveRoute.path) : undefined;

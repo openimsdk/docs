@@ -7,9 +7,7 @@ const sdk = JSON.parse(await readFile('data/structure/wasm-sdk-api.json', 'utf8'
 const domainCoverage = JSON.parse(
   await readFile('data/structure/wasm-domain-api-coverage.json', 'utf8'),
 );
-const contentAudit = JSON.parse(
-  await readFile('data/structure/wasm-content-audit.json', 'utf8'),
-);
+const contentAudit = JSON.parse(await readFile('data/structure/wasm-content-audit.json', 'utf8'));
 const activeRoutes = new Set(
   JSON.parse(await readFile('src/generated/routes.json', 'utf8'))
     .filter((route) => route.contextKey === 'chat/sdk/wasm')
@@ -19,6 +17,7 @@ const activeRoutes = new Set(
 const commercialMethods = new Set([
   'speechToTextCapabilities',
   'speechToText',
+  'setMessageLocalContent',
   'getConversationGroupInfoWithConversations',
   'getConversationGroupIDsByConversationID',
   'removeConversationsFromGroups',
@@ -245,14 +244,13 @@ events('user/managing-friends/update-or-delete-friends', [
   'OnFriendDeleted',
   'OnFriendInfoChanged',
 ]);
-events('user/moderating-a-user/block-or-unblock-users', [
-  'OnBlackAdded',
-  'OnBlackDeleted',
-]);
+events('user/moderating-a-user/block-or-unblock-users', ['OnBlackAdded', 'OnBlackDeleted']);
 events('user/retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user', [
   'OnUserStatusChanged',
 ]);
-events('user/retrieving-and-updating-user-information/retrieve-and-update-self-profile', ['OnSelfInfoUpdated']);
+events('user/retrieving-and-updating-user-information/retrieve-and-update-self-profile', [
+  'OnSelfInfoUpdated',
+]);
 events('message/sending-messages/upload-files-and-track-progress', [
   'OnProgress',
   'UploadComplete',
@@ -266,22 +264,15 @@ events('message/receiving-messages/receive-messages', [
   'OnRecvOnlineOnlyMessages',
 ]);
 events('message/composing-messages/custom-message-and-extra-data', ['OnRecvCustomBusinessMessage']);
-events('message/managing-messages/delete-a-message', [
-  'OnDeleteUserAllMsgsInConv',
-  'OnMsgDeleted',
-]);
+events('message/managing-messages/delete-a-message', ['OnDeleteUserAllMsgsInConv', 'OnMsgDeleted']);
 events('message/managing-messages/revoke-a-message', [
   'OnNewRecvMessageRevoked',
   'OnRecvMessageRevoked',
 ]);
 events('message/managing-messages/modify-a-message', ['OnMessageModified']);
 events('message/managing-messages/pin-conversation-messages', ['OnChangedPinnedMsg']);
-events('conversation/managing-conversations/mark-conversation-read', [
-  'OnRecvC2CReadReceipt',
-]);
-events('message/managing-read-status/send-group-read-receipts', [
-  'OnRecvGroupReadReceipt',
-]);
+events('conversation/managing-conversations/mark-conversation-read', ['OnRecvC2CReadReceipt']);
+events('message/managing-read-status/send-group-read-receipts', ['OnRecvGroupReadReceipt']);
 events('calling/sending-custom-signals/send-a-custom-signal', ['OnReceiveCustomSignal']);
 events('calling/managing-calls/start-or-handle-a-call', [
   'OnHangUp',

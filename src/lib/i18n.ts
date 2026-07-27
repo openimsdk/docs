@@ -50,11 +50,6 @@ export const i18nText = {
       editPage: 'Edit page',
       scaffold: 'Scaffold',
       commercialBadge: 'Commercial',
-      commercialPartialBadge: 'Includes commercial',
-      commercialFullNotice:
-        'All APIs on this page are commercial. Methods and events marked Commercial inline require a commercial deployment or license.',
-      commercialPartialNotice:
-        'This page mixes open-source and commercial capabilities. Only methods and events marked Commercial inline require a commercial deployment or license.',
     },
     chrome: {
       docs: 'Docs',
@@ -103,11 +98,6 @@ export const i18nText = {
       editPage: '编辑页面',
       scaffold: '占位页',
       commercialBadge: '商业版',
-      commercialPartialBadge: '含商业版能力',
-      commercialFullNotice:
-        '本页 API 均为商业版能力。正文中带「商业版」标记的方法或事件，需要商业版部署或授权后才能使用。',
-      commercialPartialNotice:
-        '本页同时包含开源能力与商业版能力。只有正文中带「商业版」标记的方法或事件需要商业版部署或授权。',
     },
     chrome: {
       docs: '文档',

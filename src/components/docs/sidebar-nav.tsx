@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import type { NavContext, NavNode } from '@/src/types/docs';
+import { getPageCommercialInfo } from '@/src/lib/client-sdk-commercial';
 import { nodeContainsPath } from '@/src/lib/navigation';
 import type { Locale } from '@/src/lib/i18n';
 import { toLocalizedPath } from '@/src/lib/i18n';
@@ -57,6 +58,7 @@ function SidebarNode({
 }) {
   const active = node.href === currentPath;
   const containsActive = nodeContainsPath(node, currentPath);
+  const enterprise = isEnterpriseNode(node);
   const title = localizeNavNodeTitle(node, locale);
 
   if (node.children.length === 0) {
@@ -70,8 +72,8 @@ function SidebarNode({
       >
         <SidebarNodeLabel
           inheritedEnterprise={inheritedEnterprise}
+          enterprise={enterprise}
           locale={locale}
-          node={node}
           title={title}
         />
       </Link>
@@ -92,16 +94,16 @@ function SidebarNode({
           >
             <SidebarNodeLabel
               inheritedEnterprise={inheritedEnterprise}
+              enterprise={enterprise}
               locale={locale}
-              node={node}
               title={title}
             />
           </Link>
         ) : (
           <SidebarNodeLabel
             inheritedEnterprise={inheritedEnterprise}
+            enterprise={enterprise}
             locale={locale}
-            node={node}
             title={title}
           />
         )}
@@ -111,7 +113,7 @@ function SidebarNode({
           <SidebarNode
             currentPath={currentPath}
             depth={depth + 1}
-            inheritedEnterprise={inheritedEnterprise || node.edition === 'enterprise'}
+            inheritedEnterprise={inheritedEnterprise || enterprise}
             key={child.id}
             locale={locale}
             node={child}
@@ -125,24 +127,46 @@ function SidebarNode({
 }
 
 function SidebarNodeLabel({
+  enterprise,
   inheritedEnterprise,
   locale,
-  node,
   title,
 }: {
+  enterprise: boolean;
   inheritedEnterprise: boolean;
   locale: Locale;
-  node: NavNode;
   title: string;
 }) {
   return (
     <span className="sidebar-label-row">
       <span className="sidebar-label-text">{title}</span>
-      {node.edition === 'enterprise' && !inheritedEnterprise ? (
+      {enterprise && !inheritedEnterprise ? (
         <span className="sidebar-enterprise-badge">
           {locale === 'zh' ? '商业版' : 'Enterprise'}
         </span>
       ) : null}
     </span>
   );
+}
+
+function isEnterpriseNode(node: NavNode): boolean {
+  if (node.edition === 'enterprise') return true;
+
+  if (node.children.length === 0) {
+    return node.href ? getPageCommercialInfo(node.href).kind === 'full' : false;
+  }
+
+  const taskPages = getTaskPagePaths(node);
+  return (
+    taskPages.length > 0 && taskPages.every((path) => getPageCommercialInfo(path).kind === 'full')
+  );
+}
+
+function getTaskPagePaths(node: NavNode): string[] {
+  if (node.children.length === 0) {
+    if (!node.href || /\/overview(?:-|$)/.test(node.href)) return [];
+    return [node.href];
+  }
+
+  return node.children.flatMap(getTaskPagePaths);
 }

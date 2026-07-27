@@ -9,6 +9,7 @@ const iosAudit = JSON.parse(readFileSync('data/structure/ios-content-audit.json'
 const commercialMethods = [
   'speechToTextCapabilities',
   'speechToText',
+  'setMessageLocalContent',
   'getConversationGroupInfoWithConversations',
   'getConversationGroupIDsByConversationID',
   'removeConversationsFromGroups',
@@ -125,6 +126,27 @@ const partialCommercialConceptSources = {
   ],
 };
 
+const fullCommercialConceptPages = new Set([
+  '/sdk/wasm/conversation/managing-conversations/set-private-chat',
+  '/sdk/wasm/conversation/managing-conversations/set-burn-duration',
+  '/sdk/wasm/conversation/managing-conversations/set-message-destruct',
+  '/sdk/wasm/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/wasm/message/composing-messages/save-local-transcript',
+  '/sdk/flutter/conversation/managing-conversations/set-private-chat',
+  '/sdk/flutter/conversation/managing-conversations/set-burn-duration',
+  '/sdk/flutter/conversation/managing-conversations/set-message-destruct',
+  '/sdk/flutter/message/composing-messages/save-local-transcript',
+  '/sdk/ios/conversation/managing-conversations/set-private-chat',
+  '/sdk/ios/conversation/managing-conversations/set-burn-duration',
+  '/sdk/ios/conversation/managing-conversations/set-message-destruct',
+  '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
+  '/sdk/ios/message/composing-messages/save-local-transcript',
+]);
+
+function applyCommercialConceptOverride(pagePath, info) {
+  return fullCommercialConceptPages.has(pagePath) ? { ...info, kind: 'full' } : info;
+}
+
 function getWasmPageCommercialInfo(pagePath) {
   const documentedMethods = ownership.methods.filter(
     (entry) => entry.page === pagePath && entry.status === 'documented',
@@ -147,10 +169,7 @@ function getWasmPageCommercialInfo(pagePath) {
   }
 
   return {
-    kind:
-      documentedMethods.length > 0 && methods.length === documentedMethods.length
-        ? 'full'
-        : 'partial',
+    kind: openSourceMethods.length === 0 ? 'full' : 'partial',
     methods,
     openSourceMethods,
     events,
@@ -186,7 +205,9 @@ function getPageCommercialInfo(pagePath) {
 
   const platform = match[1];
   const wasmPath = `/sdk/wasm${match[2]}`;
-  if (platform === 'wasm') return getWasmPageCommercialInfo(wasmPath);
+  if (platform === 'wasm') {
+    return applyCommercialConceptOverride(pagePath, getWasmPageCommercialInfo(wasmPath));
+  }
 
   const audit = platform === 'flutter' ? flutterAudit : iosAudit;
   const page = audit.pages.find(
@@ -205,16 +226,21 @@ function getPageCommercialInfo(pagePath) {
   );
 
   if (methods.length === 0 && events.length === 0) {
-    return { kind: 'none', methods: [], openSourceMethods, events: [] };
+    return applyCommercialConceptOverride(pagePath, {
+      kind: 'none',
+      methods: [],
+      openSourceMethods,
+      events: [],
+    });
   }
 
   const wasmInfo = getWasmPageCommercialInfo(wasmPath);
-  return {
+  return applyCommercialConceptOverride(pagePath, {
     kind: wasmInfo.kind === 'full' ? 'full' : 'partial',
     methods: methods.sort((left, right) => left.localeCompare(right)),
     openSourceMethods: openSourceMethods.sort((left, right) => left.localeCompare(right)),
     events: events.sort((left, right) => left.localeCompare(right)),
-  };
+  });
 }
 
 test('marks the commercial method inventory', () => {
@@ -249,6 +275,15 @@ test('does not mark open-source events as commercial', () => {
   }
 });
 
+test('marks only the commercial bypass field on group-wide mute', () => {
+  const content = readFileSync('content/zh/docs/chat/sdk/wasm/group/change-group-mute.mdx', 'utf8');
+  assert.match(
+    content,
+    /`muteBypassUserIDs` <span className="enterprise-field-badge">商业版<\/span>/,
+  );
+  assert.equal(getPageCommercialInfo('/sdk/wasm/group/change-group-mute').kind, 'none');
+});
+
 test('classifies full commercial pages', () => {
   assert.equal(
     getPageCommercialInfo(
@@ -260,7 +295,7 @@ test('classifies full commercial pages', () => {
     getPageCommercialInfo(
       '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups',
     ).kind,
-    'partial',
+    'full',
   );
   assert.equal(
     getPageCommercialInfo('/sdk/wasm/message/managing-messages/set-message-pinned').kind,
@@ -270,6 +305,9 @@ test('classifies full commercial pages', () => {
     getPageCommercialInfo('/sdk/wasm/calling/managing-calls/start-single-call').kind,
     'full',
   );
+  for (const pagePath of fullCommercialConceptPages) {
+    assert.equal(getPageCommercialInfo(pagePath).kind, 'full', `${pagePath} must be commercial`);
+  }
 });
 
 test('applies the WASM commercial presentation to verified Flutter and iOS capabilities', () => {
@@ -288,7 +326,7 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   const flutterGroupOverview = getPageCommercialInfo(
     '/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups',
   );
-  assert.equal(flutterGroupOverview.kind, 'partial');
+  assert.equal(flutterGroupOverview.kind, 'full');
   assert.ok(flutterGroupOverview.events.includes('onConversationGroupAdded'));
 
   const flutterCalls = getPageCommercialInfo(
@@ -318,7 +356,7 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   const iosGroupOverview = getPageCommercialInfo(
     '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups',
   );
-  assert.equal(iosGroupOverview.kind, 'partial');
+  assert.equal(iosGroupOverview.kind, 'full');
   assert.ok(iosGroupOverview.methods.includes('Open_im_sdkSetConversationGroupListener'));
   assert.ok(iosGroupOverview.events.includes('onConversationGroupAdded:'));
 
@@ -328,9 +366,7 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
     iosModify.methods.includes('modifyMessageWithConversationID:message:onSuccess:onFailure:'),
   );
 
-  const iosPinned = getPageCommercialInfo(
-    '/sdk/ios/message/managing-messages/set-message-pinned',
-  );
+  const iosPinned = getPageCommercialInfo('/sdk/ios/message/managing-messages/set-message-pinned');
   assert.equal(iosPinned.kind, 'full');
   assert.ok(iosPinned.events.includes('onChangedPinnedMsg:'));
 
@@ -376,9 +412,7 @@ test('marks calling overviews as mixed while preserving verified platform symbol
   assert.equal(iosOverview.kind, 'partial');
   assert.ok(iosOverview.methods.includes('signalingInvite:offlinePushInfo:onSuccess:onFailure:'));
   assert.ok(
-    iosOverview.methods.includes(
-      'getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:',
-    ),
+    iosOverview.methods.includes('getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:'),
   );
 });
 
@@ -431,8 +465,7 @@ test('classifies mixed commercial pages', () => {
     'full',
   );
   assert.equal(
-    getPageCommercialInfo('/sdk/wasm/group/group-applications/delete-group-requests')
-      .kind,
+    getPageCommercialInfo('/sdk/wasm/group/group-applications/delete-group-requests').kind,
     'full',
   );
 });

@@ -69,18 +69,47 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
 
 const partialCommercialConceptSources: Record<string, string[]> = {
   '/sdk/wasm/calling/overview-calling': [
-    '/sdk/wasm/calling/managing-calls/start-or-handle-a-call',
-    '/sdk/wasm/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/wasm/calling/managing-calls/start-single-call',
+    '/sdk/wasm/calling/managing-calls/handle-call-events',
+    '/sdk/wasm/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/flutter/calling/overview-calling': [
-    '/sdk/flutter/calling/managing-calls/start-or-handle-a-call',
-    '/sdk/flutter/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/flutter/calling/managing-calls/start-single-call',
+    '/sdk/flutter/calling/managing-calls/handle-call-events',
+    '/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/ios/calling/overview-calling': [
-    '/sdk/ios/calling/managing-calls/start-or-handle-a-call',
-    '/sdk/ios/calling/retrieving-call-information/retrieve-call-information',
+    '/sdk/ios/calling/managing-calls/start-single-call',
+    '/sdk/ios/calling/managing-calls/handle-call-events',
+    '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
+
+// These capabilities share general-purpose setters with open-source fields. Classify the
+// task page instead of marking the whole setter as commercial.
+const fullCommercialConceptPages = new Set([
+  '/sdk/wasm/conversation/managing-conversations/set-private-chat',
+  '/sdk/wasm/conversation/managing-conversations/set-burn-duration',
+  '/sdk/wasm/conversation/managing-conversations/set-message-destruct',
+  '/sdk/wasm/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/wasm/message/composing-messages/save-local-transcript',
+  '/sdk/flutter/conversation/managing-conversations/set-private-chat',
+  '/sdk/flutter/conversation/managing-conversations/set-burn-duration',
+  '/sdk/flutter/conversation/managing-conversations/set-message-destruct',
+  '/sdk/flutter/message/composing-messages/save-local-transcript',
+  '/sdk/ios/conversation/managing-conversations/set-private-chat',
+  '/sdk/ios/conversation/managing-conversations/set-burn-duration',
+  '/sdk/ios/conversation/managing-conversations/set-message-destruct',
+  '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
+  '/sdk/ios/message/composing-messages/save-local-transcript',
+]);
+
+function applyCommercialConceptOverride(
+  pagePath: string,
+  info: PageCommercialInfo,
+): PageCommercialInfo {
+  return fullCommercialConceptPages.has(pagePath) ? { ...info, kind: 'full' } : info;
+}
 
 function getWasmPageCommercialInfo(pagePath: string): PageCommercialInfo {
   const documentedMethods = methods.filter(
@@ -103,10 +132,7 @@ function getWasmPageCommercialInfo(pagePath: string): PageCommercialInfo {
     return { kind: 'none', methods: [], openSourceMethods, events: [] };
   }
 
-  const kind: PageCommercialKind =
-    documentedMethods.length > 0 && commercialMethods.length === documentedMethods.length
-      ? 'full'
-      : 'partial';
+  const kind: PageCommercialKind = openSourceMethods.length === 0 ? 'full' : 'partial';
 
   return {
     kind,
@@ -164,7 +190,9 @@ export function getPageCommercialInfo(pagePath: string): PageCommercialInfo {
 
   const route = parseClientSdkPath(pagePath);
   if (!route) return { kind: 'none', methods: [], openSourceMethods: [], events: [] };
-  if (route.platform === 'wasm') return getWasmPageCommercialInfo(route.wasmPath);
+  if (route.platform === 'wasm') {
+    return applyCommercialConceptOverride(pagePath, getWasmPageCommercialInfo(route.wasmPath));
+  }
 
   const page = nativeAudits[route.platform].find(
     (entry) => entry.currentPath === pagePath && entry.disposition !== 'omit',
@@ -180,16 +208,21 @@ export function getPageCommercialInfo(pagePath: string): PageCommercialInfo {
   );
 
   if (commercialMethods.length === 0 && commercialEvents.length === 0) {
-    return { kind: 'none', methods: [], openSourceMethods, events: [] };
+    return applyCommercialConceptOverride(pagePath, {
+      kind: 'none',
+      methods: [],
+      openSourceMethods,
+      events: [],
+    });
   }
 
   const wasmInfo = getWasmPageCommercialInfo(route.wasmPath);
-  return {
+  return applyCommercialConceptOverride(pagePath, {
     kind: wasmInfo.kind === 'full' ? 'full' : 'partial',
     methods: commercialMethods.sort((left, right) => left.localeCompare(right)),
     openSourceMethods: openSourceMethods.sort((left, right) => left.localeCompare(right)),
     events: commercialEvents.sort((left, right) => left.localeCompare(right)),
-  };
+  });
 }
 
 export function getPageCommercialNames(pagePath: string): Set<string> {
