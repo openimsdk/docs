@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 const root = process.cwd();
 const componentPath = resolve(root, 'src/components/docs/guides-page.tsx');
 const outputPath = resolve(root, 'src/generated/guides-content.json');
-const rawBase = 'https://raw.githubusercontent.com/openimsdk/docs/main/docs';
+const rawBase = 'https://raw.githubusercontent.com/openimsdk/docs/refs/heads/feat/new/docs';
 const docsBase = 'https://docs.openim.io/zh-Hans';
 const existingRecords = await readExistingRecords(outputPath);
 const emojiPattern = /[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D]/gu;
@@ -28,7 +28,7 @@ const records = {};
 for (const sourcePath of sourcePaths) {
   let raw = '';
   try {
-    raw = await fetchText(`${rawBase}${sourcePath}.md`);
+    raw = await fetchGuideSource(sourcePath);
   } catch (error) {
     if (!existingRecords[sourcePath]) throw error;
     const existing = existingRecords[sourcePath];
@@ -61,7 +61,7 @@ await writeFile(
   `${JSON.stringify(
     {
       generatedAt: new Date().toISOString(),
-      source: 'openimsdk/docs docs/guides',
+      source: 'openimsdk/docs feat/new docs/guides',
       records,
     },
     null,
@@ -92,6 +92,18 @@ async function fetchText(url) {
   throw new Error(`Failed to fetch ${url}: ${lastStatus}`);
 }
 
+async function fetchGuideSource(sourcePath) {
+  let lastError;
+  for (const extension of ['.mdx', '.md']) {
+    try {
+      return await fetchText(`${rawBase}${sourcePath}${extension}`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 function parseMarkdown(raw) {
   const frontmatter = {};
   let body = raw;
@@ -111,7 +123,12 @@ function parseMarkdown(raw) {
 }
 
 function normalizeMarkdown(value) {
-  const lines = value
+  const importedAssets = new Map(
+    [...value.matchAll(/^\s*import\s+([A-Za-z_$][\w$]*)\s+from\s+['"]([^'"]+)['"];?\s*$/gm)].map(
+      (match) => [match[1], match[2]],
+    ),
+  );
+  const lines = rewriteImageTags(value, importedAssets)
     .replace(/\r\n/g, '\n')
     .replace(/<!--[\s\S]*?-->/g, '')
     .split('\n')
@@ -126,6 +143,18 @@ function normalizeMarkdown(value) {
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function rewriteImageTags(value, importedAssets) {
+  return value.replace(/<img\b([^>]*?)\/?\s*>/gi, (tag, attributes) => {
+    const variable = attributes.match(/\bsrc=\{([A-Za-z_$][\w$]*)\}/)?.[1];
+    const literal = attributes.match(/\bsrc=['"]([^'"]+)['"]/)?.[1];
+    const source = (variable && importedAssets.get(variable)) || literal;
+    if (!source) return tag;
+
+    const alt = attributes.match(/\balt=['"]([^'"]*)['"]/)?.[1] ?? '';
+    return `![${alt}](${source.replaceAll('\\', '/')})`;
+  });
 }
 
 function normalizeCommercialMarkdown(value) {

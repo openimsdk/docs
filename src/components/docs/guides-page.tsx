@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Fragment, type ReactNode } from 'react';
 import { ArticleHeader } from '@/src/components/docs/article-header';
 import type { ContextOption } from '@/src/components/docs/context-picker';
 import { DocsShell } from '@/src/components/docs/docs-shell';
-import { ChevronRightIcon, ExternalLinkIcon } from '@/src/components/ui/icons';
+import { ChevronRightIcon } from '@/src/components/ui/icons';
 import guidesContentData from '@/src/generated/guides-content.json';
 import type { Locale } from '@/src/lib/i18n';
 import { toLocalizedPath } from '@/src/lib/i18n';
@@ -15,6 +15,7 @@ type GuideItem = {
   description: string;
   href: string;
   badge: string;
+  slug?: string;
 };
 
 type GuideGroup = {
@@ -35,7 +36,6 @@ type GuidesCopy = {
   referenceDescription: string;
   sectionTitle: string;
   sectionDescription: string;
-  openLabel: string;
 };
 
 type GuideSelection =
@@ -65,205 +65,269 @@ function legacy(locale: Locale, path: string) {
   return `${legacyBase[locale]}${path}`;
 }
 
+const legacyZhGuidePaths: Record<string, string[]> = {
+  'quick-start': ['getting-started'],
+  'quick-start/intro': ['getting-started', 'overview'],
+  'quick-start/concept': ['getting-started', 'concepts'],
+  'quick-start/feature': ['getting-started', 'open-source-capabilities'],
+  'quick-start/version': ['getting-started', 'versions'],
+  'quick-deployment': ['deployment'],
+  'quick-deployment/env': ['deployment', 'components'],
+  'quick-deployment/docker': ['deployment', 'docker-compose'],
+  'quick-deployment/source': ['deployment', 'source'],
+  'quick-deployment/offline': ['deployment', 'offline'],
+  'quick-deployment/cluster': ['deployment', 'cluster'],
+  'quick-deployment/ports': ['deployment', 'network'],
+  'quick-deployment/domain': ['deployment', 'domain'],
+  'quick-deployment/prod': ['deployment', 'production'],
+  'quick-deployment/verify': ['deployment', 'verification'],
+  'quick-deployment/faq': ['operations', 'troubleshooting'],
+  'quick-deployment/ops': ['operations', 'monitoring'],
+  solutions: ['integration'],
+  'solutions/dev': ['extension', 'server-development'],
+  'solutions/debug': ['operations', 'debugging'],
+  'solutions/integrate': ['integration', 'business-system'],
+  'solutions/migrate': ['integration', 'migration'],
+  'solutions/push': ['integration', 'offline-push'],
+  'solutions/s3': ['extension', 'object-storage'],
+  'solutions/storage': ['extension', 'storage-migration'],
+  'solutions/openclaw': ['extension', 'ai-openclaw'],
+  reliability: ['operations'],
+  'reliability/report': ['operations', 'benchmark-results'],
+  'reliability/tooling': ['operations', 'benchmark-tools'],
+};
+
 function guidesCopy(locale: Locale): GuidesCopy {
   if (locale === 'zh') {
     return {
       groups: [
         {
-          id: 'quick-start',
-          eyebrow: 'Quick Start',
-          title: '快速开始',
-          description: '建立产品模型、核心概念、开源能力和版本选择的基础认知。',
+          id: 'getting-started',
+          eyebrow: 'Getting Started',
+          title: '认识 OpenIM',
+          description: '先理解 OpenIM 的产品定位、核心模型、开源能力边界和版本选择。',
           items: [
             {
-              title: 'OpenIMSDK 简介',
-              description: '了解 OpenIMSDK 的定位、生态组件、私有化部署和典型使用场景。',
+              title: 'OpenIM 概述',
+              description: '了解 OpenIM 的定位、生态组件、部署方式和典型使用场景。',
               href: legacy(locale, '/guides/introduction/product'),
               badge: 'Intro',
+              slug: 'overview',
             },
             {
-              title: '概念解释',
+              title: '核心概念',
               description: '梳理普通用户、APP 管理员、通知号、群组等核心模型。',
               href: legacy(locale, '/guides/introduction/termDefinition'),
               badge: 'Concept',
+              slug: 'concepts',
             },
             {
-              title: '开源功能明细',
+              title: '开源能力',
               description: '确认开源版包含的组件、消息能力、服务端开放能力和容量边界。',
               href: legacy(locale, '/guides/introduction/features'),
               badge: 'Feature',
+              slug: 'open-source-capabilities',
             },
             {
-              title: '版本说明',
+              title: '版本选择',
               description: '生产环境使用稳定 tag，明确 Server、ChatServer 和 SDK 版本来源。',
               href: legacy(locale, '/guides/introduction/version'),
               badge: 'Version',
+              slug: 'versions',
             },
           ],
         },
         {
-          id: 'quick-deployment',
+          id: 'deployment',
           eyebrow: 'Deployment',
-          title: '快速部署',
-          description: '从环境要求到生产验证的部署路径，覆盖单机、内网、集群和运维检查。',
+          title: '部署 OpenIM',
+          description: '从环境规划到生产验证，覆盖单机、内网和集群部署路径。',
           items: [
             {
-              title: '平台及组件',
+              title: '环境与组件',
               description: '确认服务器、操作系统和 MongoDB、Redis、Kafka、Etcd、MinIO 等依赖。',
               href: legacy(locale, '/guides/gettingStarted/env-comp'),
               badge: 'Env',
+              slug: 'components',
             },
             {
-              title: 'Docker 部署',
+              title: 'Docker Compose 部署',
               description: '使用 openim-docker 快速拉起 OpenIMServer、ChatServer 和依赖组件。',
               href: legacy(locale, '/guides/gettingStarted/dockerCompose'),
               badge: 'Docker',
+              slug: 'docker-compose',
             },
             {
               title: '源码部署',
               description: '面向生产单机部署，按稳定 tag 编译并启动 OpenIMServer 与 ChatServer。',
               href: legacy(locale, '/guides/gettingStarted/imSourceCodeDeployment'),
               badge: 'Source',
+              slug: 'source',
             },
             {
               title: '内网部署',
               description: '在联网构建机导出部署包，再复制到内网目标机运行。',
               href: legacy(locale, '/guides/gettingStarted/internalDeployment'),
               badge: 'Offline',
+              slug: 'offline',
             },
             {
               title: '集群部署',
               description: '在多节点和 Nginx 反向代理场景中部署 OpenIMServer。',
               href: legacy(locale, '/guides/gettingStarted/cluster'),
               badge: 'Cluster',
+              slug: 'cluster',
             },
             {
-              title: '端口开放',
+              title: '端口与网络',
               description: '配置防火墙、服务端口以及 SDK 访问地址。',
               href: legacy(locale, '/guides/gettingStarted/ports'),
               badge: 'Ports',
+              slug: 'network',
             },
             {
               title: '域名配置',
               description: '通过域名、证书和 Nginx 将 API 与 WebSocket 统一到生产入口。',
               href: legacy(locale, '/guides/gettingStarted/nginxDomainConfig'),
               badge: 'Domain',
+              slug: 'domain',
             },
             {
-              title: '生产环境',
+              title: '生产环境检查',
               description: '理解外部组件和服务故障的影响、恢复顺序与恢复后验证。',
               href: legacy(locale, '/guides/gettingStarted/production'),
               badge: 'Prod',
+              slug: 'production',
             },
             {
-              title: '快速验证',
+              title: '部署验证',
               description: '验证 API、WebSocket、管理后台和基础消息链路是否可用。',
               href: legacy(locale, '/guides/gettingStarted/quickTestServer'),
               badge: 'Verify',
+              slug: 'verification',
+            },
+          ],
+        },
+        {
+          id: 'integration',
+          eyebrow: 'Integration',
+          title: '集成 OpenIM',
+          description: '把业务账号、业务后端、客户端和 OpenIM 的服务端能力连接起来。',
+          items: [
+            {
+              title: '业务系统集成',
+              description: '将账号体系、业务后端和 OpenIM 的 API / Webhook 串起来。',
+              href: legacy(locale, '/guides/solution/integrate'),
+              badge: 'Integrate',
+              slug: 'business-system',
+            },
+            {
+              title: '离线推送',
+              description: '对接移动端离线推送链路，补齐消息通知体验。',
+              href: legacy(locale, '/guides/solution/offlinePush'),
+              badge: 'Push',
+              slug: 'offline-push',
+            },
+            {
+              title: '数据迁移',
+              description: '评估从现有云 IM 或自研系统迁移到 OpenIM 的接入路径。',
+              href: legacy(locale, '/guides/solution/migrate'),
+              badge: 'Migrate',
+              slug: 'migration',
+            },
+          ],
+        },
+        {
+          id: 'extension',
+          eyebrow: 'Extension',
+          title: '扩展 OpenIM',
+          description: '围绕服务端能力、对象存储和 AI 场景扩展 OpenIM。',
+          items: [
+            {
+              title: '服务端二次开发',
+              description: '基于 OpenIMServer 的 API、RPC、Storage 层扩展新业务能力。',
+              href: legacy(locale, '/guides/solution/developNewFeatures'),
+              badge: 'Dev',
+              slug: 'server-development',
+            },
+            {
+              title: '对象存储配置',
+              description: '接入 MinIO、OSS、COS、Kodo 或 AWS S3 保存文件与媒体资源。',
+              href: legacy(locale, '/guides/solution/s3'),
+              badge: 'S3',
+              slug: 'object-storage',
+            },
+            {
+              title: '对象存储迁移',
+              description: '在对象存储切换时规划配置、数据迁移和访问验证。',
+              href: legacy(locale, '/guides/solution/s3convert'),
+              badge: 'Storage',
+              slug: 'storage-migration',
+            },
+            {
+              title: 'AI 与 OpenClaw',
+              description: '通过 OpenClaw Gateway 接入 OpenIMServer 并验证第一条消息。',
+              href: legacy(locale, '/guides/solution/openclaw'),
+              badge: 'OpenClaw',
+              slug: 'ai-openclaw',
+            },
+          ],
+        },
+        {
+          id: 'operations',
+          eyebrow: 'Operations & Reliability',
+          title: '运维与可靠性',
+          description: '覆盖监控、排障、常见问题、容量评估和消息链路可靠性验证。',
+          items: [
+            {
+              title: '监控与告警',
+              description: '启用 Prometheus、Alertmanager、Grafana 和 node-exporter。',
+              href: legacy(locale, '/guides/gettingStarted/admin'),
+              badge: 'Ops',
+              slug: 'monitoring',
+            },
+            {
+              title: '源码调试',
+              description: '在源码部署场景下对 openim-api 等服务进行单步调试。',
+              href: legacy(locale, '/guides/solution/howToDebug'),
+              badge: 'Debug',
+              slug: 'debugging',
             },
             {
               title: '常见问题',
               description: '排查部署过程中的健康检查、配置和容器冲突问题。',
               href: legacy(locale, '/guides/gettingStarted/faq'),
               badge: 'FAQ',
+              slug: 'troubleshooting',
             },
             {
-              title: '运维系统',
-              description: '启用 Prometheus、Alertmanager、Grafana 和 node-exporter。',
-              href: legacy(locale, '/guides/gettingStarted/admin'),
-              badge: 'Ops',
-            },
-          ],
-        },
-        {
-          id: 'solutions',
-          eyebrow: 'Solutions',
-          title: '解决方案',
-          description: '面向业务系统接入、二次开发、迁移、推送和对象存储等实施主题。',
-          items: [
-            {
-              title: '二次开发',
-              description: '基于 OpenIMServer 的 API、RPC、Storage 层扩展新业务能力。',
-              href: legacy(locale, '/guides/solution/developNewFeatures'),
-              badge: 'Dev',
-            },
-            {
-              title: 'GoLand 调试',
-              description: '在源码部署场景下对 openim-api 等服务进行单步调试。',
-              href: legacy(locale, '/guides/solution/howToDebug'),
-              badge: 'Debug',
-            },
-            {
-              title: '业务系统集成',
-              description: '将账号体系、业务后端和 OpenIM 的 API / Webhook 串起来。',
-              href: legacy(locale, '/guides/solution/integrate'),
-              badge: 'Integrate',
-            },
-            {
-              title: '云服务迁移',
-              description: '评估从现有云 IM 或自研系统迁移到 OpenIM 的接入路径。',
-              href: legacy(locale, '/guides/solution/migrate'),
-              badge: 'Migrate',
-            },
-            {
-              title: '离线推送接入',
-              description: '对接移动端离线推送链路，补齐消息通知体验。',
-              href: legacy(locale, '/guides/solution/offlinePush'),
-              badge: 'Push',
-            },
-            {
-              title: 'S3 存储配置',
-              description: '接入 MinIO、OSS、COS、Kodo 或 AWS S3 保存文件与媒体资源。',
-              href: legacy(locale, '/guides/solution/s3'),
-              badge: 'S3',
-            },
-            {
-              title: 'S3 存储迁移',
-              description: '在对象存储切换时规划配置、数据迁移和访问验证。',
-              href: legacy(locale, '/guides/solution/s3convert'),
-              badge: 'Storage',
-            },
-            {
-              title: 'OpenClaw 接入',
-              description: '通过 OpenClaw Gateway 接入 OpenIMServer 并验证第一条消息。',
-              href: legacy(locale, '/guides/solution/openclaw'),
-              badge: 'OpenClaw',
-            },
-          ],
-        },
-        {
-          id: 'reliability',
-          eyebrow: 'Reliability',
-          title: '消息可靠性测试',
-          description: '用于上线前容量评估、消息链路可靠性验证和压测工具配置。',
-          items: [
-            {
-              title: '压力及可靠性测试报告',
+              title: '性能与可靠性报告',
               description: '使用测试程序模拟大量用户在线与消息收发，评估容量与链路稳定性。',
               href: legacy(locale, '/guides/benchmark/benchmark_test'),
               badge: 'Report',
+              slug: 'benchmark-results',
             },
             {
-              title: '压测程序使用说明',
+              title: '压测工具',
               description: '了解压测程序的运行方式、参数和验证方法。',
               href: legacy(locale, '/guides/benchmark/benchmark_guide'),
               badge: 'Tooling',
+              slug: 'benchmark-tools',
             },
           ],
         },
       ],
       heroDescription:
-        '汇总产品概念、部署路径、业务集成、存储和可靠性测试等指南，帮助团队按实施阶段查阅 OpenIM 文档。',
+        '从产品认知、部署和业务集成，到扩展、运维与可靠性验证，按实施阶段组织 OpenIM 指南。',
       heroEyebrow: '指南',
       heroTitle: 'OpenIM Guides',
       referenceLabel: '指南目录',
       referenceTitle: '按实施阶段查阅',
       referenceDescription:
-        '从产品概念与能力边界开始，再进入部署、业务集成、存储配置和可靠性验证。',
+        '先理解 OpenIM，再完成部署与集成，最后进入扩展、运维和可靠性验证。',
       sectionTitle: '指南目录',
       sectionDescription:
-        '按实施阶段组织常用 OpenIM 指南。每篇文档保留官方来源链接，便于核对原始说明。',
-      openLabel: '官方来源',
+        '每个目录对应一个实施阶段，目录页面给出本阶段的内容范围，具体接口与 SDK 方法链接到对应参考文档。',
     };
   }
 
@@ -473,7 +537,6 @@ function guidesCopy(locale: Locale): GuidesCopy {
     sectionTitle: 'Guide directory',
     sectionDescription:
       'Guides are organized by implementation stage. Each imported article keeps its official source link for verification.',
-    openLabel: 'Official source',
   };
 }
 
@@ -484,6 +547,9 @@ export function GuidesPage({ locale = 'en' }: { locale?: Locale }) {
 }
 
 export function GuidesSubPage({ locale = 'en', slug = [] }: { locale?: Locale; slug?: string[] }) {
+  const replacement = locale === 'zh' ? legacyZhGuidePaths[slug.join('/')] : undefined;
+  if (replacement) redirect(toLocalizedPath(guidePath(...replacement), locale));
+
   const text = guidesCopy(locale);
   const currentPath = guidePath(...slug);
   return <GuidesPageContent currentPath={currentPath} locale={locale} slug={slug} text={text} />;
@@ -582,7 +648,6 @@ function GuidesBody({
 
     return (
       <div className="guides-docs-content">
-        <GuideSourceStrip content={content} item={selection.item} text={text} />
         {content ? (
           <GuideMarkdown
             body={content.body}
@@ -596,7 +661,6 @@ function GuidesBody({
             <p>{selection.item.description}</p>
           </section>
         )}
-        <GuideGroupCard group={selection.group} locale={locale} />
       </div>
     );
   }
@@ -618,30 +682,6 @@ function GuidesBody({
         ))}
       </section>
     </div>
-  );
-}
-
-function GuideSourceStrip({
-  content,
-  item,
-  text,
-}: {
-  content?: GuideContentRecord;
-  item: GuideItem;
-  text: GuidesCopy;
-}) {
-  return (
-    <a
-      className="guide-source-strip"
-      href={content?.sourceUrl ?? item.href}
-      rel="noreferrer"
-      target="_blank"
-    >
-      <span>{item.badge}</span>
-      <strong>{text.openLabel}</strong>
-      <p>{content?.sourceUrl ?? item.href}</p>
-      <ExternalLinkIcon />
-    </a>
   );
 }
 
@@ -929,11 +969,11 @@ function renderInlineMarkdown(
   for (const match of value.matchAll(pattern)) {
     if (match.index > cursor) nodes.push(value.slice(cursor, match.index));
     if (match[1] !== undefined) {
-      const href = resolveGuideHref(match[2], sourcePath, sourceMap, locale);
+      const src = resolveGuideImageSrc(match[2], sourcePath);
       nodes.push(
-        <a href={href} key={`${match.index}-image`} rel="noreferrer" target="_blank">
-          {match[1] || href}
-        </a>,
+        // Guide assets are served from the documentation repository branch.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img alt={match[1] || ''} key={`${match.index}-image`} src={src} />,
       );
     } else if (match[3] !== undefined) {
       const href = resolveGuideHref(match[4], sourcePath, sourceMap, locale);
@@ -973,10 +1013,18 @@ function resolveGuideHref(
   if (isExternalHref(href)) return href;
 
   const base = `https://docs.openim.io/zh-Hans${sourcePath.replace(/\/[^/]+$/, '/')}`;
-  const resolved = new URL(href, base).pathname.replace(/^\/zh-Hans/, '').replace(/\.md$/, '');
+  const resolved = new URL(href, base).pathname.replace(/^\/zh-Hans/, '').replace(/\.(?:md|mdx)$/, '');
   const local = sourceMap.get(resolved);
   if (local) return toLocalizedPath(local, locale);
   return `https://docs.openim.io/zh-Hans${resolved}`;
+}
+
+function resolveGuideImageSrc(href: string, sourcePath: string) {
+  if (isExternalHref(href)) return href;
+
+  const base = `https://docs.openim.io/zh-Hans${sourcePath.replace(/\/[^/]+$/, '/')}`;
+  const resolved = new URL(href, base).pathname.replace(/^\/zh-Hans/, '');
+  return `https://raw.githubusercontent.com/openimsdk/docs/refs/heads/feat/new/docs${resolved}`;
 }
 
 function guideHeadingId(value: string) {
@@ -1055,6 +1103,7 @@ function createGuidesContext(text: GuidesCopy): NavContext {
     rootPath: overviewPath,
     overviewPath,
     product: 'guides',
+    sidebarExpansion: 'active-path',
     nodes: [
       {
         id: 'guides-overview',
@@ -1169,7 +1218,7 @@ function guideItemNodeId(group: GuideGroup, item: GuideItem) {
 }
 
 function guideItemSlug(item: GuideItem) {
-  return slugify(item.badge || item.title);
+  return item.slug ?? slugify(item.badge || item.title);
 }
 
 function slugify(value: string) {
