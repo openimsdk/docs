@@ -1,0 +1,23 @@
+---
+title: '加载历史消息'
+description: '使用 iOS SDK 分页读取会话历史消息。'
+sourcePath: '/sdk/ios/message/retrieving-messages/load-older-messages'
+---
+
+进入聊天页时用该 selector 建立第一页快照，继续上拉时传入当前边界消息的 `clientMsgID`。
+
+```objc
+OIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];
+param.conversationID = conversationID;
+param.startClientMsgID = startClientMsgID;
+param.count = 20;
+param.viewType = OIMGetHistoryViewTypeHistory;
+
+[[OIMManager manager] getAdvancedHistoryMessageList:param
+    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {
+        [self prependMessages:result.messageList ?: @[]];
+    }
+    onFailure:nil];
+```
+
+第一页的 `startClientMsgID` 可以为 `nil`。成功结果也允许为 `nil`，应先检查；非空时用 `messageList` 和 `isEnd` 更新分页状态。查询不触发新消息 delegate，合并时按 `conversationID:clientMsgID` 去重。

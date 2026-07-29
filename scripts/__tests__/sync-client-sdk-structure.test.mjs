@@ -25,7 +25,7 @@ test('mirrors every supported WASM path for native SDKs', () => {
     assert.ok(mirrored.nodes.some((node) => node.id === 'calling'));
     assert.equal(
       omitted.includes(
-        `/sdk/${platform}/conversation/managing-conversation-groups/manage-conversation-groups`,
+        `/sdk/${platform}/conversation/managing-conversation-groups/overview-conversation-groups`,
       ),
       false,
     );

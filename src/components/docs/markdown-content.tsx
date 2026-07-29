@@ -300,7 +300,8 @@ function parseCodeTabTitle(meta: string | undefined, language: string) {
 
 function renderInlineMarkdown(value: string, options: InlineRenderOptions): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const pattern = /!\[([^\]]*)]\(([^)]+)\)|\[([^\]]+)]\(([^)]+)\)|`([^`]+)`|\*\*([^*]+)\*\*|(<span className="enterprise-field-badge">商业版<\/span>)/g;
+  const pattern =
+    /!\[([^\]]*)]\(([^)]+)\)|\[([^\]]+)]\(([^)]+)\)|`([^`]+)`|\*\*([^*]+)\*\*|(<span className="enterprise-field-badge">商业版<\/span>)/g;
   let cursor = 0;
   const badgeLabel = t(options.locale).article.commercialBadge;
 
@@ -335,7 +336,7 @@ function renderInlineMarkdown(value: string, options: InlineRenderOptions): Reac
         nodes.push(
           <span className="commercial-api-ref" key={`${match.index}-code`}>
             <code>{codeText}</code>
-            <span className="commercial-inline-mark">{badgeLabel}</span>
+            <span className="enterprise-field-badge">{badgeLabel}</span>
           </span>,
         );
       } else {

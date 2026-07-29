@@ -9,10 +9,6 @@ type HomeCard = {
   href: string;
   description: string;
   meta?: string;
-  related?: {
-    href: string;
-    title: string;
-  }[];
 };
 
 type FeatureGroup = {
@@ -107,14 +103,25 @@ const sdkCards: HomeCard[] = [
     meta: 'Dart',
   },
   {
-    title: 'WASM',
+    title: 'Electron',
+    href: '/sdk/electron/overview',
+    description:
+      'Build Electron desktop apps with WASM in the renderer or FFI in the native runtime.',
+    meta: 'Desktop',
+  },
+  {
+    title: 'JavaScript SDK',
+    href: '/sdk/miniprogram/overview',
+    description:
+      'Use the pure JavaScript SDK for mini apps and lightweight web experiences that do not need local message storage.',
+    meta: 'Pure JavaScript',
+  },
+  {
+    title: 'JavaScript SDK (WASM)',
     href: '/sdk/wasm/overview',
-    description: 'Build browser messaging apps with the OpenIM WebAssembly SDK.',
+    description:
+      'Build full-featured web messaging apps with local message storage, conversation caching, and local search.',
     meta: 'WebAssembly',
-    related: [
-      { title: 'Electron', href: '/sdk/electron/overview' },
-      { title: 'Mini Program', href: '/sdk/miniprogram/overview' },
-    ],
   },
 ];
 
@@ -288,7 +295,8 @@ const featureGroups: FeatureGroup[] = [
   },
   {
     title: 'Message state and UX',
-    description: 'Keep unread counts, read receipts, typing indicators, and message extras in sync.',
+    description:
+      'Keep unread counts, read receipts, typing indicators, and message extras in sync.',
     links: [
       {
         title: 'Unread counts',
@@ -360,12 +368,13 @@ const featureGroups: FeatureGroup[] = [
       {
         title: 'Delete or revoke messages',
         href: '/sdk/wasm/message/managing-messages/delete-a-message',
-        description: 'Delete messages locally or on the server, or revoke them for conversation members.',
+        description:
+          'Delete messages locally or on the server, or revoke them for conversation members.',
         meta: 'Delete',
       },
       {
         title: 'Conversation groups',
-        href: '/sdk/wasm/conversation/managing-conversation-groups/manage-conversation-groups',
+        href: '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups',
         description: 'Organize conversations into user-defined groups and keep changes in sync.',
         meta: 'Group',
       },
@@ -448,7 +457,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   Electron: {
     title: 'Electron',
-    description: '查看 Electron 中 WASM 与 FFI 两种接入形态及运行环境差异。',
+    description: '面向 Electron 桌面应用，渲染层可复用 WASM，原生运行层可通过 FFI 接入。',
     meta: 'Desktop',
   },
   Messages: {
@@ -490,10 +499,17 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     description: '在 Unity 游戏和互动应用中接入用户、群组和实时消息。',
     meta: 'C#',
   },
-  'Mini Program': {
-    title: '小程序',
-    description: '查看小程序 SDK 的适用场景、运行限制和平台接入方式。',
-    meta: '小程序',
+  'JavaScript SDK': {
+    title: 'JavaScript SDK',
+    description:
+      '纯 JavaScript 实现，适用于小程序、客服入口、活动页和无需本地消息存储的轻量 Web 场景。',
+    meta: '纯 JavaScript',
+  },
+  'JavaScript SDK (WASM)': {
+    title: 'JavaScript SDK (WASM)',
+    description:
+      '基于 WebAssembly，提供本地消息存储、会话缓存和本地搜索，适用于完整 Web IM 和 Electron 渲染层。',
+    meta: 'WebAssembly',
   },
   'React Native': {
     title: 'React Native',
@@ -513,11 +529,6 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   Users: {
     title: '用户',
     description: '创建和查询用户、更新资料，并为客户端登录签发 Token。',
-  },
-  WASM: {
-    title: 'WASM',
-    description: '使用 OpenIM WebAssembly SDK 在浏览器中接入即时通讯。',
-    meta: 'WebAssembly',
   },
   'uni-app': {
     title: 'uni-app',
@@ -721,10 +732,6 @@ function localizeCards(cards: HomeCard[], locale: Locale): HomeCard[] {
   return cards.map((card) => ({
     ...card,
     ...(zhCardText[card.title] ?? {}),
-    related: card.related?.map((item) => ({
-      ...item,
-      title: zhCardText[item.title]?.title ?? item.title,
-    })),
   }));
 }
 
@@ -791,16 +798,6 @@ function CardLink({
       {card.meta ? <span>{card.meta}</span> : null}
       <h3>{card.title}</h3>
       <p>{card.description}</p>
-      {card.related ? (
-        <div
-          className="sdk-card-related"
-          aria-label={locale === 'zh' ? '平台入口' : 'Platform entries'}
-        >
-          {card.related.map((item) => (
-            <span key={item.href}>{item.title}</span>
-          ))}
-        </div>
-      ) : null}
       <strong>
         {cta}
         <b aria-hidden="true">→</b>

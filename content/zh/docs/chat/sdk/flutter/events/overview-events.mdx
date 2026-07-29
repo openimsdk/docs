@@ -81,17 +81,6 @@ Future<void> registerOpenIMListeners() async {
     ),
   );
 
-  await OpenIM.iMManager.conversationGroupManager
-      .setConversationGroupListener(
-    OnConversationGroupListener(
-      onConversationGroupAdded: handleConversationGroupAdded,
-      onConversationGroupChanged: handleConversationGroupChanged,
-      onConversationGroupDeleted: handleConversationGroupDeleted,
-      onConversationGroupMemberAdded: handleConversationGroupMemberAdded,
-      onConversationGroupMemberDeleted: handleConversationGroupMemberDeleted,
-    ),
-  );
-
   await OpenIM.iMManager.signalingManager.setSignalingListener(
     OnSignalingListener(
       onReceiveNewInvitation: handleIncomingCall,
@@ -111,30 +100,32 @@ Future<void> registerOpenIMListeners() async {
 }
 ```
 
+会话分组 listener 由 `ConversationGroupManager` 单独保存，不在这个组合入口重复设置。它的完整注册、五类回调和状态合并方式见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。
+
 固定版本没有对应的 remove 或 unset API。退出登录、切换账号或销毁状态层时，应停止向旧账号状态和已销毁 Widget 分发回调，并释放应用自己的引用；重新登录后用新账号的完整组合 listener 覆盖设置。
 
 ## 事件归属
 
-| 事件范围           | 合并标识                     | 完整处理页面                                                                                  |
-| ------------------ | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| 用户资料与在线状态 | `userID`                     | [用户概览](/sdk/flutter/user/overview-user)                                                   |
-| 好友和黑名单       | `userID`                     | [处理好友申请](/sdk/flutter/user/managing-friends/manage-friend-requests)                     |
-| 会话列表           | `conversationID`             | [获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list) |
-| 会话分组           | `conversationGroupID`        | [管理会话分组](/sdk/flutter/conversation/managing-conversation-groups/manage-conversation-groups) |
-| 总未读数           | 当前登录用户                 | [管理会话已读状态](/sdk/flutter/conversation/managing-conversations/manage-read-status)       |
-| 输入状态           | `conversationID:userID`      | [管理输入状态](/sdk/flutter/message/composing-messages/manage-typing-status)                  |
-| 群组               | `groupID`                    | [获取和搜索群组](/sdk/flutter/group/retrieving-groups/retrieve-and-search-groups)             |
-| 群成员             | `groupID:userID`             | [获取群成员](/sdk/flutter/group/retrieving-group-members/retrieve-group-members)              |
-| 入群申请           | `groupID:userID`             | [处理入群申请](/sdk/flutter/group/managing-group-applications/manage-group-applications)      |
-| 新消息             | `conversationID:clientMsgID` | [接收消息](/sdk/flutter/message/receiving-messages/receive-messages)                          |
-| 消息删除           | `conversationID:clientMsgID` | [删除消息](/sdk/flutter/message/managing-messages/delete-a-message)                           |
-| 消息撤回           | `conversationID:clientMsgID` | [撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)                           |
-| 消息修改           | `conversationID:clientMsgID` | [修改消息](/sdk/flutter/message/managing-messages/modify-a-message)                           |
-| 置顶消息           | `conversationID`，消息按 `clientMsgID` | [置顶会话中的消息](/sdk/flutter/message/managing-messages/pin-conversation-messages)           |
-| 单聊已读回执       | `conversationID:clientMsgID` | [管理消息已读回执](/sdk/flutter/message/managing-read-status/manage-message-read-receipts)    |
-| 自定义业务通知     | 业务协议中的 ID 或幂等键     | [自定义消息与扩展数据](/sdk/flutter/message/composing-messages/custom-message-and-extra-data) |
-| 通话               | `roomID`，参与者结合用户 ID  | [发起或处理通话](/sdk/flutter/calling/managing-calls/start-or-handle-a-call)                    |
-| 通话自定义信令     | `roomID:eventID`             | [发送自定义信令](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal)             |
+| 事件范围           | 合并标识                               | 完整处理页面                                                                                        |
+| ------------------ | -------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 用户资料与在线状态 | `userID`                               | [用户概览](/sdk/flutter/user/overview-user)                                                         |
+| 好友和黑名单       | `userID`                               | [分页获取好友列表](/sdk/flutter/user/friends/get-friend-list-page)                                  |
+| 会话列表           | `conversationID`                       | [获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)       |
+| 会话分组           | `conversationGroupID`                  | [会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) |
+| 总未读数           | 当前登录用户                           | [维护总未读数](/sdk/flutter/conversation/managing-conversations/get-total-unread-count)             |
+| 输入状态           | `conversationID:userID`                | [上报输入状态](/sdk/flutter/message/composing-messages/update-typing-status)                        |
+| 群组               | `groupID`                              | [群组概览](/sdk/flutter/group/overview-group)                                                       |
+| 群成员             | `groupID:userID`                       | [群成员查询](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)         |
+| 入群申请           | `groupID:userID`                       | [入群申请概览](/sdk/flutter/group/group-applications/overview-group-applications)                   |
+| 新消息             | `conversationID:clientMsgID`           | [接收消息](/sdk/flutter/message/receiving-messages/receive-messages)                                |
+| 消息删除           | `conversationID:clientMsgID`           | [删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)                             |
+| 消息撤回           | `conversationID:clientMsgID`           | [撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)                                 |
+| 消息修改           | `conversationID:clientMsgID`           | [修改消息](/sdk/flutter/message/managing-messages/modify-a-message)                                 |
+| 置顶消息           | `conversationID`，消息按 `clientMsgID` | [置顶或取消置顶消息](/sdk/flutter/message/managing-messages/set-message-pinned)                     |
+| 单聊已读回执       | `conversationID:clientMsgID`           | [标记会话已读](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)             |
+| 自定义业务通知     | 业务协议中的 ID 或幂等键               | [接收自定义业务消息](/sdk/flutter/message/receiving-messages/custom-business-listener)              |
+| 通话               | `roomID`，参与者结合用户 ID            | [通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)                                  |
+| 通话自定义信令     | `roomID:eventID`                       | [发送自定义信令](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal)                  |
 
 ## 监听初始化同步
 

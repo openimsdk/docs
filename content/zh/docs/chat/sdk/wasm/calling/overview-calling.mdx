@@ -1,17 +1,17 @@
 ---
 title: '音视频通话概览'
-description: '了解 OpenIMClientSDK 的音视频通话信令、房间信息和事件边界。'
+description: '了解 WASM SDK 的音视频通话信令、房间信息和事件边界。'
 sourcePath: '/sdk/wasm/calling/overview-calling'
 ---
 
-OpenIMClientSDK 提供发起邀请、接受、拒绝、取消、挂断、查询房间和同步通话状态所需的信令 API。它负责协调谁进入哪个房间以及通话生命周期，不负责采集摄像头、播放远端媒体流或渲染通话界面。
+WASM SDK 提供发起邀请、接受、拒绝、取消、挂断、查询房间和同步通话状态所需的信令 API。它负责协调通话参与者、房间信息和通话生命周期，不负责采集摄像头画面、播放远端媒体流或渲染通话界面。
 
-应用需要把 SDK 返回的 `roomID`、`token` 和 `liveURL` 交给所选的实时音视频媒体引擎，并自行处理设备权限、媒体轨道、弱网策略和界面状态。不要把 OpenIMClientSDK 信令 API 描述成一套完整的 WebRTC 媒体 SDK。
+应用需要把 SDK 返回的 `roomID`、`token` 和 `liveURL` 交给所选的实时音视频媒体引擎，并自行处理设备权限、媒体轨道、弱网策略和界面状态。WASM SDK 的信令 API 并不是一套完整的 WebRTC 媒体 SDK。
 
 ## 通话流程
 
 1. 调用 `signalingInvite()` 发起单聊通话，或调用 `signalingInviteInGroup()` 发起群聊通话。
-2. 被邀请方从 `OnReceiveNewInvitation` 取得邀请，选择接受或拒绝。
+2. 被邀请方从 `OnReceiveNewInvitation` 获取邀请，选择接受或拒绝。
 3. 接受方调用 `signalingAccept()`，双方使用返回的房间凭据接入媒体引擎。
 4. 通话过程中根据成员、媒体流和自定义信令事件更新本地状态。
 5. 发起方可以取消尚未接通的邀请；任一通话参与者都可以挂断已经建立的通话。
@@ -30,12 +30,16 @@ OpenIMClientSDK 提供发起邀请、接受、拒绝、取消、挂断、查询�
 
 发起、接受、拒绝、取消和挂断等写操作需要分别处理 API 的 Promise 结果与通话事件。Promise 成功表示 OpenIMServer 已接受或完成当前信令请求；事件反映邀请方、被邀请方、其他设备或房间参与者看到的增量状态，两者不是同一个完成信号。
 
-邀请生命周期、成员进出房间、挂断和媒体流变化的完整监听统一见[发起或处理通话](/sdk/wasm/calling/managing-calls/start-or-handle-a-call)；自定义信令事件见[发送自定义信令](/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal)。房间和令牌查询只通过 Promise 返回快照，具体见[获取通话信息](/sdk/wasm/calling/retrieving-call-information/retrieve-call-information)。
+邀请生命周期、成员进出房间、挂断和媒体流变化的完整监听统一见[通话事件](/sdk/wasm/calling/managing-calls/handle-call-events)；自定义信令事件见[发送自定义信令](/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal)。查询房间、重新获取 Token 和恢复待处理邀请只通过 Promise 返回调用时的快照。
 
 概览页不注册事件处理器。通话状态以 `roomID` 为主键；参与者状态还需要结合用户 ID。重新登录后的通话变化由通话事件同步；需要显示当前房间快照时，再查询房间信息。
 
-## 相关页面
+## 按任务查找页面
 
-- [发起或处理通话](/sdk/wasm/calling/managing-calls/start-or-handle-a-call)
-- [获取通话信息](/sdk/wasm/calling/retrieving-call-information/retrieve-call-information)
-- [发送自定义信令](/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal)
+| 任务 | 页面 |
+| --- | --- |
+| 发起单聊或群聊通话 | [发起单聊通话](/sdk/wasm/calling/managing-calls/start-single-call)、[发起群聊通话](/sdk/wasm/calling/managing-calls/start-group-call) |
+| 接受或拒绝邀请 | [接受通话](/sdk/wasm/calling/managing-calls/accept-call)、[拒绝通话](/sdk/wasm/calling/managing-calls/reject-call) |
+| 取消邀请或挂断通话 | [取消通话邀请](/sdk/wasm/calling/managing-calls/cancel-call)、[挂断通话](/sdk/wasm/calling/managing-calls/hang-up-call) |
+| 恢复房间或待处理邀请 | [查询群组通话房间](/sdk/wasm/calling/retrieving-call-information/get-room-by-group-id)、[获取通话房间 Token](/sdk/wasm/calling/retrieving-call-information/get-token-by-room-id)、[恢复待处理的通话邀请](/sdk/wasm/calling/retrieving-call-information/restore-pending-invitation) |
+| 处理通话事件和业务协商 | [通话事件](/sdk/wasm/calling/managing-calls/handle-call-events)、[发送自定义信令](/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal) |

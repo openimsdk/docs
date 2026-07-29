@@ -1,103 +1,104 @@
 ---
 title: '消息概览'
-description: '了解 OpenIMClientSDK 的消息类型、消息标识、收发事件、历史记录、搜索、已读状态和扩展数据能力。'
+description: '了解 MessageItem 的创建、发送、接收、查询和状态同步边界。'
 sourcePath: '/sdk/wasm/message/overview-message'
 ---
 
-OpenIMClientSDK 的消息能力围绕 `MessageItem` 展开。普通消息以及由本地文件创建的媒体消息，使用 `create*Message()` 或 `create*MessageByFile()` 创建，再通过 `sendMessage()` 发送。媒体文件已经由业务侧上传并取得 URL 时，必须使用 `create*MessageByURL()` 创建消息，再通过 `sendMessageNotOss()` 发送。两条路径都可以发送到单聊或群聊；收到新消息、撤回、已读回执、上传进度和会话变化时，通过 `CbEvents` 事件同步到应用状态。
+WASM SDK 使用 `MessageItem` 表示一条消息。发送消息分为两个阶段：先根据内容创建待发送对象，再把该对象发送到单聊用户或群组。创建方法不会发送消息；发送方法的 Promise 成功也不代表其他客户端已经收到消息。
 
-消息页通常需要长期保存以下标识：
+接收新消息、读取历史、搜索和管理消息都以会话为范围。消息列表应同时保留 `conversationID` 和 `clientMsgID`，前者确定所属会话，后者用于定位和合并具体消息。
 
-| 标识             | 用途                                                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `clientMsgID`    | 消息在客户端侧的稳定 ID，用于渲染去重、状态更新、查询和分页游标。                                                  |
-| `conversationID` | 消息所属会话的记录 ID，用于读取历史消息、清理未读数、搜索和查询已读状态；它来自会话数据，不是 `MessageItem` 字段。 |
-| `recvID`         | 单聊发送目标用户 ID；发送群聊消息时保持为空字符串。                                                                |
-| `groupID`        | 群聊发送和群消息已读回执的目标群组 ID；发送单聊消息时保持为空字符串。                                              |
+## 消息处理流程
 
-## 消息类型
+| 阶段 | 主要操作 | 说明 |
+| --- | --- | --- |
+| 创建 | 调用对应的 `create*Message()` 方法 | 返回待发送的 `MessageItem`，不会写入服务端或触发新消息事件。 |
+| 发送 | 调用 `sendMessage()` 或 `sendMessageNotOss()` | 单聊填写 `recvID`，群聊填写 `groupID`；另一个目标字段传空字符串。 |
+| 接收 | 监听新消息事件 | 根据消息路由字段确定目标会话，再按 `clientMsgID` 幂等合并。 |
+| 查询 | 读取历史、搜索或按 ID 定位消息 | 查询返回调用时的快照，不触发新消息事件。 |
+| 更新 | 删除、撤回、修改、置顶或上报已读状态 | 分别处理 Promise 结果、相关事件和必要的重新查询。 |
 
-不同内容先通过对应的创建方法生成 `MessageItem`。发送层不需要为每种内容维护不同入口，统一把创建方法返回的 `data` 作为 `sendMessage()` 的 `message` 参数。
+从浏览器 `File` 创建的图片、音频、视频和文件消息，通过 `sendMessage()` 进入 SDK 内置上传与发送流程。媒体资源已经由业务上传服务取得 URL 时，先使用对应的 `create*MessageByURL()` 创建消息，再通过 `sendMessageNotOss()` 发送，避免重复上传。
 
-### 消息类型对比
+## MessageItem 返回结构
 
-| 内容类型        | 创建方法                                          | 典型用途                                   |
-| --------------- | ------------------------------------------------- | ------------------------------------------ |
-| 普通文本        | `createTextMessage(text)`                         | 发送纯文本聊天内容。                       |
-| Markdown        | `createMarkdownMessage(text)`       | 创建需要安全渲染的 Markdown 内容。         |
-| @ 文本          | `createTextAtMessage(data)`         | 在群聊中提醒指定成员。                     |
-| 图片            | `createImageMessageByFile(params)` 或 `createImageMessageByURL(params)` | 从本地文件或已上传 URL 创建图片消息。 |
-| 音频            | `createSoundMessageByFile(data)` 或 `createSoundMessageByURL(data)` | 从本地文件或已上传 URL 创建音频消息。 |
-| 视频            | `createVideoMessageByFile(data)` 或 `createVideoMessageByURL(data)` | 从本地文件或已上传 URL 创建视频消息。 |
-| 文件            | `createFileMessageByFile(data)` 或 `createFileMessageByURL(data)` | 从本地文件或已上传 URL 创建附件消息。 |
-| 自定义消息      | `createCustomMessage(params)`       | 承载卡片、邀请、订单等结构化业务数据。 |
+创建、发送、接收和查询消息时，`data` 中的消息对象都是 `MessageItem`。常用公共字段如下：
 
-从本地 `File` 创建的文件、图片、音频和视频消息由 SDK 处理上传，可以通过 `CbEvents.OnProgress` 和 `CbEvents.UploadComplete` 更新进度 UI。资源已经通过业务上传服务取得 URL 时，使用对应的 `create*MessageByURL()` 创建消息，再调用 `sendMessageNotOss()`，避免再次进入 SDK 的内置 OSS 上传链路。
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `clientMsgID` | `string` | 消息的客户端稳定 ID，用于列表去重、状态更新、查询和历史分页游标。 |
+| `serverMsgID` | `string` | 服务端消息 ID；待发送或发送失败的消息可能尚未取得有效值。 |
+| `sessionType` | `SessionType` | 消息所属的会话类型，例如单聊或群聊。 |
+| `sendID` | `string` | 发送者用户 ID。 |
+| `recvID` | `string` | 单聊接收方用户 ID；群聊消息通常为空。 |
+| `groupID` | `string` | 群聊对应的群组 ID；单聊消息通常为空。 |
+| `contentType` | `MessageType` | 消息内容类型，决定应读取哪个内容字段。 |
+| `createTime` | `number` | 消息对象创建时间。 |
+| `sendTime` | `number` | 消息发送时间，用于消息排序。 |
+| `seq` | `number` | 服务端消息序号；未发送成功的消息可能没有可用序号。 |
+| `senderPlatformID` | `Platform` | 发送消息的客户端平台。 |
+| `senderNickname` | `string` | 发送者昵称快照。 |
+| `senderFaceUrl` | `string` | 发送者头像快照。 |
+| `status` | `MessageStatus` | 当前发送状态：发送中、成功或失败。 |
+| `isRead` | `boolean` | 当前消息的已读状态快照。 |
+| `offlinePush` | `OfflinePush`（可选） | 发送时使用的离线推送配置。 |
+| `ex` | `string`（可选） | 随消息同步的扩展字符串。 |
+| `localEx` | `string`（可选） | 只保存在当前设备本地的扩展字符串。 |
 
-需要被其他成员收到的业务数据应放入消息内容；只影响当前客户端展示的状态可写入 `localEx`。
+消息正文位于与 `contentType` 对应的内容字段中，不要通过数组位置或展示文本判断消息类型：
 
-## 按主题查看能力
+| 消息内容 | 对应字段 |
+| --- | --- |
+| 文本、Markdown | `textElem`、`markdownTextElem` |
+| 图片、音频、视频、文件 | `pictureElem`、`soundElem`、`videoElem`、`fileElem` |
+| @ 消息、回复消息 | `atTextElem`、`quoteElem` |
+| 转发合并、自定义消息 | `mergeElem`、`customElem` |
+| 名片、位置、表情 | `cardElem`、`locationElem`、`faceElem` |
+| 高级文本、输入状态 | `advancedTextElem`、`typingElem` |
+| 通知及附加状态 | `notificationElem`、`attachedInfoElem` |
 
-### 发送消息
+`conversationID` 用于确定消息所属会话，但不是 `MessageItem` 字段。它来自当前会话、历史查询条件、搜索结果或事件上下文；消息状态通常按 `conversationID:clientMsgID` 合并。
 
-先创建消息，再发送到单聊或群聊。单聊填写 `recvID`，群聊填写 `groupID`，另一个目标字段保持为空字符串。
+## 创建不同内容的消息
 
-媒体文件由 SDK 上传时，使用 `create*MessageByFile()` 与 `sendMessage()`；媒体文件已由业务上传时，使用 `create*MessageByURL()` 与 `sendMessageNotOss()`。两条路径最终都返回服务端确认后的 `MessageItem`，发送端按 `clientMsgID` 合并消息状态。
+| 内容 | 入口 | 注意事项 |
+| --- | --- | --- |
+| 文本与 Markdown | [创建文本消息](/sdk/wasm/message/creating-messages/create-text-message)、[创建 Markdown 消息](/sdk/wasm/message/creating-messages/create-markdown-message) | Markdown 内容需要由接收端安全渲染。 |
+| 群聊 @ 消息 | [创建 @ 消息](/sdk/wasm/message/creating-messages/create-text-at-message) | 只能发送到群聊；会话中的 @ 提醒状态由会话数据维护。 |
+| 图片、音频、视频和文件 | [使用文件创建图片消息](/sdk/wasm/message/creating-messages/create-image-message-by-file)、[使用 URL 创建图片消息](/sdk/wasm/message/creating-messages/create-image-message-by-url) | 其他媒体类型采用相同的“本地文件”或“已上传 URL”路径。 |
+| 名片、位置与表情 | [创建名片消息](/sdk/wasm/message/creating-messages/create-card-message)、[创建位置消息](/sdk/wasm/message/creating-messages/create-location-message)、[创建表情消息](/sdk/wasm/message/creating-messages/create-face-message) | 创建时保存内容快照，不会随来源资料自动更新。 |
+| 回复、转发与合并 | [创建回复消息](/sdk/wasm/message/creating-messages/create-quote-message)、[创建转发消息](/sdk/wasm/message/creating-messages/create-forward-message)、[创建合并消息](/sdk/wasm/message/creating-messages/create-merger-message) | 创建结果仍需显式发送。 |
+| 自定义业务内容 | [创建自定义消息](/sdk/wasm/message/creating-messages/create-custom-message) | 适合承载需要同步给会话成员的结构化业务数据。 |
 
-完整的参数、错误处理和定向群消息流程见[发送消息](/sdk/wasm/message/sending-messages/send-a-message)，URL 媒体组合示例见[创建媒体与富消息](/sdk/wasm/message/sending-messages/create-media-and-rich-messages#发送已经上传的媒体文件)。
+只影响当前客户端展示的状态应写入 `localEx`，不要放入需要同步给其他用户的业务内容。相关说明见[设置消息本地扩展](/sdk/wasm/message/managing-messages/set-message-local-ex)。
 
-### 接收消息
+## 按任务查找页面
 
-消息到达后监听 `CbEvents.OnRecvNewMessages`。应用调用 `setAppBackgroundStatus(true)` 进入后台后，新消息一般走 `CbEvents.OnRecvOfflineNewMessages`；发送时设置 `isOnlineOnly: true` 的消息由接收端的 `CbEvents.OnRecvOnlineOnlyMessages` 处理，且不会写入本地消息存储。事件回调里先根据消息的会话类型和收发双方确定目标会话，再按 `clientMsgID` 去重。
+| 任务 | 页面 |
+| --- | --- |
+| 发送普通消息或已上传的媒体消息 | [发送消息](/sdk/wasm/message/sending-messages/send-message)、[发送已上传的媒体消息](/sdk/wasm/message/sending-messages/send-message-not-oss) |
+| 接收在线、离线和仅在线消息 | [接收消息](/sdk/wasm/message/receiving-messages/receive-messages) |
+| 加载历史、反向加载或读取消息上下文 | [加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)、[反向加载历史消息](/sdk/wasm/message/retrieving-messages/load-newer-messages)、[读取消息上下文](/sdk/wasm/message/retrieving-messages/load-message-context) |
+| 按 ID 定位或搜索本地消息 | [按 ID 查找消息](/sdk/wasm/message/retrieving-messages/find-messages-by-id)、[搜索消息](/sdk/wasm/message/searching-messages/search-messages) |
+| 删除、撤回、修改或置顶消息 | [批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)、[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)、[修改消息](/sdk/wasm/message/managing-messages/modify-a-message)、[置顶或取消置顶消息](/sdk/wasm/message/managing-messages/set-message-pinned) |
+| 清理会话未读数或处理群聊成员级已读 | [标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)、[上报群消息已读](/sdk/wasm/message/managing-read-status/send-group-read-receipts)、[查询群消息已读成员](/sdk/wasm/message/managing-read-status/get-group-message-readers) |
+| 上报输入状态或识别音频文字 | [上报输入状态](/sdk/wasm/message/composing-messages/update-typing-status)、[识别音频文字](/sdk/wasm/message/composing-messages/transcribe-audio) |
+| 插入、删除或扩展仅当前设备可见的消息 | [插入本地单聊消息](/sdk/wasm/message/managing-messages/insert-local-single-message)、[删除本地消息](/sdk/wasm/message/managing-messages/delete-local-message)、[设置消息本地扩展](/sdk/wasm/message/managing-messages/set-message-local-ex) |
 
-完整接收流程见[接收消息](/sdk/wasm/message/receiving-messages/receive-messages)。
+## 状态同步边界
 
-### 获取消息
+消息事件的完整监听代码只保留在对应的归属页面：
 
-历史消息通过 `getAdvancedHistoryMessageList()` 按 `conversationID` 分页读取。第一页把 `startClientMsgID` 设为空字符串；继续加载时，使用边界消息的 `clientMsgID` 作为下一页游标。
+| 变化 | 事件归属页面 | 合并方式 |
+| --- | --- | --- |
+| 新消息、离线消息和仅在线消息 | [接收消息](/sdk/wasm/message/receiving-messages/receive-messages) | 确定目标会话后按 `clientMsgID` 合并。 |
+| 消息删除 | [批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages) | 按目标会话和 `clientMsgID` 移除。 |
+| 消息撤回 | [撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message) | 按 `clientMsgID` 更新为撤回状态。 |
+| 消息修改 | [修改消息](/sdk/wasm/message/managing-messages/modify-a-message) | 按 `clientMsgID` 替换消息内容。 |
+| 消息置顶 | [置顶或取消置顶消息](/sdk/wasm/message/managing-messages/set-message-pinned) | 按 `conversationID` 更新置顶集合。 |
+| 群聊已读回执 | [上报群消息已读](/sdk/wasm/message/managing-read-status/send-group-read-receipts) | 按 `conversationID` 和 `clientMsgID` 合并。 |
+| 输入状态 | [上报输入状态](/sdk/wasm/message/composing-messages/update-typing-status) | 按 `conversationID:userID` 更新状态。 |
 
-读取列表见[获取消息历史](/sdk/wasm/message/retrieving-messages/retrieve-message-history)，定位单条消息见[按 ID 定位消息](/sdk/wasm/message/retrieving-messages/locate-messages-by-id)。
+会话未读数、总未读数和群聊 @ 提醒属于会话状态，分别由[标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)、[维护总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)和[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)中的事件处理器维护。
 
-### 搜索消息
-
-`searchLocalMessages()` 在当前用户已同步到本地的消息中搜索。群聊搜索使用群会话的 `conversationID`，不是发送消息时的 `groupID`。
-
-搜索流程见[搜索消息](/sdk/wasm/message/searching-messages/search-messages)。
-
-### 管理消息
-
-消息发送后可以按业务需要执行转发、合并、删除、撤回、修改、清空历史和发送输入状态等操作。撤回类变化会通过 `CbEvents.OnNewRecvMessageRevoked` 通知接收端；修改类变化会通过 `CbEvents.OnMessageModified` 同步。消息列表应使用 `clientMsgID` 更新对应气泡状态。
-
-相关能力见[转发或合并消息](/sdk/wasm/message/managing-messages/forward-or-merge-a-message)、[删除消息](/sdk/wasm/message/managing-messages/delete-a-message)、[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)、[修改消息](/sdk/wasm/message/managing-messages/modify-a-message)、[置顶会话消息](/sdk/wasm/message/managing-messages/pin-conversation-messages)、[清理消息历史](/sdk/wasm/message/managing-messages/clear-message-history)和[管理输入状态](/sdk/wasm/message/composing-messages/manage-typing-status)。
-
-音频需要先转换为文字时，先通过 `speechToTextCapabilities()` 查询当前服务限制，再调用 `speechToText()`。完整流程见[将音频转为文字](/sdk/wasm/message/composing-messages/transcribe-audio)。
-
-### 标记已读
-
-会话未读数通过 `markConversationMessageAsRead(conversationID)` 清理。群消息需要展示成员级已读情况时，可以发送群消息已读回执，再查询已读或未读成员列表。
-
-相关能力见[管理会话已读状态](/sdk/wasm/conversation/managing-conversations/manage-read-status)和[管理消息已读回执](/sdk/wasm/message/managing-read-status/manage-message-read-receipts)。
-
-### 提及其他用户
-
-群聊 @ 消息使用 `createTextAtMessage()` 创建，再通过 `sendMessage()` 发送到群组。接收端可以从 `atTextElem` 渲染被提及成员，并通过会话的 `groupAtType` 展示 @ 提醒。
-
-相关流程见[在消息中提及用户](/sdk/wasm/message/composing-messages/mention-users-in-a-message)。
-
-### 获取未读数
-
-会话列表、总未读数和 @ 提醒通常来自会话 API 与会话事件。会话层按 `conversationID` 合并 `OnConversationChanged`，并使用 `OnTotalUnreadMessageCountChanged` 的最新计数更新全局角标；消息页面不重复注册这些会话事件。
-
-相关能力见[管理会话已读状态](/sdk/wasm/conversation/managing-conversations/manage-read-status)。
-
-### 自定义消息与扩展数据
-
-需要同步给其他成员的附加数据，发送前写入自定义消息；只影响当前客户端展示的数据，写入 `localEx`。
-
-相关流程见[自定义消息与扩展数据](/sdk/wasm/message/composing-messages/custom-message-and-extra-data)。
-
-### 事件归属
-
-消息事件按职责分散在对应能力页，概览页只说明导航和归属：新消息和离线补偿见[接收消息](/sdk/wasm/message/receiving-messages/receive-messages)，上传进度见[上传文件并跟踪进度](/sdk/wasm/message/sending-messages/upload-files-and-track-progress)，删除见[删除消息](/sdk/wasm/message/managing-messages/delete-a-message)，撤回见[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)，置顶、已读回执和输入状态分别见各自能力页。会话变化的完整监听见[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。
-
-创建消息对象和纯查询 API 直接使用 Promise 返回值建立快照，不应描述为触发共享事件。会改变状态的调用则分别处理 Promise 结果和对应事件增量；重新登录后的消息变化由事件同步。
+创建消息对象和纯查询操作只使用 Promise 返回值建立快照，不会触发共享消息事件。会改变状态的操作应分别处理 Promise 成功、事件到达和重新查询校准，不能将三个阶段视为同一结果。

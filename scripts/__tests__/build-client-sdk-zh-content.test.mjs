@@ -84,13 +84,22 @@ test('native audit seeds and generated packages retain the fixed structural cont
     assert.ok(audit.pages.every((page) => page.locales.en.reviewStatus === 'deferred'));
     for (const page of audit.pages) {
       assert.ok(
-        ['structure-only', 'written', 'api-verified', 'example-verified', 'published'].includes(
+        [
+          'structure-only',
+          'written',
+          'api-verified',
+          'example-verified',
+          'source-reviewed',
+          'published',
+        ].includes(
           page.locales.zh.reviewStatus,
         ),
       );
-      assert.ok(['pending', 'verified', 'not-applicable'].includes(
-        page.locales.zh.exampleVerification.status,
-      ));
+      assert.ok(
+        ['pending', 'verified', 'source-reviewed', 'not-applicable'].includes(
+          page.locales.zh.exampleVerification.status,
+        ),
+      );
       assert.ok(Array.isArray(page.locales.zh.exampleVerification.evidence));
       assert.deepEqual(page.locales.en.exampleVerification, {
         status: 'pending',

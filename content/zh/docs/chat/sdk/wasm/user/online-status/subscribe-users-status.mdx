@@ -1,0 +1,45 @@
+---
+title: '订阅用户在线状态'
+description: '订阅指定用户的在线状态。'
+sourcePath: '/sdk/wasm/user/online-status/subscribe-users-status'
+---
+
+在线状态只表示用户是否连接 OpenIMServer。建议仅订阅当前界面可见的用户，每个账号最多订阅 3000 个用户。
+
+```ts
+const { data: states } = await openimsdk.subscribeUsersStatus(
+  [...new Set(visibleUserIDs.filter(Boolean))],
+);
+```
+
+Promise 成功后，`data` 是这些用户当前的 `UserOnlineState[]`，随后通过 `OnUserStatusChanged` 接收增量。不要一次订阅整个用户目录。
+
+### 在线状态字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 状态所属的用户 ID，也是状态缓存的合并标识。 |
+| `status` | `OnlineState` | 汇总在线状态；`OnlineState.Online` 为在线，`OnlineState.Offline` 为离线。 |
+| `platformIDs` | `Platform[]` | 用户当前在线的平台列表；字段缺失或为空时不要推断具体设备。 |
+
+在线状态只反映与 OpenIMServer 的连接情况，不表示用户正在查看应用、某个会话或某条消息。
+
+## 监听在线状态变化
+
+本页是 `OnUserStatusChanged` 的完整监听归属页。初始快照和后续事件都按 `userID` 合并。
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleStatusChanged = ({ data }) => {
+  presenceByUserID.set(data.userID, data);
+};
+
+openimsdk.on(CbEvents.OnUserStatusChanged, handleStatusChanged);
+
+function removeStatusListener() {
+  openimsdk.off(CbEvents.OnUserStatusChanged, handleStatusChanged);
+}
+```
+
+退出登录、切换账号或销毁在线状态层时调用 `removeStatusListener()`。

@@ -1,0 +1,36 @@
+---
+title: '获取消息总未读数'
+description: '使用 WASM SDK 获取并持续维护账号总未读数。'
+sourcePath: '/sdk/wasm/conversation/managing-conversations/get-total-unread-count'
+---
+
+`getTotalUnreadMsgCount()` 返回当前账号所有会话的总未读快照。不要把当前已加载分页中的 `unreadCount` 简单相加。
+
+```ts
+const { data: totalUnread } = await openimsdk.getTotalUnreadMsgCount();
+updateApplicationBadge(totalUnread);
+```
+
+查询本身不会触发事件。前台运行期间，由本页唯一处理 `CbEvents.OnTotalUnreadMessageCountChanged`：
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleTotalUnreadChanged = ({ data }) => {
+  updateApplicationBadge(data);
+};
+
+openimsdk.on(
+  CbEvents.OnTotalUnreadMessageCountChanged,
+  handleTotalUnreadChanged,
+);
+
+function removeTotalUnreadListener() {
+  openimsdk.off(
+    CbEvents.OnTotalUnreadMessageCountChanged,
+    handleTotalUnreadChanged,
+  );
+}
+```
+
+组件卸载、退出登录或切换账号时调用 `removeTotalUnreadListener()`。

@@ -38,28 +38,11 @@ export const viewport: Viewport = {
   ],
 };
 
-const themeScript = `
-(() => {
-  try {
-    const locale = location.pathname.split('/').filter(Boolean)[0];
-    document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en';
-    const stored = localStorage.getItem('openim-docs-theme');
-    const theme = stored === 'dark' || stored === 'light'
-      ? stored
-      : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    document.documentElement.dataset.theme = theme;
-  } catch (_) {}
-})();`;
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body>
-        <RootProvider>{children}</RootProvider>
+        <RootProvider theme={{ storageKey: 'openim-docs-theme' }}>{children}</RootProvider>
       </body>
     </html>
   );

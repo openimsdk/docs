@@ -1,0 +1,35 @@
+---
+title: '上传文件'
+description: '使用 iOS SDK 独立上传文件。'
+sourcePath: '/sdk/ios/file-uploads/upload-file'
+---
+
+独立文件上传可用于头像、群头像、资料附件或业务文件，不从属于消息。
+
+## 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `fullPath` | App 可读取的绝对文件路径。 |
+| `name` | 上传文件名；传 `nil` 时使用路径末段。 |
+| `cause` | 业务约定的上传原因。 |
+| `onProgress` | 返回已保存、当前处理和总字节数。 |
+| `onCompletion` | 返回总字节数、远端 URL 与 `putType`。 |
+
+```objc
+[[OIMManager manager] uploadFile:fileURL.path
+                            name:fileURL.lastPathComponent
+                           cause:@"user-avatar"
+                      onProgress:^(NSInteger saved, NSInteger current, NSInteger total) {
+    [uploadStore updateCurrentBytes:current totalBytes:total];
+}
+                    onCompletion:^(NSInteger total, NSString *url, NSInteger putType) {
+    [profileService saveAvatarURL:url];
+}
+                       onSuccess:nil
+                       onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"uploadFile failed: %ld %@", (long)code, message);
+}];
+```
+
+`onCompletion` 表示已经取得资源结果，整个调用最终状态仍以 `onSuccess` 或 `onFailure` 为准。该方法不会自动修改用户资料，也不会创建或发送消息。若资源随后用于聊天，应使用回调返回的 URL 创建 URL 型消息，再显式发送。

@@ -24,30 +24,31 @@ export function ArticleHeader({
   commercial?: PageCommercialInfo;
 }) {
   const text = t(locale);
-  const commercialBadge =
-    commercial?.kind === 'full'
+  const enterpriseBadge =
+    route.edition === 'enterprise' || commercial?.kind === 'full'
       ? text.article.commercialBadge
-      : commercial?.kind === 'partial'
-        ? text.article.commercialPartialBadge
-        : undefined;
+      : undefined;
   const badges = [
     getProductLabel(route.product, locale),
     getPlatformLabel(route.platform),
     showVersion ? route.version : undefined,
-    route.edition === 'enterprise' ? (locale === 'zh' ? '商业版' : 'Enterprise') : undefined,
+    enterpriseBadge,
     route.status === 'scaffold' ? text.article.scaffold : undefined,
-    commercialBadge,
   ].filter(Boolean);
   const showDescription = route.product !== 'platform-api' && route.description;
   const supportsMarkdown = route.contentFile !== 'guides' || hasGuideMarkdownPage(route.path);
-  const showCommercialNotice = commercial && commercial.kind !== 'none';
 
   return (
     <header className="article-header">
       <Breadcrumbs items={breadcrumbs} />
       <div className="article-badges">
         {badges.map((badge) => (
-          <span className={badge === '商业版' || badge === 'Enterprise' ? 'enterprise-badge' : undefined} key={badge}>
+          <span
+            className={
+              badge === '商业版' || badge === 'Enterprise' ? 'enterprise-badge' : undefined
+            }
+            key={badge}
+          >
             {badge}
           </span>
         ))}
@@ -67,15 +68,6 @@ export function ArticleHeader({
           ) : null}
         </div>
       </div>
-      {showCommercialNotice ? (
-        <div className="article-commercial-notice" role="note">
-          <p>
-            {commercial.kind === 'full'
-              ? text.article.commercialFullNotice
-              : text.article.commercialPartialNotice}
-          </p>
-        </div>
-      ) : null}
     </header>
   );
 }

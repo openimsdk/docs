@@ -1,0 +1,42 @@
+---
+title: '加载历史消息'
+description: '使用 WASM SDK 分页读取会话历史消息。'
+sourcePath: '/sdk/wasm/message/retrieving-messages/load-older-messages'
+---
+
+聊天页面进入会话时使用 `getAdvancedHistoryMessageList()` 建立第一页快照；继续加载更早消息时，把当前最早一条消息的 `clientMsgID` 作为下一页游标。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 要读取历史消息的会话 ID。 |
+| `startClientMsgID` | `string` | 是 | 分页锚点消息 ID；第一页传空字符串。 |
+| `count` | `number` | 是 | 本次读取的消息数量。 |
+| `viewType` | `ViewType` | 是 | 消息查看方向；读取历史时使用 `ViewType.History`。 |
+
+```ts
+import { ViewType } from '@openim/wasm-client-sdk';
+
+const { data: page } = await openimsdk.getAdvancedHistoryMessageList({
+  conversationID,
+  startClientMsgID: oldestMessage?.clientMsgID ?? '',
+  count: 30,
+  viewType: ViewType.History,
+});
+
+prependMessages(page.messageList);
+```
+
+## 返回结果
+
+Promise 成功后，`data` 是 `AdvancedGetMessageResult`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `messageList` | `MessageItem[]` | 当前页消息，消息字段见[消息概览](/sdk/wasm/message/overview-message)。 |
+| `isEnd` | `boolean` | 是否已经到达当前加载方向的历史边界。 |
+| `errCode` | `number` | 本次历史读取结果携带的状态码。 |
+| `errMsg` | `string` | 与 `errCode` 对应的状态说明。 |
+
+只有 `errCode` 表示成功时才合并 `messageList`；调用 Promise 被拒绝时仍按通用错误处理。按 `conversationID` 限定列表，并以 `clientMsgID` 去重；查询不会触发新消息事件。

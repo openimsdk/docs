@@ -1,0 +1,42 @@
+---
+title: '创建群组'
+description: '创建群组并配置初始群主、管理员和普通成员。'
+sourcePath: '/sdk/wasm/group/create-group'
+---
+
+`createGroup()` 接收群资料以及初始普通成员、管理员和群主配置。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `memberUserIDs` | `string[]` | 是 | 初始普通成员用户 ID。 |
+| `adminUserIDs` | `string[]` | 否 | 初始管理员用户 ID。 |
+| `ownerUserID` | `string` | 否 | 群主用户 ID；省略时使用当前用户。 |
+| `groupInfo` | `Partial<GroupItem>` | 是 | 初始群资料。 |
+| `groupInfo.groupName` | `string` | 否 | 群名称；创建可展示群组时应提供。 |
+| `groupInfo.groupType` | `GroupType` | 否 | 群类型；常规群聊使用 `GroupType.WorkingGroup`。 |
+| `groupInfo.faceURL` | `string` | 否 | 群头像地址。 |
+
+普通成员、管理员和群主不能重复。应用应在调用前完成去重和交集检查。
+
+```ts
+import { GroupType } from '@openim/wasm-client-sdk';
+
+const { data: group } = await openimsdk.createGroup({
+  memberUserIDs: ['user-003', 'user-004'],
+  adminUserIDs: ['user-002'],
+  ownerUserID: currentUserID,
+  groupInfo: {
+    groupName: '项目讨论组',
+    groupType: GroupType.WorkingGroup,
+    faceURL: 'https://example.com/group.png',
+  },
+});
+```
+
+## 返回结果
+
+Promise 成功后，`data` 是新建群组的 `GroupItem`。可以立即使用 `groupID`、`groupName` 和 `faceURL` 打开群资料或群聊页面；完整字段见[分页获取已加入群组](/sdk/wasm/group/retrieving-groups/get-joined-group-list-page)。
+
+已加入群组列表的增量通过 `OnJoinedGroupAdded` 合并，完整监听见[群组概览](/sdk/wasm/group/overview-group)。

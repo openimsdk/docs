@@ -1,0 +1,46 @@
+---
+title: '处理通话事件'
+description: '集中设置和移除 iOS SDK 的通话信令 delegate。'
+sourcePath: '/sdk/ios/calling/managing-calls/handle-call-events'
+---
+
+通话状态层实现稳定的 `OIMSignalingListener`，并使用同一实例注册和移除：
+
+```objc
+@interface CallStore () <OIMSignalingListener>
+@end
+
+@implementation CallStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addSignalingListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeSignalingListener:self];
+}
+
+- (void)onReceiveNewInvitation:(OIMSignalingInfo *)info {
+    [self upsertCall:info state:@"ringing"];
+}
+- (void)onInviteeAccepted:(OIMSignalingInfo *)info { [self mergeCall:info state:@"accepted"]; }
+- (void)onInviteeRejected:(OIMSignalingInfo *)info { [self mergeCall:info state:@"rejected"]; }
+- (void)onInvitationCancelled:(OIMSignalingInfo *)info { [self finishCall:info.invitation.roomID]; }
+- (void)onInvitationTimeout:(OIMSignalingInfo *)info { [self finishCall:info.invitation.roomID]; }
+- (void)onInviteeAcceptedByOtherDevice:(OIMSignalingInfo *)info { [self stopRinging:info.invitation.roomID]; }
+- (void)onInviteeRejectedByOtherDevice:(OIMSignalingInfo *)info { [self stopRinging:info.invitation.roomID]; }
+- (void)onHunguUp:(OIMSignalingInfo *)info { [self finishCall:info.invitation.roomID]; }
+- (void)onRoomParticipantConnected:(OIMParticipantConnectedInfo *)info {
+    [self mergeParticipants:info roomID:info.roomID];
+}
+- (void)onRoomParticipantDisconnected:(OIMParticipantConnectedInfo *)info {
+    [self removeParticipants:info roomID:info.roomID];
+}
+- (void)onStreamChange:(OIMMeetingStreamEvent *)event {
+    [self updateStream:event roomID:event.roomID];
+}
+
+@end
+```
+
+本页是以上通话 delegate 的唯一完整归属页。事件按 `roomID` 合并，参与者状态同时使用用户 ID。退出登录、切换账号或销毁状态层时调用 `removeSignalingListener:`。

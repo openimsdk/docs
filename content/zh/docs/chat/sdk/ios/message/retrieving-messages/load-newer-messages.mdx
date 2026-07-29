@@ -1,0 +1,23 @@
+---
+title: '反向加载历史消息'
+description: '使用 iOS SDK 从消息锚点向较新方向反向分页读取历史消息。'
+sourcePath: '/sdk/ios/message/retrieving-messages/load-newer-messages'
+---
+
+需要从消息锚点向较新方向补齐消息时，使用反向 selector，并沿用 `OIMGetAdvancedHistoryMessageListParam`：
+
+```objc
+OIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];
+param.conversationID = conversationID;
+param.startClientMsgID = anchorMessage.clientMsgID;
+param.count = 20;
+param.viewType = OIMGetHistoryViewTypeHistory;
+
+[[OIMManager manager] getAdvancedHistoryMessageListReverse:param
+                                                 onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {
+                                                     [self appendMessages:result.messageList ?: @[]];
+                                                 }
+                                                 onFailure:nil];
+```
+
+不要在同一个滚动边界任意混用两个方向。成功 callback 与新消息 delegate 是独立阶段；按 `conversationID:clientMsgID` 合并结果。

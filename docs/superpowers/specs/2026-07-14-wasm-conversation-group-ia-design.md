@@ -8,6 +8,12 @@ Sendbird 只提供可参考的任务组织方式，不再决定 OpenIM 的能力
 
 中文是当前交付语言，英文审核状态继续为 `deferred`。WASM 包只用于核对声明，不加入站点依赖。
 
+### 2026-07-23 结构修订
+
+WASM 公开方法改为“一方法一正文页”。领域与能力分类继续作为导航文件夹，概念、数据模型和事件监听由对应概览页统一承载。旧设计中“按任务聚合多个方法”的页面组织决策自本修订起不再适用于 WASM。
+
+会话分组作为首个样板，在 Conversation 下建立 `Conversation groups` 二级菜单，包含一个概览与事件页以及九个独立方法页。WASM、iOS 与 Flutter 共用这套信息架构和路由后缀，但正文、页面标题、方法名、参数、返回模型与 listener 必须分别采用对应 SDK 的真实声明。原 `manage-conversation-groups` 聚合路由直接移除，不建立旧地址重定向。
+
 ## Conversation 页面树
 
 1. `conversation/overview-conversation`
@@ -81,7 +87,8 @@ Group 事件覆盖群申请、群资料、群成员、当前用户已加入群�
 
 ## 内容规则
 
-- 页面按用户任务组织，不机械地为每个方法创建一页。
+- WASM 每个未废弃的公开方法建立一个独立正文页；方法页只归属一个公开方法。
+- 领域概览页集中说明共享概念、数据模型和该领域事件的完整监听，不混入多个方法的参数与返回结果。
 - 参数、返回值、事件和权限边界以固定 WASM 声明、OpenIM 文档和 SDK Core 为证据。
 - `ConversationItem.ex` 与 `GroupItem.ex` 只作为真实对象的扩展字段说明，不包装成 Channel Metadata。
 - 不提供 Deprecated 页面；废弃方法名不进入正文，当前能力直接写在替代 API 工作流中。`setConversationDraft()` 是已确认的声明标记例外，继续作为独立能力页。

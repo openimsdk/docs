@@ -1,0 +1,60 @@
+---
+title: '会话分组概览'
+description: '了解 OpenIM Flutter SDK 会话分组的数据模型和 listener 生命周期。'
+sourcePath: '/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组用于整理当前登录用户的会话列表。它管理 `conversationID` 与分组的关系，不会创建聊天群组、修改群成员，也不会改变消息发送目标。
+
+## 分组类型
+
+| 枚举值 | 数值 | 用途 |
+| --- | ---: | --- |
+| `ConversationGroupType.custom` | `0` | 普通自定义分组。 |
+| `ConversationGroupType.preset` | `1` | 由 SDK 或服务端规则维护的预设分组。 |
+| `ConversationGroupType.all` | `2` | 查询全部类型时使用。 |
+
+普通用户分类使用 `custom`。预设分组的生成规则取决于当前 OpenIMServer 部署。
+
+`ConversationGroupInfo` 的常用字段包括 `conversationGroupID`、`name`、`serial`、`version`、`ex`、`conversationGroupType`、`hidden`、`unreadCount` 和 `conversationIDs`，固定版本中这些字段均为 nullable。
+
+## 可用操作
+
+- [创建会话分组](/sdk/flutter/conversation/managing-conversation-groups/create-conversation-group)
+- [查询会话分组](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-groups)
+- [查询分组内的会话](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [查询会话所属的分组](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [更新会话分组](/sdk/flutter/conversation/managing-conversation-groups/update-conversation-group)
+- [设置会话分组顺序](/sdk/flutter/conversation/managing-conversation-groups/set-conversation-group-order)
+- [添加会话到分组](/sdk/flutter/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [从分组移除会话](/sdk/flutter/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [删除会话分组](/sdk/flutter/conversation/managing-conversation-groups/delete-conversation-group)
+
+## 监听分组变化
+
+```dart
+Future<void> registerConversationGroupListener() {
+  return OpenIM.iMManager.conversationGroupManager
+      .setConversationGroupListener(
+    OnConversationGroupListener(
+      onConversationGroupAdded: mergeConversationGroups,
+      onConversationGroupChanged: mergeConversationGroups,
+      onConversationGroupDeleted: removeConversationGroups,
+      onConversationGroupMemberAdded: mergeConversationGroupMembers,
+      onConversationGroupMemberDeleted: removeConversationGroupMembers,
+    ),
+  );
+}
+```
+
+| Listener | 载荷 | 处理方式 |
+| --- | --- | --- |
+| `onConversationGroupAdded` | `List<ConversationGroupInfo>` | 合并新增分组。 |
+| `onConversationGroupChanged` | `List<ConversationGroupInfo>` | 按 `conversationGroupID` 更新。 |
+| `onConversationGroupDeleted` | `List<ConversationGroupInfo>` | 移除已删除分组。 |
+| `onConversationGroupMemberAdded` | `List<ConversationGroupMemberChangedInfo>` | 合并 `group`、`conversationIDs` 和 `conversations`。 |
+| `onConversationGroupMemberDeleted` | `List<ConversationGroupMemberChangedInfo>` | 移除对应关联。 |
+
+成员变化字段可能为空，应先检查 `group?.conversationGroupID` 和会话 ID。分组按 `conversationGroupID` 幂等合并，成员关系再结合 `conversationID`。
+
+`ConversationGroupManager` 只保存一个 listener，固定 SDK 没有 remove 或 unset 方法。应用应集中设置一次；切换账号时停止向旧状态分发，再用新账号的完整 listener 覆盖。Future 完成、listener 到达和重新查询是三个独立阶段。

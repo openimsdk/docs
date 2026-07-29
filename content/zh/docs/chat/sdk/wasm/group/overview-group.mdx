@@ -1,6 +1,6 @@
 ---
 title: '群组概览'
-description: '了解 OpenIMClientSDK 中群资料、群成员、群申请、角色和群组事件的关系。'
+description: '了解 WASM SDK 中群资料、群成员、入群申请、成员角色和群组事件的关系。'
 sourcePath: '/sdk/wasm/group/overview-group'
 ---
 
@@ -14,30 +14,49 @@ OpenIMSDK 的多人聊天使用群组承载共享资料、成员关系和权限�
 | `GroupMemberItem`      | 用户在指定群内的昵称、角色、禁言和入群信息。           |
 | `GroupApplicationItem` | 入群申请及处理状态。                                   |
 
-群角色使用 `GroupMemberRole`：普通成员为 `20`，管理员为 `60`，群主为 `100`。前端可以据此控制操作入口，但最终权限由 OpenIMServer 校验。
+群成员角色使用 `GroupMemberRole`：普通成员为 `20`，管理员为 `60`，群主为 `100`。客户端可以据此控制操作入口，但最终权限由 OpenIMServer 校验。
 
-## 群资料和生命周期
+## 按任务查找页面
 
-- [创建或更新群组](/sdk/wasm/group/creating-and-updating-groups/create-or-update-a-group)
-- [获取和搜索群组](/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups)
-- [加入、退出或解散群组](/sdk/wasm/group/joining-and-leaving-groups/join-leave-or-dismiss-a-group)
-
-## 群成员和申请
-
-- [处理入群申请](/sdk/wasm/group/managing-group-applications/manage-group-applications)
-- [获取群成员](/sdk/wasm/group/retrieving-group-members/retrieve-group-members)
-- [邀请或移除群成员](/sdk/wasm/group/managing-group-members/invite-or-remove-group-members)
-- [更新群成员资料和角色](/sdk/wasm/group/managing-group-members/update-group-member-info)
-- [转让群主](/sdk/wasm/group/managing-group-members/transfer-group-owner)
-
-## 群组管控
-
-- [禁言群组或群成员](/sdk/wasm/group/moderating-groups/mute-a-group-or-member)
+| 任务 | 页面 |
+| --- | --- |
+| 创建和维护群资料 | [创建群组](/sdk/wasm/group/create-group)、[更新群名称、简介和头像](/sdk/wasm/group/update-group-profile)、[发布或更新群公告](/sdk/wasm/group/set-group-announcement)、[设置群组扩展字段](/sdk/wasm/group/set-group-extension) |
+| 设置入群和成员权限 | [设置入群验证方式](/sdk/wasm/group/set-group-join-verification)、[设置成员资料查看权限](/sdk/wasm/group/set-group-member-profile-access)、[设置群内添加好友权限](/sdk/wasm/group/set-group-member-friend-permission) |
+| 加入、退出或解散群组 | [加入群组](/sdk/wasm/group/join-group)、[退出群组](/sdk/wasm/group/quit-group)、[解散群组](/sdk/wasm/group/dismiss-group) |
+| 查询已加入群组或指定群资料 | [分页查询已加入群组](/sdk/wasm/group/retrieving-groups/get-joined-group-list-page)、[查询指定群组资料](/sdk/wasm/group/retrieving-groups/get-specified-groups-info)、[搜索已加入群组](/sdk/wasm/group/retrieving-groups/search-groups) |
+| 查询和处理入群申请 | [获取收到的入群申请](/sdk/wasm/group/group-applications/get-group-application-list-as-recipient)、[获取发出的入群申请](/sdk/wasm/group/group-applications/get-group-application-list-as-applicant) |
+| 查询和管理群成员 | [分页查询群成员](/sdk/wasm/group/retrieving-group-members/get-group-member-list)、[邀请用户加入群组](/sdk/wasm/group/managing-group-members/invite-user-to-group)、[移除群成员](/sdk/wasm/group/managing-group-members/kick-group-member)、[设置管理员](/sdk/wasm/group/managing-group-members/set-group-member-role-level)、[转让群主](/sdk/wasm/group/managing-group-members/transfer-group-owner) |
+| 管理群聊发言权限 | [设置群组禁言](/sdk/wasm/group/change-group-mute)、[设置群成员禁言](/sdk/wasm/group/managing-group-members/change-group-member-mute) |
 
 ## 状态更新
 
-群组事件由对应数据页面统一监听：群资料、当前用户加入或退出以及群组解散见[获取和搜索群组](/sdk/wasm/group/retrieving-groups/retrieve-and-search-groups)；成员新增、删除和资料变化见[获取群成员](/sdk/wasm/group/retrieving-group-members/retrieve-group-members)；入群申请变化见[处理入群申请](/sdk/wasm/group/managing-group-applications/manage-group-applications)。
+本页是群资料、当前用户加入或退出以及群组解散事件的完整归属页：
 
-概览页只说明事件归属，不注册处理器。群组写操作的 Promise 结果和事件增量应分别处理；重新登录后的群组变化由事件同步。
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
 
-OpenIMClientSDK 的群组 API 只处理 OpenIMSDK 群资料、成员关系和权限。公开发现、复杂目录和大规模群聊的容量治理属于业务后端与 OpenIMServer 配置，不应扩写成不存在的客户端群组类型。
+const handlers = {
+  joinedAdded: ({ data }) => mergeJoinedGroup(data),
+  joinedDeleted: ({ data }) => removeJoinedGroup(data.groupID),
+  groupChanged: ({ data }) => mergeGroup(data),
+  groupDismissed: ({ data }) => markGroupDismissed(data.groupID),
+};
+
+openimsdk.on(CbEvents.OnJoinedGroupAdded, handlers.joinedAdded);
+openimsdk.on(CbEvents.OnJoinedGroupDeleted, handlers.joinedDeleted);
+openimsdk.on(CbEvents.OnGroupInfoChanged, handlers.groupChanged);
+openimsdk.on(CbEvents.OnGroupDismissed, handlers.groupDismissed);
+
+function removeGroupListeners() {
+  openimsdk.off(CbEvents.OnJoinedGroupAdded, handlers.joinedAdded);
+  openimsdk.off(CbEvents.OnJoinedGroupDeleted, handlers.joinedDeleted);
+  openimsdk.off(CbEvents.OnGroupInfoChanged, handlers.groupChanged);
+  openimsdk.off(CbEvents.OnGroupDismissed, handlers.groupDismissed);
+}
+```
+
+四个事件都按 `groupID` 幂等合并。Promise 成功、事件到达和重新查询校准是三个独立阶段；分页期间收到新增或删除事件时，应重置分页并从第一页重新加载。
+
+成员事件归属[分页查询群成员](/sdk/wasm/group/retrieving-group-members/get-group-member-list)，申请事件归属[获取收到的入群申请](/sdk/wasm/group/group-applications/get-group-application-list-as-recipient)。
+
+WASM SDK 的群组 API 只处理 OpenIM 群资料、成员关系和权限。公开发现、复杂目录和大规模群聊的容量治理属于业务后端与 OpenIMServer 配置，不应扩写成不存在的客户端群组类型。

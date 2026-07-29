@@ -1,134 +1,19 @@
 ---
-title: '将音频转为文字'
-description: '使用 OpenIM iOS SDK 将音频转为文字，并把结果保存到本地语音消息。'
+title: '识别音频文字'
+description: '使用 iOS OpenIMCore 将音频识别为文字。'
 sourcePath: '/sdk/ios/message/composing-messages/transcribe-audio'
 ---
 
-`Open_im_sdkSpeechToText` 把音频内容提交给当前 OpenIMServer 部署配置的语音识别服务，并返回识别文本。调用前先通过 `Open_im_sdkSpeechToTextCapabilities` 查询服务端能力，不要在客户端写死格式、采样率或大小限制。
-
-这两个能力由 iOS enterprise SDK 随附的 `OpenIMCore` Objective-C 函数提供，成功和失败通过 `CallbackProxy` 返回 JSON 字符串。示例聚焦应用需要构造的业务参数和 callback，不展开 Core 的底层调用上下文：
+原生 iOS 优先把沙盒内可读音频路径放入 `filename`；无法提供路径时，将 Base64 放入 `data`：
 
 ```objc
-#import <OpenIMSDK/CallbackProxy.h>
-@import OpenIMCore;
+NSDictionary *request = @{@"filename": audioFileURL.path};
+NSString *requestJSON = [self JSONString:request];
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString *data) {
+        [self showTranscription:[self textFromResultJSON:data]];
+    }
+    onFailure:nil];
 ```
 
-## 查询能力
-
-```objc
-CallbackProxy *capabilitiesCallback = [[CallbackProxy alloc]
-    initWithOnSuccess:^(NSString * _Nullable data) {
-        if (data == nil) {
-            return;
-        }
-        NSDictionary *capabilities = [NSJSONSerialization
-            JSONObjectWithData:[data dataUsingEncoding:NSUTF8StringEncoding]
-            options:0
-            error:nil];
-        [self applySpeechToTextCapabilities:capabilities];
-    }
-    onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showTranscriptionError:code message:message ?: @"获取语音识别能力失败"];
-    }];
-
-```
-
-将 `capabilitiesCallback` 交给 `Open_im_sdkSpeechToTextCapabilities`。能力 JSON 包含以下真实字段：
-
-| 字段 | JSON 类型 | 说明 |
-| --- | --- | --- |
-| `format` | `string[]` | 支持的音频格式。 |
-| `sampleRateHz` | `number[]` | 服务支持的采样率列表。 |
-| `maxRecordTimeMs` | `number` | 单段音频最长时长，单位为毫秒。 |
-| `maxFileSize` | `number` | 单个音频最大字节数。 |
-| `provider` | `string` | 当前部署使用的语音识别提供方。 |
-| `requestType` | `string` | 服务端配置的识别请求方式。 |
-| `crossDomain` | `boolean` | 当前识别地址是否允许跨域请求；原生 iOS 通常不据此决定是否可调用。 |
-
-录音完成后应同时校验文件格式、大小、时长和采样率。能力查询失败时，不要继续提交并猜测限制。
-
-## 提交音频
-
-Core 请求 JSON 包含 `filename` 和 `data`。在原生 iOS 中，优先把 `filename` 设为应用沙盒内可读取的音频路径；Core 会读取该文件，此时无需再填写 `data`：
-
-```objc
-NSDictionary *request = @{ @"filename": audioFileURL.path };
-NSData *requestData = [NSJSONSerialization dataWithJSONObject:request options:0 error:nil];
-NSString *requestJSON = [[NSString alloc] initWithData:requestData
-                                              encoding:NSUTF8StringEncoding];
-
-CallbackProxy *speechCallback = [[CallbackProxy alloc]
-    initWithOnSuccess:^(NSString * _Nullable data) {
-        if (data == nil) {
-            return;
-        }
-        NSDictionary *result = [NSJSONSerialization
-            JSONObjectWithData:[data dataUsingEncoding:NSUTF8StringEncoding]
-            options:0
-            error:nil];
-        NSString *text = [result[@"text"] isKindOfClass:NSString.class]
-            ? result[@"text"]
-            : @"";
-        [self showTranscription:text];
-    }
-    onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showTranscriptionError:code message:message ?: @"音频转写失败"];
-    }];
-
-```
-
-将 `speechCallback` 与 `requestJSON` 交给 `Open_im_sdkSpeechToText`。如果不能提供本地路径，可令 `filename` 为空字符串，并把音频字节编码为 Base64 字符串写入 `data`。Go Core 的 `[]byte` JSON 解码使用 Base64；不能把 `NSData` 对象直接交给 `NSJSONSerialization`。
-
-返回 JSON 是 `{ "text": string }`。空字符串表示本次调用没有得到可展示文字；失败时进入错误 callback。在日志中只记录文件名、格式和大小，不要记录完整音频内容或 Base64 数据。
-
-## 保存到当前设备
-
-语音识别只返回文字，不会自动修改原语音消息。当前 `OIMSoundElem` 没有转写文字属性；需要在当前设备长期展示结果时，可以把业务 JSON 合并到消息的 `localEx`，再调用 `setMessageLocalEx:clientMsgID:localEx:onSuccess:onFailure:`：
-
-```objc
-NSMutableDictionary *localPayload = [NSMutableDictionary dictionary];
-if (message.localEx.length > 0) {
-    NSData *existingData = [message.localEx dataUsingEncoding:NSUTF8StringEncoding];
-    id existingObject = [NSJSONSerialization JSONObjectWithData:existingData
-                                                         options:0
-                                                           error:nil];
-    if ([existingObject isKindOfClass:NSDictionary.class]) {
-        [localPayload addEntriesFromDictionary:existingObject];
-    }
-}
-
-localPayload[@"speechToText"] = @{ @"text": transcriptionText ?: @"" };
-NSError *serializationError = nil;
-NSData *localData = [NSJSONSerialization dataWithJSONObject:localPayload
-                                                    options:0
-                                                      error:&serializationError];
-if (localData == nil) {
-    [self showTranscriptionError:0
-                         message:serializationError.localizedDescription ?: @"保存转写结果失败"];
-    return;
-}
-NSString *localEx = [[NSString alloc] initWithData:localData encoding:NSUTF8StringEncoding];
-
-[[OIMManager manager]
-    setMessageLocalEx:conversationID
-    clientMsgID:message.clientMsgID
-    localEx:localEx
-    onSuccess:^(NSString * _Nullable data) {
-        [self replaceLocalTranscript:transcriptionText
-                      conversationID:conversationID
-                          clientMsgID:message.clientMsgID];
-    }
-    onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showTranscriptionError:code message:message ?: @"保存转写结果失败"];
-    }];
-```
-
-示例会先解析并合并 `localEx` 的已有字典字段，再写入 `speechToText`，避免覆盖其他业务数据。若已有内容不是合法 JSON 对象，应按产品约定中止写入或迁移旧格式，不能静默丢弃。该修改只保存到当前设备，不会同步给其他设备或其他用户，也不会触发新消息或消息修改事件。
-
-如果转写结果需要让其他会话成员看到，应由用户确认后创建并发送一条新的文本消息；不要把本地 `localEx` 当作共享消息内容。
-
-## 调用结果
-
-能力查询和音频识别都是请求型 API，成功后直接使用 callback 数据建立当前结果，不会触发消息事件。本地写入成功只表示当前设备的消息附加数据已经更新；它与识别请求完成、共享消息发送和其他客户端收到新消息是不同阶段。
-
-需要发送识别文字时，再单独创建文本消息并调用发送 API，完整流程见[发送消息](/sdk/ios/message/sending-messages/send-a-message)与[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+将 `requestJSON` 与 callback 交给 `Open_im_sdkSpeechToText`。成功 JSON 为 `{ "text": string }`，不会修改原消息或触发消息事件。调用前先[查询语音识别能力](/sdk/ios/message/composing-messages/check-speech-to-text)。

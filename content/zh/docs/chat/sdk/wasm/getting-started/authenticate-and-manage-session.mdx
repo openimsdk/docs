@@ -1,10 +1,10 @@
 ---
 title: '认证与管理登录会话'
-description: '使用 OpenIMClientSDK 登录、查询登录状态、处理连接事件并退出当前账号。'
+description: '使用 WASM SDK 登录、查询登录状态、处理连接事件并退出当前账号。'
 sourcePath: '/sdk/wasm/getting-started/authenticate-and-manage-session'
 ---
 
-OpenIMClientSDK 使用 `login()` 建立当前用户的登录会话。开始认证前，请先按照[开始之前](/sdk/wasm/getting-started/before-you-start)完成准备工作：OpenIMServer、用户登录信息、浏览器可访问的服务地址，以及 SDK 运行资源。
+WASM SDK 使用 `login()` 建立当前用户的登录会话。开始认证前，请先按照[开始之前](/sdk/wasm/getting-started/before-you-start)完成准备工作：OpenIMServer、用户登录信息、浏览器可访问的服务地址，以及 SDK 运行资源。
 
 完整登录流程按以下顺序执行：
 
@@ -32,7 +32,7 @@ const openimsdk = getSDK({
 
 `getSDK()` 的配置字段如下：
 
-| 字段 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
 | `coreWasmPath` | `string` | 否 | `openIM.wasm` 的浏览器可访问地址，未传时默认使用 `/openIM.wasm`。 |
 | `sqlWasmPath` | `string` | 否 | `sql-wasm.wasm` 的浏览器可访问地址；项目改变静态资源目录或使用 CDN 时应显式传入。 |
@@ -102,7 +102,7 @@ try {
 
 ### 参数说明
 
-| 字段 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
 | `userID` | `string` | 是 | 当前 OpenIMSDK 用户 ID，必须与 Token 对应。它不是昵称、手机号或业务侧临时会话 ID。 |
 | `token` | `string` | 是 | 当前用户的 OpenIMSDK Token，由可信后端获取并返回；不要使用管理员 Token，也不要在前端自行签发。 |
@@ -115,6 +115,23 @@ try {
 `login()` 的 Promise 成功表示登录请求已经完成；`OnConnectSuccess` 表示 SDK 连接已经可用。两者是不同阶段，不能只因 Promise 成功就立即调用依赖连接的消息、会话、群组或用户 API。
 
 重复点击登录时，应复用正在进行的登录请求及其 Promise，避免并发调用 `login()`。
+
+## 处理 API 调用结果
+
+WASM SDK 的异步 API 返回 Promise。调用成功时，从响应的 `data` 取得业务结果；调用失败时，Promise 会抛出包含 `errCode` 和 `errMsg` 的错误。各 API 页的“返回结果”只描述 `data` 的业务结构，不重复展开公共响应外层。
+
+```ts
+try {
+  const { data } = await openimsdk.getSelfUserInfo();
+  useCurrentUser(data);
+} catch ({ errCode, errMsg }) {
+  console.error('getSelfUserInfo failed', { errCode, errMsg });
+}
+```
+
+查询 API 的 `data` 用于建立调用时的快照。状态变更 API 没有可用于刷新界面的业务数据时，直接等待 Promise，并根据页面说明继续处理相关事件或重新查询；不要把 Promise 成功、事件到达和最终界面状态视为同一个阶段。
+
+复杂对象只在一个主要查询页完整说明字段，其他 API 页说明本次操作会使用的字段并链接到该结构，避免同一类型在多个页面出现不一致的字段表。
 
 ## 查询当前登录状态
 
@@ -207,7 +224,7 @@ const handleKickedOffline = () => {
 openimsdk.on(CbEvents.OnKickedOffline, handleKickedOffline);
 ```
 
-收到 `OnKickedOffline` 时，OpenIMClientSDK 已经自动退出当前登录会话，不要再调用 `logout()`。事件处理器只需清理应用自身保存的当前用户、会话列表、消息视图和页面状态，再根据产品策略提示重新登录或跳转到登录页。
+收到 `OnKickedOffline` 时，WASM SDK 已经自动退出当前登录会话，不要再调用 `logout()`。事件处理器只需清理应用自身保存的当前用户、会话列表、消息视图和页面状态，再根据产品策略提示重新登录或跳转到登录页。
 
 ## 断开与 OpenIMServer 的连接
 

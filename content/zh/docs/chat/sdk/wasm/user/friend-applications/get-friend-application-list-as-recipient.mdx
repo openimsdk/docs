@@ -1,0 +1,106 @@
+---
+title: '获取收到的好友申请'
+description: '分页查询当前用户收到的好友申请。'
+sourcePath: '/sdk/wasm/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+调用 `getFriendApplicationListAsRecipient()` 并传入 `handleResults`、`offset` 和 `count`，分页查询当前用户收到的好友申请。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `handleResults` | `number[]` | 是 | 要查询的申请处理结果。 |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次请求的申请数量。 |
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ApplicationHandleResult.Unprocessed` | `0` | 待处理。 |
+| `ApplicationHandleResult.Agree` | `1` | 已同意。 |
+| `ApplicationHandleResult.Reject` | `-1` | 已拒绝。 |
+
+```ts
+import {
+  ApplicationHandleResult,
+  CbEvents,
+} from '@openim/wasm-client-sdk';
+
+const { data: applications } =
+  await openimsdk.getFriendApplicationListAsRecipient({
+    handleResults: [ApplicationHandleResult.Unprocessed],
+    offset: 0,
+    count: 20,
+  });
+```
+
+Promise 成功后，`data` 是当前页 `FriendApplicationItem[]`；查询不会触发申请事件。
+
+### 好友申请字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `fromUserID` | `string` | 申请发起人的用户 ID。 |
+| `fromNickname` | `string` | 申请发起人的昵称快照。 |
+| `fromFaceURL` | `string` | 申请发起人的头像快照。 |
+| `toUserID` | `string` | 申请接收人的用户 ID。 |
+| `toNickname` | `string` | 申请接收人的昵称快照。 |
+| `toFaceURL` | `string` | 申请接收人的头像快照。 |
+| `reqMsg` | `string` | 申请附言。 |
+| `handleResult` | `ApplicationHandleResult` | 当前处理结果：待处理、已同意或已拒绝。 |
+| `handlerUserID` | `string` | 执行处理的用户 ID；未处理时可能为空。 |
+| `handleMsg` | `string` | 处理时填写的说明。 |
+| `handleTime` | `number` | 处理时间；未处理时不应作为有效时间使用。 |
+| `createTime` | `number` | 申请记录创建时间。 |
+| `ex` | `string` | 申请记录扩展字符串。 |
+
+申请记录使用 `fromUserID:toUserID` 作为合并标识。昵称和头像是申请创建或同步时的快照，需要展示最新账号资料时再按 `userID` 查询。
+
+## 同步好友申请变化
+
+好友申请按 `fromUserID:toUserID` 定位。本页是 `OnFriendApplicationAdded`、`OnFriendApplicationAccepted`、`OnFriendApplicationRejected` 和 `OnFriendApplicationDeleted` 的完整监听归属页。
+
+```ts
+const handleApplicationChanged = ({ data }) =>
+  mergeFriendApplication(data);
+const handleApplicationDeleted = ({ data }) =>
+  removeFriendApplication(data.fromUserID, data.toUserID);
+
+openimsdk.on(
+  CbEvents.OnFriendApplicationAdded,
+  handleApplicationChanged,
+);
+openimsdk.on(
+  CbEvents.OnFriendApplicationAccepted,
+  handleApplicationChanged,
+);
+openimsdk.on(
+  CbEvents.OnFriendApplicationRejected,
+  handleApplicationChanged,
+);
+openimsdk.on(
+  CbEvents.OnFriendApplicationDeleted,
+  handleApplicationDeleted,
+);
+
+function removeFriendApplicationListeners() {
+  openimsdk.off(
+    CbEvents.OnFriendApplicationAdded,
+    handleApplicationChanged,
+  );
+  openimsdk.off(
+    CbEvents.OnFriendApplicationAccepted,
+    handleApplicationChanged,
+  );
+  openimsdk.off(
+    CbEvents.OnFriendApplicationRejected,
+    handleApplicationChanged,
+  );
+  openimsdk.off(
+    CbEvents.OnFriendApplicationDeleted,
+    handleApplicationDeleted,
+  );
+}
+```
+
+按当前用户是否为 `toUserID`，将事件分流到收到或发出的列表。分页期间收到变化时重置分页；申请被同意后，新好友关系由[分页获取好友列表](/sdk/wasm/user/friends/get-friend-list-page)归属的 `OnFriendAdded` 合并。

@@ -1,0 +1,24 @@
+---
+title: '上报群消息已读'
+description: '使用 iOS SDK 上报群消息已读回执。'
+sourcePath: '/sdk/ios/message/managing-read-status/send-group-read-receipts'
+---
+
+```objc
+[[OIMManager manager] sendGroupMessageReadReceipt:conversationID
+    clientMsgIDs:visibleClientMsgIDs
+    onSuccess:nil
+    onFailure:nil];
+```
+
+同一批 ID 必须属于目标群会话。成功 callback 只表示上报请求完成，不等于其他客户端已收到回执。会话未读数由独立的会话已读 API 维护。
+
+其他客户端通过 `onRecvGroupReadReceipt:` 接收群聊成员级已读变化。本页是该 delegate 的正文归属页；按 `conversationID + clientMsgID` 合并已读人数、未读人数和成员信息。
+
+```objc
+- (void)onRecvGroupReadReceipt:(OIMGroupMessageReceipt *)receipt {
+    [self mergeGroupReceipt:receipt];
+}
+```
+
+承载该回调的稳定 listener 需要成对调用 `addAdvancedMsgListener:` 与 `removeAdvancedMsgListener:`，完整生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。上报 callback、群回执 delegate 和[查询群消息已读成员](/sdk/ios/message/managing-read-status/get-group-message-readers)得到的成员快照是三个独立阶段。

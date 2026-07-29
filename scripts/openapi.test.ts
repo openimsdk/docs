@@ -52,6 +52,7 @@ type OpenApiDocument = {
 type RouteRecord = {
   readonly contentFile: string;
   readonly contextKey: string;
+  readonly edition?: string;
   readonly status: string;
   readonly template: string;
 };
@@ -150,6 +151,7 @@ function routeRecord(value: unknown): RouteRecord | undefined {
   return {
     contentFile: value.contentFile,
     contextKey: value.contextKey,
+    edition: typeof value.edition === 'string' ? value.edition : undefined,
     status: value.status,
     template: value.template,
   };
@@ -177,6 +179,8 @@ async function platformApiDocumentationOperations(): Promise<Set<string>> {
       (route): route is RouteRecord =>
         route !== undefined &&
         route.contextKey === 'chat/platform-api' &&
+        route.edition !== 'enterprise' &&
+        !route.contentFile.includes('/platform-api/v3/webhooks/') &&
         route.status === 'published' &&
         route.template === 'api',
     );

@@ -159,6 +159,26 @@ export function buildClientSdkNavigationLabels(wasmLabels, platformId) {
   const labels = { ...wasmLabels };
   delete labels['OpenIM SDK for WASM'];
   labels[`OpenIM SDK for ${displayName}`] = `OpenIM ${displayName} SDK 概览`;
+  Object.assign(
+    labels,
+    platformId === 'ios'
+      ? {
+          Open_im_sdkCreateConversationGroup: '创建会话分组',
+          Open_im_sdkGetConversationGroups: '查询会话分组',
+          Open_im_sdkGetConversationGroupInfoWithConversations: '查询分组内的会话',
+          Open_im_sdkGetConversationGroupByConversationID: '查询会话所属的分组',
+          Open_im_sdkUpdateConversationGroup: '更新会话分组',
+          Open_im_sdkSetConversationGroupOrder: '设置会话分组顺序',
+          Open_im_sdkAddConversationsToGroups: '添加会话到分组',
+          Open_im_sdkRemoveConversationsFromGroups: '从分组移除会话',
+          Open_im_sdkDeleteConversationGroup: '删除会话分组',
+        }
+      : {
+          getConversationGroupByConversationID: '查询会话所属的分组',
+          addConversationsToGroups: '添加会话到分组',
+          removeConversationsFromGroups: '从分组移除会话',
+        },
+  );
   return labels;
 }
 

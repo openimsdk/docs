@@ -1,13 +1,13 @@
 'use client';
 
+import { useTheme } from 'fumadocs-ui/provider/base';
 import { MoonIcon, SunIcon } from '@/src/components/ui/icons';
 
 export function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+
   function toggleTheme() {
-    const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
-    document.documentElement.dataset.theme = nextTheme;
-    window.localStorage.setItem('openim-docs-theme', nextTheme);
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   }
 
   return (

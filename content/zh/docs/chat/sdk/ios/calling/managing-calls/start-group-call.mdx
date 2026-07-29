@@ -1,0 +1,27 @@
+---
+title: '发起群聊通话'
+description: '使用 iOS SDK 发起群聊音视频通话。'
+sourcePath: '/sdk/ios/calling/managing-calls/start-group-call'
+---
+
+群聊只邀请 `inviteeUserIDList` 明确列出的成员，不会因为填写 `groupID` 自动邀请全群：
+
+```objc
+OIMInvitationInfo *invitation = [OIMInvitationInfo new];
+invitation.inviteeUserIDList = selectedGroupMemberIDs;
+invitation.groupID = groupID;
+invitation.roomID = groupID;
+invitation.timeout = 30;
+invitation.mediaType = @"video";
+
+[[OIMManager manager] signalingInviteInGroup:invitation
+                              offlinePushInfo:nil
+                                    onSuccess:^(OIMInvitationResultInfo * _Nullable credentials) {
+    if (credentials != nil) [self joinMediaRoom:credentials];
+}
+                                     onFailure:^(NSInteger code, NSString * _Nullable message) {
+    [self showCallError:code message:message ?: @"发起群聊通话失败"];
+}];
+```
+
+`groupID` 不能为空。示例使用群组 ID 作为 `roomID`；若业务自行生成房间 ID，所有参与端必须使用同一个值。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请。

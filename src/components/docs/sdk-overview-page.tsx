@@ -55,19 +55,19 @@ const copy = {
       {
         title: 'Unread message count',
         description: 'Keep conversation lists and app badges in sync with unread counts.',
-        href: '/sdk/wasm/conversation/managing-conversations/manage-read-status',
+        href: '/sdk/wasm/conversation/managing-conversations/mark-conversation-read',
         visual: 'unread',
       },
       {
         title: 'Read receipts',
         description: 'Show who has read group messages and update receipt state from SDK events.',
-        href: '/sdk/wasm/message/managing-read-status/manage-message-read-receipts',
+        href: '/sdk/wasm/message/managing-read-status/send-group-read-receipts',
         visual: 'receipt',
       },
       {
         title: 'Send a message',
         description: 'Create text, file, and custom messages, then send them to users or groups.',
-        href: '/sdk/wasm/message/sending-messages/send-a-message',
+        href: '/sdk/wasm/message/sending-messages/send-message',
         visual: 'message',
       },
       {
@@ -79,7 +79,7 @@ const copy = {
       {
         title: 'Message history',
         description: 'Page through local and synced history with stable message cursors.',
-        href: '/sdk/wasm/message/retrieving-messages/retrieve-message-history',
+        href: '/sdk/wasm/message/retrieving-messages/load-older-messages',
         visual: 'history',
       },
     ],
@@ -135,19 +135,19 @@ const copy = {
       {
         title: '未读消息数',
         description: '读取会话未读数，并同步聊天列表、角标和全局未读状态。',
-        href: '/sdk/wasm/conversation/managing-conversations/manage-read-status',
+        href: '/sdk/wasm/conversation/managing-conversations/mark-conversation-read',
         visual: 'unread',
       },
       {
-        title: '已读回执',
-        description: '查询群消息已读成员，并通过回执事件更新消息气泡状态。',
-        href: '/sdk/wasm/message/managing-read-status/manage-message-read-receipts',
+        title: '群聊消息已读',
+        description: '上报群消息已读状态、接收回执事件，并查询已读成员。',
+        href: '/sdk/wasm/message/managing-read-status/send-group-read-receipts',
         visual: 'receipt',
       },
       {
         title: '发送消息',
         description: '创建文本、文件或自定义消息，并发送给单聊用户或群组。',
-        href: '/sdk/wasm/message/sending-messages/send-a-message',
+        href: '/sdk/wasm/message/sending-messages/send-message',
         visual: 'message',
       },
       {
@@ -159,7 +159,7 @@ const copy = {
       {
         title: '历史消息',
         description: '使用会话 ID 和消息游标读取本地及同步后的历史消息。',
-        href: '/sdk/wasm/message/retrieving-messages/retrieve-message-history',
+        href: '/sdk/wasm/message/retrieving-messages/load-older-messages',
         visual: 'history',
       },
     ],
@@ -304,19 +304,25 @@ function createMobilePopularCards(
     {
       title: '未读消息数',
       description: '读取会话未读数，并同步聊天列表、角标和全局未读状态。',
-      href: `${prefix}/conversation/managing-conversations/manage-read-status`,
+      href: `${prefix}/conversation/managing-conversations/mark-conversation-read`,
       visual: 'unread',
     },
     {
-      title: '已读回执',
-      description: '查询群消息已读成员，并通过回执事件更新消息气泡状态。',
-      href: `${prefix}/message/managing-read-status/manage-message-read-receipts`,
+      title: platform === 'ios' ? '群聊消息已读' : '会话已读',
+      description:
+        platform === 'ios'
+          ? '上报群消息已读状态、接收回执事件，并查询已读成员。'
+          : '清理会话未读数，并处理单聊消息已读回执。',
+      href:
+        platform === 'ios'
+          ? `${prefix}/message/managing-read-status/send-group-read-receipts`
+          : `${prefix}/conversation/managing-conversations/mark-conversation-read`,
       visual: 'receipt',
     },
     {
       title: '发送消息',
       description: '创建文本、文件或自定义消息，并发送给单聊用户或群组。',
-      href: `${prefix}/message/sending-messages/send-a-message`,
+      href: `${prefix}/message/sending-messages/send-message`,
       visual: 'message',
     },
     {
@@ -328,7 +334,7 @@ function createMobilePopularCards(
     {
       title: '历史消息',
       description: '使用会话标识和消息游标读取本地及同步后的历史消息。',
-      href: `${prefix}/message/retrieving-messages/retrieve-message-history`,
+      href: `${prefix}/message/retrieving-messages/load-older-messages`,
       visual: 'history',
     },
   ];

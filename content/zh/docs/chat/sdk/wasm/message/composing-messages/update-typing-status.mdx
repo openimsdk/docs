@@ -1,0 +1,31 @@
+---
+title: '上报输入状态'
+description: '使用 WASM SDK 上报当前用户的输入状态。'
+sourcePath: '/sdk/wasm/message/composing-messages/update-typing-status'
+---
+
+输入框开始输入时传 `focus: true`；发送消息、失焦、切换会话或停止输入时传 `false`。输入状态绑定 `conversationID`，不会保存草稿或写入消息列表。
+
+```ts
+await openimsdk.changeInputStates({ conversationID, focus: true });
+// 停止输入时：
+await openimsdk.changeInputStates({ conversationID, focus: false });
+```
+
+对开始输入做节流和状态去重，不要在每个键盘事件中重复上报。Promise 成功只表示服务端接受请求，不表示远端界面已更新。
+
+本页唯一处理 `CbEvents.OnConversationUserInputStatusChanged`。使用稳定处理函数，并按 `conversationID:userID` 覆盖 `platformIDs` 快照：
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleInputStatusChanged = ({ data }) => {
+  updateTypingState(data.conversationID, data.userID, data.platformIDs);
+};
+
+openimsdk.on(CbEvents.OnConversationUserInputStatusChanged, handleInputStatusChanged);
+
+function removeInputStatusListener() {
+  openimsdk.off(CbEvents.OnConversationUserInputStatusChanged, handleInputStatusChanged);
+}
+```

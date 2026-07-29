@@ -46,7 +46,7 @@ function messagesForCurrentConversation(messages: MessageItem[]) {
 
 ### 图片、音频、视频和文件消息
 
-OpenIMClientSDK 用不同元素表示图片、音频、视频和普通文件。接收端不需要重新上传文件，只需要读取消息中已有的文件地址、大小、名称、时长或快照图等字段，并按界面规则展示。
+WASM SDK 使用不同的消息元素表示图片、音频、视频和普通文件。接收端无需重新上传文件，只需读取消息中已有的文件地址、大小、名称、时长或快照图等字段，并按界面规则展示。
 
 如果产品需要一次发送多个文件，常见实现是连续发送多条文件消息，或发送一条自定义消息承载文件组数据。接收端仍应以每条 `MessageItem` 的 `clientMsgID` 作为渲染和状态更新的稳定标识。
 
@@ -79,7 +79,7 @@ function handleOfflineMessages({ data }: { data: MessageItem[] }) {
 openimsdk.on(CbEvents.OnRecvOfflineNewMessages, handleOfflineMessages);
 ```
 
-发送方在 `sendMessage()` 或 `sendMessageNotOss()` 中把 `isOnlineOnly` 设为 `true` 时，接收端通过 `CbEvents.OnRecvOnlineOnlyMessages` 收到这类只在线投递的消息。它们不会写入 SDK 本地消息存储，也不能通过历史消息接口回放，通常只适合临时提示或业务通知；是否展示在当前界面按产品约定处理。发送参数见[发送消息](/sdk/wasm/message/sending-messages/send-a-message)。
+发送方在 `sendMessage()` 或 `sendMessageNotOss()` 中把 `isOnlineOnly` 设为 `true` 时，接收端通过 `CbEvents.OnRecvOnlineOnlyMessages` 收到这类只在线投递的消息。它们不会写入 SDK 本地消息存储，也不能通过历史消息接口回放，通常只适合临时提示或业务通知；是否展示在当前界面由产品规则决定。发送参数见[发送消息](/sdk/wasm/message/sending-messages/send-message)。
 
 ```ts
 function handleOnlineOnlyMessages({ data }: { data: MessageItem[] }) {
@@ -103,56 +103,15 @@ SDK 同时导出单条事件 `OnRecvNewMessage`、`OnRecvOfflineNewMessage` 和 
 
 ## 首次进入会话时读取历史
 
-事件只负责推送新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，使用 `getAdvancedHistoryMessageList()` 读取当前用户可见并已同步的历史消息。
+事件只负责推送新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史快照。分页参数、调用示例和 `AdvancedGetMessageResult` 结构见[加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)。
 
-### 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `conversationID` | `string` | 必填 | 要读取历史消息的会话 ID。 |
-| `startClientMsgID` | `string` | 必填 | 分页游标；第一页传空字符串，后续传边界消息的 `clientMsgID`。 |
-| `count` | `number` | 必填 | 本次读取数量。 |
-| `viewType` | `ViewType` | 必填 | 消息视图类型；普通历史记录使用 `ViewType.History`。 |
-
-```ts
-import { ViewType } from '@openim/wasm-client-sdk';
-
-const { data: firstPage } = await openimsdk.getAdvancedHistoryMessageList({
-  conversationID,
-  startClientMsgID: '',
-  count: 30,
-  viewType: ViewType.History,
-});
-
-replaceMessageList(firstPage.messageList);
-```
-
-历史查询的 Promise 成功后直接使用 `AdvancedGetMessageResult` 建立消息快照。查询历史不会触发新消息事件；事件和分页结果可能包含同一条消息，因此两条路径都必须使用相同的 `clientMsgID` 去重规则。
-
-继续加载更早消息时，使用当前列表边界上的 `clientMsgID` 作为游标。历史分页和事件推送可能覆盖同一条消息，渲染层应继续按 `clientMsgID` 去重。
-
-```ts
-const nextCursor = messageList.at(-1)?.clientMsgID ?? '';
-
-const { data: nextPage } = await openimsdk.getAdvancedHistoryMessageList({
-  conversationID,
-  startClientMsgID: nextCursor,
-  count: 30,
-  viewType: ViewType.History,
-});
-
-appendOlderMessages(nextPage.messageList);
-```
+历史查询不会触发新消息事件；事件和分页结果可能包含同一条消息，因此两条路径都必须使用相同的 `clientMsgID` 去重规则。
 
 ## 将群聊会话标记为已读
 
-用户进入群聊并看到最新消息后，可以调用 `markConversationMessageAsRead(conversationID)` 清理该会话的未读数。这个调用处理的是会话未读数，不等同于群消息成员级已读回执。
+用户进入群聊并看到最新消息后，可以清理该会话的未读数。这个操作处理的是会话未读数，不等同于群消息成员级已读回执；调用方式和状态同步见[标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)。
 
-```ts
-await openimsdk.markConversationMessageAsRead(conversationID);
-```
-
-会话列表和总未读角标分别通过[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)和[管理会话已读状态](/sdk/wasm/conversation/managing-conversations/manage-read-status)中的事件处理器做最终同步。
+会话列表和总未读角标分别通过[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)和[维护总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)中的事件处理器做最终同步。
 
 如果事件注册在全局消息状态层，不要在每次进入同一个群聊页面时重复注册全局处理器。需要显示当前会话的历史快照时，再读取边界历史；重新登录后的消息变化由事件同步，不要把事件到达视为某次历史查询或已读调用的完成回调。
 
@@ -168,6 +127,6 @@ await openimsdk.markConversationMessageAsRead(conversationID);
 ## 相关页面
 
 - [消息概览](/sdk/wasm/message/overview-message)
-- [发送消息](/sdk/wasm/message/sending-messages/send-a-message)
-- [获取消息历史](/sdk/wasm/message/retrieving-messages/retrieve-message-history)
-- [管理会话已读状态](/sdk/wasm/conversation/managing-conversations/manage-read-status)
+- [发送消息](/sdk/wasm/message/sending-messages/send-message)
+- [加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)
+- [标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)

@@ -1,99 +1,16 @@
 ---
-title: '将音频转为文字'
-description: '使用 OpenIM Flutter SDK 将本地音频转为文字，并把结果保存到本地语音消息。'
+title: '识别音频文字'
+description: '使用 Flutter SDK 将本地音频识别为文字。'
 sourcePath: '/sdk/flutter/message/composing-messages/transcribe-audio'
 ---
 
-`speechToText()` 把本地音频文件提交给当前 OpenIMServer 部署配置的语音识别服务，并返回识别文本。调用前先使用 `speechToTextCapabilities()` 检查当前部署是否提供该能力；不要在客户端假设所有环境都已配置语音识别。
-
-## 检查能力
-
-Flutter SDK 的 `speechToTextCapabilities()` 声明返回 `Future<void>`，不会像 WASM SDK 一样向 Dart 层公开格式、采样率、时长、大小或服务提供方等能力字段：
+`filename` 必须是当前设备上 SDK 可读取的本地路径，不是 URL、Base64 或上传文件名：
 
 ```dart
-try {
-  await OpenIM.iMManager.messageManager.speechToTextCapabilities();
-  setTranscriptionAvailable(true);
-} catch (error) {
-  setTranscriptionAvailable(false);
-  reportTranscriptionCapabilityError(error);
-}
-```
-
-Future 成功表示当前部署接受能力检查，可以继续展示转写入口；它不是能力配置对象。调用失败时应停用入口并进入错误处理，不能自行猜测服务端限制。
-
-录音侧仍应按产品和服务端约定限制文件格式、大小、时长与采样率。需要在界面展示精确限制时，应由业务后端提供与当前部署一致的配置，不能从 `Future<void>` 虚构字段。
-
-## 提交本地音频
-
-`speechToText()` 只接收一个必填的 `filename`，它是当前设备上 SDK 可以读取的音频文件路径，不是上传文件名、远端 URL、Base64 或字节数组。
-
-```dart
-final soundElem = message.soundElem;
-final filename = soundElem?.soundPath;
-
-if (soundElem == null || filename == null || filename.isEmpty) {
-  throw StateError('Voice message has no readable local file');
-}
-
-await OpenIM.iMManager.messageManager.speechToTextCapabilities();
-
-final transcription = await OpenIM.iMManager.messageManager.speechToText(
-  filename: filename,
+final result = await OpenIM.iMManager.messageManager.speechToText(
+  filename: soundElem.soundPath!,
 );
-final transcript = transcription.text ?? '';
-
-showTranscription(transcript);
+final transcript = result.text ?? '';
 ```
 
-`SpeechToTextResp` 只公开 nullable 的 `text` 字段。`null` 或空字符串表示本次调用没有得到可展示文字；Future 抛出异常时进入失败处理。在日志中记录非敏感的文件名、格式和大小即可，不要记录完整音频内容。
-
-只有远端 `sourceUrl` 而没有可读 `soundPath` 时，应先按应用的文件策略下载到受控本地路径，再传给 `speechToText()`；不能把 URL 直接当作 `filename`。
-
-## 保存到本地语音消息
-
-`speechToText()` 只返回识别结果，不会自动修改原语音消息。需要在当前设备的消息气泡中长期展示转写结果时，把文字写入 `SoundElem.text`，再使用 `setMessageLocalContent()` 保存修改后的完整 `Message`：
-
-```dart
-final clientMsgID = message.clientMsgID;
-final soundElem = message.soundElem;
-if (clientMsgID == null || clientMsgID.isEmpty || soundElem == null) {
-  throw StateError('Voice message is missing its local identity or content');
-}
-
-final previousText = soundElem.text;
-soundElem.text = SoundText(
-  text: transcript,
-  translate: previousText?.translate,
-);
-
-try {
-  await OpenIM.iMManager.messageManager.setMessageLocalContent(
-    conversationID: conversationID,
-    clientMsgID: clientMsgID,
-    message: message,
-  );
-  replaceMessage(conversationID, clientMsgID, message);
-} catch (_) {
-  soundElem.text = previousText;
-  rethrow;
-}
-```
-
-### 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | 必填 | 原语音消息所在的会话 ID。 |
-| `clientMsgID` | `String` | 必填 | 原语音消息的客户端稳定 ID。 |
-| `message` | `Message` | 必填 | 写入转写结果后的完整消息对象；必须保留原消息的 ID、路由和其他内容字段。 |
-
-`setMessageLocalContent()` 不是局部字段更新。示例只替换 `soundElem.text`，同时保留既有 `SoundText.translate` 及语音地址、时长、大小、发送者和时间等字段。Future 成功表示当前设备的本地消息内容已经更新；该修改不会上传到服务端、同步到其他设备或其他用户，也不会触发新消息或消息修改 listener。
-
-如果转写结果需要让其他会话成员看到，应由用户确认后创建并发送一条新的文本消息；不要把本地 `SoundElem.text` 当作共享消息内容。
-
-## 调用结果
-
-能力检查和音频识别都是请求型 API，Future 成功后直接使用当前调用结果，不应等待消息 listener。`setMessageLocalContent()` 是随后的本地写入步骤；能力检查成功、识别完成和本地消息保存是三个不同阶段。
-
-需要发送识别文字时，再单独创建文本消息并调用发送 API，完整流程见[发送消息](/sdk/flutter/message/sending-messages/send-a-message)与[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。
+只有远端 URL 时先下载到受控本地路径。Future 返回 `SpeechToTextResp`，不会修改原消息或触发 listener。调用前先[检查语音识别能力](/sdk/flutter/message/composing-messages/check-speech-to-text)。

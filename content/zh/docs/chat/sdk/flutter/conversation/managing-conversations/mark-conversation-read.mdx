@@ -1,0 +1,27 @@
+---
+title: '标记会话已读'
+description: '使用 Flutter SDK 将指定会话的消息标记为已读。'
+sourcePath: '/sdk/flutter/conversation/managing-conversations/mark-conversation-read'
+---
+
+用户打开会话并阅读完当前可见消息后调用：
+
+```dart
+await OpenIM.iMManager.conversationManager.markConversationMessageAsRead(
+  conversationID: conversationID,
+);
+```
+
+不要在只预览通知或后台收到消息时提前标记。Future 成功表示请求完成，不等于 `onConversationChanged` 已到达；随后按 `conversationID` 合并最新 `ConversationInfo`，需要立即确认时重新查询该会话。
+
+对于单聊，当前用户标记会话已读后，对端可通过 `onRecvC2CReadReceipt` 收到消息已读回执。本页是该回调的正文归属页。对每个 `ReadReceiptInfo` 先验证单聊 `sessionType` 和非空 `userID`，用对端用户解析 `conversationID`，再按 `msgIDList` 中的非空 `clientMsgID` 更新已读状态。
+
+```dart
+void handleC2CReadReceipts(List<ReadReceiptInfo> items) {
+  for (final receipt in items) {
+    mergeC2CReadReceipt(receipt);
+  }
+}
+```
+
+把 `handleC2CReadReceipts` 传给应用唯一 `OnAdvancedMsgListener` 的 `onRecvC2CReadReceipt`；集中设置方式见[事件概览](/sdk/flutter/events/overview-events)。固定 Flutter SDK 没有群消息成员级回执能力。

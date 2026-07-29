@@ -1,0 +1,30 @@
+---
+title: '获取消息总未读数'
+description: '使用 iOS SDK 获取并持续维护账号总未读数。'
+sourcePath: '/sdk/ios/conversation/managing-conversations/get-total-unread-count'
+---
+
+该查询返回当前账号所有会话的总未读快照，不要把当前分页中的 `unreadCount` 简单相加。
+
+```objc
+[[OIMManager manager] getTotalUnreadMsgCountWithOnSuccess:^(NSInteger count) {
+    [badgeStore setTotalUnread:count];
+} onFailure:nil];
+```
+
+查询本身不触发 delegate。后续总数变化由本页唯一处理：
+
+```objc
+@interface TotalUnreadSync : NSObject <OIMConversationListener>
+@end
+
+@implementation TotalUnreadSync
+- (void)onTotalUnreadMessageCountChanged:(NSInteger)count {
+    [badgeStore setTotalUnread:count];
+}
+@end
+
+[[OIMManager callbacker] addConversationListener:totalUnreadSync];
+// 账号作用域结束时：
+[[OIMManager callbacker] removeConversationListener:totalUnreadSync];
+```

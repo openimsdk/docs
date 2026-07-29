@@ -165,10 +165,15 @@ test('every active WASM route title has a Chinese structural label', () => {
   const navigationLabels = JSON.parse(
     readFileSync('data/structure/wasm-navigation-labels.json', 'utf8'),
   );
+  const sidebar = JSON.parse(readFileSync('data/structure/wasm-sidebar.json', 'utf8'));
+  const sidebarEntries = new Map(
+    flattenSidebarEntries(sidebar.nodes).map((entry) => [entry.path, entry]),
+  );
 
-  assert.equal(routes.length, 60);
+  assert.equal(routes.length, flattenSidebarPaths(sidebar.nodes).length);
   for (const route of routes) {
-    const title = resolveLocalizedRouteTitle(route.title, navigationLabels);
+    const navigationTitle = sidebarEntries.get(route.path)?.navigationTitle ?? route.title;
+    const title = resolveLocalizedRouteTitle(navigationTitle, navigationLabels);
     assert.match(title ?? '', /[\u3400-\u9fff]/, route.path);
   }
 });
@@ -195,3 +200,19 @@ test('rejects an active route without a Chinese structural title label', () => {
 
   assert.ok(errors.includes(`${routeB.path}: active route requires a Chinese structural title`));
 });
+
+function flattenSidebarPaths(nodes) {
+  return nodes.flatMap((node) => {
+    if (typeof node === 'string') return [node];
+    if (node.path) return [node.path];
+    return flattenSidebarPaths(node.children ?? []);
+  });
+}
+
+function flattenSidebarEntries(nodes) {
+  return nodes.flatMap((node) => {
+    if (typeof node === 'string') return [{ path: node }];
+    if (node.path) return [node];
+    return flattenSidebarEntries(node.children ?? []);
+  });
+}

@@ -1,10 +1,10 @@
 ---
 title: '获取会话列表'
-description: '使用 OpenIMClientSDK 分页获取当前用户的会话列表。'
+description: '使用 WASM SDK 分页获取当前用户的会话列表。'
 sourcePath: '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-会话列表属于当前登录用户。每条 `ConversationItem` 都包含会话标识、未读数、最后一条消息、置顶和草稿等状态。所有场景都必须使用分页接口读取会话，不要一次加载完整列表。
+会话列表属于当前登录用户。每条 `ConversationItem` 都包含会话标识、未读数、最后一条消息、置顶和草稿等状态。应使用分页接口读取会话，避免一次加载完整列表。
 
 ## 分页获取会话
 
@@ -14,8 +14,8 @@ sourcePath: '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversati
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `offset` | `number` | 必填 | 起始偏移量，第一页传 `0`。 |
-| `count` | `number` | 必填 | 本次读取的会话数量。 |
+| `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
+| `count` | `number` | 是 | 本次读取的会话数量。 |
 
 ```ts
 const pageSize = 50;
@@ -32,9 +32,41 @@ async function loadConversationPage(offset = 0) {
 
 Promise 成功后，`data` 是当前页的 `ConversationItem[]`。
 
+### 会话字段
+
+`ConversationItem` 同时包含聊天目标、列表展示和当前账号的会话设置：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `string` | 会话的稳定 ID，也是列表和事件的合并标识。 |
+| `conversationType` | `SessionType` | 会话类型，例如单聊或群聊。 |
+| `userID` | `string` | 单聊对方的用户 ID；群聊中通常为空。 |
+| `groupID` | `string` | 群聊对应的群组 ID；单聊中通常为空。 |
+| `showName` | `string` | 当前会话的展示名称快照。 |
+| `faceURL` | `string` | 当前会话的展示头像快照。 |
+| `latestMsg` | `string` | 最后一条消息的序列化内容；为空时表示没有可展示的末条消息。 |
+| `latestMsgSendTime` | `number` | 最后一条消息的发送时间，用于列表排序。 |
+| `unreadCount` | `number` | 当前账号在该会话中的未读消息数。 |
+| `recvMsgOpt` | `MessageReceiveOptType` | 该会话的消息接收与提醒方式。 |
+| `groupAtType` | `GroupAtType` | 群聊中的 @ 提醒状态；单聊不使用。 |
+| `draftText` | `string` | 当前设备保存的会话草稿。 |
+| `draftTextTime` | `number` | 草稿更新时间。 |
+| `isPinned` | `boolean` | 会话是否置顶。 |
+| `isMarked` | `boolean` | 会话是否已标记，可与会话分组中的“标记”分组配合使用。 |
+| `isPrivateChat` | `boolean` | 是否启用私聊阅后即焚。 |
+| `burnDuration` | `number` | 私聊阅后即焚时长。 |
+| `isMsgDestruct` | `boolean` | 是否启用定期删除服务端消息。 |
+| `msgDestructTime` | `number` | 服务端消息的定期删除周期。 |
+| `isNotInGroup` | `boolean` | 当前账号是否已经不在该群组中。 |
+| `remark` | `string`（可选） | 会话备注。 |
+| `attachedInfo` | `string` | SDK 附加信息；只按已确认的业务约定解析。 |
+| `ex` | `string`（可选） | 会话扩展字符串。 |
+
+列表标题和头像可以直接使用 `showName`、`faceURL`，但好友资料或群资料更新时仍应由对应领域的数据和事件校准。不要根据展示名称生成会话 ID。
+
 继续加载时按已经请求的条目数量推进 `offset`；合并结果按 `conversationID` 去重，避免同一会话因查询结果和事件重复进入列表。
 
-本页返回数量小于 `count` 时表示已经到达列表末尾。用户主动刷新时，应清空旧分页状态并从 `offset: 0` 重新读取；重新登录后的会话变化由会话事件同步。
+当本次返回数量小于 `count` 时，表示已经到达列表末尾。用户主动刷新时，应清空旧分页状态并从 `offset: 0` 重新读取；重新登录后的会话变化由会话事件同步。
 
 ## 保持列表同步
 
@@ -60,6 +92,6 @@ function removeConversationListListeners() {
 }
 ```
 
-组件卸载、退出登录或切换账号时调用 `removeConversationListListeners()`。总未读数由[管理会话已读状态](/sdk/wasm/conversation/managing-conversations/manage-read-status)负责，输入状态由[管理输入状态](/sdk/wasm/message/composing-messages/manage-typing-status)负责。
+组件卸载、退出登录或切换账号时调用 `removeConversationListListeners()`。总未读数由[维护总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)负责，输入状态由[上报输入状态](/sdk/wasm/message/composing-messages/update-typing-status)负责。
 
 不要用已加入群组列表替代会话列表。用户可能已经加入群组但尚未产生对应会话，也可能退出群组后仍保留历史会话记录。
