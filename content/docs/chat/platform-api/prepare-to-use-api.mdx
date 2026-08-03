@@ -1,49 +1,60 @@
 ---
 title: "Prepare to use the API"
-description: "Prepare to use the API for the OpenIM Platform API."
+description: "Configure the OpenIM API address, request headers, authentication, and request body conventions."
 product: "platform-api"
 context: "chat/platform-api"
 template: "overview"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/prepare-to-use-api"
 ---
 
-Before calling OpenIM Platform API endpoints, configure the base API address, common headers, authentication tokens, and JSON request conventions.
+Before calling the OpenIM Platform API, configure the base address, common request headers, authentication tokens, and request body conventions.
+
+> **Note:** Call Platform API endpoints from your backend and handle authentication, auditing, and errors there. Never expose an administrator token or management endpoint directly to a client.
 
 ## Base URL
 
-Use the API address from your OpenIM deployment as the base URL. Replace `{API_ADDRESS}` in endpoint examples with your gateway or server address.
+Use the API address of your OpenIM deployment as the base URL. Replace `{API_ADDRESS}` in endpoint examples with your OpenIM API gateway or server address.
 
 ```bash
 {API_ADDRESS}
 ```
 
-Production deployments should keep management endpoints reachable only from trusted backend services.
+For example, `POST {API_ADDRESS}/user/get_users` sends a request to `/user/get_users` in the current environment. In production, allow only trusted backend services to access management endpoints.
 
-## Headers
+## Request headers
 
-Most OpenIM management APIs use JSON request bodies and the following headers.
+Most OpenIM management REST APIs use JSON request bodies. Unless an endpoint states otherwise, include these headers.
 
 | Header | Required | Description |
 | ------ | -------- | ----------- |
 | Content-Type | Yes | Use `application/json; charset=utf-8` for JSON requests. |
-| operationID | Yes | Unique trace ID for the request. Generate a new value for each backend call. |
-| token | Management APIs | Administrator token issued by the OpenIM authentication API. |
+| operationID | Yes | Globally unique trace ID. Generate a new value for each request so that backend and OpenIM logs can be correlated. |
+| token | Management endpoints | APP administrator token. A small number of bootstrap endpoints, such as user creation, may not require it; follow the endpoint page. |
 
 ## Authentication
 
-Backend services should first obtain an administrator token, then pass it in the `token` header for user, group, message, conversation, and other management APIs. User tokens for SDK login should also be issued by the backend.
+Platform API endpoints must be called by a server. This can be your own business backend or the OpenIM Chat Server. The server stores the OpenIM API address, administrator account, and administrator credential (`secret`), and handles token acquisition, caching, renewal, and auditing.
 
-1. Configure the OpenIM API address and administrator credentials on the backend.
-2. Call the administrator token API.
-3. Use the administrator token to call management APIs.
-4. Issue user tokens when clients need to log in to the SDK.
+### Management API calls
 
-- [Get an administrator token](/platform-api/auth/tokens/get-admin-token)
-- [Get a user token](/platform-api/auth/tokens/get-user-token)
+First call [Get an administrator token](/platform-api/auth/tokens/get-admin-token) with the administrator account and `secret`. Include the returned APP administrator token in the `token` header when creating users or groups, sending server-side messages, importing relationships, or performing administrative operations.
+
+### Client login
+
+After a user registers, signs in with a password, or completes third-party authentication, the client must not receive the administrator token. Once the business identity has been verified, your backend or the OpenIM Chat Server calls [Get a user token](/platform-api/auth/tokens/get-user-token) and returns that IM token to the client for OpenIM SDK login.
+
+A typical integration flow is:
+
+1. Configure the OpenIM API address, administrator account, and `secret` on your backend or OpenIM Chat Server.
+2. Call [Get an administrator token](/platform-api/auth/tokens/get-admin-token).
+3. Use the administrator token to call user, group, message, relationship, and other management APIs.
+4. After a user signs in to your business system, call [Get a user token](/platform-api/auth/tokens/get-user-token) and return the IM token to the client.
 
 ## Request body
 
-Current OpenIM Platform API pages use fixed endpoint paths and JSON request bodies. Do not move user IDs, group IDs, pagination fields, or message payloads into URL query strings unless a specific endpoint says so.
+The documented OpenIM Platform API endpoints use `POST` requests to fixed paths and place business parameters in a JSON request body. Do not move pagination, user IDs, group IDs, or message fields into URL query parameters.
+
+When a field value is itself a URL, such as an avatar, file, or object storage address, submit the original string as a JSON field.

@@ -64,6 +64,33 @@ test('omits unpublished WASM pages and indexes published manual Chinese content'
   assert.ok(!result.zh.some((record) => record.path === pending.path));
 });
 
+test('respects locale restrictions for non-SDK routes', () => {
+  const bilingual = route('/platform-api/overview', 'chat/platform-api');
+  const zhOnly = {
+    ...route('/platform-api/webhooks/overview', 'chat/platform-api'),
+    locales: ['zh'],
+  };
+
+  const result = buildSearchIndexes({
+    routes: [bilingual, zhOnly],
+    sourcePages: new Map([
+      [bilingual.path, { body: 'Platform API overview' }],
+      [zhOnly.path, { body: 'Webhooks 中文正文' }],
+    ]),
+    manualZhPages: new Map(),
+    auditPages: new Map(),
+  });
+
+  assert.deepEqual(
+    result.en.map((record) => record.path),
+    [bilingual.path],
+  );
+  assert.deepEqual(
+    result.zh.map((record) => record.path),
+    [bilingual.path, zhOnly.path],
+  );
+});
+
 test('fails when a route source page is missing', () => {
   const nonWasm = route('/sdk/android/overview');
 

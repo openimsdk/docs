@@ -1,41 +1,123 @@
 ---
 title: "Overview"
-description: "Overview for the OpenIM Platform API."
+description: "Overview of friend requests, friend lists, relationship management, and blacklists in the OpenIM Platform API."
 product: "platform-api"
 context: "chat/platform-api"
 template: "overview"
 status: "published"
-lastUpdated: "2026-07-06"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/relation/overview"
 ---
 
-The relationship module manages friend relationships, friend requests, friend profile updates, and user blacklists from trusted backend services.
+The relationship module manages friend relationships, friend requests, relationship metadata, and blacklists from trusted backend services. A blacklist has governance implications, but its data ownership remains within user relationships rather than content moderation.
 
 ## Capability scope
 
 | Capability | Description |
-| --- | --- |
-| Friends | Add, delete, import, check, and list friend relationships. |
-| Friend requests | List received or sent requests and process request decisions. |
-| Blacklists | Add users to a blacklist, remove them, or list blocked users. |
-| Friend metadata | Update remarks and extension fields for friend records. |
+| ---- | ---- |
+| Friend requests | Send requests, list received or sent requests, and accept or reject them. |
+| Friend queries | Page through a friend list or retrieve selected friend profiles in batches. |
+| Friend management | Delete or import relationships and update remarks, pinned state, and extension data in batches. |
+| Blacklists | Add users to a blacklist, remove them, and page through blacklist records. |
+| Request record governance <span className="enterprise-field-badge">Enterprise</span> | Delete friend request records sent or received by a user. |
 
 ## Common APIs
 
 - [Apply to add a friend](/platform-api/relation/managing-friend-requests/apply-to-add-friend)
 - [Respond to a friend request](/platform-api/relation/managing-friend-requests/respond-friend-apply)
+- [List received friend requests](/platform-api/relation/managing-friend-requests/list-received-friend-requests)
+- [List sent friend requests](/platform-api/relation/managing-friend-requests/list-sent-friend-requests)
 - [List friends](/platform-api/relation/listing-friends/list-friends)
-- [Add to blacklist](/platform-api/relation/blacklist/add-black)
+- [Get designated friends](/platform-api/relation/listing-friends/get-designated-friends)
 - [Delete a friend](/platform-api/relation/managing-friends/delete-friend)
+- [Import friends](/platform-api/relation/managing-friends/import-friends)
+- [Update friends](/platform-api/relation/managing-friends/update-friends)
+- [Add a user to a blacklist](/platform-api/relation/blacklist/add-black)
+- [List blacklist records](/platform-api/relation/blacklist/list-blacks)
+- [Remove a user from a blacklist](/platform-api/relation/blacklist/remove-black)
+- [Delete sent friend requests](/platform-api/relation/managing-friend-requests/delete-sent-friend-requests) <span className="enterprise-field-badge">Enterprise</span>
+- [Delete received friend requests](/platform-api/relation/managing-friend-requests/delete-received-friend-requests) <span className="enterprise-field-badge">Enterprise</span>
+
+## Resource representations
+
+Relationship resources describe state between users, including friendships, friend requests, and blacklists.
+
+### FriendInfo
+
+`FriendInfo` represents the relationship between an owner and a friend.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| ownerUserID | string | User ID that owns the friend record. |
+| remark | string | Owner-defined friend remark. |
+| createTime | int64 | Relationship creation time, normally a Unix timestamp in milliseconds. |
+| friendUser | object | Friend profile represented by [`UserInfo`](/platform-api/user/overview#userinfo). |
+| addSource | int | How the relationship was established. See [`AddSource`](#addsource). |
+| operatorUserID | string | User that created or updated the relationship. |
+| ex | string | Relationship extension data. |
+| isPinned | boolean | Whether the friend record is pinned. |
+
+### FriendRequestInfo
+
+`FriendRequestInfo` represents a friend request record.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| fromUserID | string | Requesting user ID. |
+| fromNickname | string | Requesting user's nickname. |
+| fromFaceURL | string | Requesting user's avatar URL. |
+| toUserID | string | Recipient user ID. |
+| toNickname | string | Recipient's nickname. |
+| toFaceURL | string | Recipient's avatar URL. |
+| handleResult | int | Request result. See [`FriendRequestResult`](#friendrequestresult). |
+| reqMsg | string | Request message. |
+| createTime | int64 | Request creation time. |
+| handlerUserID | string | User that handled the request. |
+| handleMsg | string | Handling message. |
+| handleTime | int64 | Time when the request was handled. |
+| ex | string | Friend request extension data. |
+
+### BlackInfo
+
+`BlackInfo` represents a user blacklist relationship.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| ownerUserID | string | User ID that owns the blacklist record. |
+| createTime | int64 | Time when the user was added to the blacklist. |
+| blackUserInfo | object | Public profile of the blocked user, represented by [`PublicUserInfo`](/platform-api/user/overview#publicuserinfo). |
+| addSource | int | How the blacklist record was created. See [`AddSource`](#addsource). |
+| operatorUserID | string | User that performed the operation. |
+| ex | string | Blacklist extension data. |
+
+## Enums
+
+### AddSource
+
+`AddSource` describes how a friendship or blacklist relationship was established.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 1 | `BecomeFriendByImport` | Imported by an administrator or backend service. |
+| 2 | `BecomeFriendByApply` | Established through a friend request. |
+
+### FriendRequestResult
+
+| Value | Name | Description |
+| --- | --- | --- |
+| -1 | `Refuse` | Rejected. |
+| 0 | `NotHandle` | Pending. |
+| 1 | `Agree` | Accepted. |
 
 ## Integration advice
 
-Apply privacy, risk, and notification rules in your backend before changing relationships.
+Your backend should decide whether a relationship may be created, deleted, or imported. Confirm both users exist in your business system and record the operator, source, and reason before calling OpenIM. Combine these APIs with Webhooks or a business approval workflow when risk controls are required.
 
-Record blacklist operations with source and operator information for auditability.
+Treat blacklists as relationship data. A product may link to blacklist operations from a moderation surface, but the API remains in this module so that users do not mistake it for channel or message moderation.
 
 ## Related pages
 
-- [Prepare to use the API](/platform-api/prepare-to-use-api)
+- [User overview](/platform-api/user/overview)
+- [Platform API overview](/platform-api/overview)
 - [Error codes](/platform-api/error-codes)

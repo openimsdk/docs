@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/auth/tokens/get-user-token"
 ---
 
-Get a user token is an OpenIM authentication REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **Get a user token** from your backend to issue a token for a specific user and login platform. The client uses this token to log in to the OpenIM SDK. Configure the API address as described in [Prepare to use the API](/platform-api/prepare-to-use-api), and keep the administrator token on the backend only.
 
 ## HTTP request
 
@@ -31,7 +31,17 @@ curl --request POST "${API_ADDRESS}/auth/get_user_token" \
 }'
 ```
 
-> Keep administrator tokens on trusted backend services only. Client applications should use user tokens issued by your backend.
+## Parameters
+
+This endpoint accepts tracing and authentication information in request headers and business parameters in a JSON request body.
+
+### Request headers
+
+| Header | Required | Type | Description |
+| --- | --- | --- | --- |
+| operationID | Yes | string | A unique tracing ID for this request. Generate it on the backend and include it in application logs. |
+| token | Yes | string | An application administrator token. Keep it on the backend only. |
+| Content-Type: application/json | Yes | string | Required when the request body is JSON. |
 
 ## Request body
 
@@ -44,8 +54,8 @@ curl --request POST "${API_ADDRESS}/auth/get_user_token" \
 
 | Parameter | Required | Type | Description |
 | --- | --- | --- | --- |
-| platformID | Yes | int | Client platform ID. |
-| userID | Yes | string | OpenIM user ID. |
+| platformID | Yes | int | The user's login platform. See [`PlatformID`](/platform-api/user/overview#platformid). The administrator platform ID is not allowed. |
+| userID | Yes | string | The registered regular user for whom the token is issued. |
 
 ## Response
 
@@ -71,8 +81,8 @@ OpenIM usually returns `200 OK` when the request reaches the service. Use `errCo
 | errMsg | string | Short error message. |
 | errDlt | string | Detailed error information for troubleshooting. |
 | data | object | Endpoint-specific response data. |
-| data.token | string | OpenIM authentication token. |
-| data.expireTimeSeconds | int | Token expiration time in seconds. |
+| data.token | string | The issued user token. |
+| data.expireTimeSeconds | int | Token lifetime in seconds. |
 
 ### Error response
 
@@ -94,12 +104,14 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- A successful request issues a new user token and stores its state on the server.
+- The request must use an application administrator token.
+- `platformID` cannot be the administrator platform ID.
+- `userID` cannot identify an application administrator or a notification account.
+- The target user must already be registered with OpenIM.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [authentication overview](/platform-api/auth/overview)
+- [Authentication overview](/platform-api/auth/overview)
 - [Error codes](/platform-api/error-codes)

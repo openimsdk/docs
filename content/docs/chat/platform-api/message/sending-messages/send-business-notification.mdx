@@ -1,0 +1,109 @@
+---
+title: "Send a business notification"
+description: "Deliver a custom business event to one-to-one or group clients through OpenIM."
+product: "platform-api"
+context: "chat/platform-api"
+template: "api"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+sourcePath: "/platform-api/message/sending-messages/send-business-notification"
+---
+
+Use this endpoint when an external service needs to deliver a real-time business event through OpenIM. OpenIM acts as the delivery layer between the business backend and clients: the backend calls one endpoint, OpenIM routes the notification to a user or group, and the client receives `OnRecvCustomBusinessMessage`.
+
+Typical events include order status changes, moderation results, operational commands, and real-time data synchronization signals that OpenIM does not need to interpret. `key` identifies the event type and `data` follows a format defined by your application. The callback's `sendMsg` field indicates whether the notification was also written to a conversation as a message.
+
+This is not a normal chat message endpoint. Clients process the event through `OnRecvCustomBusinessMessage`, not a normal text-message callback.
+
+## HTTP request
+
+```bash
+POST {API_ADDRESS}/msg/send_business_notification
+```
+
+### Request example
+
+```bash
+curl --request POST "${API_ADDRESS}/msg/send_business_notification" \
+  --header "Content-Type: application/json; charset=utf-8" \
+  --header "operationID: ${OPERATION_ID}" \
+  --header "token: ${ADMIN_TOKEN}" \
+  --data-raw '{
+  "key": "order_paid",
+  "data": "{\"orderID\":\"order_001\"}",
+  "sendUserID": "openIMAdmin",
+  "recvUserID": "user_001",
+  "sendMsg": true,
+  "reliabilityLevel": 1
+}'
+```
+
+## Request body
+
+| Parameter | Required | Type | Description |
+| --- | --- | --- | --- |
+| key | No | string | Stable, backward-compatible business event name, such as `order_paid`. |
+| data | No | string | Business payload, normally a JSON string parsed by the client callback. |
+| sendUserID | Yes | string | Sender user ID, normally a dedicated notification account or APP administrator account. |
+| recvUserID | One target | string | Recipient for a one-to-one notification. Set exactly one of `recvUserID` and `recvGroupID`. |
+| recvGroupID | One target | string | Recipient group. Set exactly one of `recvUserID` and `recvGroupID`. |
+| sendMsg | No | boolean | Whether to also write the notification as a one-to-one or group conversation message. The service configuration supplies the default. |
+| reliabilityLevel | No | int | Delivery reliability. Defaults to `1`. See [Reliability levels](#reliability-levels). |
+
+### Reliability levels
+
+| Value | Name | Description |
+| --- | --- | --- |
+| `1` | `UnreliableNotification` | Online delivery. The callback fires while the client is online; notifications sent while offline are not replayed after reconnect or login. Default. |
+| `2` | `ReliableNotificationNoMsg` | Guaranteed notification. The callback is synchronized after reconnect or login, for events that must be delivered. It does not create a normal conversation message. |
+
+Level `2` notifications are synchronized in full and in order. Do not use this level for high-frequency events or large notification batches. A backlog increases reconnect, login, and message synchronization time and can significantly degrade client synchronization performance.
+
+The reliability level describes OpenIM delivery behavior; it does not guarantee successful business processing on the client. Include a unique event ID in `data`, process events idempotently, and add business acknowledgements when completion must be confirmed.
+
+## Response
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "serverMsgID": "server_msg_001",
+    "clientMsgID": "client_msg_001",
+    "sendTime": 1719800000000,
+    "modify": null
+  }
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| data.serverMsgID | string | Server message ID. |
+| data.clientMsgID | string | Client message ID. |
+| data.sendTime | int | Send time as a Unix timestamp in milliseconds. |
+| data.modify | object | Message data changed by a Webhook or server rule; may be `null`. |
+
+## Client delivery flow
+
+1. The business backend calls this endpoint with `recvUserID` or `recvGroupID`.
+2. OpenIM routes the business notification and, when `sendMsg` is `true`, creates a message in the target conversation.
+3. The client SDK invokes `OnRecvCustomBusinessMessage`.
+4. The client dispatches by `key` and parses `data`.
+
+Use `sendMsg: true` when the event should also appear in a chat timeline. Use `sendMsg: false` for callback-only events, and select a reliability level based on whether offline replay is required.
+
+## Permissions and limits
+
+- Call this endpoint with an APP administrator token from a trusted backend.
+- `sendUserID` is required; set exactly one of `recvUserID` and `recvGroupID`.
+- `sendMsg` controls conversation-message creation, not whether the business callback fires.
+- Use level `2` only for events that truly require offline replay, and strictly control volume.
+
+## Related pages
+
+- [Message overview](/platform-api/message/overview)
+- [Listen for custom business events](/sdk/android/event-handler/methods/set-custom-business-listener)
+- [Send a message](/platform-api/message/sending-messages/send-msg)
+- [Error codes](/platform-api/error-codes)

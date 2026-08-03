@@ -1,0 +1,152 @@
+本页说明在单机生产环境中，从稳定发布版本编译并运行 OpenIMServer 与 ChatServer。OpenIMServer 与外部组件部署在同一台机器，部分组件可按需替换为云服务。
+
+## 准备环境和外部组件
+
+先确认[环境与组件](./components)中的系统、硬件和软件要求。
+
+### 获取 OpenIMServer
+
+从 GitHub Releases 页面绿色 **Latest** 对应的最新正式发布 tag 部署，不要在生产环境直接使用 `main`，也不要使用 alpha、beta、rc 等预发布版本。
+
+```bash
+git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
+```
+
+后续 OpenIMServer 命令均在仓库根目录执行。
+
+### 使用 Docker Compose 部署外部组件
+
+确保 `docker` 和 `docker compose` 可用，然后完成以下配置：
+
+1. 如果本机已有 MongoDB、Redis、Kafka、MinIO、Etcd，或计划使用云服务，可在 `docker-compose.yml` 中注释对应组件。Etcd 不支持云服务。
+2. 修改组件的默认账号和密码。
+3. 修改 `.env` 中的 `DATA_DIR`，将外部组件数据存入容量足够的磁盘。
+
+| 组件    | `docker-compose.yml` 中的配置                                                                                |
+| ------- | ------------------------------------------------------------------------------------------------------------ |
+| MongoDB | `MONGO_INITDB_ROOT_USERNAME`、`MONGO_INITDB_ROOT_PASSWORD`、`MONGO_OPENIM_USERNAME`、`MONGO_OPENIM_PASSWORD` |
+| Redis   | `redis-server --requirepass ...`                                                                             |
+| MinIO   | `MINIO_ROOT_USER`、`MINIO_ROOT_PASSWORD`                                                                     |
+| Etcd    | 启用鉴权时配置 `ETCD_ROOT_USER`、`ETCD_ROOT_PASSWORD`                                                        |
+| Kafka   | 启用鉴权时配置 `KAFKA_USERNAME`、`KAFKA_PASSWORD`                                                            |
+
+```bash
+docker compose up -d
+```
+
+当前 `open-im-server/docker-compose.yml` 除外部组件外，还会拉起 `openim-web-front` 和 `openim-admin-front`。只需要依赖组件时，应先调整 Compose 文件。
+
+### 自行部署组件或使用云服务时的初始化要求
+
+| 存储组件 | 初始化要求                                                                                    |
+| -------- | --------------------------------------------------------------------------------------------- |
+| MongoDB  | 预先创建数据库 `openim_v3`                                                                    |
+| Kafka    | 预先创建 `toRedis`、`toMongo`、`toPush`、`toOfflinePush` 四个 topic，每个 topic 配置 8 个分区 |
+
+## 编译并启动 OpenIMServer
+
+`bootstrap.sh` 会尝试安装 Mage，但系统必须先有可用的 Go 环境。确认 `go version` 成功后再继续。
+
+中国境内可设置 Go 模块代理：
+
+```bash
+go env -w GO111MODULE=on
+go env -w GOPROXY=https://goproxy.cn,direct
+```
+
+初始化只需执行一次：
+
+```bash
+bash bootstrap.sh
+```
+
+编译：
+
+```bash
+mage
+```
+
+### 修改 OpenIMServer 基础配置
+
+| 配置                               | 文件                          |
+| ---------------------------------- | ----------------------------- |
+| Kafka 用户名、密码、地址           | `config/kafka.yml`            |
+| Redis 密码、地址                   | `config/redis.yml`            |
+| MinIO 用户名、密码、地址和外网地址 | `config/minio.yml`            |
+| S3 云存储密钥                      | `config/openim-rpc-third.yml` |
+| Etcd 用户名、密码、地址            | `config/discovery.yml`        |
+| MongoDB 用户名、密码、地址         | `config/mongodb.yml`          |
+| OpenIMServer `secret`              | `config/share.yml`            |
+
+`config/minio.yml` 的 `externalAddress` 必须是客户端能够访问的外网 IP 或域名路径，否则图片和文件消息无法正常访问。
+
+### 管理 OpenIMServer 服务
+
+| 任务     | 命令                                                 |
+| -------- | ---------------------------------------------------- |
+| 后台启动 | `nohup mage start >> _output/logs/openim.log 2>&1 &` |
+| 停止     | `mage stop`                                          |
+| 检测     | `mage check`                                         |
+
+首次启动后等待 `20-30s` 再执行 `mage check` 或接口验证，以免把启动过程中的短暂连接失败误判为最终异常。
+
+## 编译并启动 ChatServer
+
+已有自有账号体系时，可以不部署 ChatServer。需要 ChatServer 时，同样固定到与 OpenIMServer 联调版本匹配的正式发布 tag：
+
+```bash
+git clone https://github.com/openimsdk/chat && cd chat
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/chat/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+echo "using chat stable release tag: $LATEST_STABLE_TAG"
+```
+
+在 ChatServer 仓库根目录编译：
+
+```bash
+mage
+```
+
+### 修改 ChatServer 基础配置
+
+| 配置                       | 文件                        |
+| -------------------------- | --------------------------- |
+| Redis 用户名、密码、地址   | `config/redis.yml`          |
+| Etcd 用户名、密码、地址    | `config/discovery.yml`      |
+| MongoDB 用户名、密码、地址 | `config/mongodb.yml`        |
+| OpenIMServer `secret`      | `config/share.yml`          |
+| ChatServer `secret`        | `config/chat-rpc-admin.yml` |
+
+### 管理 ChatServer 服务
+
+| 任务     | 命令                                               |
+| -------- | -------------------------------------------------- |
+| 后台启动 | `nohup mage start >> _output/logs/chat.log 2>&1 &` |
+| 停止     | `mage stop`                                        |
+| 检测     | `mage check`                                       |
+
+ChatServer 依赖 OpenIMServer。先确认 OpenIMServer 的 `mage check` 正常，再启动 ChatServer，并等待 `20-30s` 后验证 `10008` 和 `10009` 接口。
+
+## 配置和可选能力
+
+- 两个仓库的完整配置说明均以当前检出版本中的 `config/README_zh_CN.md` 为准。
+- 个推：申请 `AppID`、`AppKey`、`MasterSecret` 后接入。
+- Firebase：配置 `config/openim-push.yml` 中的 `fcm.filepath`。
+- 监控与告警：参考[监控与告警](../operations/monitoring)。
+
+## 调整服务实例数
+
+在 `start-config.yml` 的 `serviceBinaries` 中，除 `openim-msggateway` 和 `openim-api` 外，其他服务可直接调整实例数。调整 `openim-msggateway` 或 `openim-api` 时，实例数必须与对应配置文件中的端口数量一致。修改后重启服务。
+
+## 上线前检查
+
+1. 将 OpenIMServer 和 ChatServer 的默认 `secret` 修改为至少 8 位的数字与字母组合，并妥善保管。
+2. 不使用域名时，按照[端口与网络](./network)配置防火墙和客户端地址。
+3. 使用域名时，按照[域名配置](./domain)统一 API、WebSocket 和对象存储入口。
+4. 按照[生产环境检查](./production)准备恢复和验证流程。
+5. 按照[部署验证](./verification)完成进程、API 和 WebSocket 验证。

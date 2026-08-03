@@ -1,0 +1,90 @@
+## 部署服务端
+
+先按照 [Docker Compose 部署](./docker-compose)或[源码部署](./source)完成服务端部署。
+
+## 开放端口
+
+根据是否使用域名和 SSL，按照[端口与网络](./network)放行必要端口。
+
+## 验证 PC Web
+
+在浏览器中访问 `http://your_server_ip:11001`。`your_server_ip` 是部署前端服务的服务器 IP 地址。
+
+![PC Web 界面](/assets/guides/gettingStarted/assets/pc-web.png)
+
+没有测试账号时，在登录页点击“立即注册”，按页面提示完成注册后返回登录。默认配置下可直接使用验证码 `666666`；该值来自 `chat/config/chat-rpc-chat.yml` 中的 `verifyCode.superCode`。如果部署关闭了自助注册或修改过配置，请使用实际测试账号和验证码。
+
+如果只部署了服务端而没有部署前端页面，本步骤不适用。
+
+## 验证服务进程
+
+Docker Compose 部署：
+
+```bash
+docker ps | grep -E 'openim-server|openim-chat'
+```
+
+容器启动初期可能显示 `health: starting`。建议等待 `20-30s`，确认进入 `healthy` 后再验证接口。
+
+源码部署：
+
+```bash
+# 在 open-im-server 目录执行
+mage check
+
+# 在 chat 目录执行
+mage check
+```
+
+## 验证域名和网关
+
+使用域名和 SSL 时，直接调用实际接口确认 OpenIMServer 与 ChatServer 网关路由可达：
+
+```bash
+curl -sS -X POST "https://your_domain/api/auth/get_admin_token" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-openim" \
+  -d '{"secret":"your_openim_secret","userID":"imAdmin"}'
+```
+
+```bash
+curl -sS -X POST "https://your_domain/chat/application/latest_version" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-chat" \
+  -d '{}'
+```
+
+接口返回业务错误但响应是 JSON 时，通常也说明网关反向代理链路已经连通。
+
+WebSocket 网关可使用任意 WebSocket 客户端测试：
+
+```text
+wss://your_domain/msg_gateway
+```
+
+生产环境建议统一通过 `443` 端口访问，OpenIMClientSDK 使用以下初始化地址：
+
+```text
+apiAddr: https://your_domain/api
+wsAddr: wss://your_domain/msg_gateway
+```
+
+## 验证非域名部署
+
+没有配置域名和 SSL 时，直接使用服务端 IP 和默认端口：
+
+```bash
+curl -sS -X POST "http://your_server_ip:10002/auth/get_admin_token" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-openim-local" \
+  -d '{"secret":"your_openim_secret","userID":"imAdmin"}'
+```
+
+```bash
+curl -sS -X POST "http://your_server_ip:10008/application/latest_version" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-chat-local" \
+  -d '{}'
+```
+
+ChatServer 的 POST 接口同样要求 `operationID` 请求头；缺少该请求头会返回参数错误。

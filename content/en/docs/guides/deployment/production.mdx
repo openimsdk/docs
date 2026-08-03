@@ -1,0 +1,77 @@
+This page explains the runtime impact of production failures, the recovery order, and post-recovery reconciliation.
+
+## General recovery order
+
+1. Restore external components.
+2. Restore OpenIMServer.
+3. Restore ChatServer.
+
+## External component failures
+
+| Failure | Runtime impact | Recovery |
+| --- | --- | --- |
+| MongoDB unavailable | OpenIMServer `10002` may still respond, but ChatServer and App Administrator APIs usually fail | Restore MongoDB; immediately retest `10002`, `10008`, and `10009`, then restart OpenIMServer and ChatServer only if failures remain |
+| Redis unavailable | OpenIMServer authentication fails; source deployments commonly report `auth-rpc-service down`, while integrated Docker deployments report Redis connection or resolution errors | Restore Redis; wait `30-60s`, then restart OpenIMServer if authentication still fails |
+| Kafka unavailable | Basic probes may remain healthy while message forwarding and push fail | Restore Kafka, then verify a complete message send, consume, and push cycle |
+| Etcd unavailable | Running instances may continue briefly, but restarts can fail | Restore Etcd, then restart OpenIMServer and ChatServer if service registration does not recover |
+| MinIO unavailable | File upload and download fail; integrated Docker deployments may also lose `10002`, `10008`, and `10009` | Restore MinIO and verify `externalAddress`; if probes remain unhealthy after `30-60s`, restart the service stack |
+
+For `openim-docker`:
+
+```bash
+cd /path/to/openim-docker
+docker compose up -d mongo redis kafka etcd minio
+```
+
+For an OpenIMServer source deployment:
+
+```bash
+cd /path/to/open-im-server
+docker compose up -d mongodb redis kafka etcd minio
+```
+
+> The default service name is `mongo` in `openim-docker` and `mongodb` in `open-im-server`.
+
+## OpenIMServer failures
+
+| Service | Runtime impact | Recovery |
+| --- | --- | --- |
+| `openim-api` | `10002` is usually unavailable | Restart from the `open-im-server` directory |
+| `openim-rpc-auth` | OpenIMServer authentication probes fail, while ChatServer probes may remain available | Restart OpenIMServer |
+| `openim-msggateway` | The real-time WebSocket path is interrupted | Restart OpenIMServer |
+| `openim-msgtransfer` / `openim-push` | Messaging or push is degraded without necessarily failing basic probes | Restart, then validate the complete message path |
+| `openim-crontask` | Scheduled jobs stop | Restart OpenIMServer |
+
+```bash
+cd /path/to/open-im-server
+mage check
+mage stop
+mage start
+mage check
+```
+
+## ChatServer failures
+
+| Service | Runtime impact | Recovery |
+| --- | --- | --- |
+| `chat-api` | App business API `10008` is usually unavailable | Restart from the `chat` directory |
+| `chat-rpc` | Core ChatServer operations fail although the HTTP port may remain open | Restart ChatServer |
+| `admin-api` | App Administrator API `10009` is usually unavailable while `10008` may remain available | Restart ChatServer |
+| `admin-rpc` | App Administrator business operations fail | Restart ChatServer |
+| `bot-api` / `bot-rpc` | Bot capabilities fail | Restart ChatServer |
+
+```bash
+cd /path/to/chat
+mage check
+mage stop
+mage start
+mage check
+```
+
+## Post-recovery checks
+
+1. Confirm that `mage check` or `docker ps` is healthy.
+2. Confirm that the `10002`, `10008`, and `10009` probes have recovered.
+3. After Kafka or MinIO failures, also validate the message and file paths.
+
+Basic OpenIMServer and ChatServer probes require an `operationID` request header.

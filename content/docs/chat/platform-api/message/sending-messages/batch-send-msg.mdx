@@ -1,0 +1,87 @@
+---
+title: "Batch send messages"
+description: "Send the same message to selected users or all users from a trusted backend."
+product: "platform-api"
+context: "chat/platform-api"
+template: "api"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+sourcePath: "/platform-api/message/sending-messages/batch-send-msg"
+---
+
+Use this endpoint to send the same message to multiple users or to deliver a low-frequency system notification to all users. Batch delivery amplifies message writes, push traffic, and conversation updates, so apply business approval and rate limits.
+
+## HTTP request
+
+```bash
+POST {API_ADDRESS}/msg/batch_send_msg
+```
+
+### Request example
+
+```bash
+curl --request POST "${API_ADDRESS}/msg/batch_send_msg" \
+  --header "Content-Type: application/json; charset=utf-8" \
+  --header "operationID: ${OPERATION_ID}" \
+  --header "token: ${ADMIN_TOKEN}" \
+  --data-raw '{
+  "sendID": "openIMAdmin",
+  "recvIDs": ["user_001", "user_002"],
+  "isSendAll": false,
+  "groupID": "",
+  "content": {"content": "hello"},
+  "contentType": 101,
+  "sessionType": 1,
+  "isOnlineOnly": false,
+  "notOfflinePush": false,
+  "sendTime": 1719800000000,
+  "ex": ""
+}'
+```
+
+## Request body
+
+| Parameter | Required | Type | Description |
+| --- | --- | --- | --- |
+| recvIDs | Selected users | string[] | Recipient IDs when `isSendAll` is `false`. |
+| isSendAll | No | boolean | When `true`, the server pages through all users and sends the message. |
+| sendID | Yes | string | Sender user or notification account ID. |
+| groupID | Group | string | Target group when `sessionType` is `3`. |
+| content | Yes | object | Payload defined by [Message content types](/platform-api/message/message-content-types). |
+| contentType | Yes | int | Message content type. |
+| sessionType | Yes | int | Conversation type. See [`ConversationType`](/platform-api/conversation/overview#conversationtype). |
+| isOnlineOnly | No | boolean | Deliver online only without persistence, history, sender sync, or conversation updates. |
+| notOfflinePush | No | boolean | Disable offline push when `true`. |
+| sendTime | No | int | Send time in Unix milliseconds. |
+| offlinePushInfo | No | object | Offline push information, with the same fields as [Send a message](/platform-api/message/sending-messages/send-msg). |
+| ex | No | string | Message extension data. |
+
+## Response
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "results": [{
+      "serverMsgID": "server_msg_001",
+      "clientMsgID": "client_msg_001",
+      "sendTime": 1719800000000,
+      "recvID": "user_001"
+    }],
+    "failedUserIDs": ["user_002"]
+  }
+}
+```
+
+`data.results` lists successful deliveries and `data.failedUserIDs` lists recipients that failed. A top-level `errCode` of `0` does not mean every recipient succeeded; inspect both arrays.
+
+Use `isSendAll: true` only for low-frequency system notifications. It is not suitable for high-frequency marketing delivery.
+
+## Related pages
+
+- [Send a message](/platform-api/message/sending-messages/send-msg)
+- [Message content types](/platform-api/message/message-content-types)
+- [Error codes](/platform-api/error-codes)

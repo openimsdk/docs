@@ -1,0 +1,101 @@
+This page configures the common domain entry points for OpenIMServer and ChatServer.
+
+## Prerequisites
+
+- OpenIMServer and ChatServer are running.
+- Nginx is installed with the SSL module enabled.
+- You have a domain and TLS certificate, for example `im.yourhost.com`.
+- TCP port `443` is open.
+
+On Debian or Ubuntu, install Nginx with `apt-get install -y nginx`.
+
+## Configure Nginx
+
+Replace the domain, certificate paths, and service addresses in this example:
+
+```nginx
+upstream msg_gateway { server 127.0.0.1:10001; }
+upstream im_api { server 127.0.0.1:10002; }
+upstream im_chat_api { server 127.0.0.1:10008; }
+upstream minio_s3 { server 127.0.0.1:10005; }
+
+server {
+    listen 443 ssl;
+    server_name im.yourhost.com;
+    ssl_certificate /usr/local/nginx/conf/ssl/im.yourhost.com_bundle.pem;
+    ssl_certificate_key /usr/local/nginx/conf/ssl/im.yourhost.com.key;
+
+    location /msg_gateway {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://msg_gateway/;
+    }
+    location ^~ /api/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Request-Api $scheme://$host/api;
+        proxy_pass http://im_api/;
+    }
+    location ^~ /chat/ {
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header X-real-ip $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://im_chat_api/;
+    }
+    location ^~ /im-minio-api/ {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 300;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        chunked_transfer_encoding off;
+        proxy_pass http://minio_s3/;
+    }
+}
+```
+
+## Configure the public MinIO address
+
+- Source deployment: update `externalAddress` in `config/minio.yml`.
+- Docker Compose deployment: update `MINIO_EXTERNAL_ADDRESS` in `.env`.
+
+For either deployment, use:
+
+```text
+https://im.yourhost.com/im-minio-api
+```
+
+## Validate and reload Nginx
+
+```bash
+nginx -t
+nginx -s reload
+```
+
+## Initialize OpenIMClientSDK
+
+```text
+apiAddr: https://im.yourhost.com/api
+wsAddr: wss://im.yourhost.com/msg_gateway
+```
+
+## Gateway paths
+
+| Path | Backend service |
+| --- | --- |
+| `/api/*` | OpenIMServer API on `10002` |
+| `/msg_gateway` | OpenIMServer WebSocket on `10001` |
+| `/chat/*` | ChatServer API on `10008` |
+| `/im-minio-api/*` | MinIO object storage on `10005` |
+
+This template does not proxy App Administrator APIs. Add a corresponding `upstream` and `location` if port `10009` must also use the domain entry point.

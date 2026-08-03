@@ -1,0 +1,79 @@
+本文说明生产环境运行时故障的影响、恢复顺序和恢复后的校准步骤。
+
+## 通用恢复顺序
+
+1. 先恢复外部组件。
+2. 再恢复 OpenIMServer。
+3. 最后恢复 ChatServer。
+
+## 外部组件故障
+
+| 组件故障       | 运行时影响                                                                                                  | 恢复方式                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| MongoDB 不可用 | OpenIMServer `10002` 可能仍可返回，但 ChatServer 与 APP 管理员接口通常失败                                  | 先恢复 MongoDB；立即复测 `10002`、`10008`、`10009`，仍异常时再重启 OpenIMServer 和 ChatServer |
+| Redis 不可用   | OpenIMServer 鉴权链路异常；源码部署常见 `auth-rpc-service down`，Docker 一体化部署常见 Redis 连接或解析错误 | 先恢复 Redis；观察 `30-60s`，鉴权仍异常时再重启 OpenIMServer                                  |
+| Kafka 不可用   | 基础探针可能仍正常，但消息转发和推送链路异常                                                                | 先恢复 Kafka；恢复后补做消息发送、消费和推送闭环验证                                          |
+| Etcd 不可用    | 已运行实例通常可短时继续服务，但服务重启可能失败                                                            | 先恢复 Etcd；服务注册未恢复时再重启 OpenIMServer 和 ChatServer                                |
+| MinIO 不可用   | 文件上传下载失败；Docker 一体化部署还可能连带 `10002`、`10008`、`10009` 异常                                | 先恢复 MinIO 并检查 `externalAddress`；等待 `30-60s` 后基础探针仍未恢复时，再重启服务栈       |
+
+### 恢复外部组件
+
+`openim-docker` 部署：
+
+```bash
+cd /path/to/openim-docker
+docker compose up -d mongo redis kafka etcd minio
+```
+
+OpenIMServer 源码部署：
+
+```bash
+cd /path/to/open-im-server
+docker compose up -d mongodb redis kafka etcd minio
+```
+
+> `openim-docker` 默认服务名为 `mongo`，`open-im-server` 默认服务名为 `mongodb`。
+
+## OpenIMServer 故障
+
+| 服务故障                             | 运行时影响                                           | 恢复方式                         |
+| ------------------------------------ | ---------------------------------------------------- | -------------------------------- |
+| `openim-api`                         | `10002` 通常不可用                                   | 在 `open-im-server` 目录重启服务 |
+| `openim-rpc-auth`                    | OpenIMServer 鉴权探针失败，ChatServer 探针可能仍可用 | 在 `open-im-server` 目录重启服务 |
+| `openim-msggateway`                  | WebSocket 实时链路中断                               | 在 `open-im-server` 目录重启服务 |
+| `openim-msgtransfer` / `openim-push` | 消息或推送链路退化，基础探针不一定失败               | 重启服务，恢复后补做消息闭环验证 |
+| `openim-crontask`                    | 定时任务停止执行                                     | 在 `open-im-server` 目录重启服务 |
+
+```bash
+cd /path/to/open-im-server
+mage check
+mage stop
+mage start
+mage check
+```
+
+## ChatServer 故障
+
+| 服务故障              | 运行时影响                                               | 恢复方式               |
+| --------------------- | -------------------------------------------------------- | ---------------------- |
+| `chat-api`            | APP 业务服务器接口 `10008` 通常不可用                    | 在 `chat` 目录重启服务 |
+| `chat-rpc`            | ChatServer 核心业务调用失败，基础 HTTP 端口可能仍在      | 在 `chat` 目录重启服务 |
+| `admin-api`           | APP 管理员接口 `10009` 通常不可用，但 `10008` 可能仍可用 | 在 `chat` 目录重启服务 |
+| `admin-rpc`           | APP 管理员业务调用失败                                   | 在 `chat` 目录重启服务 |
+| `bot-api` / `bot-rpc` | Bot 相关能力异常                                         | 在 `chat` 目录重启服务 |
+
+```bash
+cd /path/to/chat
+mage check
+mage stop
+mage start
+mage check
+```
+
+## 恢复后确认
+
+1. 确认 `mage check` 或 `docker ps` 正常。
+2. 确认 `10002`、`10008`、`10009` 三个基础探针恢复。
+3. 对 Kafka、MinIO 故障补做消息与文件链路验证。
+
+OpenIMServer 和 ChatServer 的基础探针都必须带 `operationID` 请求头。

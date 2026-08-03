@@ -1,0 +1,178 @@
+本文以 A、B 两个 OpenIMServer 节点为例，两台机器位于同一内网，内网地址分别为 `IP_A`、`IP_B`，并各自具有外网 IP。本页只覆盖业务节点和 Nginx，不包含外部组件集群的搭建。
+
+开始前应准备至少三节点的 Redis 集群、MongoDB 分片集群、Kafka 集群和 Etcd 集群，以及可用的 MinIO。记录以下地址：
+
+- Redis：`redisAddr1`、`redisAddr2`、`redisAddr3`
+- MongoDB：`mongoAddr1`、`mongoAddr2`、`mongoAddr3`
+- Kafka：`kafkaAddr1`、`kafkaAddr2`、`kafkaAddr3`
+- Etcd：`etcdAddr1`、`etcdAddr2`、`etcdAddr3`
+- MinIO 内网地址：`your_minio_internal_address`
+- MinIO 外网地址：`your_minio_external_address`
+
+两个 OpenIMServer 节点必须能够访问所有外部组件。
+
+## 获取相同版本的 OpenIMServer
+
+在 A、B 两台机器分别执行。两个节点必须固定到同一个正式发布 tag：
+
+```bash
+git clone https://github.com/openimsdk/open-im-server
+cd open-im-server
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
+```
+
+`main` 是开发分支，生产集群不应直接使用。alpha、beta、rc 等预发布版本也不应直接用于生产环境。
+
+## 配置外部组件
+
+两台机器使用相同的外部组件集群配置。地址字段采用单行列表格式。
+
+### Kafka
+
+修改 `config/kafka.yml`：
+
+```yaml
+address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
+```
+
+### MinIO
+
+修改 `config/minio.yml`：
+
+```yaml
+internalAddress: your_minio_internal_address
+externalAddress: your_minio_external_address
+```
+
+`externalAddress` 必须能被客户端访问。使用统一域名时，应配置为对象存储的 HTTPS 网关路径。
+
+### MongoDB
+
+修改 `config/mongodb.yml`：
+
+```yaml
+address: [mongoAddr1, mongoAddr2, mongoAddr3]
+```
+
+### Etcd
+
+修改 `config/discovery.yml`：
+
+```yaml
+etcd:
+  address: [etcdAddr1, etcdAddr2, etcdAddr3]
+```
+
+### Redis
+
+修改 `config/redis.yml` 并启用集群模式：
+
+```yaml
+address: [redisAddr1, redisAddr2, redisAddr3]
+clusterMode: true
+```
+
+## 配置 Nginx
+
+可以在两台机器部署相同的 Nginx 配置。将域名、证书路径和节点地址替换为实际值：
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream msg_gateway {
+        server IP_A:10001;
+        server IP_B:10001;
+    }
+
+    upstream im_api {
+        server IP_A:10002;
+        server IP_B:10002;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name yourhost.com;
+
+        ssl_certificate /usr/local/nginx/conf/ssl/your_host_bundle.pem;
+        ssl_certificate_key /usr/local/nginx/conf/ssl/your_host.key;
+
+        location ^~ /api/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Request-Api $scheme://$host/api;
+            proxy_pass http://im_api/;
+        }
+
+        location /msg_gateway/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_pass http://msg_gateway/;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name yourhost.com;
+        return 301 https://$host$request_uri;
+    }
+}
+```
+
+检查并重载 Nginx：
+
+```bash
+nginx -t
+nginx -s reload
+```
+
+将域名 `yourhost.com` 解析到两个入口节点的外网 IP。生产环境还应结合 DNS 或负载均衡器的健康检查，避免继续向故障节点分发流量。
+
+## 编译并启动两个节点
+
+首次执行时先安装项目工具：
+
+```bash
+bash bootstrap.sh
+```
+
+中国境内可设置 Go 模块代理：
+
+```bash
+go env -w GO111MODULE=on
+go env -w GOPROXY=https://goproxy.cn,direct
+```
+
+在 A、B 两台机器分别编译并启动：
+
+```bash
+mage
+mage start
+mage check
+```
+
+OpenIMClientSDK 使用统一入口：
+
+```text
+apiAddr: https://yourhost.com/api
+wsAddr: wss://yourhost.com/msg_gateway
+```
+
+## 上线前检查
+
+1. Kafka 的 `KAFKA_CFG_ADVERTISED_LISTENERS` 必须广播所有 OpenIMServer 节点都能访问的地址。例如：`PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`。
+2. 所有节点时钟必须同步。token 签发允许的节点时钟误差为 `5s` 以内。
+3. 两个节点应使用同一正式 tag、相同 `secret` 和一致的外部组件配置。
+4. 逐个停止节点，确认 API 和 WebSocket 流量能转移到健康节点。
+5. 按照[部署验证](./verification)校验网关、登录和消息链路。

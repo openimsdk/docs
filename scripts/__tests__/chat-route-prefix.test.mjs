@@ -3,7 +3,11 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { isChatDocumentationPath, localizedContentFile } from '../lib/chat-content-paths.mjs';
+import {
+  isChatDocumentationPath,
+  localizedContentFile,
+  localizedContentFileCandidates,
+} from '../lib/chat-content-paths.mjs';
 
 const routes = JSON.parse(readFileSync('src/generated/routes.json', 'utf8'));
 const structure = JSON.parse(readFileSync('data/structure/chat-pages.json', 'utf8'));
@@ -57,6 +61,18 @@ test('maps public Chat routes to their retained physical content directories', (
   assert.equal(isChatDocumentationPath('/platform-api/overview'), true);
   assert.equal(isChatDocumentationPath('/docs/guides'), false);
   assert.equal(isChatDocumentationPath('/docs/chat/sdk/wasm/overview'), false);
+});
+
+test('finds Platform API Chinese pages retained under the legacy v3 directory', () => {
+  assert.deepEqual(
+    localizedContentFileCandidates(
+      'content/docs/chat/platform-api/user/account-governance/ban-user.mdx',
+    ),
+    [
+      'content/zh/docs/chat/platform-api/user/account-governance/ban-user.mdx',
+      'content/zh/docs/chat/platform-api/v3/user/account-governance/ban-user.mdx',
+    ],
+  );
 });
 
 test('keeps SDK document links on current routable addresses', () => {

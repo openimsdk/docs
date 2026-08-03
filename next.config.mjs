@@ -19,6 +19,8 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   outputFileTracingIncludes: {
     '/docs/[[...slug]]': ['./content/docs/**/*.mdx'],
+    '/docs/guides/[...slug]': ['./content/zh/docs/guides/**/*.mdx', './content/en/docs/guides/**/*.mdx'],
+    '/[locale]/docs/guides/[...slug]': ['./content/zh/docs/guides/**/*.mdx', './content/en/docs/guides/**/*.mdx'],
   },
   serverExternalPackages: ['shiki'],
   images: {

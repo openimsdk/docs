@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-01"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/user/listing-users/list-users"
 ---
 
-List users is an OpenIM user REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **List users** to page through user profiles registered with OpenIM. `pagination.pageNumber` starts at 1, and `data.total` reports the total number of matching users.
 
 ## HTTP request
 
@@ -51,6 +51,7 @@ curl --request POST "${API_ADDRESS}/user/get_users" \
 | pagination | Yes | object | Pagination settings. |
 | pagination.pageNumber | Yes | int | Page number, starting from 1. |
 | pagination.showNumber | Yes | int | Number of records to return per page. |
+| statuses <span className="enterprise-field-badge">Enterprise</span> | No | int[] | Filter by account state. See [`UserStatus`](/platform-api/user/overview#userstatus). |
 
 ## Response
 
@@ -96,7 +97,11 @@ OpenIM usually returns `200 OK` when the request reaches the service. Use `errCo
 | errDlt | string | Detailed error information for troubleshooting. |
 | data | object | Endpoint-specific response data. |
 | total | int | Total number of matching records. |
-| users | array | The users value. |
+| data.users | array | User profiles for the current page. Each item follows [`UserInfo`](/platform-api/user/overview#userinfo). |
+
+### Pagination
+
+Start with page 1 and use `pagination.showNumber` as the page size. The total page count is `Math.ceil(data.total / pagination.showNumber)`.
 
 ### Error response
 
@@ -118,12 +123,11 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- Keep the page size within the limit configured by your OpenIM deployment.
+- The `statuses` filter is available in OpenIM Enterprise.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [user overview](/platform-api/user/overview)
+- [User overview](/platform-api/user/overview)
 - [Error codes](/platform-api/error-codes)

@@ -1,0 +1,76 @@
+---
+title: "Upload log records"
+description: "Register client log file URLs and environment metadata with the OpenIM Platform API."
+product: "platform-api"
+context: "chat/platform-api"
+template: "api"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+sourcePath: "/platform-api/logs/upload-logs"
+---
+
+Use this endpoint to register local client logs that your application has already collected and uploaded to object storage or a file service. OpenIM stores the file URL and client metadata so that the record can be searched later. This endpoint does not receive the log file itself.
+
+## HTTP request
+
+```bash
+POST {API_ADDRESS}/third/logs/upload
+```
+
+### Request example
+
+```bash
+curl --request POST "${API_ADDRESS}/third/logs/upload" \
+  --header "Content-Type: application/json; charset=utf-8" \
+  --header "operationID: ${OPERATION_ID}" \
+  --header "token: ${ADMIN_TOKEN}" \
+  --data-raw '{
+  "platform": 2,
+  "fileURLs": [{
+    "filename": "openim.log",
+    "URL": "https://example.com/logs/openim.log"
+  }],
+  "appFramework": "flutter",
+  "version": "1.0.0",
+  "ex": ""
+}'
+```
+
+> Keep management tokens on trusted backend services. Do not ship them in client code.
+
+## Request body
+
+| Parameter | Required | Type | Description |
+| --- | --- | --- | --- |
+| platform | Yes | int | Source client platform. See [`PlatformID`](/platform-api/user/overview#platformid). |
+| fileURLs | Yes | array | Log files that have already been uploaded. |
+| fileURLs[].filename | Yes | string | Log filename. |
+| fileURLs[].URL | Yes | string | Log file URL accessible to the OpenIM server. |
+| appFramework | No | string | Client framework, such as `flutter` or `react-native`. |
+| version | No | string | Client or application version. |
+| ex | No | string | Extension data. |
+
+## Response
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": ""
+}
+```
+
+`errCode === 0` means that the log index record was registered. It does not mean that OpenIM uploaded or validated the file contents. See [Error codes](/platform-api/error-codes) for error handling.
+
+## Permissions and limits
+
+- `platform` and `fileURLs` are required.
+- Every `fileURLs[].URL` must be accessible to the OpenIM server.
+- Keep array sizes within the limits configured for your deployment.
+
+## Related pages
+
+- [Logs overview](/platform-api/logs/overview)
+- [Search log records](/platform-api/logs/search-logs)
+- [Error codes](/platform-api/error-codes)

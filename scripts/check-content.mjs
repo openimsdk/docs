@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   isChatDocumentationPath,
-  localizedContentFile,
+  localizedContentFileCandidates,
 } from './lib/chat-content-paths.mjs';
 import { validateSearchIndexPaths } from './lib/search-index-contract.mjs';
 import { clientSdkPlatformIds, getClientSdkPlatform } from './lib/client-sdk-platforms.mjs';
@@ -104,7 +104,7 @@ const platformApiUncoveredPatterns = [
   /Available through OpenIM primitives/,
   /Not exposed as a Platform API endpoint/,
 ];
-const platformApiEnglishRequiredApiHeadings = ['## HTTP request', '## Request body', '## Response'];
+const platformApiEnglishRequiredApiHeadings = ['## HTTP request', '## Response'];
 const platformApiZhRequiredApiHeadings = ['## HTTP 请求', '## 响应'];
 const platformApiForbiddenApiHeadings = [
   /^### 路径参数$/m,
@@ -140,18 +140,32 @@ const platformApiEnglishListUsersExpectedSnippets = [
 ];
 const platformApiListUsersForbiddenSnippets = ['123.321.1.1', '203.56.175.233'];
 const platformApiEnglishOverviewHeadingExpectations = new Map([
-  ['/platform-api/overview', ['## Common tasks', '## Recommended modules', '## Resources']],
+  ['/platform-api/overview', ['## Most popular', '## Recommended features', '## Resources']],
   [
     '/platform-api/prepare-to-use-api',
-    ['## Base URL', '## Headers', '## Authentication', '## Request body'],
+    ['## Base URL', '## Request headers', '## Authentication', '## Request body'],
   ],
   [
     '/platform-api/user/overview',
-    ['## Capability scope', '## Common APIs', '## Integration advice', '## Related pages'],
+    [
+      '## Capability scope',
+      '## Common APIs',
+      '## Resource representations',
+      '## Enums',
+      '## Integration advice',
+      '## Related pages',
+    ],
   ],
   [
     '/platform-api/relation/overview',
-    ['## Capability scope', '## Common APIs', '## Integration advice', '## Related pages'],
+    [
+      '## Capability scope',
+      '## Common APIs',
+      '## Resource representations',
+      '## Enums',
+      '## Integration advice',
+      '## Related pages',
+    ],
   ],
   [
     '/platform-api/auth/overview',
@@ -159,11 +173,33 @@ const platformApiEnglishOverviewHeadingExpectations = new Map([
   ],
   [
     '/platform-api/group/overview',
+    [
+      '## Capability scope',
+      '## Common APIs',
+      '## Resource representations',
+      '## Enums',
+      '## Integration advice',
+      '## Related pages',
+    ],
+  ],
+  [
+    '/platform-api/message/overview',
+    ['## Capability scope', '## Common APIs', '## Enums', '## Integration advice', '## Related pages'],
+  ],
+  [
+    '/platform-api/logs/overview',
     ['## Capability scope', '## Common APIs', '## Integration advice', '## Related pages'],
   ],
   [
     '/platform-api/conversation/overview',
-    ['## Capability scope', '## Common APIs', '## Integration advice', '## Related pages'],
+    [
+      '## Capability scope',
+      '## Common APIs',
+      '## Resource representations',
+      '## Enums',
+      '## Integration advice',
+      '## Related pages',
+    ],
   ],
   [
     '/platform-api/migration-to-openim',
@@ -406,19 +442,30 @@ for (const route of routes) {
             errors.push(`${route.contentFile}: missing English heading "${heading}"`);
           }
         }
+        if (!mdx.includes('## Request body') && !mdx.includes('## Request parameters')) {
+          errors.push(
+            `${route.contentFile}: missing English request body or request parameters heading`,
+          );
+        }
         if (route.path === platformApiListUsersPath) {
           checkPlatformApiEnglishListUsersPage(bodyWithoutFrontmatter, route.contentFile);
         }
       }
 
-      const localizedFile = localizedContentFile(route.contentFile);
-      const localizedPath = resolve(root, localizedFile);
+      const localizedFiles = localizedContentFileCandidates(route.contentFile);
+      let localizedFile = localizedFiles[0];
       let localizedMdx = '';
-      try {
-        const details = await stat(localizedPath);
-        if (!details.isFile()) errors.push(`Not a file: ${localizedFile}`);
-        localizedMdx = await readFile(localizedPath, 'utf8');
-      } catch {
+      for (const candidate of localizedFiles) {
+        try {
+          const localizedPath = resolve(root, candidate);
+          const details = await stat(localizedPath);
+          if (!details.isFile()) continue;
+          localizedFile = candidate;
+          localizedMdx = await readFile(localizedPath, 'utf8');
+          break;
+        } catch {}
+      }
+      if (!localizedMdx) {
         errors.push(`Missing Chinese Platform API MDX file: ${localizedFile}`);
       }
       if (localizedMdx) {

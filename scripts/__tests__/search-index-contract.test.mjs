@@ -37,6 +37,27 @@ test('expects non-client routes and only locale-published client SDK routes', ()
   );
 });
 
+test('respects locale restrictions for non-client routes', () => {
+  const bilingual = { path: '/platform-api/overview', contextKey: 'chat/platform-api' };
+  const zhOnly = {
+    path: '/platform-api/webhooks/overview',
+    contextKey: 'chat/platform-api',
+    locales: ['zh'],
+  };
+
+  assert.deepEqual(
+    validateSearchIndexPaths({
+      routes: [bilingual, zhOnly],
+      auditPages: new Map(),
+      indexes: {
+        en: [{ path: bilingual.path }],
+        zh: [{ path: bilingual.path }, { path: zhOnly.path }],
+      },
+    }),
+    [],
+  );
+});
+
 test('expects legacy source records while a native route tree is incomplete', () => {
   const legacy = { path: '/sdk/flutter/open-channel/overview', contextKey: 'chat/sdk/flutter' };
   assert.deepEqual(

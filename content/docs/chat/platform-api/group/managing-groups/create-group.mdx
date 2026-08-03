@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/group/managing-groups/create-group"
 ---
 
-Create group is an OpenIM group REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **Create group** to create an OpenIM group with an owner, initial members and administrators, and group profile data.
 
 ## HTTP request
 
@@ -82,21 +82,22 @@ curl --request POST "${API_ADDRESS}/group/create_group" \
 
 | Parameter | Required | Type | Description |
 | --- | --- | --- | --- |
-| memberUserIDs | No | array | List of regular group member user IDs. |
+| memberUserIDs | No | array | Initial regular member user IDs, up to 1,000. |
 | adminUserIDs | No | array | List of group administrator user IDs. |
 | ownerUserID | Yes | string | Group owner user ID. |
-| groupInfo | Yes | object | Group profile object. |
-| groupInfo.groupID | No | string | OpenIM group ID. |
+| groupInfo | Yes | object | Group profile following [`GroupInfo`](/platform-api/group/overview#groupinfo). |
+| groupInfo.groupID | No | string | Group ID. OpenIM generates one when this field is omitted. |
 | groupInfo.groupName | Yes | string | Group name. |
 | groupInfo.notification | No | string | Group announcement or notification text. |
 | groupInfo.introduction | No | string | Group introduction. |
 | groupInfo.faceURL | No | string | Avatar or icon URL. |
 | groupInfo.ex | No | string | Business extension field. |
-| groupInfo.groupType | Yes | int | OpenIM group type. |
-| groupInfo.needVerification | No | int | Join verification policy. |
+| groupInfo.groupType | Yes | int | Group type. This endpoint requires the value `2`; see [`GroupType`](/platform-api/group/overview#grouptype). |
+| groupInfo.needVerification | No | int | Join verification policy. See [`GroupVerification`](/platform-api/group/overview#groupverification). |
 | groupInfo.lookMemberInfo | No | int | Whether members can view group member information. |
 | groupInfo.applyMemberFriend | No | int | Whether members can add each other as friends from the group. |
 | sendMessage | No | boolean | Whether OpenIM should send a notification message for this operation. |
+| displayIsRead <span className="enterprise-field-badge">Enterprise</span> | No | boolean | Whether group-message read status is displayed. The server may disable it automatically for large groups. |
 
 ## Response
 
@@ -139,7 +140,7 @@ OpenIM usually returns `200 OK` when the request reaches the service. Use `errCo
 | errMsg | string | Short error message. |
 | errDlt | string | Detailed error information for troubleshooting. |
 | data | object | Endpoint-specific response data. |
-| data.groupInfo | object | Group profile object. |
+| data.groupInfo | object | Created group profile following [`GroupInfo`](/platform-api/group/overview#groupinfo). |
 
 ### Error response
 
@@ -161,12 +162,12 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- `groupInfo` and `ownerUserID` are required.
+- `groupInfo.groupType` must be `2`, and `memberUserIDs` accepts at most 1,000 users.
+- `displayIsRead` is available in OpenIM Enterprise.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [group overview](/platform-api/group/overview)
+- [Group overview](/platform-api/group/overview)
 - [Error codes](/platform-api/error-codes)

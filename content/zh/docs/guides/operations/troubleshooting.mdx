@@ -1,0 +1,110 @@
+## 升级服务
+
+同一大版本内的小版本数据通常兼容，但仍应先阅读目标版本 release note 并完成备份。优先升级到 GitHub Releases 页面绿色 **Latest** 对应的最新正式发布 tag；需要固定版本时显式指定 tag。
+
+### Docker Compose 部署
+
+```bash
+cd openim-docker
+git fetch --tags
+TARGET_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
+git checkout "$TARGET_TAG"
+echo "upgrade openim-docker to stable release tag: $TARGET_TAG"
+```
+
+检查 `.env` 中的镜像 tag 是否与仓库版本一致，必要时按 release note 调整，然后更新服务：
+
+```bash
+docker compose down
+docker compose pull
+docker compose up -d
+```
+
+### 源码部署
+
+```bash
+cd open-im-server
+mage stop
+git fetch --tags
+TARGET_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$TARGET_TAG"
+mage
+mage start
+```
+
+部署了 ChatServer 时，应按兼容关系同步固定并升级 ChatServer 的正式版 tag。
+
+## 迁移本地组件数据
+
+通过 Compose 启动组件后，部署仓库的 `components` 目录保存 MongoDB、Redis、Kafka、Etcd、MinIO 等本地组件数据。迁移前先停止业务服务和组件，并完成可恢复备份。
+
+Docker Compose 部署：
+
+```bash
+docker compose down
+```
+
+源码部署：
+
+```bash
+mage stop
+docker compose down
+```
+
+将整个 `components` 目录移动到目标数据盘，修改 `.env` 中的 `DATA_DIR`，再启动组件和服务：
+
+```bash
+docker compose up -d
+mage start  # 仅源码部署需要
+```
+
+启动后不要只检查容器状态，还应按照[部署验证](../deployment/verification)复测 API、WebSocket、消息和文件链路。
+
+## 清除测试数据
+
+此操作会删除服务端本地组件数据，只适用于确认不再需要数据的测试环境。先停止服务和组件，并确认备份可以恢复：
+
+```bash
+mage stop           # 源码部署需要
+docker compose down
+```
+
+随后删除当前部署仓库的 `components` 目录，并在重启后重新安装客户端以清除本地数据库。生产环境不应使用此方法清理数据。
+
+## 文本消息正常但图片失败
+
+通常是对象存储外网地址不可达。
+
+源码部署修改 `config/minio.yml`：
+
+```yaml
+externalAddress: http://your-server-ip:10005
+```
+
+Docker Compose 部署修改 `.env`：
+
+```dotenv
+MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
+```
+
+使用域名时应配置为[域名配置](../deployment/domain)中的 `/im-minio-api` HTTPS 地址，并验证客户端网络可以访问。
+
+## 降低 MongoDB 和 Kafka 内存占用
+
+在资源受限的测试环境中，可通过 `docker-compose.yml` 限制缓存和堆大小。该设置会影响吞吐量，不应直接套用到生产环境。
+
+`openim-docker` 的服务名为 `mongo`，`open-im-server` 的服务名为 `mongodb`：
+
+```yaml
+mongo:
+  environment:
+    - wiredTigerCacheSizeGB=0.5
+```
+
+Kafka：
+
+```yaml
+kafka:
+  environment:
+    KAFKA_HEAP_OPTS: '-Xms256m -Xmx256m'
+```

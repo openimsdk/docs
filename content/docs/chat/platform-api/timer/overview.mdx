@@ -1,0 +1,71 @@
+---
+title: "Overview"
+description: "Overview of the OpenIM Enterprise timer-task service."
+product: "platform-api"
+context: "chat/platform-api/v3"
+template: "overview"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+edition: "enterprise"
+sourcePath: "/platform-api/timer/overview"
+---
+
+The timer module lets a backend register delayed tasks that call a configured business handler at the scheduled time. It is suitable for message reminders, scheduled operations, and business compensation, but it is not a high-frequency real-time scheduler.
+
+## Capabilities
+
+- [Create a timer task](/platform-api/timer/managing-tasks/create-timer-task)
+- [Update a timer task](/platform-api/timer/managing-tasks/update-timer-task)
+- [Delete a timer task](/platform-api/timer/managing-tasks/delete-timer-task)
+- [Get a timer task](/platform-api/timer/managing-tasks/get-timer-task)
+- [List timer tasks](/platform-api/timer/managing-tasks/list-timer-tasks)
+
+## Resource representations
+
+### TimerTaskCallbackConfig
+
+| Property | Type | Description |
+| --- | --- | --- |
+| callbackMethod | string | Callback strategy. See [`TimerTaskCallbackMethod`](#timertaskcallbackmethod). |
+| callbackPayload | string | Business payload passed to the callback handler. |
+
+### TimerTask
+
+| Property | Type | Description |
+| --- | --- | --- |
+| taskID | string | Timer task ID. |
+| taskName | string | Display name. |
+| taskCategory | string | Business-defined task category. |
+| srcUserID | string | User associated with the task. |
+| executeAt | int | Scheduled execution time as a Unix timestamp in milliseconds. |
+| executeBefore | int | Latest permitted execution time as a Unix timestamp in milliseconds. |
+| maxRetry | int | Maximum retries after execution failure. |
+| callbackConfig | TimerTaskCallbackConfig | Callback method and payload. |
+| createdAt | int | Creation time in Unix milliseconds. |
+| updatedAt | int | Last update time in Unix milliseconds. |
+| dedupKey | string | Business idempotency key used to prevent duplicate creation. |
+
+## Enumerations
+
+### TimerTaskStatus
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `Pending` | Waiting for execution. |
+| 1 | `Processing` | Currently executing. |
+
+### TimerTaskCallbackMethod
+
+| Value | Description |
+| --- | --- |
+| `openim-message` | Invoke an OpenIM message operation. |
+| `openim-http` | Invoke a configured HTTP handler. |
+| `openim-rpc` | Invoke a preconfigured RPC handler. |
+| `preset` | Invoke a server-side preset handler. |
+
+## Integration guidance
+
+- Call timer endpoints from an authorized business backend.
+- Validate the target user, callback destination, and tenant boundary before creating or changing a task.
+- Use a stable `dedupKey` for retryable task creation.

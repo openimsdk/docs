@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Fragment, type ReactNode } from 'react';
@@ -6,6 +8,7 @@ import type { ContextOption } from '@/src/components/docs/context-picker';
 import { DocsShell } from '@/src/components/docs/docs-shell';
 import { ChevronRightIcon } from '@/src/components/ui/icons';
 import guidesContentData from '@/src/generated/guides-content.json';
+import { extractMarkdownHeadings } from '@/src/lib/heading-ids';
 import type { Locale } from '@/src/lib/i18n';
 import { toLocalizedPath } from '@/src/lib/i18n';
 import type { BreadcrumbItem, NavContext, NavNode, RouteRecord, TocItem } from '@/src/types/docs';
@@ -55,6 +58,78 @@ type GuideContentRecord = {
 const guidesContent = guidesContentData as {
   records: Record<string, GuideContentRecord>;
 };
+
+const reviewedZhGuideFiles: Record<string, string> = {
+  '/guides/introduction/features': 'getting-started/open-source-capabilities.mdx',
+  '/guides/introduction/version': 'getting-started/versions.mdx',
+  '/guides/gettingStarted/env-comp': 'deployment/components.mdx',
+  '/guides/gettingStarted/dockerCompose': 'deployment/docker-compose.mdx',
+  '/guides/gettingStarted/imSourceCodeDeployment': 'deployment/source.mdx',
+  '/guides/gettingStarted/internalDeployment': 'deployment/offline.mdx',
+  '/guides/gettingStarted/cluster': 'deployment/cluster.mdx',
+  '/guides/gettingStarted/ports': 'deployment/network.mdx',
+  '/guides/gettingStarted/nginxDomainConfig': 'deployment/domain.mdx',
+  '/guides/gettingStarted/production': 'deployment/production.mdx',
+  '/guides/gettingStarted/quickTestServer': 'deployment/verification.mdx',
+  '/guides/gettingStarted/faq': 'operations/troubleshooting.mdx',
+};
+
+const reviewedZhGuides = new Map<string, GuideContentRecord>(
+  Object.entries(reviewedZhGuideFiles).map(([sourcePath, file]) => {
+    const body = readFileSync(
+      resolve(process.cwd(), 'content/zh/docs/guides', file),
+      'utf8',
+    ).trim();
+    const existing = guidesContent.records[sourcePath];
+
+    return [
+      sourcePath,
+      {
+        ...existing,
+        body,
+        excerpt: guideExcerpt(body),
+        headings: extractMarkdownHeadings(body),
+        sourceUrl: `https://github.com/openimsdk/docs/blob/a177b296f1abe53ba2cf7d897acf86467a45e7c6/docs${sourcePath}.md`,
+      },
+    ];
+  }),
+);
+
+const reviewedEnGuideFiles: Record<string, string> = {
+  '/guides/introduction/product': 'getting-started/overview.mdx',
+  '/guides/introduction/termDefinition': 'getting-started/concepts.mdx',
+  '/guides/introduction/features': 'getting-started/open-source-capabilities.mdx',
+  '/guides/introduction/version': 'getting-started/versions.mdx',
+  '/guides/gettingStarted/env-comp': 'deployment/components.mdx',
+  '/guides/gettingStarted/dockerCompose': 'deployment/docker-compose.mdx',
+  '/guides/gettingStarted/imSourceCodeDeployment': 'deployment/source.mdx',
+  '/guides/gettingStarted/internalDeployment': 'deployment/offline.mdx',
+  '/guides/gettingStarted/cluster': 'deployment/cluster.mdx',
+  '/guides/gettingStarted/ports': 'deployment/network.mdx',
+  '/guides/gettingStarted/nginxDomainConfig': 'deployment/domain.mdx',
+  '/guides/gettingStarted/production': 'deployment/production.mdx',
+  '/guides/gettingStarted/quickTestServer': 'deployment/verification.mdx',
+  '/guides/solution/integrate': 'integration/business-system.mdx',
+  '/guides/solution/offlinePush': 'integration/offline-push.mdx',
+  '/guides/solution/migrate': 'integration/migration.mdx',
+  '/guides/solution/developNewFeatures': 'extension/server-development.mdx',
+  '/guides/solution/s3': 'extension/object-storage.mdx',
+  '/guides/solution/s3convert': 'extension/storage-migration.mdx',
+  '/guides/solution/openclaw': 'extension/ai-openclaw.mdx',
+  '/guides/gettingStarted/admin': 'operations/monitoring.mdx',
+  '/guides/solution/howToDebug': 'operations/debugging.mdx',
+  '/guides/gettingStarted/faq': 'operations/troubleshooting.mdx',
+  '/guides/benchmark/benchmark_test': 'operations/benchmark-results.mdx',
+  '/guides/benchmark/benchmark_guide': 'operations/benchmark-tools.mdx',
+};
+
+const reviewedEnGuides = new Map<string, GuideContentRecord>(
+  Object.entries(reviewedEnGuideFiles).map(([sourcePath, file]) => {
+    const body = readFileSync(resolve(process.cwd(), 'content/en/docs/guides', file), 'utf8').trim();
+    const existing = guidesContent.records[sourcePath];
+    return [sourcePath, { ...existing, body, excerpt: guideExcerpt(body), headings: extractMarkdownHeadings(body) }];
+  }),
+);
 
 const legacyBase = {
   en: 'https://docs.openim.io',
@@ -323,15 +398,14 @@ function guidesCopy(locale: Locale): GuidesCopy {
       heroTitle: 'OpenIM Guides',
       referenceLabel: '指南目录',
       referenceTitle: '按实施阶段查阅',
-      referenceDescription:
-        '先理解 OpenIM，再完成部署与集成，最后进入扩展、运维和可靠性验证。',
+      referenceDescription: '先理解 OpenIM，再完成部署与集成，最后进入扩展、运维和可靠性验证。',
       sectionTitle: '指南目录',
       sectionDescription:
         '每个目录对应一个实施阶段，目录页面给出本阶段的内容范围，具体接口与 SDK 方法链接到对应参考文档。',
     };
   }
 
-  return {
+  const legacyCopy: GuidesCopy = {
     groups: [
       {
         id: 'quick-start',
@@ -538,6 +612,93 @@ function guidesCopy(locale: Locale): GuidesCopy {
     sectionDescription:
       'Guides are organized by implementation stage. Each imported article keeps its official source link for verification.',
   };
+
+  return currentEnglishGuidesCopy(legacyCopy);
+}
+
+function currentEnglishGuidesCopy(copy: GuidesCopy): GuidesCopy {
+  const items = new Map(
+    copy.groups.flatMap((group) => group.items).map((item) => [sourcePathFromHref(item.href), item]),
+  );
+  const item = (sourcePath: string, slug: string, title?: string): GuideItem => ({
+    ...items.get(sourcePath)!,
+    ...(title ? { title } : {}),
+    slug,
+  });
+
+  return {
+    ...copy,
+    groups: [
+      {
+        id: 'getting-started',
+        eyebrow: 'Getting Started',
+        title: 'Get to Know OpenIM',
+        description: 'Understand the product, core concepts, open-source scope, and release strategy.',
+        items: [
+          item('/guides/introduction/product', 'overview', 'OpenIM Overview'),
+          item('/guides/introduction/termDefinition', 'concepts', 'Core Concepts'),
+          item('/guides/introduction/features', 'open-source-capabilities', 'Open-Source Capabilities'),
+          item('/guides/introduction/version', 'versions', 'Choosing Versions'),
+        ],
+      },
+      {
+        id: 'deployment',
+        eyebrow: 'Deployment',
+        title: 'Deploy OpenIM',
+        description: 'From environment planning through production verification for single-node, air-gapped, and cluster deployments.',
+        items: [
+          item('/guides/gettingStarted/env-comp', 'components', 'Environment and Components'),
+          item('/guides/gettingStarted/dockerCompose', 'docker-compose', 'Docker Compose Deployment'),
+          item('/guides/gettingStarted/imSourceCodeDeployment', 'source', 'Source Deployment'),
+          item('/guides/gettingStarted/internalDeployment', 'offline', 'Air-Gapped Deployment'),
+          item('/guides/gettingStarted/cluster', 'cluster', 'Cluster Deployment'),
+          item('/guides/gettingStarted/ports', 'network', 'Ports and Network'),
+          item('/guides/gettingStarted/nginxDomainConfig', 'domain', 'Domain Configuration'),
+          item('/guides/gettingStarted/production', 'production', 'Production Checks'),
+          item('/guides/gettingStarted/quickTestServer', 'verification', 'Deployment Verification'),
+        ],
+      },
+      {
+        id: 'integration',
+        eyebrow: 'Integration',
+        title: 'Integrate OpenIM',
+        description: 'Connect your accounts, backend, clients, and OpenIM server capabilities.',
+        items: [
+          item('/guides/solution/integrate', 'business-system'),
+          item('/guides/solution/offlinePush', 'offline-push'),
+          item('/guides/solution/migrate', 'migration', 'Data Migration'),
+        ],
+      },
+      {
+        id: 'extension',
+        eyebrow: 'Extension',
+        title: 'Extend OpenIM',
+        description: 'Extend OpenIM with server development, object storage, and AI integrations.',
+        items: [
+          item('/guides/solution/developNewFeatures', 'server-development', 'Server Development'),
+          item('/guides/solution/s3', 'object-storage', 'Object Storage'),
+          item('/guides/solution/s3convert', 'storage-migration', 'Object Storage Migration'),
+          item('/guides/solution/openclaw', 'ai-openclaw', 'AI and OpenClaw'),
+        ],
+      },
+      {
+        id: 'operations',
+        eyebrow: 'Operations & Reliability',
+        title: 'Operations and Reliability',
+        description: 'Monitor, troubleshoot, and validate the capacity and reliability of your deployment.',
+        items: [
+          item('/guides/gettingStarted/admin', 'monitoring', 'Monitoring and Alerting'),
+          item('/guides/solution/howToDebug', 'debugging', 'Source Debugging'),
+          item('/guides/gettingStarted/faq', 'troubleshooting', 'Troubleshooting'),
+          item('/guides/benchmark/benchmark_test', 'benchmark-results', 'Performance and Reliability Report'),
+          item('/guides/benchmark/benchmark_guide', 'benchmark-tools', 'Benchmark Tools'),
+        ],
+      },
+    ],
+    heroDescription: 'OpenIM guides organized by implementation stage, from product concepts and deployment to integration, extension, operations, and reliability.',
+    referenceDescription: 'Understand OpenIM first, complete deployment and integration, then move into extension, operations, and reliability validation.',
+    sectionDescription: 'Each directory represents an implementation stage and links its APIs and SDK methods to the corresponding reference documentation.',
+  };
 }
 
 export function GuidesPage({ locale = 'en' }: { locale?: Locale }) {
@@ -547,7 +708,7 @@ export function GuidesPage({ locale = 'en' }: { locale?: Locale }) {
 }
 
 export function GuidesSubPage({ locale = 'en', slug = [] }: { locale?: Locale; slug?: string[] }) {
-  const replacement = locale === 'zh' ? legacyZhGuidePaths[slug.join('/')] : undefined;
+  const replacement = legacyZhGuidePaths[slug.join('/')];
   if (replacement) redirect(toLocalizedPath(guidePath(...replacement), locale));
 
   const text = guidesCopy(locale);
@@ -581,7 +742,7 @@ function GuidesPageContent({
   const selection = getGuideSelection(text, slug);
   if (!selection) notFound();
 
-  const content = selection.kind === 'item' ? getGuideContent(selection.item) : undefined;
+  const content = selection.kind === 'item' ? getGuideContent(selection.item, locale) : undefined;
   const route = createGuidesRoute(text, currentPath, selection, content);
   const breadcrumbs: BreadcrumbItem[] = [
     { title: locale === 'zh' ? '首页' : 'Home', href: toLocalizedPath('/', locale) },
@@ -1013,18 +1174,20 @@ function resolveGuideHref(
   if (isExternalHref(href)) return href;
 
   const base = `https://docs.openim.io/zh-Hans${sourcePath.replace(/\/[^/]+$/, '/')}`;
-  const resolved = new URL(href, base).pathname.replace(/^\/zh-Hans/, '').replace(/\.(?:md|mdx)$/, '');
+  const resolved = new URL(href, base).pathname
+    .replace(/^\/zh-Hans/, '')
+    .replace(/\.(?:md|mdx)$/, '');
   const local = sourceMap.get(resolved);
   if (local) return toLocalizedPath(local, locale);
   return `https://docs.openim.io/zh-Hans${resolved}`;
 }
 
 function resolveGuideImageSrc(href: string, sourcePath: string) {
-  if (isExternalHref(href)) return href;
+  if (isExternalHref(href) || href.startsWith('/')) return href;
 
   const base = `https://docs.openim.io/zh-Hans${sourcePath.replace(/\/[^/]+$/, '/')}`;
   const resolved = new URL(href, base).pathname.replace(/^\/zh-Hans/, '');
-  return `https://raw.githubusercontent.com/openimsdk/docs/refs/heads/feat/new/docs${resolved}`;
+  return `/assets${resolved}`;
 }
 
 function guideHeadingId(value: string) {
@@ -1173,8 +1336,20 @@ function createGuidesRoute(
   };
 }
 
-function getGuideContent(item: GuideItem) {
-  return guidesContent.records[sourcePathFromHref(item.href)];
+function getGuideContent(item: GuideItem, locale: Locale) {
+  const sourcePath = sourcePathFromHref(item.href);
+  if (locale === 'zh') return reviewedZhGuides.get(sourcePath) ?? guidesContent.records[sourcePath];
+  return reviewedEnGuides.get(sourcePath) ?? guidesContent.records[sourcePath];
+}
+
+function guideExcerpt(body: string) {
+  return body
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\|/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 180);
 }
 
 function createGuideSourceMap(text: GuidesCopy) {

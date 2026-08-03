@@ -56,6 +56,8 @@ function SidebarNode({
   sidebarExpansion: NavContext['sidebarExpansion'];
   stateScope: string;
 }) {
+  if (!nodeSupportsLocale(node, locale)) return null;
+
   const active = node.href === currentPath;
   const containsActive = nodeContainsPath(node, currentPath);
   const enterprise = isEnterpriseNode(node);
@@ -124,6 +126,12 @@ function SidebarNode({
       </div>
     </SidebarDisclosure>
   );
+}
+
+function nodeSupportsLocale(node: NavNode, locale: Locale): boolean {
+  if (node.locales && !node.locales.includes(locale)) return false;
+  if (node.href) return true;
+  return node.children.some((child) => nodeSupportsLocale(child, locale));
 }
 
 function SidebarNodeLabel({

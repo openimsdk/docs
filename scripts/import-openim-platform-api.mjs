@@ -1952,6 +1952,7 @@ async function writeGeneratedData() {
     platform: null,
     nodes: buildNavigationNodes(routeRecords, localRoot),
     pageCount: routeRecords.length,
+    sidebarExpansion: 'active-path',
   };
   const nextNavigation = {
     generatedAt: today,

@@ -1,0 +1,178 @@
+This example uses two OpenIMServer nodes, A and B. They share a private network at `IP_A` and `IP_B`, and each also has a public IP. The guide covers application nodes and Nginx, not the creation of external component clusters.
+
+Prepare Redis, MongoDB sharding, Kafka, and Etcd clusters with at least three nodes, plus an available MinIO service. Record these addresses:
+
+- Redis: `redisAddr1`, `redisAddr2`, `redisAddr3`
+- MongoDB: `mongoAddr1`, `mongoAddr2`, `mongoAddr3`
+- Kafka: `kafkaAddr1`, `kafkaAddr2`, `kafkaAddr3`
+- Etcd: `etcdAddr1`, `etcdAddr2`, `etcdAddr3`
+- MinIO private address: `your_minio_internal_address`
+- MinIO public address: `your_minio_external_address`
+
+Both OpenIMServer nodes must be able to reach every external component.
+
+## Get the same OpenIMServer version
+
+Run the following on both A and B. The nodes must use the same official release tag:
+
+```bash
+git clone https://github.com/openimsdk/open-im-server
+cd open-im-server
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
+```
+
+Do not deploy `main` or alpha, beta, rc, or other prerelease versions directly to a production cluster.
+
+## Configure external components
+
+Use the same cluster configuration on both machines. Address fields use single-line lists.
+
+### Kafka
+
+In `config/kafka.yml`:
+
+```yaml
+address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
+```
+
+### MinIO
+
+In `config/minio.yml`:
+
+```yaml
+internalAddress: your_minio_internal_address
+externalAddress: your_minio_external_address
+```
+
+Clients must be able to reach `externalAddress`. With a unified domain, set it to the HTTPS object storage gateway path.
+
+### MongoDB
+
+In `config/mongodb.yml`:
+
+```yaml
+address: [mongoAddr1, mongoAddr2, mongoAddr3]
+```
+
+### Etcd
+
+In `config/discovery.yml`:
+
+```yaml
+etcd:
+  address: [etcdAddr1, etcdAddr2, etcdAddr3]
+```
+
+### Redis
+
+In `config/redis.yml`, enable cluster mode:
+
+```yaml
+address: [redisAddr1, redisAddr2, redisAddr3]
+clusterMode: true
+```
+
+## Configure Nginx
+
+You can deploy the same Nginx configuration on both machines. Replace the domain, certificate paths, and node addresses:
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream msg_gateway {
+        server IP_A:10001;
+        server IP_B:10001;
+    }
+
+    upstream im_api {
+        server IP_A:10002;
+        server IP_B:10002;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name yourhost.com;
+
+        ssl_certificate /usr/local/nginx/conf/ssl/your_host_bundle.pem;
+        ssl_certificate_key /usr/local/nginx/conf/ssl/your_host.key;
+
+        location ^~ /api/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header X-Request-Api $scheme://$host/api;
+            proxy_pass http://im_api/;
+        }
+
+        location /msg_gateway/ {
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_pass http://msg_gateway/;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name yourhost.com;
+        return 301 https://$host$request_uri;
+    }
+}
+```
+
+Validate and reload Nginx:
+
+```bash
+nginx -t
+nginx -s reload
+```
+
+Resolve `yourhost.com` to the public IPs of both entry nodes. In production, use DNS or load-balancer health checks so traffic is not sent to a failed node.
+
+## Build and start both nodes
+
+Install project tools on the first run:
+
+```bash
+bash bootstrap.sh
+```
+
+Within mainland China, you can configure a Go module proxy:
+
+```bash
+go env -w GO111MODULE=on
+go env -w GOPROXY=https://goproxy.cn,direct
+```
+
+Build and start on both A and B:
+
+```bash
+mage
+mage start
+mage check
+```
+
+Use the unified endpoints in OpenIMClientSDK:
+
+```text
+apiAddr: https://yourhost.com/api
+wsAddr: wss://yourhost.com/msg_gateway
+```
+
+## Pre-production checks
+
+1. Kafka `KAFKA_CFG_ADVERTISED_LISTENERS` must advertise addresses reachable by every OpenIMServer node, for example `PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`.
+2. Synchronize all node clocks. Token issuance allows at most `5s` of clock skew.
+3. Both nodes must use the same official tag, the same `secret`, and consistent external component configuration.
+4. Stop each node in turn and confirm that API and WebSocket traffic moves to the healthy node.
+5. Validate the gateway, login, and messaging path with [Deployment verification](./verification).

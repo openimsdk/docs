@@ -1,0 +1,188 @@
+## OpenIM stress and reliability testing
+
+## Terminology & Scope
+
+- **OpenIMSDK**: General term, including **OpenIMClientSDK** (client SDK) and **OpenIMServer** (server).
+- **ChatServer**: Refers to the message-related modules of OpenIMServer in this document.
+- **App Administrator**: Administrator account used for management-side API calls (e.g., obtaining tokens, batch operations).
+- **App Business Server**: The business backend integrating with OpenIMServer (handles your business logic, integrated with the IM system via API/callback/SDK).
+
+---
+
+## Background
+
+OpenIM is not a standalone chat application (like WeChat or Slack), but rather an instant messaging solution providing OpenIMClientSDK and OpenIMServer. Since OpenIMClientSDK's underlying implementation relies on Go-based `openim-sdk-core`, without massive real-world endpoints, stress testing programs are needed to simulate large-scale user online presence and message traffic to evaluate system capacity, reliability, and latency.
+
+This test uses two test programs in coordination:
+
+1. **Test Program A: openim-sdk-core/integration_test** (for reliability/latency and consistency verification)
+   - Loads and runs `openim-sdk-core` instances to simulate OpenIMClientSDK instances, covering a comprehensive client pipeline.
+
+2. **Test Program B: openim-sdk-core/msgtest** (for stress/capacity)
+   - Focuses on login and message sending/receiving, used to launch large numbers of instances simulating high-concurrency stress scenarios.
+
+Recommended approach: **msgtest generates the stress load**; **integration_test performs sampling verification for reliability and latency**.
+
+---
+
+## Reliability & Latency Definitions
+
+- **Reliability**: Message delivery reliability ("guaranteed delivery") — messages sent must be received by the recipient.
+- **Latency**: Time elapsed from Client A creating and sending a message to Client B successfully receiving and persisting it.
+
+---
+
+## Test Resources
+
+Server 1: Ubuntu 22.04.2, 16 Core, 64GB RAM, 150GB HDD: Deploys components and OpenIMServer; also deploys Test Program B; may deploy Test Program A in shared memory `/dev/shm`.
+
+Server 2: Ubuntu 18.04.5, 4 Core, 8GB RAM, 40GB HDD: Deploys Test Program A in shared memory `/dev/shm`.
+
+Server config `open-im-server/start-config.yml`: Service instances adjusted to `openim-push: 8`, `openim-msgtransfer: 8`, others remain at 1.
+
+---
+
+## Test Scenarios & Results
+
+### Test 1: 200 Users
+
+Test Program A simulates 200 users, with 100 logging in immediately, sending messages to small groups and friends.
+
+Command:
+
+`go run main.go -lgr 0.5 -imf -crg -ckgn -ckcon -sem -ckmsn -u 200 -su 10 -lg 2 -cg 2 -cgm 5 -sm 5 -gm 5 -reg`
+
+Deployment: Test Program A deployed on Server 1's shared memory `/dev/shm`.
+
+| Parameter/Result | Description |
+| --- | --- |
+| Test Purpose | Test message reliability and latency with a small number of users |
+| User Count | 200 users, 100 log in immediately, 100 delayed login |
+| Group Count & Size | Each user joins 0-10 regular groups with 5 members |
+| Message Rate | Peak 40 msg/s |
+| Total Messages | 112,350 |
+| Message Integrity | 100% (all messages delivered accurately) |
+| Average Latency | 0.231 seconds |
+| Maximum Latency | 1.703 seconds |
+
+---
+
+### Test 2: 50K Online Users + Small Groups
+
+- Test Program B: Simulates 50,000 online users sending messages randomly (generating stress).
+- Test Program A: Simulates 100 users (sampling reliability and latency statistics).
+
+Commands (examples):
+
+- Test Program A registers 100K users: `go run main.go -reg -u 100000`
+- Test Program B starts 50K online users: `go run main.go -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000`
+- Test Program A sampling: `go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 100 -su 3 -lg 0 -cg 4 -cgm 5 -sm 100 -gm 100 -msgitv 1500 -test`
+
+Deployment: Test Program A on Server 2's `/dev/shm`, Test Program B on Server 1.
+
+| Parameter/Result | Description |
+| --- | --- |
+| Stress Load | 50,000 users online, ~1,700 messages/second |
+| Sampling User Count | 100 users, 80 log in immediately, 20 delayed login |
+| Sampling Group Count & Size | Each user joins 0-20 regular groups with 5 members |
+| Sampling Message Send Rate | Peak 54 msg/s |
+| Sampling Message Count | 170,800 |
+| Sampling Message Integrity | 100% (all messages delivered accurately) |
+| Sampling Average Latency | 0.202 seconds |
+| Sampling Maximum Latency | 3.641 seconds |
+
+#### Test 2: Server Resource Consumption
+
+Online users:
+
+![Online users](/assets/guides/assets/br-login.png)
+
+Message pressure (metric below indicates messages received by the server per minute):
+
+![Message pressure](/assets/guides/assets/br-msg.png)
+
+CPU usage:
+
+![CPU usage](/assets/guides/assets/br-cpu.png)
+
+| Process | CPU Usage |
+| --- | --- |
+| openim-msggateway | 210% |
+| mongo | 100% |
+| kafka | 84% |
+| redis | 67% |
+| openim-rpc-msg | 56% |
+| openim-msgtransfer | 27%*8 |
+| openim-push | 13%*8 |
+| Other OpenIM services and components | 65% |
+| Total | 902% |
+
+Physical memory usage:
+
+![Physical memory usage](/assets/guides/assets/br-mem.png)
+
+| Process | Memory Usage |
+| --- | --- |
+| openim-msggateway | 2.1 GiB |
+| mongo | 717 MiB |
+| kafka | 1.1 GiB |
+| redis | 85 MiB |
+| openim-rpc-msg | 162 MiB |
+| openim-msgtransfer | 74 MiB*8 |
+| openim-push | 126 MiB*8 |
+| Other OpenIM services and components | 457 MiB |
+| Total (all OpenIM services and components) | 6.986 GiB |
+
+Note: The above table is an approximate summary and does not include Docker's overhead for forwarding data to containers.
+
+---
+
+### Test 3: 50K online users and 50K-member large groups
+
+- Test Program B simulates 50,000 online users sending messages randomly.
+- Test Program A simulates 20 users, 16 of whom sign in immediately, and sends messages to friends and ten groups with 50,000 members each.
+
+Test Program A registers 100,000 users:
+
+`go run main.go -reg -u 100000`
+
+Test Program B starts 50,000 online users:
+
+`go run main.go -o 50000 -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000`
+
+Test Program A measures message integrity and latency:
+
+`go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 3 -lg 10 -cg 0 -cgm 5 -sm 0 -gm 10`
+
+Test Program A runs from `/dev/shm` on Server 2, while Test Program B runs on Server 1.
+
+| Parameter/Result | Description |
+| --- | --- |
+| Stress Load | 50,000 users online, approximately 1,700 messages per second |
+| Sampling User Count | 20 users: 16 sign in immediately and 4 sign in later |
+| Sampling Group Count & Size | 10 large groups with 50,000 members each, including 500 online members |
+| Sampling Message Send Rate | Peak 32 msg/s |
+| Sampling Message Count | 24,000 |
+| Sampling Message Integrity | 100% (all messages delivered accurately) |
+| Sampling Average Latency | 0.022 seconds |
+| Sampling Maximum Latency | 1.664 seconds |
+
+---
+
+## Results Analysis
+
+OpenIM supports 50,000 concurrent online users and multiple 50,000-member large groups. Under a load of 1,700 messages per second, the measured delivery rate is 100%, average latency remains below one second, and maximum latency remains below three seconds.
+
+---
+
+## Configuration Recommendations
+
+Based on 100K registered users, 10% daily online rate, support for 50K-member large groups, and 600 messages per second, recommended configuration:
+
+| Resource | Configuration |
+| --- | --- |
+| Memory | 16 GB |
+| CPU | 8 Cores |
+| Network Bandwidth | 10 Mbps |
+
+Note: Message packet size is calculated at 2 KB; actual size varies with message content. Typical text message packets are approximately 700 bytes.

@@ -1,0 +1,210 @@
+---
+title: "Message content types"
+description: "Map OpenIM message contentType values to the JSON structure of content."
+product: "platform-api"
+context: "chat/platform-api"
+template: "guide"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+sourcePath: "/platform-api/message/message-content-types"
+---
+
+When sending a message, `contentType` determines the JSON structure of `content`. The two must match or clients may be unable to parse or render the message.
+
+Image, audio, video, and file messages store resource URLs and metadata rather than binary data. Upload the file to object storage or your file service before calling a message endpoint.
+
+## contentType reference
+
+| contentType | Message type | content structure |
+| --- | --- | --- |
+| `101` | Text | `TextElem` |
+| `102` | Image | `PictureElem` |
+| `103` | Audio | `SoundElem` |
+| `104` | Video | `VideoElem` |
+| `105` | File | `FileElem` |
+| `106` | Mention | `AtTextElem` |
+| `107` | Merged messages | `MergeElem` |
+| `108` | Contact card | `CardElem` |
+| `109` | Location | `LocationElem` |
+| `110` | Custom | `CustomElem` |
+| `114` | Quote | `QuoteElem` |
+| `115` | Face | `FaceElem` |
+| `117` | Advanced text | `AdvancedTextElem` |
+
+## Text message
+
+```json
+{"contentType": 101, "content": {"content": "hello"}}
+```
+
+`content` is a required string containing the message text.
+
+## Image message
+
+```json
+{
+  "contentType": 102,
+  "content": {
+    "sourcePath": "",
+    "sourcePicture": {"uuid":"image_001","type":"png","size":204800,"width":1280,"height":720,"url":"https://example.com/source.png"},
+    "bigPicture": {"uuid":"image_001_big","type":"png","size":102400,"width":640,"height":360,"url":"https://example.com/big.png"},
+    "snapshotPicture": {"uuid":"image_001_thumb","type":"png","size":20480,"width":160,"height":90,"url":"https://example.com/thumb.png"}
+  }
+}
+```
+
+`sourcePicture`, `bigPicture`, and `snapshotPicture` are required `PictureBaseInfo` objects. `sourcePath` is an optional client-local path and is normally empty for server-side sending.
+
+### PictureBaseInfo
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| uuid | No | string | Unique file ID. |
+| type | Yes | string | Image format such as `png` or `jpg`. |
+| size | No | int64 | File size in bytes. |
+| width | Yes | int | Width in pixels. |
+| height | Yes | int | Height in pixels. |
+| url | Yes | string | Accessible image URL. |
+
+## Audio message
+
+```json
+{
+  "contentType": 103,
+  "content": {"uuid":"audio_001","soundPath":"","sourceUrl":"https://example.com/voice.m4a","dataSize":24576,"duration":12,"soundType":"m4a"}
+}
+```
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| uuid | No | string | Unique audio file ID. |
+| soundPath | No | string | Client-local path; normally empty for server-side sending. |
+| sourceUrl | Yes | string | Accessible audio URL. |
+| dataSize | No | int64 | File size in bytes. |
+| duration | Yes | int64 | Duration using the unit expected by your client SDK. |
+| soundType | No | string | Audio format such as `m4a`. |
+
+## Video message
+
+```json
+{
+  "contentType": 104,
+  "content": {
+    "videoPath":"","videoUUID":"video_001","videoUrl":"https://example.com/demo.mp4","videoType":"mp4","videoSize":5242880,"duration":30,
+    "snapshotPath":"","snapshotUUID":"snapshot_001","snapshotSize":65536,"snapshotUrl":"https://example.com/cover.jpg","snapshotWidth":640,"snapshotHeight":360
+  }
+}
+```
+
+`videoUrl`, `videoType`, `videoSize`, `duration`, `snapshotUrl`, `snapshotWidth`, and `snapshotHeight` are required. UUID, local-path, and snapshot-size fields are optional. File sizes are in bytes; duration must use the unit expected by the client SDK.
+
+## File message
+
+```json
+{
+  "contentType": 105,
+  "content": {"filePath":"","uuid":"file_001","sourceUrl":"https://example.com/report.pdf","fileName":"report.pdf","fileSize":1048576,"fileType":"pdf"}
+}
+```
+
+`sourceUrl`, `fileName`, and `fileSize` are required. `filePath` is a client-local path and is normally empty for server-side sending. `uuid` and `fileType` are optional.
+
+## Mention message
+
+```json
+{
+  "contentType": 106,
+  "content": {"text":"@Tom please review","atUserList":["user_002"],"isAtSelf":false}
+}
+```
+
+`atUserList` is required and contains mentioned user IDs. `AtAllTag` represents all members. `text`, `isAtSelf`, and an optional full `quoteMessage` may also be supplied.
+
+## Merged message
+
+```json
+{
+  "contentType": 107,
+  "content": {"title":"Chat history","abstractList":["Tom: hello","Jerry: received"],"multiMessage":[]}
+}
+```
+
+`title`, `abstractList`, and `multiMessage` are required. Each item in `multiMessage` is a complete OpenIM message object.
+
+## Contact card message
+
+```json
+{
+  "contentType": 108,
+  "content": {"userID":"user_002","nickname":"Tom","faceURL":"https://example.com/tom.png","ex":""}
+}
+```
+
+`userID`, `nickname`, and `faceURL` are required. `ex` is optional business extension data.
+
+## Location message
+
+```json
+{
+  "contentType": 109,
+  "content": {"description":"OpenIM office","longitude":113.93041,"latitude":22.53332}
+}
+```
+
+`longitude` and `latitude` are required doubles. `description` is optional.
+
+## Custom message
+
+```json
+{
+  "contentType": 110,
+  "content": {"data":"{\"type\":\"order_paid\",\"orderID\":\"order_001\"}","description":"Order paid","extension":"{\"source\":\"backend\"}"}
+}
+```
+
+`data` is required and normally contains a JSON string interpreted by your client. `description` and `extension` are optional. Define and version this protocol in your application.
+
+## Quote message
+
+```json
+{
+  "contentType": 114,
+  "content": {"text":"Received","quoteMessage":{"clientMsgID":"client_msg_001","serverMsgID":"server_msg_001","sendID":"user_001","contentType":101,"content":"{\"content\":\"hello\"}"}}
+}
+```
+
+`text` and the full quoted `quoteMessage` object are required. The example shows only common message fields.
+
+## Face message
+
+```json
+{"contentType": 115, "content": {"index": 1, "data": "{\"name\":\"smile\"}"}}
+```
+
+`index` is required. `data` is optional custom face data, normally a JSON string.
+
+## Advanced text message
+
+```json
+{
+  "contentType": 117,
+  "content": {"text":"See the attachment","messageEntityList":[]}
+}
+```
+
+`text` and `messageEntityList` are required. Entity objects can describe files, images, or other business fragments and must match the client SDK's current entity structure.
+
+## Usage guidance
+
+- Keep `contentType` and `content` strictly aligned.
+- Upload media first; the Platform API does not receive media binary data.
+- Client-local path fields are normally empty for server-side sending.
+- Version custom-message protocols and preserve backward compatibility.
+- During migration, preserve the original `contentType`, `content`, and `sendTime` and verify that current clients can parse the legacy payload.
+
+## Related pages
+
+- [Send a message](/platform-api/message/sending-messages/send-msg)
+- [Batch send messages](/platform-api/message/sending-messages/batch-send-msg)
+- [Migrate to OpenIM](/platform-api/migration-to-openim)

@@ -30,8 +30,12 @@ export function buildSearchIndexes({
       !clientSdkContexts.has(route.contextKey) ||
       !managedClientSdkContexts.has(route.contextKey)
     ) {
-      indexes.en.push(createSearchRecord(route, sourcePage));
-      indexes.zh.push(createSearchRecord(route, sourcePage));
+      if (!route.locales || route.locales.includes('en')) {
+        indexes.en.push(createSearchRecord(route, sourcePage));
+      }
+      if (!route.locales || route.locales.includes('zh')) {
+        indexes.zh.push(createSearchRecord(route, sourcePage));
+      }
       continue;
     }
 

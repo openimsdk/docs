@@ -1,40 +1,137 @@
 ---
 title: "Overview"
-description: "Overview for the OpenIM Platform API."
+description: "Overview of user creation, profile queries, presence, and notification accounts in the OpenIM Platform API."
 product: "platform-api"
 context: "chat/platform-api"
 template: "overview"
 status: "published"
-lastUpdated: "2026-07-03"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/user/overview"
 ---
 
-The user module maps business accounts to OpenIM users and manages profile data, online status, status subscriptions, and notification accounts.
+The user module maps accounts in your business system to OpenIM users and manages profiles, queries, presence, and notification accounts from trusted backend services. Keep the administrator token on the backend; browser, mobile, and desktop clients must not call these management endpoints directly.
 
 ## Capability scope
 
 | Capability | Description |
-| --- | --- |
-| User registration | Register business user IDs with nickname, avatar, and extension data. |
-| Profile maintenance | Update profile fields and global message receiving options. |
-| User queries | List users, fetch profiles, and check account existence. |
-| Presence | Query online status, subscribed status, and online token details. |
-| Notification accounts | Create, update, and search system notification accounts. |
+| ---- | ---- |
+| User creation | Register a business user ID in OpenIM with a nickname, avatar, and extension data. |
+| User queries | Page through users or user IDs, retrieve profiles in batches, and check registration status. |
+| Profile updates | Synchronize profile changes such as nickname, avatar, and extension data from your backend. |
+| Presence | Query online state, connected platform details, and aggregated online token details. |
+| Notification accounts | Create, update, and search server-side accounts used for system or business notifications. |
+| Account governance <span className="enterprise-field-badge">Enterprise</span> | Ban, unban, or unregister users and page through disabled accounts. |
 
 ## Common APIs
 
 - [Create a user](/platform-api/user/creating-users/create-a-user)
-- [Update a user](/platform-api/user/managing-users/update-a-user)
 - [List users](/platform-api/user/listing-users/list-users)
-- [Get online status](/platform-api/user/presence/get-users-online-status)
+- [List all user IDs](/platform-api/user/listing-users/list-all-user-ids)
+- [Check user accounts](/platform-api/user/listing-users/check-user-accounts)
+- [Get a user](/platform-api/user/listing-users/get-a-user)
+- [Update a user](/platform-api/user/managing-users/update-a-user)
+- [Get users' online status](/platform-api/user/presence/get-users-online-status)
+- [Get users' online token details](/platform-api/user/presence/get-users-online-token-detail)
 - [Add a notification account](/platform-api/user/notification-accounts/add-notification-account)
+- [Update a notification account](/platform-api/user/notification-accounts/update-notification-account)
+- [Search notification accounts](/platform-api/user/notification-accounts/search-notification-account)
+- [Ban a user](/platform-api/user/account-governance/ban-user) <span className="enterprise-field-badge">Enterprise</span>
+- [List disabled users](/platform-api/user/account-governance/list-disabled-users) <span className="enterprise-field-badge">Enterprise</span>
+
+## Resource representations
+
+Objects with an `Info` suffix in this module represent user data stored or returned by the OpenIM server. Endpoint pages highlight fields relevant to that operation; this page defines the complete shared field semantics.
+
+### UserInfo
+
+`UserInfo` represents an OpenIM user profile used by user creation, user queries, and profile updates.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| userID | string | OpenIM user ID. Keep a stable mapping to the account in your business system. |
+| nickname | string | User nickname. |
+| faceURL | string | User avatar URL. |
+| ex | string | Business extension data written and interpreted by your backend. |
+| createTime | int64 | User creation time, normally a Unix timestamp in milliseconds. |
+| appMangerLevel | int | Application management level. The field name matches the server response. |
+| globalRecvMsgOpt | int | Global message receiving option. See [`GlobalRecvMsgOpt`](#globalrecvmsgopt). |
+| status <span className="enterprise-field-badge">Enterprise</span> | int | Account status. See [`UserStatus`](#userstatus). |
+| addFriendPermission <span className="enterprise-field-badge">Enterprise</span> | int | Permission for incoming friend requests. See [`AddFriendPermission`](#addfriendpermission). |
+| category <span className="enterprise-field-badge">Enterprise</span> | string | Business-defined user category. |
+
+### PublicUserInfo
+
+`PublicUserInfo` represents profile data that can be read by other users or business workflows.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| userID | string | OpenIM user ID. |
+| nickname | string | User nickname. |
+| faceURL | string | User avatar URL. |
+| ex | string | Public extension data. |
+
+## Enums
+
+### UserStatus
+
+`UserStatus` describes an account state and applies only to Enterprise account governance fields.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `Normal` | Active account. |
+| 1 | `Banned` | Banned account. |
+| 2 | `Expunged` | Unregistered or removed account. |
+
+### GlobalRecvMsgOpt
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `ReceiveMessage` | Receive messages. |
+| 1 | `NotReceiveMessage` | Do not receive messages. |
+| 2 | `ReceiveNotNotifyMessage` | Receive messages without notifications. |
+
+### OnlineStatus
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `Offline` | Offline. |
+| 1 | `Online` | Online. |
+
+### AddFriendPermission
+
+`AddFriendPermission` applies only to Enterprise user profiles.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `AddFriendAllowed` | Allow friend requests with approval. |
+| 1 | `AddFriendAllowedNoReview` | Allow friend requests without approval. |
+| 2 | `AddFriendDenied` | Deny incoming friend requests. |
+
+### PlatformID
+
+`PlatformID` identifies the client platform of a user connection.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 1 | `IOS` | iOS. |
+| 2 | `Android` | Android. |
+| 3 | `Windows` | Windows. |
+| 4 | `OSX` | macOS. |
+| 5 | `Web` | Web. |
+| 6 | `MiniWeb` | Mini program or lightweight Web client. |
+| 7 | `Linux` | Linux. |
+| 8 | `APad` | Android tablet. |
+| 9 | `IPad` | iPad. |
+| 10 | `Admin` | Administrative client. |
+| 11 | `HarmonyOS` | HarmonyOS. |
+| 12 | `Bot` | Bot. |
 
 ## Integration advice
 
-Use your business system as the source of truth for user IDs.
+Use your business system as the source of truth for user IDs. Before creating an OpenIM user, complete registration, risk checks, and authorization in your business system, then store the mapping between the business account and OpenIM user ID in your backend database.
 
-Let clients request login credentials from your backend, then let the backend issue OpenIM user tokens.
+For client login, request credentials from your business backend and let the backend issue an OpenIM user token. Never embed an APP administrator token in client code, frontend environment variables, or mobile application packages.
 
 ## Related pages
 

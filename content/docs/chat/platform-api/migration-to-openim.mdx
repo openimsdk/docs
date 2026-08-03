@@ -1,42 +1,65 @@
 ---
 title: "Migrate to OpenIM"
-description: "Migrate to OpenIM for the OpenIM Platform API."
+description: "Plan the migration of users, relationships, groups, historical messages, and conversation state to OpenIM."
 product: "platform-api"
 context: "chat/platform-api"
 template: "overview"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/migration-to-openim"
 ---
 
-When migrating to OpenIM, normalize existing data into OpenIM users, relationships, groups, conversations, and messages, then import it from trusted backend jobs. Do not run migration workflows from client applications.
+When migrating to OpenIM, normalize data from the existing system into OpenIM users, relationships, groups, conversations, and messages, then import it in batches from a trusted backend. Do not run migration jobs on clients. Keep administrator tokens, batch scripts, retry handling, and audit logs on the server.
 
 ## Capability scope
 
 | Source data | OpenIM target | Description |
-| ----------- | ------------- | ----------- |
-| Accounts and profiles | Users | Register users first, then fill nickname, avatar, and extension fields. |
-| Friend relationships | Relationships | Import historical friends and migrate blacklist data separately. |
-| Groups and members | Groups | Create groups before importing or inviting members. |
-| Historical messages | Messages | Write historical records by conversation, sender, timestamp, and message type. |
-| Conversation state | Conversations | Rebuild pinned, muted, unread, and offline-push state after core data is imported. |
+| ---- | ---- | ---- |
+| Accounts and profiles | Users | Register users first, then populate nickname, avatar, and extension data. |
+| Friend relationships | Relationships | Import historical friendships and migrate blacklists separately. |
+| Groups and members | Groups | Create each group before inviting or importing members and updating the profile. |
+| Historical messages | Messages | Normalize conversation, sender, timestamp, and content type, then write or replay messages from the backend. |
+| Conversation state | Conversations | Restore pinned, notification, unread, and offline-push state after core data is imported. |
 
 ## Common APIs
 
-- [Create a user](/platform-api/user/creating-users/create-a-user)
-- [List users](/platform-api/user/listing-users/list-users)
-- [Import friends](/platform-api/relation/managing-friends/import-friends)
-- [Create a group](/platform-api/group/managing-groups/create-group)
-- [Invite users to a group](/platform-api/group/group-members/invite-users-to-group)
-- [Send a message](/platform-api/message/sending-messages/send-msg)
-- [Batch send messages](/platform-api/message/sending-messages/batch-send-msg)
+| Migration task | Primary API | Guidance |
+| ---- | ---- | ---- |
+| Register users | [Create a user](/platform-api/user/creating-users/create-a-user) | Reuse the business account ID as the OpenIM `userID` where possible to avoid another mapping layer. |
+| Verify users | [List users](/platform-api/user/listing-users/list-users) | Validate imported users in batches. |
+| Import friends | [Import friends](/platform-api/relation/managing-friends/import-friends) | Import existing relationships directly instead of replaying friend requests. |
+| Create groups | [Create a group](/platform-api/group/managing-groups/create-group) | Decide the group ID, owner, name, and initial membership strategy first. |
+| Add members | [Invite users to a group](/platform-api/group/group-members/invite-users-to-group) | Add existing members in controlled batches. |
+| Import messages | [Send a message](/platform-api/message/sending-messages/send-msg) | Send as the original sender and preserve the original send time. |
+| Batch notifications | [Batch send messages](/platform-api/message/sending-messages/batch-send-msg) | Use for system notifications or low-risk batch delivery; historical messages still require ordering and idempotency. |
 
 ## Integration advice
 
-Run migration in repeatable batches. Record the source primary key, OpenIM target ID, operation time, `operationID`, response, and failure reason for each item.
+Migrate users first, followed by relationships, groups, messages, and conversation validation. Ensure every account has a stable OpenIM `userID`; ensure both users exist before importing friendships or blacklists; create a group before importing members and profile data; and write historical messages in conversation-level batches while preserving source message IDs, timestamps, and migration batch IDs.
 
-Import users first, then relationships and groups, then historical messages, and finally conversation state. Before retrying failed writes, check whether the target resource already exists.
+Design migration jobs to be repeatable. For each item, record the source primary key, OpenIM target ID, operation time, `operationID`, response, and failure reason. Retry failed items only, and verify state before retrying an uncertain write to avoid duplicate users, friendships, or messages.
+
+Historical messages require explicit ordering and idempotency. Partition batches by conversation and keep the source message ID or migration batch ID in business extension data. Validate content type mappings, revoked state, file URLs, and offline push behavior in a test environment before production migration.
+
+### Unread counts and read state
+
+OpenIM calculates a conversation's unread count from message sequences and the user's read sequence. Importing historical messages restores content, sender, and send time, but it does not automatically restore each user's read position in each conversation.
+
+The current public Platform API does not provide an endpoint to mark imported conversations as read in batches or directly set a conversation's unread count. If unread state matters to a migration, first determine whether the source system can export per-user conversation read state.
+
+| Strategy | Description | Suitable when |
+| ---- | ---- | ---- |
+| Treat historical messages as read | After migration, consider imported history read so that users do not see a large historical unread count on first login. | The source cannot export per-user read state, or the product wants unread counts to restart with new messages. |
+| Restore unread counts per user and conversation | Provide an unread count for every user and conversation, then derive the read position from the latest conversation sequence. | The source can export `userID + conversationID + unreadCount` and the product must preserve the previous unread experience. |
+
+For projects that require unread-state migration, OpenIM can evaluate additional data repair or Platform API capabilities, such as:
+
+- Mark imported historical conversations as read in batches.
+- Set unread counts by `userID + conversationID + unreadCount`.
+- Set the user read position from the last read message, last read time, or imported message Seq.
+
+If the source system cannot provide user-level read state, OpenIM cannot reconstruct accurate unread counts from historical messages alone. In that case, treat migrated history as read and start unread counting from messages sent after migration.
 
 ## Related pages
 

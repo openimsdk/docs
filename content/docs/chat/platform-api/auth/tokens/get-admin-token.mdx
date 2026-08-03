@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/auth/tokens/get-admin-token"
 ---
 
-Get an administrator token is an OpenIM authentication REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **Get an administrator token** to issue an administrator token for a configured application administrator. Your backend uses this token to call OpenIM management REST APIs. Configure the API address first as described in [Prepare to use the API](/platform-api/prepare-to-use-api), and never send an administrator token to a client or embed it in frontend code.
 
 ## HTTP request
 
@@ -30,6 +30,17 @@ curl --request POST "${API_ADDRESS}/auth/get_admin_token" \
 }'
 ```
 
+## Parameters
+
+This endpoint accepts tracing information in request headers and business parameters in a JSON request body. It is on the router allowlist, so it does not require an administrator token.
+
+### Request headers
+
+| Header | Required | Type | Description |
+| --- | --- | --- | --- |
+| operationID | Yes | string | A unique tracing ID for this request. Generate it on the backend and include it in application logs. |
+| Content-Type: application/json | Yes | string | Required when the request body is JSON. |
+
 ## Request body
 
 ```json
@@ -41,8 +52,8 @@ curl --request POST "${API_ADDRESS}/auth/get_admin_token" \
 
 | Parameter | Required | Type | Description |
 | --- | --- | --- | --- |
-| secret | Yes | string | The secret value. |
-| userID | Yes | string | OpenIM user ID. |
+| secret | Yes | string | The `secret` configured in the server-side `config/share.yml` file. |
+| userID | Yes | string | An application administrator user ID configured on the server. The default is usually `imAdmin`. |
 
 ## Response
 
@@ -68,8 +79,8 @@ OpenIM usually returns `200 OK` when the request reaches the service. Use `errCo
 | errMsg | string | Short error message. |
 | errDlt | string | Detailed error information for troubleshooting. |
 | data | object | Endpoint-specific response data. |
-| data.token | string | OpenIM authentication token. |
-| data.expireTimeSeconds | int | Token expiration time in seconds. |
+| data.token | string | The issued application administrator token. |
+| data.expireTimeSeconds | int | Token lifetime in seconds. |
 
 ### Error response
 
@@ -85,18 +96,19 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 | Scenario | Possible cause | Recommended action |
 | --- | --- | --- |
-| Authentication failed | `token` is missing, expired, or not an administrator token. | Issue a new administrator token and keep it on the backend. |
+| Authentication failed | `secret` is incorrect or `userID` is not a configured application administrator. | Check the server configuration and request a new administrator token. |
 | Traceability is weak | `operationID` is missing or reused across many requests. | Generate a unique `operationID` for every request and log it with the response. |
 | Validation failed | The request body has an invalid type, missing field, or unsupported enum value. | Compare the payload with the request table and retry after correcting the fields. |
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- A successful request issues a new administrator token and records an administrator login.
+- `secret` must match the server configuration.
+- `userID` must identify an application administrator configured on the server.
+- This endpoint is on the router allowlist and does not require an administrator token.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [authentication overview](/platform-api/auth/overview)
+- [Authentication overview](/platform-api/auth/overview)
 - [Error codes](/platform-api/error-codes)

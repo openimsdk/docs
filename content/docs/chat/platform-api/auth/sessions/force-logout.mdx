@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/auth/sessions/force-logout"
 ---
 
-Force logout is an OpenIM authentication REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **Force logout** to sign a user out from a specific platform. OpenIM marks the corresponding token as kicked, asks the gateway to close that connection, and the client SDK receives the kicked-offline callback. Configure the API address as described in [Prepare to use the API](/platform-api/prepare-to-use-api), and keep the administrator token on the backend only.
 
 ## HTTP request
 
@@ -31,7 +31,17 @@ curl --request POST "${API_ADDRESS}/auth/force_logout" \
 }'
 ```
 
-> Keep administrator tokens on trusted backend services only. Client applications should use user tokens issued by your backend.
+## Parameters
+
+This endpoint accepts tracing and authentication information in request headers and business parameters in a JSON request body.
+
+### Request headers
+
+| Header | Required | Type | Description |
+| --- | --- | --- | --- |
+| operationID | Yes | string | A unique tracing ID for this request. Generate it on the backend and include it in application logs. |
+| token | Yes | string | An application administrator token. Keep it on the backend only. |
+| Content-Type: application/json | Yes | string | Required when the request body is JSON. |
 
 ## Request body
 
@@ -44,8 +54,8 @@ curl --request POST "${API_ADDRESS}/auth/force_logout" \
 
 | Parameter | Required | Type | Description |
 | --- | --- | --- | --- |
-| platformID | Yes | int | Client platform ID. |
-| userID | Yes | string | OpenIM user ID. |
+| platformID | Yes | int | The platform from which the user must be signed out. See [`PlatformID`](/platform-api/user/overview#platformid). |
+| userID | Yes | string | The user to sign out. |
 
 ## Response
 
@@ -87,12 +97,12 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- OpenIM marks the user's token for the specified platform as kicked and notifies the gateway to close the corresponding connection.
+- The request must use an application administrator token.
+- Both `platformID` and `userID` are required.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [authentication overview](/platform-api/auth/overview)
+- [Authentication overview](/platform-api/auth/overview)
 - [Error codes](/platform-api/error-codes)

@@ -1,0 +1,104 @@
+---
+title: "Send a message"
+description: "Send one message to a one-to-one or group conversation from a trusted backend."
+product: "platform-api"
+context: "chat/platform-api"
+template: "api"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+sourcePath: "/platform-api/message/sending-messages/send-msg"
+---
+
+Use this endpoint to send one message from a business backend as a selected user or system account. It is intended for system messages, operational notifications, agent-assisted sending, and historical message migration. Normal user chat should generally be sent by the client SDK under the signed-in user's identity.
+
+## HTTP request
+
+```bash
+POST {API_ADDRESS}/msg/send_msg
+```
+
+### Request example
+
+```bash
+curl --request POST "${API_ADDRESS}/msg/send_msg" \
+  --header "Content-Type: application/json; charset=utf-8" \
+  --header "operationID: ${OPERATION_ID}" \
+  --header "token: ${ADMIN_TOKEN}" \
+  --data-raw '{
+  "sendID": "openIMAdmin",
+  "recvID": "user_001",
+  "groupID": "",
+  "senderNickname": "System",
+  "senderFaceURL": "https://example.com/system.png",
+  "senderPlatformID": 10,
+  "content": {"content": "hello"},
+  "contentType": 101,
+  "sessionType": 1,
+  "isOnlineOnly": false,
+  "notOfflinePush": false,
+  "sendTime": 1719800000000,
+  "offlinePushInfo": {
+    "title": "OpenIM message",
+    "desc": "You have a new message",
+    "ex": "",
+    "iOSPushSound": "default",
+    "iOSBadgeCount": true,
+    "signalInfo": ""
+  },
+  "ex": ""
+}'
+```
+
+## Request body
+
+| Parameter | Required | Type | Description |
+| --- | --- | --- | --- |
+| sendID | Yes | string | Sender user ID, including a system notification account or ordinary user. |
+| recvID | One-to-one | string | Recipient user ID when `sessionType` is `1`. |
+| groupID | Group | string | Target group ID when `sessionType` is `3`. |
+| senderNickname | No | string | Sender nickname. |
+| senderFaceURL | No | string | Sender avatar URL. |
+| senderPlatformID | No | int | Sender platform. Administrative sending normally uses `10`; see [`PlatformID`](/platform-api/user/overview#platformid). |
+| content | Yes | object | Message payload determined by `contentType`. See [Message content types](/platform-api/message/message-content-types). |
+| contentType | Yes | int | Message content type. |
+| sessionType | Yes | int | Conversation type. See [`ConversationType`](/platform-api/conversation/overview#conversationtype). |
+| isOnlineOnly | No | boolean | When `true`, deliver online only and disable history, persistence, sender synchronization, and conversation updates. |
+| notOfflinePush | No | boolean | When `true`, do not trigger offline push. |
+| sendTime | No | int | Send time as a Unix timestamp in milliseconds. Use it to preserve time during migration. |
+| offlinePushInfo | No | object | Offline push title, description, extension data, iOS sound and badge behavior, and signaling data. |
+| ex | No | string | Message extension data. |
+
+For one-to-one chat, use `sessionType: 1` with `recvID`. For group chat, use `sessionType: 3` with `groupID`.
+
+## Response
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "serverMsgID": "server_msg_001",
+    "clientMsgID": "client_msg_001",
+    "sendTime": 1719800000000,
+    "modify": null
+  }
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| data.serverMsgID | string | Server message ID. |
+| data.clientMsgID | string | Client message ID. |
+| data.sendTime | int | Effective send time in Unix milliseconds. |
+| data.modify | object | Message data modified by a Webhook or server rule; may be `null`. |
+
+For migration, write messages in conversation order, preserve the original `sendTime`, and retain a source message ID in extension data for idempotency. Import users, groups, and relationships before messages.
+
+## Related pages
+
+- [Message content types](/platform-api/message/message-content-types)
+- [Batch send messages](/platform-api/message/sending-messages/batch-send-msg)
+- [Migrate to OpenIM](/platform-api/migration-to-openim)
+- [Error codes](/platform-api/error-codes)

@@ -672,6 +672,7 @@ if (!platformContext) {
 
 platformContext.nodes = reorderPlatformNodes(buildPlatformNavigationNodes(nextRoutes));
 platformContext.pageCount = nextRoutes.filter((route) => route.contextKey === contextKey).length;
+platformContext.sidebarExpansion = 'active-path';
 
 platformApiZh.generatedAt = today;
 for (const label of ['channel', 'migration', 'moderation']) {

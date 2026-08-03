@@ -1,40 +1,166 @@
 ---
 title: "Overview"
-description: "Overview for the OpenIM Platform API."
+description: "Overview of group creation, join requests, members, moderation, and profile management in the OpenIM Platform API."
 product: "platform-api"
 context: "chat/platform-api"
 template: "overview"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/group/overview"
 ---
 
-The group module lets backend services create and manage groups, members, join requests, ownership, moderation, and full data reads.
+The group module lets backend services create and manage group chats, including group profiles, members, join requests, ownership transfer, dismissal, and mute controls.
 
 ## Capability scope
 
 | Capability | Description |
-| --- | --- |
-| Group management | Create groups, update group profile data, dismiss groups, and transfer ownership. |
-| Join workflows | Apply to join groups and process group applications. |
-| Members | Invite, remove, query, and update group members. |
-| Moderation | Mute or unmute members and whole groups. |
-| Full reads | Read complete member IDs, joined group IDs, and unhandled application counts. |
+| ---- | ---- |
+| Group management | Create groups, update group profiles, dismiss groups, and transfer ownership. |
+| Group queries | Retrieve group profiles in batches and list groups joined by a user. |
+| Join workflows | Apply to join, process applications, and query requests by group, user, or direction. |
+| Member management | Invite, remove, or withdraw members; query member profiles and lists; and update member roles, nicknames, or extension data. |
+| Moderation | Mute or unmute individual members and entire groups. |
+| Application reminders and cleanup <span className="enterprise-field-badge">Enterprise</span> | Get or clear application badge counts and delete sent or received group application records. |
 
 ## Common APIs
 
 - [Create a group](/platform-api/group/managing-groups/create-group)
+- [Get group information](/platform-api/group/managing-groups/get-groups-info)
+- [Update group information](/platform-api/group/managing-groups/set-group-info-ex)
+- [List joined groups](/platform-api/group/group-membership/get-joined-group-list)
 - [Invite users to a group](/platform-api/group/group-members/invite-users-to-group)
-- [Get group members](/platform-api/group/group-members/get-group-member-list)
+- [List group members](/platform-api/group/group-members/get-group-member-list)
+- [Update group member information](/platform-api/group/group-members/set-group-member-info)
 - [Mute a group member](/platform-api/group/group-moderation/mute-group-member)
-- [Get unhandled application count](/platform-api/group/group-applications/get-group-application-unhandled-count)
+- [List received group applications](/platform-api/group/group-applications/list-received-group-applications)
+- [Get the group application badge count](/platform-api/group/group-applications/get-group-application-badge-count) <span className="enterprise-field-badge">Enterprise</span>
+
+## Resource representations
+
+### GroupInfo
+
+`GroupInfo` represents an OpenIM group.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| groupID | string | Group ID. Supply it when creating a group or let the server generate it. |
+| groupName | string | Group name. |
+| notification | string | Group announcement. |
+| introduction | string | Group introduction. |
+| faceURL | string | Group avatar URL. |
+| ownerUserID | string | Group owner user ID. |
+| creatorUserID | string | Group creator user ID. |
+| createTime | int64 | Creation time, normally a Unix timestamp in milliseconds. |
+| memberCount | int | Number of group members. |
+| status | int | Group status. See [`GroupStatus`](#groupstatus). |
+| groupType | int | Group type. See [`GroupType`](#grouptype). |
+| needVerification | int | Join verification policy. See [`GroupVerification`](#groupverification). |
+| lookMemberInfo | int | Whether members may view other member profiles. |
+| applyMemberFriend | int | Whether users may add friends from the member list. |
+| notificationUpdateTime | int64 | Last announcement update time. |
+| notificationUserID | string | User ID that last updated the announcement. |
+| ex | string | Group extension data. |
+| displayIsRead <span className="enterprise-field-badge">Enterprise</span> | boolean | Whether group message read status is displayed. The server may disable it for large groups. |
+| muteBypassUserIDs <span className="enterprise-field-badge">Enterprise</span> | string[] | Users allowed to send while the group is muted. |
+
+### GroupMemberInfo
+
+`GroupMemberInfo` represents a user's complete membership profile in a group.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| groupID | string | Group ID. |
+| userID | string | Member user ID. |
+| nickname | string | Member nickname. |
+| faceURL | string | Member avatar URL. |
+| appMangerLevel | int | Application management level. The field name matches the server response. |
+| roleLevel | int | Member role. See [`GroupMemberRole`](#groupmemberrole). |
+| joinTime | int64 | Time when the member joined. |
+| joinSource | int | How the member joined. See [`JoinSource`](#joinsource). |
+| operatorUserID | string | User that invited, imported, or approved the member. |
+| muteEndTime | int64 | Time when the member mute expires. |
+| inviterUserID | string | Inviter user ID. |
+| ex | string | Group member extension data. |
+
+### GroupRequestInfo
+
+`GroupRequestInfo` represents a join request with nested user and group profiles.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| userInfo | object | Applicant profile represented by [`PublicUserInfo`](/platform-api/user/overview#publicuserinfo). |
+| groupInfo | object | Group profile represented by [`GroupInfo`](#groupinfo). |
+| handleResult | int | Request result. See [`GroupRequestResult`](#grouprequestresult). |
+| reqMsg | string | Application message. |
+| handleMsg | string | Handling message. |
+| reqTime | int64 | Application time. |
+| handleUserID | string | User that handled the application. |
+| handleTime | int64 | Time when the application was handled. |
+| ex | string | Application extension data. |
+| joinSource | int | Join source. See [`JoinSource`](#joinsource). |
+| inviterUserID | string | Inviter user ID. |
+
+## Enums
+
+### GroupType
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `NormalGroup` | Normal group. |
+| 1 | `SuperGroup` | Super group. |
+| 2 | `WorkingGroup` | Working group. |
+
+### GroupStatus
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `GroupOk` | Active. |
+| 1 | `GroupBanChat` | Group chat is banned. |
+| 2 | `GroupStatusDismissed` | Group is dismissed. |
+| 3 | `GroupStatusMuted` | Group is muted. |
+| 4 | `GroupBanPrivateChat` | Private chat is prohibited. |
+
+### GroupMemberRole
+
+Ordinary member and administrator roles can be changed through member management APIs. Group ownership cannot be assigned through the normal member profile API.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 20 | `GroupOrdinaryUsers` | Ordinary member. |
+| 60 | `GroupAdmin` | Group administrator. |
+| 100 | `GroupOwner` | Group owner. |
+
+### GroupVerification
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `ApplyNeedVerificationInviteDirectly` | Applications require approval; invitations join directly. |
+| 1 | `AllNeedVerification` | All methods except owner or administrator invitations require approval. |
+| 2 | `Directly` | Join directly without approval. |
+
+### JoinSource
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 1 | `JoinByAdmin` | Added directly by an administrator. |
+| 2 | `JoinByInvitation` | Joined by invitation. |
+| 3 | `JoinBySearch` | Applied after searching for the group. |
+| 4 | `JoinByQRCode` | Joined through a QR code. |
+
+### GroupRequestResult
+
+| Value | Name | Description |
+| --- | --- | --- |
+| -1 | `GroupResponseRefuse` | Rejected. |
+| 0 | `Pending` | Pending. |
+| 1 | `GroupResponseAgree` | Accepted. |
 
 ## Integration advice
 
-Group operations affect multiple users, so log the operator, target group, member list, and `operationID`.
+Group operations often affect multiple users. Log the `operationID`, operator, target group, and member list in your backend.
 
-Restrict mute, kick, ownership transfer, and dismiss operations to audited backend workflows.
+Muting, removing members, transferring ownership, and dismissing groups are high-impact operations. Protect them with business authorization and audit workflows.
 
 ## Related pages
 

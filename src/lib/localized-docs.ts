@@ -184,13 +184,24 @@ function getManualLocalizedPage(path: string, locale: Locale): LocalizedDocPage 
 
   const route = getRouteRecord(path);
   const localizedRelativePath = route?.contentFile.replace(/^content\/docs\//, 'docs/');
-  const filePath = resolve(
+  const primaryFilePath = resolve(
     process.cwd(),
     'content',
     locale,
     localizedRelativePath ?? `${path.slice(1)}.mdx`,
   );
-  if (!existsSync(filePath)) {
+  const legacyPlatformFilePath = localizedRelativePath?.startsWith('docs/chat/platform-api/')
+    ? resolve(
+        process.cwd(),
+        'content',
+        locale,
+        localizedRelativePath.replace('docs/chat/platform-api/', 'docs/chat/platform-api/v3/'),
+      )
+    : undefined;
+  const filePath = [primaryFilePath, legacyPlatformFilePath]
+    .filter((candidate): candidate is string => Boolean(candidate))
+    .find(existsSync);
+  if (!filePath) {
     localizedPageCache.set(cacheKey, undefined);
     return undefined;
   }

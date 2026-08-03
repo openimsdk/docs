@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import rawRoutes from '@/src/generated/routes.json';
 import { CheckIcon, ChevronDownIcon, GithubIcon, GlobeIcon } from '@/src/components/ui/icons';
 import { SearchDialog } from '@/src/components/search/search-dialog';
 import { Logo } from '@/src/components/site/logo';
@@ -11,6 +12,11 @@ import { sdkPlatformSections } from '@/src/config/docs';
 import { siteConfig } from '@/src/config/site';
 import type { Locale } from '@/src/lib/i18n';
 import { localeFromPathname, stripLocaleFromPath, t, toLocalizedPath } from '@/src/lib/i18n';
+import type { RouteRecord } from '@/src/types/docs';
+
+const routeLocaleMap = new Map(
+  (rawRoutes as RouteRecord[]).map((route) => [route.path, route.locales]),
+);
 
 const languageItems: {
   code: string;
@@ -224,7 +230,7 @@ function LanguageSwitcher({
             <Link
               aria-current={activeLocale ? 'page' : undefined}
               className={activeLocale ? 'is-active' : ''}
-              href={toLocalizedPath(plainPathname, item.locale)}
+              href={getLanguageHref(plainPathname, item.locale)}
               key={item.locale}
               onClick={closeMenu}
             >
@@ -240,6 +246,21 @@ function LanguageSwitcher({
       </div>
     </details>
   );
+}
+
+function getLanguageHref(pathname: string, locale: Locale): string {
+  const supportedLocales = routeLocaleMap.get(pathname);
+  if (!supportedLocales || supportedLocales.includes(locale)) {
+    return toLocalizedPath(pathname, locale);
+  }
+
+  if (pathname.startsWith('/platform-api/')) {
+    return toLocalizedPath('/platform-api/overview', locale);
+  }
+  if (pathname.startsWith('/sdk/')) {
+    return toLocalizedPath('/sdk', locale);
+  }
+  return toLocalizedPath('/docs/guides', locale);
 }
 
 function active(pathname: string, prefix: string, exact = false): string {

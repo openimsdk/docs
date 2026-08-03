@@ -1,0 +1,86 @@
+## 环境准备
+
+服务器硬件、软件、操作系统和依赖组件要求，请先阅读[环境与组件](./components)。
+
+## 部署 OpenIMServer
+
+### 克隆仓库并固定版本
+
+建议使用 GitHub Releases 页面绿色 **Latest** 对应的最新正式发布 tag，不要直接按 tag 名称排序，也不要使用 alpha、beta、rc 等预发布版本。
+
+```bash
+git clone https://github.com/openimsdk/openim-docker && cd openim-docker
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/openim-docker/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+echo "using openim-docker stable release tag: $LATEST_STABLE_TAG"
+```
+
+> `main` 是开发分支，生产环境不要直接使用 `main`。
+
+### 配置对象存储外网地址
+
+修改 `.env`，将 MinIO 外网地址配置为服务端可供客户端访问的地址：
+
+```dotenv
+MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
+```
+
+### 启动和停止服务
+
+启动服务：
+
+```bash
+docker compose up -d
+```
+
+首次执行会拉取较大的镜像。启动完成后建议等待 `30-60s`，再执行健康检查或接口验证。
+
+本文默认在干净环境下启动。如果机器上已经存在 `mongo`、`redis`、`kafka`、`etcd`、`minio`、`openim-server`、`openim-chat` 等同名容器，`docker compose up -d` 会因 `container_name` 冲突而失败。请先处理同名容器，或复用现有组件并相应调整配置。
+
+如果启动时提示 `ETCD_USERNAME`、`ETCD_PASSWORD`、`KAFKA_USERNAME`、`KAFKA_PASSWORD` 未设置，而你没有启用这些组件的鉴权，通常可以忽略。
+
+停止服务：
+
+```bash
+docker compose down
+```
+
+查看 OpenIMServer 和 ChatServer 日志：
+
+```bash
+docker compose logs -f openim-server openim-chat
+```
+
+### 启动监控与告警（可选）
+
+如需同时启动 Prometheus、Alertmanager、Grafana 和 node-exporter，执行：
+
+```bash
+docker compose --profile m up -d
+```
+
+默认端口以当前 `.env` 为准，常用值如下：
+
+| 端口    | 组件          |
+| ------- | ------------- |
+| `19090` | Prometheus    |
+| `19093` | Alertmanager  |
+| `13000` | Grafana       |
+| `19100` | node-exporter |
+
+## 验证部署
+
+完成启动后，按照[部署验证](./verification)检查 OpenIMServer、ChatServer、API、WebSocket 和可选前端。
+
+## 常见问题
+
+### 容器持续 unhealthy
+
+1. 执行 `docker exec -it openim-server mage check` 与 `docker exec -it openim-chat mage check`，确认异常是否持续超过一分钟。
+2. 执行 `docker compose logs -f openim-server openim-chat` 查看日志。
+3. 如果 `openim-chat` 在启动初期短暂报告 `connect: connection refused`，先等待 `30-60s` 后复查。这通常是 `openim-server` 尚未完全就绪造成的启动时序现象。
+
+### 配置修改没有生效
+
+进入容器直接修改 `config` 目录不会持久生效。应通过环境变量修改配置，参考 [openim-docker 环境变量说明](https://github.com/openimsdk/openim-docker/issues/136)。

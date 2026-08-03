@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-06"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/user/listing-users/check-user-accounts"
 ---
 
-Check user accounts is an OpenIM user REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **Check user accounts** to determine whether a batch of user IDs is registered with OpenIM. This is useful before bulk imports, conversation creation, or message delivery.
 
 ## HTTP request
 
@@ -48,7 +48,7 @@ curl --request POST "${API_ADDRESS}/user/account_check" \
 
 | Parameter | Required | Type | Description |
 | --- | --- | --- | --- |
-| checkUserIDs | Yes | array | The check user ids value. |
+| checkUserIDs | Yes | array | User IDs to check. The array must not be empty or contain duplicate IDs. |
 
 ## Response
 
@@ -82,7 +82,14 @@ OpenIM usually returns `200 OK` when the request reaches the service. Use `errCo
 | errMsg | string | Short error message. |
 | errDlt | string | Detailed error information for troubleshooting. |
 | data | object | Endpoint-specific response data. |
-| results | array | The results value. |
+| data.results | array | One account check result for each requested user ID. |
+
+#### `data.results[]` fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| userID | string | The user ID that was checked. |
+| accountStatus | int | Registration state. `1` means registered and `0` means not registered. |
 
 ### Error response
 
@@ -104,12 +111,11 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- Remove duplicate IDs before sending the request.
+- An unregistered result is not a request error; inspect `accountStatus` for each user.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [user overview](/platform-api/user/overview)
+- [User overview](/platform-api/user/overview)
 - [Error codes](/platform-api/error-codes)

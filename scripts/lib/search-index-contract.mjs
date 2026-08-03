@@ -17,8 +17,12 @@ export function validateSearchIndexPaths({
     const expected = new Set(
       routes
         .filter((route) => {
-          if (!clientSdkContexts.has(route.contextKey)) return true;
-          if (!managedClientSdkContexts.has(route.contextKey)) return true;
+          if (!clientSdkContexts.has(route.contextKey)) {
+            return !route.locales || route.locales.includes(locale);
+          }
+          if (!managedClientSdkContexts.has(route.contextKey)) {
+            return !route.locales || route.locales.includes(locale);
+          }
           if (clientSdkActivePaths && !clientSdkActivePaths.has(route.path)) return false;
           return auditPages.get(route.path)?.locales?.[locale]?.reviewStatus === 'published';
         })

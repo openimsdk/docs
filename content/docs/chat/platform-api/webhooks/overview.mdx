@@ -1,0 +1,86 @@
+---
+title: "Overview"
+description: "OpenIM Webhooks overview, including delivery behavior, configuration, protocol, and callback coverage."
+product: "platform-api"
+context: "chat/platform-api/v3"
+template: "overview"
+status: "published"
+version: "v3"
+---
+
+Webhooks let OpenIM notify a business backend over HTTP or HTTPS before or after an operation. Before-event callbacks can validate, reject, or adjust an operation. After-event callbacks synchronize completed user, relationship, group, message, presence, and conversation changes.
+
+## Delivery model
+| Type | Invocation | Typical use | Effect on OpenIM |
+| --- | --- | --- | --- |
+| Before-event | Synchronous | Moderation, authorization, field changes, risk controls | OpenIM waits for the response and uses `failedContinue`, `actionCode`, and `nextCode` to continue or stop. |
+| After-event | Asynchronous | Synchronization, auditing, analytics, notifications | The operation has completed; the response cannot change its result. |
+
+Before-event handlers are on the OpenIM request path and must remain low latency and highly available. After-event delivery can still be affected by network, process, or queue failures, so it must not be the only persistence mechanism for financial or similarly critical events.
+
+## Configure Webhooks
+Configure a common URL and enable callbacks in `config/webhooks.yml`:
+
+```yaml
+url: https://api.example.com/openim/webhooks
+beforeSendSingleMsg:
+  enable: true
+  timeout: 5
+  failedContinue: false
+  deniedTypes: []
+afterUserRegister:
+  enable: true
+  timeout: 5
+```
+
+| Setting | Description |
+| --- | --- |
+| url | Base receiver URL. OpenIM appends the `callbackCommand`. |
+| enable | Enables the callback. |
+| timeout | Receiver timeout in seconds. |
+| failedContinue | Whether a before-event operation continues after receiver failure or timeout. |
+| attentionIds | User or group IDs observed by an after-event callback. |
+| allowedTypes | Message content types allowed to trigger the callback. |
+| deniedTypes | Message content types excluded from the callback. |
+| insecureSkipVerify <span className="enterprise-field-badge">Enterprise</span> | Skips HTTPS certificate verification. Use only in controlled tests. |
+| signature.algorithm <span className="enterprise-field-badge">Enterprise</span> | `HMAC-SHA1`, `HMAC-SHA256`, `HMAC-SHA512`, `RSA-SHA256`, or `ECDSA-SHA256`. |
+| signature.signatureHeader <span className="enterprise-field-badge">Enterprise</span> | Header carrying the signature. |
+| signature.nonceHeader <span className="enterprise-field-badge">Enterprise</span> | Header carrying the signed nonce. |
+| signature.secret <span className="enterprise-field-badge">Enterprise</span> | HMAC secret or asymmetric private key. |
+
+The current Enterprise signature covers the nonce header, not the full body. Always use HTTPS and validate signature, nonce freshness, and replay state.
+
+## Request and response protocol
+OpenIM sends JSON with `POST` to `{WEBHOOK_ADDRESS}/{callbackCommand}` and supplies `operationID` as a request header. Dispatch by `callbackCommand`, not arrival order, and make handlers idempotent using the event's business key, message ID, or `operationID`.
+
+Before-event responses use:
+
+```json
+{"actionCode":0,"errCode":0,"errMsg":"","errDlt":"","nextCode":0}
+```
+
+### CallbackAction
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `ActionAllow` | Use `nextCode` to continue or stop. This is the value required by the current common response parser. |
+| 1 | `ActionForbidden` | Reserved. To reject, return `actionCode: 0`, `nextCode: 1`, and a business error. |
+
+### CallbackNextCode
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `Continue` | Continue the OpenIM operation. |
+| 1 | `Stop` | Stop the operation using `errCode`, `errMsg`, and `errDlt`. |
+
+## Callback coverage
+- **Users:** registration and profile updates.
+- **Relationships:** friend requests, acceptance, deletion, remarks, blacklist changes, and imports.
+- **Groups:** creation, joining, leaving, dismissal, ownership, and group/member profile updates.
+- **Messages:** one-to-one and group sends, final message modification, read status, and revocation.
+- **Push and presence:** online/offline push targeting and user online, offline, or forced-logout state.
+- **Conversations:** creation callbacks are available in OpenIM Enterprise.
+
+## Integration guidance
+- Host receivers on a stable backend, never on a client.
+- Define strict before-event timeouts and an explicit `failedContinue` policy.
+- Acknowledge after-event callbacks quickly, then enqueue expensive work.
+- Restrict source addresses, rate, and body size at the gateway, and use HTTPS.

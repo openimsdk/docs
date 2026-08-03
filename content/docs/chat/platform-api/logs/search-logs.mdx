@@ -1,0 +1,86 @@
+---
+title: "Search log records"
+description: "Search registered client log records by keyword, time range, and pagination."
+product: "platform-api"
+context: "chat/platform-api"
+template: "api"
+status: "published"
+lastUpdated: "2026-08-03"
+version: "v3"
+sourcePath: "/platform-api/logs/search-logs"
+---
+
+Use this endpoint to search client log records registered by your application. It supports administration, customer support, and issue investigation workflows; it does not search OpenIM server runtime logs.
+
+## HTTP request
+
+```bash
+POST {API_ADDRESS}/third/logs/search
+```
+
+### Request example
+
+```bash
+curl --request POST "${API_ADDRESS}/third/logs/search" \
+  --header "Content-Type: application/json; charset=utf-8" \
+  --header "operationID: ${OPERATION_ID}" \
+  --header "token: ${ADMIN_TOKEN}" \
+  --data-raw '{
+  "keyword": "user_001",
+  "startTime": 1719800000000,
+  "endTime": 1719886400000,
+  "pagination": {"pageNumber": 1, "showNumber": 20}
+}'
+```
+
+## Request body
+
+| Parameter | Required | Type | Description |
+| --- | --- | --- | --- |
+| keyword | No | string | Keyword matched against searchable log record fields. |
+| startTime | No | int | Start of the time range as a Unix timestamp in milliseconds. When both time values are `0`, the server uses its default range. |
+| endTime | No | int | End of the time range as a Unix timestamp in milliseconds. |
+| pagination | Yes | object | Pagination settings. |
+| pagination.pageNumber | Yes | int | Page number, starting at `1`. |
+| pagination.showNumber | Yes | int | Positive number of records per page. |
+
+## Response
+
+```json
+{
+  "errCode": 0,
+  "errMsg": "",
+  "errDlt": "",
+  "data": {
+    "logsInfos": [{
+      "userID": "user_001",
+      "platform": "Android",
+      "url": "https://example.com/logs/openim.log",
+      "createTime": 1719800000000,
+      "nickname": "Tom",
+      "logID": "1234567890",
+      "filename": "openim.log",
+      "systemType": "",
+      "ex": "",
+      "version": "1.0.0"
+    }],
+    "total": 1
+  }
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| data.logsInfos | array | Matching client log records. |
+| data.logsInfos[].logID | string | Log record ID used for deletion. |
+| data.logsInfos[].url | string | Registered log file URL. |
+| data.logsInfos[].createTime | int | Record creation time in Unix milliseconds. |
+| data.total | int | Total matching records. |
+
+This is a read-only operation. `startTime` must not be later than `endTime`. See [Error codes](/platform-api/error-codes) for error handling.
+
+## Related pages
+
+- [Logs overview](/platform-api/logs/overview)
+- [Upload log records](/platform-api/logs/upload-logs)
+- [Delete log records](/platform-api/logs/delete-logs)

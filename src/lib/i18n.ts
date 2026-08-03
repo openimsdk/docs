@@ -49,7 +49,7 @@ export const i18nText = {
       copyMarkdownHint: 'Copy this page source',
       editPage: 'Edit page',
       scaffold: 'Scaffold',
-      commercialBadge: 'Commercial',
+      commercialBadge: 'Enterprise',
     },
     chrome: {
       docs: 'Docs',

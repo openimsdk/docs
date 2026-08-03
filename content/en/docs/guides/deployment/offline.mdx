@@ -1,0 +1,138 @@
+The air-gapped deployment flow is to run `mage export` on an internet-connected build machine, then copy the exported deployment packages to the target machine on the private network.
+
+## Version and overall process
+
+`main` is the development branch for unreleased continuous-integration changes. For an air-gapped production environment, use the latest official release marked **Latest** on GitHub Releases, or a stable tag explicitly verified by your team.
+
+1. Check out stable OpenIMServer and ChatServer releases on an internet-connected build machine.
+2. Run `mage export` to produce archives that can be transferred into the private network.
+3. Copy the archives, configuration, and external component packages to the target machine.
+4. Extract the archives and use the bundled `./mage` executable to start and check the services.
+
+## Prepare external components
+
+The OpenIMServer and ChatServer exports contain only the application services. Prepare MongoDB, Redis, Kafka, Etcd, and MinIO separately.
+
+### The target machine uses Docker
+
+On an internet-connected machine, download Docker offline packages matching the target operating system and architecture:
+
+- Debian / Ubuntu: `.deb` packages for `docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-buildx-plugin`, and `docker-compose-plugin`.
+- RHEL / CentOS: the corresponding `.rpm` packages.
+
+After installation, use `docker load` to import the external component images saved in advance.
+
+### The target machine does not use Docker
+
+Copy official MongoDB, Redis, Kafka, Etcd, and MinIO binaries or internal artifacts to the target, then run them with systemd, supervisor, or internal scripts. OpenIMServer and ChatServer only require correct component addresses and credentials; Docker is not required on the target.
+
+## Export OpenIMServer on the build machine
+
+```bash
+git clone https://github.com/openimsdk/open-im-server && cd open-im-server
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/open-im-server/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+
+bash bootstrap.sh
+PLATFORMS="linux_amd64" mage export
+```
+
+The archive is written to `_output/export/` by default, with a name such as:
+
+```text
+exported_open-im-server_v3.8.3-patch.12_linux_amd64.tar.gz
+```
+
+## Export ChatServer on the build machine
+
+```bash
+git clone https://github.com/openimsdk/chat && cd chat
+git fetch --tags
+LATEST_STABLE_TAG=$(basename "$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/openimsdk/chat/releases/latest)")
+git checkout "$LATEST_STABLE_TAG"
+
+bash bootstrap.sh
+PLATFORMS="linux_amd64" mage export
+```
+
+The filename is similar to:
+
+```text
+exported_chat_v1.8.4-patch.3_linux_amd64.tar.gz
+```
+
+The export contains compiled binaries, `start-config.yml`, runtime configuration, and a Mage launcher that runs on the target. The target does not need Go and does not rebuild the source.
+
+## Copy deployment materials
+
+Copy the OpenIMServer archive, ChatServer archive, external component images or binaries, and the actual configuration, including domains, component addresses, `secret` values, and the MinIO `externalAddress`.
+
+## Deploy external components on the target
+
+With Docker, import each image and start it using the prepared orchestration files:
+
+```bash
+docker load -i image-name.tar
+```
+
+Without Docker, start MongoDB, Redis, Kafka, Etcd, and MinIO in order, then enter their addresses and credentials in the OpenIMServer and ChatServer configuration.
+
+## Start OpenIMServer
+
+```bash
+mkdir -p /opt/openim/open-im-server
+tar -xzf exported_open-im-server_v*.tar.gz -C /opt/openim/open-im-server
+cd /opt/openim/open-im-server
+```
+
+After configuring external components, `secret`, and the MinIO `externalAddress`, start the service:
+
+```bash
+./mage check
+./mage start
+./mage check
+```
+
+## Start ChatServer
+
+```bash
+mkdir -p /opt/openim/chat
+tar -xzf exported_chat_v*.tar.gz -C /opt/openim/chat
+cd /opt/openim/chat
+```
+
+After configuring Redis, MongoDB, Etcd, and the OpenIMServer `secret`, start it:
+
+```bash
+./mage check
+./mage start
+./mage check
+```
+
+## Common operations
+
+For OpenIMServer:
+
+```bash
+cd /opt/openim/open-im-server
+./mage check
+./mage stop
+./mage start
+```
+
+For ChatServer:
+
+```bash
+cd /opt/openim/chat
+./mage check
+./mage stop
+./mage start
+```
+
+## Notes
+
+1. Do not build air-gapped production packages from `main`.
+2. Use the bundled `./mage` on the target instead of repeating the source-build process.
+3. When build and target architectures differ, set `PLATFORMS` to the target, for example `linux_amd64` or `linux_arm64`.
+4. Whether dependencies use Docker or native binaries, their addresses and credentials must match the OpenIMServer and ChatServer configuration.

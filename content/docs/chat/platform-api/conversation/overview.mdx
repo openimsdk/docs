@@ -1,39 +1,131 @@
 ---
 title: "Overview"
-description: "Overview for the OpenIM Platform API."
+description: "Overview of conversation reads, batch updates, and Enterprise conversation groups in the OpenIM Platform API."
 product: "platform-api"
 context: "chat/platform-api"
 template: "overview"
 status: "published"
-lastUpdated: "2026-07-07"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/conversation/overview"
 ---
 
-The conversation module lets backend services inspect and maintain user conversation data, including pinned, muted, and offline-push state.
+The conversation module lets backend services read and maintain user conversation data, including sorted lists, individual records, batch reads, paginated owner reads, and batch updates.
 
 ## Capability scope
 
 | Capability | Description |
-| --- | --- |
-| Conversation reads | Get sorted, all, single, or batch conversation records. |
+| ---- | ---- |
+| Conversation reads | Get sorted conversations, one conversation, multiple conversations, or a user's conversations by page. |
 | Conversation settings | Set conversation attributes and extension data in batches. |
-| Offline push | Read users associated with conversation offline push. |
-| Full sync | Read all conversation IDs for a user. |
-| State filters | Read pinned and do-not-notify conversation IDs. |
+| Conversation groups <span className="enterprise-field-badge">Enterprise</span> | Create, update, delete, and list user conversation groups, maintain group order, and manage conversations within groups. |
 
 ## Common APIs
 
 - [Get sorted conversations](/platform-api/conversation/listing-conversations/get-sorted-conversation-list)
-- [Get all conversations](/platform-api/conversation/listing-conversations/get-all-conversations)
-- [Set conversations](/platform-api/conversation/managing-conversations/set-conversations)
-- [Get pinned conversation IDs](/platform-api/conversation/conversation-state/get-pinned-conversation-ids)
+- [Get a conversation](/platform-api/conversation/listing-conversations/get-conversation)
+- [Get conversations in batches](/platform-api/conversation/listing-conversations/get-conversations)
+- [Get a user's conversations](/platform-api/conversation/listing-conversations/get-owner-conversation)
+- [Set conversations in batches](/platform-api/conversation/managing-conversations/set-conversations)
+- [List conversation groups](/platform-api/conversation/conversation-groups/list-conversation-groups) <span className="enterprise-field-badge">Enterprise</span>
+- [Create a conversation group](/platform-api/conversation/conversation-groups/create-conversation-group) <span className="enterprise-field-badge">Enterprise</span>
+- [Add conversations to groups](/platform-api/conversation/conversation-groups/add-conversations-to-groups) <span className="enterprise-field-badge">Enterprise</span>
+
+## Resource representations
+
+### ConversationInfo
+
+`ConversationInfo` represents a conversation as stored for one user.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| ownerUserID | string | User ID that owns the conversation record. |
+| conversationID | string | Conversation ID. |
+| conversationType | int | Conversation type. See [`ConversationType`](#conversationtype). |
+| userID | string | Peer user ID for a one-to-one conversation. |
+| groupID | string | Group ID for a group conversation. |
+| recvMsgOpt | int | Message receiving option. See [`RecvMsgOpt`](#recvmsgopt). |
+| isPinned | boolean | Whether the conversation is pinned. |
+| attachedInfo | string | Attached conversation data. |
+| isPrivateChat | boolean | Whether private chat behavior is enabled. |
+| groupAtType | int | Group mention state. See [`GroupAtType`](#groupattype). |
+| ex | string | Conversation extension data. |
+| burnDuration | int | Burn-after-reading duration. |
+| minSeq | int64 | Minimum message sequence for this user's conversation. |
+| maxSeq | int64 | Maximum message sequence for this user's conversation. |
+| msgDestructTime | int64 | Message destruction time. |
+| latestMsgDestructTime | int64 | Latest message destruction time. |
+| isMsgDestruct | boolean | Whether message destruction is enabled. |
+| isMarked <span className="enterprise-field-badge">Enterprise</span> | boolean | Whether the conversation is marked. |
+| remark <span className="enterprise-field-badge">Enterprise</span> | string | User-defined conversation remark. |
+
+### ConversationGroup
+
+`ConversationGroup` represents an Enterprise user conversation group.
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| conversationGroupID | string | Conversation group ID. |
+| ownerUserID | string | User ID that owns the group. |
+| name | string | Group name. |
+| order | int64 | Display order. |
+| version | int64 | Group version. |
+| ex | string | Business extension data. |
+| conversationIDs | string[] | Conversation IDs in the group. |
+| hidden | boolean | Whether the group is hidden. |
+| conversationGroupType | int | Group type. See [`ConversationGroupType`](#conversationgrouptype). |
+| createTime | int64 | Creation time as a Unix timestamp in milliseconds. |
+
+### ConversationGroupOrder
+
+| Field | Type | Description |
+| ---- | ---- | ---- |
+| conversationGroupID | string | Conversation group ID. |
+| order | int64 | Target display order. |
+
+## Enums
+
+### ConversationType
+
+Message and Webhook `sessionType` fields use the same values.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 1 | `SingleChatType` | One-to-one chat. |
+| 2 | `WriteGroupChatType` | Write-group chat; direct use is not currently recommended. |
+| 3 | `ReadGroupChatType` | Group chat. |
+| 4 | `NotificationChatType` | Notification conversation. |
+
+### RecvMsgOpt
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `ReceiveMessage` | Receive messages. |
+| 1 | `NotReceiveMessage` | Do not receive messages. |
+| 2 | `ReceiveNotNotifyMessage` | Receive messages without notifications. |
+
+### GroupAtType
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `AtNormal` | No mention. |
+| 1 | `AtMe` | Current user mentioned. |
+| 2 | `AtAll` | All members mentioned. |
+| 3 | `AtAllAtMe` | Both all members and the current user mentioned. |
+| 4 | `GroupNotification` | Group notification. |
+
+### ConversationGroupType
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | `Normal` | Normal conversation group. |
+| 1 | `Filter` | Filter group. |
 
 ## Integration advice
 
-Use conversation APIs for admin tooling, data repair, and synchronization support rather than direct client calls.
+Use conversation APIs for administration, data repair, and multi-device synchronization support. Do not expose management endpoints directly to clients.
 
-Validate ownership before batch updates to avoid changing another user's conversation state.
+Before a batch update, verify that each conversation belongs to the target user so that another user's state is not modified.
 
 ## Related pages
 

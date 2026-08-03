@@ -1,0 +1,90 @@
+## Deploy the server
+
+Complete either [Docker Compose deployment](./docker-compose) or [Source deployment](./source).
+
+## Open ports
+
+Follow [Ports and network](./network) to allow only the ports required for your domain and TLS configuration.
+
+## Verify PC Web
+
+Open `http://your_server_ip:11001` in a browser, where `your_server_ip` is the address of the server hosting the frontend.
+
+![PC Web interface](/assets/guides/gettingStarted/assets/pc-web.png)
+
+If you do not have a test account, select the registration action on the login page, complete registration, and return to sign in. With the default configuration, verification code `666666` is available from `verifyCode.superCode` in `chat/config/chat-rpc-chat.yml`. If self-registration is disabled or the configuration was changed, use an actual test account and code.
+
+Skip this step when only the server was deployed without a frontend.
+
+## Verify service processes
+
+For Docker Compose:
+
+```bash
+docker ps | grep -E 'openim-server|openim-chat'
+```
+
+Containers may initially report `health: starting`. Wait `20-30s` and confirm they become `healthy` before testing APIs.
+
+For source deployments:
+
+```bash
+# Run in open-im-server
+mage check
+
+# Run in chat
+mage check
+```
+
+## Verify domains and gateways
+
+With a domain and TLS, call real endpoints to confirm the OpenIMServer and ChatServer routes:
+
+```bash
+curl -sS -X POST "https://your_domain/api/auth/get_admin_token" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-openim" \
+  -d '{"secret":"your_openim_secret","userID":"imAdmin"}'
+```
+
+```bash
+curl -sS -X POST "https://your_domain/chat/application/latest_version" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-chat" \
+  -d '{}'
+```
+
+A JSON response containing a business error usually still proves that the reverse-proxy path is connected.
+
+Test the WebSocket gateway with any WebSocket client:
+
+```text
+wss://your_domain/msg_gateway
+```
+
+In production, route traffic through port `443` and initialize OpenIMClientSDK with:
+
+```text
+apiAddr: https://your_domain/api
+wsAddr: wss://your_domain/msg_gateway
+```
+
+## Verify a deployment without a domain
+
+Use the server IP and default ports:
+
+```bash
+curl -sS -X POST "http://your_server_ip:10002/auth/get_admin_token" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-openim-local" \
+  -d '{"secret":"your_openim_secret","userID":"imAdmin"}'
+```
+
+```bash
+curl -sS -X POST "http://your_server_ip:10008/application/latest_version" \
+  -H "Content-Type: application/json" \
+  -H "operationID: verify-chat-local" \
+  -d '{}'
+```
+
+ChatServer POST endpoints also require the `operationID` header; omitting it returns a parameter error.

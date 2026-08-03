@@ -5,12 +5,12 @@ product: "platform-api"
 context: "chat/platform-api"
 template: "api"
 status: "published"
-lastUpdated: "2026-07-06"
+lastUpdated: "2026-08-03"
 version: "v3"
 sourcePath: "/platform-api/user/presence/get-users-online-status"
 ---
 
-Get users' online status is an OpenIM user REST API for trusted backend services. Configure the API address and administrator token in [Prepare to use the API](/platform-api/prepare-to-use-api) before calling management endpoints.
+Use **Get users' online status** to retrieve current connection state across all message gateways. Offline users remain in the response with `status: 0`.
 
 ## HTTP request
 
@@ -88,7 +88,19 @@ OpenIM usually returns `200 OK` when the request reaches the service. Use `errCo
 | errCode | int | Business error code. `0` means success. |
 | errMsg | string | Short error message. |
 | errDlt | string | Detailed error information for troubleshooting. |
-| data | array | Endpoint-specific response data. |
+| data | array | Online-state results for all requested users. |
+
+#### `data[]` fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| userID | string | User ID. |
+| status | int | Online state. See [`OnlineStatus`](/platform-api/user/overview#onlinestatus). |
+| detailPlatformStatus | array | Active platform connection details; empty when the user is offline. |
+| detailPlatformStatus[].platformID | int | Connected platform. See [`PlatformID`](/platform-api/user/overview#platformid). |
+| detailPlatformStatus[].connID | string | Gateway connection ID. |
+| detailPlatformStatus[].isBackground | bool | Whether the connection is currently in the background. |
+| detailPlatformStatus[].token | string | User token used by the connection. Treat this value as sensitive. |
 
 ### Error response
 
@@ -110,12 +122,12 @@ When a request fails, OpenIM returns the same error envelope. See [Error codes](
 
 ## Permissions and limits
 
-- Call this endpoint from a trusted backend service.
-- Log `operationID`, the endpoint path, and the response error fields for troubleshooting.
-- Treat write operations as state-changing. If a retry follows an uncertain failure, check the resource state first.
+- This endpoint requires an application administrator token.
+- An offline state does not mean that the user account is missing.
+- Use the result for backend operations, risk controls, or service scheduling rather than exposing connection tokens to clients.
 
 ## Related pages
 
 - [Prepare to use the API](/platform-api/prepare-to-use-api)
-- [user overview](/platform-api/user/overview)
+- [User overview](/platform-api/user/overview)
 - [Error codes](/platform-api/error-codes)
