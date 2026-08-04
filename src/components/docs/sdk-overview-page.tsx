@@ -419,7 +419,10 @@ function FeatureCardView({ item, locale }: { item: FeatureCard; locale: Locale }
 
 function ResourceLinkView({ item, locale }: { item: ResourceLink; locale: Locale }) {
   return (
-    <Link className="sdk-overview-resource-link" href={toLocalizedPath(item.href, locale)}>
+    <Link
+      className="sdk-overview-resource-link is-without-icon"
+      href={toLocalizedPath(item.href, locale)}
+    >
       <span>
         <strong>{item.title}</strong>
         <small>{item.description}</small>

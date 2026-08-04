@@ -5,8 +5,8 @@ export default function NotFound() {
     <main className="not-found-page">
       <span>404</span>
       <h1>This documentation page does not exist.</h1>
-      <p>The requested route is not part of the imported OpenIM documentation structure.</p>
-      <Link href="/">Return to OpenIM docs</Link>
+      <p>The requested route is not part of the OpenIMSDK documentation structure.</p>
+      <Link href="/">Return to OpenIMSDK docs</Link>
     </main>
   );
 }

@@ -8,9 +8,9 @@ import { toLocalizedPath } from '@/src/lib/i18n';
 import { source } from '@/src/lib/source';
 
 const zhHomeMetadata = {
-  title: 'OpenIM 文档',
+  title: 'OpenIMSDK 文档',
   description:
-    'OpenIM 中文文档入口，包含客户端 SDK、Platform API、示例应用、核心接入流程和功能特性。',
+    'OpenIMSDK 中文文档入口，包含 OpenIMClientSDK、OpenIMServer、ChatServer、Platform API、示例应用和核心接入流程。',
 };
 
 export async function generateHomeMetadata(locale: Locale): Promise<Metadata> {

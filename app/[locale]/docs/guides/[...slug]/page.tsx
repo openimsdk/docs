@@ -10,7 +10,7 @@ type PageProps = {
 
 export const metadata: Metadata = {
   title: '指南',
-  description: 'OpenIM 产品、部署和运维指南。',
+  description: 'OpenIMSDK 产品、部署和运维指南。',
 };
 
 export default async function LocalizedGuidesSubRoute({ params }: PageProps) {

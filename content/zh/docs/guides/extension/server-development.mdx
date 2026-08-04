@@ -1,0 +1,488 @@
+## 扩展 OpenIMSDK
+
+- 开发 OpenIMSDK 新能力前，先确认需求属于业务扩展还是 IM 核心逻辑。
+- OpenIMSDK 已经对大部分即时通讯能力做了完整抽象，不建议直接修改核心实现。
+- 确实需要扩展 IM 核心能力时，可以参考本页流程实现，并向对应仓库提交 PR，以便后续持续维护。
+
+# OpenIMServer
+
+> OpenIMServer 的长连接接口负责消息实时链路，入口位于 `/internal/msggateway`；短连接接口负责 REST API 业务逻辑，入口位于 `/internal/api/`。
+>
+> 以下以新增 `AddFriendCategory` 为例，说明如何依次修改 API、RPC 和 Storage 层。
+
+## 开发前提
+
+- 准备开发环境：
+  - Go 版本建议不低于 1.22，参见 [Go 官方文档](https://golang.org/doc/install)。
+  - `protoc-gen-go` 建议不低于 1.36.1，`protoc-gen-go-grpc` 建议不低于 1.5.1，参见 [gRPC 官方文档](https://grpc.io/docs/languages/go/quickstart/)。
+  - `protoc` 建议不低于 5.29.2，并确保其二进制文件位于 `PATH` 中，参见 [Protocol Buffers 文档](https://protobuf.dev/downloads/)。
+- Fork OpenIMServer 依赖的协议仓库：
+  - 官方仓库：[github.com/openimsdk/protocol](https://github.com/openimsdk/protocol)
+
+OpenIMServer 通过 `github.com/openimsdk/protocol` 依赖 protobuf 协议。需要修改协议时，先 Fork 该仓库并添加新定义，再在 OpenIMServer 的 `go.mod` 中指向你的 Fork：
+
+```go
+replace github.com/openimsdk/protocol => github.com/<your-username>/protocol
+```
+
+## 添加并生成 Protobuf 协议
+
+### 编写 Proto 文件
+
+以下示例在 Friend 模块的 `relation/relation.proto` 中添加 `AddFriendCategory`：
+
+```proto
+syntax = "proto3";
+
+package openim.relation;
+
+option go_package = "github.com/openimsdk/protocol/relation";
+
+message AddFriendCategoryReq {
+  string ownerUserID = 1;
+  string friendUserID = 2;
+  int32 category = 3;
+}
+
+message AddFriendCategoryResp {
+}
+
+service Friend {
+  rpc AddFriendCategory(AddFriendCategoryReq) returns (AddFriendCategoryResp);
+}
+```
+
+该定义包含请求参数、空响应和新增的 RPC 方法。
+
+### 生成 Go 代码
+
+1. 安装 Mage。OpenIMServer 使用 Mage 统一执行开发命令，减少跨平台脚本差异：
+
+   ```bash
+   go install github.com/magefile/mage@latest
+   ```
+
+2. 在协议仓库运行 `mage InstallDepend` 安装依赖。
+3. 修改 Proto 文件后运行 `mage GenGo` 生成 Go 代码。
+4. 其他说明参见[使用 Mage 生成 PB 文件](https://github.com/openimsdk/protocol/blob/main/mage-README.md)。
+
+### 添加参数校验
+
+OpenIMServer 不通过 Proto Tag 和反射插件生成参数校验，而是在生成的 PB 目录中增加 Go 文件，并为请求对象实现 `Check` 方法。例如：
+
+```go
+func (x *AddFriendCategoryReq) Check() error {
+  if x.OwnerUserID == "" {
+    return errors.New("OwnerUserID is empty")
+  }
+  if x.FriendUserID == "" {
+    return errors.New("FriendUserID is empty")
+  }
+  if x.Category == 0 {
+    return errors.New("Category is empty")
+  }
+  return nil
+}
+```
+
+## 添加 API
+
+### 定义路由
+
+路由位于 `/internal/api/router.go`。在 `newGinRouter` 中将新接口加入 Friend 路由组：
+
+```go
+{
+  f := NewFriendApi(relation.NewFriendClient(friendConn))
+  friendRouterGroup := r.Group("/friend")
+  friendRouterGroup.POST("/delete_friend", f.DeleteFriend)
+  // ...
+  friendRouterGroup.POST("/add_friend_category", f.AddFriendCategory)
+}
+```
+
+如果接口属于现有路由组，直接添加到对应路由组；否则参考现有模块创建新的路由组文件。
+
+### 实现 API
+
+在 `/internal/api/friend/friend.go` 中实现接口。如果 API JSON 请求与 RPC Request 完全一致，可以直接调用 `a2r.Call`；否则需要解析请求并调用 gRPC 接口，可以参考 Message 模块的 `SendMessage`：
+
+```go
+func (o *FriendApi) AddFriendCategory(c *gin.Context) {
+  a2r.Call(c, relation.FriendClient.AddFriendCategory, o.client)
+}
+```
+
+## 添加 RPC 方法
+
+在对应模块的 Server 结构体上实现新增的 gRPC 方法。涉及数据库更新或插入，并且需要实时通知 OpenIMClientSDK 时，可以参考 `s.notificationSender.FriendsInfoUpdateNotification` 的调用方式。
+
+### 实现业务逻辑
+
+在 `internal/rpc/relation/friend/friend.go` 中实现 `AddFriendCategory`：
+
+```go
+func (s *friendServer) AddFriendCategory(
+  ctx context.Context,
+  req *relation.AddFriendCategoryReq,
+) (*relation.AddFriendCategoryResp, error) {
+  if err := authverify.CheckAccessV3(
+    ctx,
+    req.OwnerUserID,
+    s.config.Share.IMAdminUserID,
+  ); err != nil {
+    return nil, err
+  }
+
+  if _, err := s.db.FindFriendsWithError(
+    ctx,
+    req.OwnerUserID,
+    []string{req.FriendUserID},
+  ); err != nil {
+    return nil, err
+  }
+
+  if err := s.db.AddFriendCategory(
+    ctx,
+    req.OwnerUserID,
+    req.FriendUserID,
+    req.Category,
+  ); err != nil {
+    return nil, err
+  }
+
+  s.notification.FriendCategoryAddNotification(
+    ctx,
+    req.OwnerUserID,
+    req.FriendUserID,
+  )
+
+  return &relation.AddFriendCategoryResp{}, nil
+}
+```
+
+在 `internal/rpc/relation/notification.go` 中实现对应通知：
+
+```go
+func (f *FriendNotificationSender) FriendCategoryAddNotification(
+  ctx context.Context,
+  fromUserID,
+  toUserID string,
+) {
+  tips := sdkws.FriendInfoChangedTips{
+    FromToUserID: &sdkws.FromToUserID{},
+  }
+  tips.FromToUserID.FromUserID = fromUserID
+  tips.FromToUserID.ToUserID = toUserID
+  f.setSortVersion(
+    ctx,
+    &tips.FriendVersion,
+    &tips.FriendVersionID,
+    database.FriendVersionName,
+    toUserID,
+    &tips.FriendSortVersion,
+  )
+  f.Notification(
+    ctx,
+    fromUserID,
+    toUserID,
+    constant.FriendCategoryAddNotification,
+    &tips,
+  )
+}
+```
+
+在协议仓库的 `constant/constant.go` 中增加通知类型：
+
+```go
+const (
+  FriendApplicationApprovedNotification = 1201
+  // ...
+  FriendCategoryAddNotification = 1211
+)
+```
+
+然后更新 `sdkws/sdkws.proto` 中的好友字段，并重新生成 `sdkws/sdkws.pb.go`：
+
+```proto
+message FriendInfo {
+  string ownerUserID = 1;
+  string remark = 2;
+  // ...
+  int32 category = 9;
+}
+```
+
+## 添加 Storage 层接口
+
+OpenIMServer 的 Storage 层分为三层：
+
+- **Controller：**负责事务、缓存协调和业务数据转换。
+- **Cache：**缓存热点数据，减少数据库访问。
+- **Database：**负责持久化数据读写。
+
+### Controller 层
+
+在 `pkg/common/storage/controller/friend.go` 中扩展接口并实现方法：
+
+```go
+type FriendDatabase interface {
+  CheckIn(
+    ctx context.Context,
+    user1,
+    user2 string,
+  ) (inUser1Friends bool, inUser2Friends bool, err error)
+  // ...
+  AddFriendCategory(
+    ctx context.Context,
+    ownerUserID,
+    friendUserID string,
+    category int,
+  ) error
+}
+
+func (f *FriendDatabase) AddFriendCategory(
+  ctx context.Context,
+  ownerUserID,
+  friendUserID string,
+  category int,
+) error {
+  if err := f.friend.AddFriendCategory(
+    ctx,
+    ownerUserID,
+    friendUserID,
+    category,
+  ); err != nil {
+    return err
+  }
+
+  return f.cache.
+    DeleteFriend(ownerUserID, friendUserID).
+    DelMaxFriendVersion(ownerUserID).
+    ChainExecDel(ctx)
+}
+```
+
+### Cache 层
+
+在 `pkg/common/storage/cache` 中声明缓存接口，在 `pkg/common/storage/cache/cachekey` 中维护 Key，并提供 Controller 层需要的实现。本例可以复用现有的 `DeleteFriend`。
+
+缓存写入通常遵循“写时删除、读时更新”的策略：修改数据库后删除旧缓存，后续读取时再写入新数据。
+
+### Database 层
+
+先在 `pkg/common/storage/model/friend.go` 中增加字段：
+
+```go
+type Friend struct {
+  ID          primitive.ObjectID `bson:"_id"`
+  OwnerUserID string             `bson:"owner_user_id"`
+  // ...
+  Category int `bson:"category"`
+}
+```
+
+在 `pkg/common/storage/database/friend.go` 中扩展接口：
+
+```go
+type Friend interface {
+  UpdateRemark(
+    ctx context.Context,
+    ownerUserID,
+    friendUserID,
+    remark string,
+  ) error
+  // ...
+  AddFriendCategory(
+    ctx context.Context,
+    ownerUserID,
+    friendUserID string,
+    category int,
+  ) error
+}
+```
+
+最后在 `pkg/common/storage/database/mgo/friend.go` 中实现数据库操作：
+
+```go
+func (f *FriendMgo) AddFriendCategory(
+  ctx context.Context,
+  ownerUserID,
+  friendUserID string,
+  category int,
+) error {
+  return f.UpdateByMap(
+    ctx,
+    ownerUserID,
+    friendUserID,
+    map[string]any{"category": category},
+  )
+}
+```
+
+# OpenIMClientSDK
+
+OpenIMClientSDK 的跨平台核心层是 **[OpenIMClientSDK Core](https://github.com/openimsdk/openim-sdk-core)**。它负责客户端的核心 IM 能力，包括：
+
+- **网络连接管理：**维护与 OpenIMServer 之间稳定的 WebSocket 长连接。
+- **消息接收与存储：**接收消息并持久化到客户端本地数据库。
+- **关系链与群组管理：**维护好友、黑名单、群组和群成员等状态。
+- **跨平台支持：**向 Android、iOS、Windows、macOS 等平台提供一致的核心行为。
+
+## 定义 Server API
+
+如果新增方法需要调用 OpenIMServer，先在 `server_api` 中定义接口。
+
+在 `pkg/api/api.go` 中声明请求：
+
+```go
+var (
+  AddFriend = newApi[
+    relation.ApplyToAddFriendReq,
+    relation.ApplyToAddFriendResp,
+  ]("/friend/add_friend")
+  // ...
+  AddFriendCategory = newApi[
+    relation.AddFriendCategoryReq,
+    relation.AddFriendCategoryResp,
+  ]("/friend/add_friend_category")
+)
+```
+
+`relation.AddFriendCategoryReq` 来自 OpenIMServer 使用的协议仓库，OpenIMClientSDK Core 也需要依赖相同协议。
+
+在 `relation/server_api.go` 中增加调用器：
+
+```go
+func (r *Relation) AddFriendCategory(
+  ctx context.Context,
+  req *relation.AddFriendCategoryReq,
+) error {
+  req.OwnerUserID = r.loginUserID
+  return api.AddFriendCategory.Execute(ctx, req)
+}
+```
+
+## 实现 SDK 业务逻辑
+
+在 `internal/relation/api.go` 中实现对外逻辑。请求和响应可以使用 PB 结构，也可以使用带 JSON Tag 的自定义结构：
+
+```go
+func (r *Relation) AddFriendCategory(
+  ctx context.Context,
+  req *sdkpb.AddFriendCategoryReq,
+) (*sdkpb.AddFriendCategoryResp, error) {
+  serverReq := &relation.AddFriendCategoryReq{
+    OwnerUserID:  r.loginUserID,
+    FriendUserID: req.FriendUserID,
+    Category:     req.Category,
+  }
+  if err := r.AddFriendCategory(ctx, serverReq); err != nil {
+    return nil, err
+  }
+
+  r.relationSyncMutex.Lock()
+  defer r.relationSyncMutex.Unlock()
+  if err := r.IncrSyncFriends(ctx); err != nil {
+    return nil, err
+  }
+
+  return &sdkpb.AddFriendCategoryResp{}, nil
+}
+```
+
+## 处理 OpenIMServer 通知
+
+在 `internal/relation/notification.go` 中处理 OpenIMServer 下发的通知：
+
+```go
+func (r *Relation) doNotification(
+  ctx context.Context,
+  msg *sdkws.MsgData,
+) error {
+  r.relationSyncMutex.Lock()
+  defer r.relationSyncMutex.Unlock()
+
+  switch msg.ContentType {
+  case constant.FriendRemarkSetNotification:
+    // ...
+  case constant.FriendCategoryAddNotification:
+    var tips sdkws.FriendCategoryAddTips
+    if err := utils.UnmarshalNotificationElem(msg.Content, &tips); err != nil {
+      return err
+    }
+    if tips.FromToUserID != nil &&
+      tips.FromToUserID.FromUserID == r.loginUserID {
+      return r.IncrSyncFriends(ctx)
+    }
+  }
+  return nil
+}
+```
+
+`IncrSyncFriends` 会更新本地数据库，因此还需要在 `internal/relation/conversion.go` 中同步转换新增字段：
+
+```go
+func ServerFriendToLocalFriend(
+  info *sdkws.FriendInfo,
+) *model_struct.LocalFriend {
+  return &model_struct.LocalFriend{
+    OwnerUserID:    info.OwnerUserID,
+    FriendUserID:   info.FriendUser.UserID,
+    Remark:         info.Remark,
+    CreateTime:     info.CreateTime,
+    AddSource:      info.AddSource,
+    OperatorUserID: info.OperatorUserID,
+    Nickname:       info.FriendUser.Nickname,
+    FaceURL:        info.FriendUser.FaceURL,
+    Ex:             info.Ex,
+    IsPinned:       info.IsPinned,
+    Category:       info.Category,
+  }
+}
+```
+
+## 更新本地数据库
+
+1. 在 `pkg/db/db_interface/databse.go` 中增加 OpenIMClientSDK 调用的接口。本例可以复用 `UpdateFriend`。
+2. 在 `pkg/db/model_struct/data_model_struct.go` 的 `LocalFriend` 中增加字段：
+
+```go
+type LocalFriend struct {
+  OwnerUserID  string `gorm:"column:owner_user_id;primary_key;type:varchar(64)" json:"ownerUserID"`
+  FriendUserID string `gorm:"column:friend_user_id;primary_key;type:varchar(64)" json:"userID"`
+  Remark       string `gorm:"column:remark;type:varchar(255)" json:"remark"`
+  // ...
+  Category int32 `gorm:"column:category" json:"category"`
+}
+```
+
+3. 在 `pkg/db/friend_model.go` 中实现具体的数据更新逻辑。
+
+## 导出多语言接口
+
+**[OpenIMClientSDK Core](https://github.com/openimsdk/openim-sdk-core)** 使用 Go 开发。完成核心逻辑后，需要将接口导出给其他语言：
+
+- `open_im_sdk/`：函数接口层。
+- `open_im_sdk_callback/`：回调定义层。
+
+Android 和 iOS 使用 gomobile 构建 AAR 与 xcframework。构建方式参见 OpenIMClientSDK Core 仓库文档。
+
+例如，在 `open_im_sdk/relation.go` 中导出接口：
+
+```go
+func AddFriendCategory(
+  callback open_im_sdk_callback.Base,
+  operationID string,
+  req string,
+) {
+  call(
+    callback,
+    operationID,
+    UserForSDK.Relation().AddFriendCategory,
+    req,
+  )
+}
+```
+
+OpenIMClientSDK Core 还提供用于其他跨平台绑定的 C 接口，其实现位于 **[OpenIMClientSDK C++](https://github.com/openimsdk/openim-sdk-cpp)** 仓库。其他语言需要通过 C 接口接入时，请参考该仓库的封装方式。

@@ -149,7 +149,7 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
             pathname={pathname}
           />
           <a
-            aria-label="OpenIM on GitHub"
+            aria-label="OpenIMSDK on GitHub"
             className="icon-button"
             href={siteConfig.githubUrl}
             rel="noreferrer"

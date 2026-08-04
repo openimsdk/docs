@@ -1,7 +1,7 @@
 export const siteConfig = {
-  name: 'OpenIM Docs',
-  productName: 'OpenIM',
-  description: 'Documentation for OpenIM client SDKs and Platform API.',
+  name: 'OpenIMSDK Docs',
+  productName: 'OpenIMSDK',
+  description: 'Documentation for OpenIMClientSDK, OpenIMServer, ChatServer, and Platform API.',
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   websiteUrl: process.env.NEXT_PUBLIC_WEBSITE_URL ?? 'https://openim.io/',
   enterpriseUrl: process.env.NEXT_PUBLIC_ENTERPRISE_URL ?? 'https://openim.io/enterprise/',

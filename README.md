@@ -1,12 +1,12 @@
-# OpenIM Documentation
+# OpenIMSDK Documentation
 
 [![CI](https://github.com/openimsdk/docs/actions/workflows/ci.yml/badge.svg)](https://github.com/openimsdk/docs/actions/workflows/ci.yml)
 [![Documentation](https://img.shields.io/badge/docs-docs.openim.io-1769ff)](https://docs.openim.io)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-This repository contains the source for the official [OpenIM documentation](https://docs.openim.io). It provides implementation guides and API documentation for OpenIM client SDKs and the server-side Platform API in English and Simplified Chinese.
+This repository contains the source for the official [OpenIMSDK documentation](https://docs.openim.io). It provides implementation guides and API documentation for OpenIMClientSDK, OpenIMServer, ChatServer, and the server-side Platform API in English and Simplified Chinese.
 
-OpenIM is an open-source instant messaging infrastructure for building messaging, group chat, realtime event, and audio/video calling experiences into applications. Product source code and SDK repositories are maintained by the [OpenIMSDK organization](https://github.com/openimsdk).
+OpenIMSDK is the umbrella project for the OpenIMClientSDK client SDKs and the OpenIMServer core IM server. ChatServer is the business extension server; it is not presented as a standalone “Chat” product. The source repositories are maintained by the [OpenIMSDK organization](https://github.com/openimsdk).
 
 ## Documentation links
 
@@ -14,7 +14,7 @@ OpenIM is an open-source instant messaging infrastructure for building messaging
 | -------------------------------- | ----------------------------------------------------- |
 | Documentation                    | [docs.openim.io](https://docs.openim.io)              |
 | Simplified Chinese documentation | [docs.openim.io/zh](https://docs.openim.io/zh)        |
-| OpenIM website                   | [openim.io](https://openim.io/)                       |
+| OpenIMSDK website                | [openim.io](https://openim.io/)                       |
 | Enterprise edition               | [openim.io/enterprise](https://openim.io/enterprise/) |
 | OpenIMSDK on GitHub              | [github.com/openimsdk](https://github.com/openimsdk)  |
 
@@ -22,7 +22,7 @@ OpenIM is an open-source instant messaging infrastructure for building messaging
 
 The public documentation currently covers:
 
-- OpenIM product concepts, deployment guidance, and integration workflows
+- OpenIMSDK concepts, OpenIMServer and ChatServer deployment guidance, and integration workflows
 - iOS SDK
 - Flutter SDK
 - Electron SDK
@@ -94,7 +94,7 @@ Public URLs do not expose internal product-version directories. For example:
 └── content/zh/docs/chat/sdk/wasm/overview.mdx
 ```
 
-Generated files are build inputs, not editorial evidence. Documentation facts must be verified against the pinned OpenIM SDK declarations, OpenIMServer definitions, OpenAPI documents, or the immutable sources recorded in the relevant audit file.
+Generated files are build inputs, not editorial evidence. Documentation facts must be verified against the pinned OpenIMClientSDK declarations, OpenIMServer definitions, OpenAPI documents, or the immutable sources recorded in the relevant audit file.
 
 ## Authoring and localization
 

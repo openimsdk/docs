@@ -10,15 +10,12 @@ export function ProductNav() {
 
   return (
     <div className="product-nav-shell">
-      <nav aria-label="Chat documentation products" className="product-nav">
+      <nav aria-label="OpenIMSDK documentation products" className="product-nav">
         <Link className={active(pathname, '/', true)} href="/">
           Overview
         </Link>
         <Dropdown active={pathname.includes('/sdk/')} sections={sdkPlatformSections} label="SDKs" />
-        <Link
-          className={active(pathname, '/platform-api/')}
-          href="/platform-api/overview"
-        >
+        <Link className={active(pathname, '/platform-api/')} href="/platform-api/overview">
           Server API
         </Link>
         <Link

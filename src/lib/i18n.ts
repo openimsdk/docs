@@ -54,8 +54,9 @@ export const i18nText = {
     chrome: {
       docs: 'Docs',
       enterprise: 'Enterprise',
-      footerLabel: 'OpenIM documentation',
-      footerText: 'Client SDK integration, Platform API, and implementation guides for OpenIM.',
+      footerLabel: 'OpenIMSDK documentation',
+      footerText:
+        'OpenIMClientSDK integration, OpenIMServer Platform API, and implementation guides',
       guides: 'Guides',
       language: 'Language',
       platformApi: 'Platform API',
@@ -103,8 +104,8 @@ export const i18nText = {
     chrome: {
       docs: '文档',
       enterprise: '商业版',
-      footerLabel: 'OpenIM 文档',
-      footerText: '提供 OpenIM 客户端 SDK、Platform API 与实现指南。',
+      footerLabel: 'OpenIMSDK 文档',
+      footerText: '提供 OpenIMClientSDK、OpenIMServer Platform API 与实施指南',
       guides: '指南',
       language: '语言',
       platformApi: '平台 API',

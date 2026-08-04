@@ -30,4 +30,4 @@ The maintainers will acknowledge the report, validate the impact, coordinate a f
 
 ## Scope
 
-This policy covers the documentation application and its build, routing, search, and content-processing code. Vulnerabilities in OpenIM Server or an OpenIM SDK should be reported through the corresponding OpenIM repository or the contact address above.
+This policy covers the documentation application and its build, routing, search, and content-processing code. Vulnerabilities in OpenIMServer, ChatServer, or OpenIMClientSDK should be reported through the corresponding OpenIMSDK repository or the contact address above.

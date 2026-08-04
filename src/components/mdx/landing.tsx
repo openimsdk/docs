@@ -27,7 +27,7 @@ const landingCopy = {
     apiHeroDescription:
       'Platform API is organized by users, groups, and messages. Configure the base URL, auth, and request conventions first, then wire each server capability.',
     apiHeroKicker: 'REST API',
-    apiHeroTitle: 'Manage OpenIM from your backend.',
+    apiHeroTitle: 'Manage OpenIMServer from your backend',
     apiTitle: 'Platform API',
     featureDescription:
       'Browse capabilities by users, conversations, groups, and messages, then open the matching SDK or Platform API guide.',
@@ -38,13 +38,13 @@ const landingCopy = {
     featuredEyebrow: 'GETTING STARTED',
     featuredTitle: 'Core integration flow',
     heroDescription:
-      'Start from client SDKs, Platform API, sample apps, or the core integration flow to add users, conversations, groups, messages, and calling.',
-    heroEyebrow: 'OPENIM',
+      'Start from OpenIMClientSDK, the OpenIMServer Platform API, sample apps, or the core integration flow to add users, conversations, groups, messages, and calling.',
+    heroEyebrow: 'OPENIMSDK',
     heroPrimary: 'Explore SDKs',
     heroSecondary: 'Open Platform API',
-    heroTitle: 'Build instant messaging with OpenIM.',
+    heroTitle: 'Build instant messaging with OpenIMSDK',
     sampleDescription:
-      'Browse demos maintained by the openimsdk GitHub organization to see how each platform integrates OpenIM.',
+      'Browse demos maintained by the OpenIMSDK GitHub organization to see how each platform integrates OpenIMClientSDK.',
     sampleEyebrow: 'OPEN SOURCE',
     sampleTitle: 'Sample apps',
     sdkAction: 'Browse WASM SDK',
@@ -62,7 +62,7 @@ const landingCopy = {
     apiHeroDescription:
       'Platform API 按用户、群组和消息等资源组织。先完成地址、鉴权和请求约定配置，再接入具体服务端能力。',
     apiHeroKicker: 'REST API',
-    apiHeroTitle: '从服务端管理 OpenIM。',
+    apiHeroTitle: '从业务后端管理 OpenIMServer',
     apiTitle: 'Platform API',
     featureDescription:
       '按用户、会话、群组和消息等领域查找能力，并进入对应的 SDK 或 Platform API 文档。',
@@ -73,12 +73,13 @@ const landingCopy = {
     featuredEyebrow: '接入指南',
     featuredTitle: '核心接入流程',
     heroDescription:
-      '从客户端 SDK、服务端 Platform API、示例应用和核心接入流程开始，接入用户、会话、群组、消息与音视频通话。',
-    heroEyebrow: 'OPENIM',
+      '从 OpenIMClientSDK、OpenIMServer Platform API、示例应用和核心接入流程开始，接入用户、会话、群组、消息与音视频通话。',
+    heroEyebrow: 'OPENIMSDK',
     heroPrimary: '查看 SDK',
     heroSecondary: '查看 Platform API',
-    heroTitle: '使用 OpenIM 构建即时通讯应用。',
-    sampleDescription: '查看 openimsdk GitHub 组织维护的 Demo，对照各平台的实际接入方式。',
+    heroTitle: '使用 OpenIMSDK 构建即时通讯应用',
+    sampleDescription:
+      '查看 OpenIMSDK GitHub 组织维护的 Demo，对照各平台接入 OpenIMClientSDK 的实际方式。',
     sampleEyebrow: '开源 Demo',
     sampleTitle: '示例应用',
     sdkAction: '查看 WASM SDK',
@@ -99,7 +100,8 @@ const sdkCards: HomeCard[] = [
   {
     title: 'Flutter',
     href: '/sdk/flutter/overview',
-    description: 'Use one OpenIM integration path across mobile and supported desktop targets.',
+    description:
+      'Use one OpenIMClientSDK integration path across mobile and supported desktop targets.',
     meta: 'Dart',
   },
   {
@@ -152,7 +154,7 @@ const sampleApps: HomeCard[] = [
   {
     title: 'H5 demo',
     href: 'https://github.com/openimsdk/openim-h5-demo',
-    description: 'Browser demo for OpenIM login, conversations, and messaging.',
+    description: 'Browser demo for OpenIMClientSDK login, conversations, and messaging.',
     meta: 'GitHub / H5',
   },
   {
@@ -164,7 +166,7 @@ const sampleApps: HomeCard[] = [
   {
     title: 'iOS demo',
     href: 'https://github.com/openimsdk/openim-ios-demo',
-    description: 'Native iOS demo and its OpenIM SDK integration path.',
+    description: 'Native iOS demo and its OpenIMClientSDK integration path.',
     meta: 'GitHub / iOS',
   },
   {
@@ -179,7 +181,7 @@ const featuredSamples: HomeCard[] = [
   {
     title: 'Prepare SDK integration',
     href: '/sdk/wasm/getting-started/before-you-start',
-    description: 'Prepare the OpenIM server, app credentials, user account, and login token.',
+    description: 'Prepare OpenIMServer, app credentials, a user account, and a login token.',
     meta: 'SDK',
   },
   {
@@ -205,18 +207,18 @@ const featuredSamples: HomeCard[] = [
 const featureGroups: FeatureGroup[] = [
   {
     title: 'User identity and access',
-    description: 'Create OpenIM users, keep profiles up to date, and complete client login.',
+    description: 'Create OpenIMServer users, keep profiles up to date, and complete client login.',
     links: [
       {
         title: 'User provisioning',
         href: '/platform-api/user/creating-users/create-a-user',
-        description: 'Create OpenIM users from a trusted backend before clients log in.',
+        description: 'Create OpenIMServer users from a trusted backend before clients log in.',
         meta: 'Users',
       },
       {
         title: 'User directory',
         href: '/platform-api/user/listing-users/list-users',
-        description: 'Query users already imported into OpenIM from the backend.',
+        description: 'Query users already imported into OpenIMServer from the backend.',
         meta: 'Users',
       },
       {
@@ -392,19 +394,20 @@ const featureGroups: FeatureGroup[] = [
       {
         title: 'WASM SDK',
         href: '/sdk/wasm/overview',
-        description: 'Integrate OpenIM into browser apps through WebAssembly.',
+        description: 'Integrate OpenIMClientSDK into browser apps through WebAssembly.',
         meta: 'WASM',
       },
       {
         title: 'iOS SDK',
         href: '/sdk/ios/overview',
-        description: 'Integrate OpenIM into native iOS apps.',
+        description: 'Integrate OpenIMClientSDK into native iOS apps.',
         meta: 'iOS',
       },
       {
         title: 'Flutter SDK',
         href: '/sdk/flutter/overview',
-        description: 'Use one OpenIM integration path across mobile and supported desktop targets.',
+        description:
+          'Use one OpenIMClientSDK integration path across mobile and supported desktop targets.',
         meta: 'Flutter',
       },
       {
@@ -436,7 +439,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   Flutter: {
     title: 'Flutter',
-    description: '用同一套 OpenIM 接入路径覆盖移动端和支持的桌面平台。',
+    description: '用同一套 OpenIMClientSDK 接入路径覆盖移动端和支持的桌面平台。',
     meta: 'Dart',
   },
   iOS: {
@@ -446,7 +449,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Issue a session token': {
     title: '签发会话 Token',
-    description: '由可信业务服务端为 OpenIM 用户签发登录 Token。',
+    description: '由可信业务服务端为 OpenIMServer 用户签发登录 Token。',
     meta: '认证',
   },
   'Block a user': {
@@ -480,7 +483,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Prepare SDK integration': {
     title: '完成接入准备',
-    description: '准备 OpenIM 服务端、应用凭证、用户账号和登录 Token。',
+    description: '准备 OpenIMServer、应用凭证、用户账号和登录 Token。',
     meta: 'SDK',
   },
   'Authenticate a client': {
@@ -507,7 +510,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'React Native': {
     title: 'React Native',
-    description: '在 React Native 应用中接入 OpenIM，并处理移动端运行时差异。',
+    description: '在 React Native 应用中接入 OpenIMClientSDK，并处理移动端运行时差异。',
     meta: 'RN',
   },
   'Unread counts': {
@@ -546,7 +549,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Client authentication': {
     title: '登录与会话管理',
-    description: '初始化并登录 OpenIM SDK，处理连接、Token 过期和被踢下线事件。',
+    description: '初始化并登录 OpenIMClientSDK，处理连接、Token 过期和被踢下线事件。',
     meta: 'SDK',
   },
   'Electron demo': {
@@ -566,7 +569,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'iOS demo': {
     title: 'iOS Demo',
-    description: '查看 iOS 原生 Demo 及其 OpenIM SDK 接入路径。',
+    description: '查看 iOS 原生 Demo 及其 OpenIMClientSDK 接入路径。',
     meta: 'GitHub / iOS',
   },
   'Join a group': {
@@ -616,12 +619,12 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'User directory': {
     title: '查询用户',
-    description: '从服务端查询已导入 OpenIM 的用户资料。',
+    description: '从服务端查询已导入 OpenIMServer 的用户资料。',
     meta: '用户',
   },
   'User provisioning': {
     title: '创建用户',
-    description: '在客户端登录前，由可信业务服务端创建 OpenIM 用户。',
+    description: '在客户端登录前，由可信业务服务端创建 OpenIMServer 用户。',
     meta: '用户',
   },
   Groups: {
@@ -670,17 +673,17 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'WASM SDK': {
     title: 'WASM SDK',
-    description: '通过 WebAssembly 在浏览器应用中接入 OpenIM。',
+    description: '通过 WebAssembly 在浏览器应用中接入 OpenIMClientSDK。',
     meta: 'WASM',
   },
   'iOS SDK': {
     title: 'iOS SDK',
-    description: '在 iOS 原生应用中接入 OpenIM。',
+    description: '在 iOS 原生应用中接入 OpenIMClientSDK。',
     meta: 'iOS',
   },
   'Flutter SDK': {
     title: 'Flutter SDK',
-    description: '用同一套 OpenIM 接入路径覆盖移动端和支持的桌面平台。',
+    description: '用同一套 OpenIMClientSDK 接入路径覆盖移动端和支持的桌面平台。',
     meta: 'Flutter',
   },
 };
@@ -688,7 +691,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
 const zhFeatureGroupText: Record<string, Pick<FeatureGroup, 'title' | 'description'>> = {
   'User identity and access': {
     title: '用户与登录',
-    description: '创建 OpenIM 用户、维护用户资料，并完成客户端登录。',
+    description: '创建 OpenIMServer 用户、维护用户资料，并完成 OpenIMClientSDK 登录。',
   },
   'Conversations and groups': {
     title: '会话与群组',
@@ -733,6 +736,10 @@ function localizeFeatureGroups(groups: FeatureGroup[], locale: Locale): FeatureG
   }));
 }
 
+function homeCopy(value: string): string {
+  return value.replace(/[。.]+$/, '');
+}
+
 function SectionIntro({
   eyebrow,
   title,
@@ -750,8 +757,8 @@ function SectionIntro({
     <header className="docs-home-section-header">
       <div>
         <span>{eyebrow}</span>
-        <h2>{title}</h2>
-        <p>{description}</p>
+        <h2>{homeCopy(title)}</h2>
+        <p>{homeCopy(description)}</p>
       </div>
       {actionLabel && actionHref ? (
         <Link className="docs-home-section-link" href={actionHref}>
@@ -785,8 +792,8 @@ function CardLink({
       target={external ? '_blank' : undefined}
     >
       {card.meta ? <span>{card.meta}</span> : null}
-      <h3>{card.title}</h3>
-      <p>{card.description}</p>
+      <h3>{homeCopy(card.title)}</h3>
+      <p>{homeCopy(card.description)}</p>
       <strong>
         {cta}
         <b aria-hidden="true">→</b>
@@ -842,8 +849,8 @@ export function ChatHero({
       </div>
       <div className="chat-hero-copy">
         <span className="chat-eyebrow">{hero.eyebrow}</span>
-        <h1>{hero.title}</h1>
-        <p>{hero.description}</p>
+        <h1>{homeCopy(hero.title)}</h1>
+        <p>{homeCopy(hero.description)}</p>
         <div className="chat-hero-actions">
           <Link className="button-primary" href={toLocalizedPath(hero.primaryHref, locale)}>
             {hero.primaryLabel}
@@ -892,8 +899,8 @@ export function LandingSection({
   return (
     <section className="landing-section">
       <header>
-        <h2>{title}</h2>
-        <p>{description}</p>
+        <h2>{homeCopy(title)}</h2>
+        <p>{homeCopy(description)}</p>
       </header>
       <div className="landing-card-grid">{children}</div>
     </section>
@@ -919,8 +926,8 @@ export function LandingCard({
       <span className="landing-card-icon">
         <Icon />
       </span>
-      <h3>{title}</h3>
-      <p>{description}</p>
+      <h3>{homeCopy(title)}</h3>
+      <p>{homeCopy(description)}</p>
       <span className="landing-card-link">
         Explore documentation <b aria-hidden="true">→</b>
       </span>
@@ -984,8 +991,8 @@ export function PlatformApiSection({ locale = 'en' }: { locale?: Locale }) {
           href={toLocalizedPath('/platform-api/overview', locale)}
         >
           <span>{copy.apiHeroKicker}</span>
-          <h3>{copy.apiHeroTitle}</h3>
-          <p>{copy.apiHeroDescription}</p>
+          <h3>{homeCopy(copy.apiHeroTitle)}</h3>
+          <p>{homeCopy(copy.apiHeroDescription)}</p>
           <strong>
             {copy.apiHeroCta}
             <b aria-hidden="true">→</b>
@@ -1054,8 +1061,8 @@ export function FeaturedSamplesSection({ locale = 'en' }: { locale?: Locale }) {
             <span>{String(index + 1).padStart(2, '0')}</span>
             <div>
               <small>{card.meta}</small>
-              <h3>{card.title}</h3>
-              <p>{card.description}</p>
+              <h3>{homeCopy(card.title)}</h3>
+              <p>{homeCopy(card.description)}</p>
             </div>
             <b aria-hidden="true">→</b>
           </Link>
@@ -1080,8 +1087,8 @@ export function FeaturesSection({ locale = 'en' }: { locale?: Locale }) {
         {groups.map((group) => (
           <article className="feature-group-card" key={group.title}>
             <header>
-              <h3>{group.title}</h3>
-              <p>{group.description}</p>
+              <h3>{homeCopy(group.title)}</h3>
+              <p>{homeCopy(group.description)}</p>
             </header>
             <div className="feature-mini-list">
               {group.links.map((feature) => (
@@ -1091,8 +1098,8 @@ export function FeaturesSection({ locale = 'en' }: { locale?: Locale }) {
                   key={feature.href}
                 >
                   <span>{feature.meta}</span>
-                  <strong>{feature.title}</strong>
-                  <p>{feature.description}</p>
+                  <strong>{homeCopy(feature.title)}</strong>
+                  <p>{homeCopy(feature.description)}</p>
                 </Link>
               ))}
             </div>

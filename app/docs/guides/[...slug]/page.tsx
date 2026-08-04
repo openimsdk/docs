@@ -7,7 +7,7 @@ type PageProps = {
 
 export const metadata: Metadata = {
   title: 'Guides',
-  description: 'Product, deployment, and operations guides for OpenIM.',
+  description: 'Product, deployment, and operations guides for OpenIMSDK.',
 };
 
 export default async function GuidesSubRoute({ params }: PageProps) {

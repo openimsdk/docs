@@ -1,0 +1,82 @@
+## 接入 OpenClaw
+
+本页面向 OpenIMSDK 用户，说明如何通过 OpenClaw Gateway 连接 OpenIMServer，并通过发送第一条消息验证集成结果。
+
+## 前置条件
+
+- 已经[部署 OpenIMServer 和 ChatServer](/docs/guides/deployment/docker-compose)。
+- 已经部署并启动 OpenClaw Gateway。
+- 可以在运行 Gateway 的机器上执行 `openclaw` 命令。
+
+## 注册 OpenClaw 用户
+
+### 注册用户
+
+登录管理后台。默认地址为 `http://server_ip:11002`，其中 `server_ip` 是 OpenIMServer 的部署地址。
+
+进入“用户管理 > 用户列表”，选择“创建新用户”：
+
+![创建 OpenClaw 用户](/assets/guides/solution/openclaw.assets/1.png)
+
+填写账号信息：
+
+![填写 OpenClaw 账号信息](/assets/guides/solution/openclaw.assets/2.png)
+
+### 获取管理员 Token
+
+调用[获取管理员 Token](/platform-api/auth/tokens/get-admin-token)接口取得管理员 Token。
+
+### 获取用户 Token
+
+取得管理员 Token 后，调用[获取用户 Token](/platform-api/auth/tokens/get-user-token)接口，为刚创建的用户签发登录 Token。`userID` 填写该用户的 ID，`platformID` 填写 `12`，表示 Bot 平台。
+
+## 安装 OpenIMSDK Channel 插件
+
+```bash
+openclaw plugins install @openim/openclaw-channel
+```
+
+插件地址：<https://www.npmjs.com/package/@openim/openclaw-channel>
+
+## 启用插件并配置 OpenIMSDK Channel
+
+### 方式一：交互式配置（推荐）
+
+```bash
+openclaw openim setup
+```
+
+根据提示填写 `token`、`wsAddr`、`apiAddr` 等信息。
+
+### 方式二：直接编辑配置文件
+
+编辑 `~/.openclaw/openclaw.json`：
+
+```json
+{
+  "channels": {
+    "openim": {
+      "accounts": {
+        "default": {
+          "enabled": true,
+          "token": "your_token",
+          "wsAddr": "ws://127.0.0.1:10001",
+          "apiAddr": "http://127.0.0.1:10002"
+        }
+      }
+    }
+  }
+}
+```
+
+## 验证：发送第一条消息
+
+在集成 OpenIMClientSDK 的应用中，通过 `userID` 搜索对应的 Bot 账号，然后向该账号发送一条消息，确认是否能够自动回复。
+
+如果客户端成功收到回复，说明 OpenClaw 已经完成 OpenIMSDK 接入。
+
+![验证 OpenClaw 回复](/assets/guides/solution/openclaw.assets/3.png)
+
+## 常见问题
+
+- **插件提示 `OpenIM is not connected`：**这是插件返回的原始错误文本，通常表示 `token`、`wsAddr`、`apiAddr` 配置错误或网络不可达。请先核对配置，再结合 OpenClaw Gateway 日志定位原因。

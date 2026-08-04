@@ -1,0 +1,73 @@
+## 组件说明
+
+| 组件 | 用途 | 部署方式 |
+| --- | --- | --- |
+| Prometheus | 收集并存储 OpenIMServer 指标 | 手动启用 |
+| Alertmanager | 管理并发送告警 | 手动启用 |
+| Grafana | 展示监控仪表盘 | 手动启用 |
+| node-exporter | 采集服务器节点指标 | 手动启用 |
+
+## 启动监控
+
+### 启动组件
+
+OpenIMServer 使用 Prometheus、Alertmanager、Grafana 和 node-exporter 完成监控与告警。普通的 `docker compose up -d` **不会**启动这些组件，需要显式启用监控 profile：
+
+```sh
+docker compose --profile m up -d
+```
+
+> 以上方式不直接适用于 Windows。需要在 Windows 中启用监控时，请调整 `docker-compose.yml` 中监控服务的网络模式和端口映射，并将 `prometheus.yml` 中的 `127.0.0.1` 替换为部署机器的内网 IP。
+
+### 在 Grafana 中导入 OpenIMServer 指标
+
+#### 登录 Grafana
+
+登录管理后台，在左侧导航中打开“数据监控”，使用默认用户名 `admin` 和密码 `admin` 登录 Grafana。
+
+也可以直接访问 `http://your_ip:13000`，将 `your_ip` 替换为部署机器的 IP 地址。
+
+![Grafana 登录页面](/assets/guides/gettingStarted/assets/login1.png)
+
+#### 添加 Prometheus 数据源
+
+在左侧导航中打开 `Connections > Add new connection`，搜索并添加 Prometheus。将 `http://your_ip:19090` 填写为 Prometheus URL，其中 `19090` 是默认端口，然后选择 **Save and Test**。
+
+![添加 Prometheus 数据源](/assets/guides/gettingStarted/assets/database.png)
+
+![配置 Prometheus 数据源](/assets/guides/gettingStarted/assets/database2.png)
+
+#### 导入仪表盘
+
+打开 `Dashboards`，选择 **Create Dashboard**，然后选择 **Import dashboard**。
+
+![创建 Grafana 仪表盘](/assets/guides/gettingStarted/assets/dashboard.png)
+
+可以通过以下任一方式导入 OpenIMServer 默认仪表盘：
+
+1. 将 [Demo.json](https://github.com/openimsdk/open-im-server/tree/main/config/grafana-template/Demo.json) 的内容复制到 `Import via dashboard JSON model`。
+2. 选择 **Upload dashboard JSON file**，上传 `open-im-server/config/grafana-template/Demo.json`。
+
+选择 **Load**。
+
+![加载 OpenIMServer 仪表盘](/assets/guides/gettingStarted/assets/dashboard2.png)
+
+选择刚添加的数据源，然后选择 **Import**。
+
+![OpenIMServer 指标仪表盘](/assets/guides/gettingStarted/assets/dashboard3.png)
+
+至此，OpenIMServer 的主要监控指标已经配置完成。
+
+### 导入 node-exporter 指标
+
+打开 `Dashboard`，在 **New** 菜单中选择 **Import**。
+
+![导入 node-exporter 仪表盘](/assets/guides/gettingStarted/assets/dashboard4.png)
+
+在 `Grafana.com dashboard URL or ID` 中输入 `1860`，选择 **Load**，然后选择 **Import**。
+
+![加载仪表盘 1860](/assets/guides/gettingStarted/assets/dashboard5.png)
+
+导入后即可查看 node-exporter 指标。
+
+![node-exporter 指标](/assets/guides/gettingStarted/assets/dashboard6.png)

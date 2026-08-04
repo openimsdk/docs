@@ -1,13 +1,13 @@
-# Contributing to OpenIM Documentation
+# Contributing to OpenIMSDK Documentation
 
-Thank you for improving OpenIM documentation. Contributions must preserve the accuracy of both the product content and the documentation system.
+Thank you for improving OpenIMSDK documentation. Contributions must preserve the accuracy of both the product content and the documentation system.
 
 ## Before you start
 
 - Use Node.js 22.12 or newer and the pnpm version declared in `package.json`.
 - Read `AGENTS.md` and `docs/CONTENT_AUTHORING.md` before editing SDK or Platform API content.
 - Check `git status` and preserve unrelated work already present in the worktree.
-- Confirm that the target capability exists in the pinned OpenIM SDK, OpenIMServer source, OpenAPI document, or immutable audit evidence.
+- Confirm that the target capability exists in the pinned OpenIMClientSDK declaration, OpenIMServer source, OpenAPI document, or immutable audit evidence.
 
 ## Language workflow
 

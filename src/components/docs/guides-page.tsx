@@ -60,6 +60,8 @@ const guidesContent = guidesContentData as {
 };
 
 const reviewedZhGuideFiles: Record<string, string> = {
+  '/guides/introduction/product': 'getting-started/overview.mdx',
+  '/guides/introduction/termDefinition': 'getting-started/concepts.mdx',
   '/guides/introduction/features': 'getting-started/open-source-capabilities.mdx',
   '/guides/introduction/version': 'getting-started/versions.mdx',
   '/guides/gettingStarted/env-comp': 'deployment/components.mdx',
@@ -71,7 +73,13 @@ const reviewedZhGuideFiles: Record<string, string> = {
   '/guides/gettingStarted/nginxDomainConfig': 'deployment/domain.mdx',
   '/guides/gettingStarted/production': 'deployment/production.mdx',
   '/guides/gettingStarted/quickTestServer': 'deployment/verification.mdx',
+  '/guides/solution/integrate': 'integration/business-system.mdx',
+  '/guides/solution/offlinePush': 'integration/offline-push.mdx',
+  '/guides/solution/developNewFeatures': 'extension/server-development.mdx',
+  '/guides/solution/openclaw': 'extension/ai-openclaw.mdx',
+  '/guides/gettingStarted/admin': 'operations/monitoring.mdx',
   '/guides/gettingStarted/faq': 'operations/troubleshooting.mdx',
+  '/guides/benchmark/benchmark_test': 'operations/benchmark-results.mdx',
 };
 
 const reviewedZhGuides = new Map<string, GuideContentRecord>(
@@ -125,9 +133,15 @@ const reviewedEnGuideFiles: Record<string, string> = {
 
 const reviewedEnGuides = new Map<string, GuideContentRecord>(
   Object.entries(reviewedEnGuideFiles).map(([sourcePath, file]) => {
-    const body = readFileSync(resolve(process.cwd(), 'content/en/docs/guides', file), 'utf8').trim();
+    const body = readFileSync(
+      resolve(process.cwd(), 'content/en/docs/guides', file),
+      'utf8',
+    ).trim();
     const existing = guidesContent.records[sourcePath];
-    return [sourcePath, { ...existing, body, excerpt: guideExcerpt(body), headings: extractMarkdownHeadings(body) }];
+    return [
+      sourcePath,
+      { ...existing, body, excerpt: guideExcerpt(body), headings: extractMarkdownHeadings(body) },
+    ];
   }),
 );
 
@@ -179,12 +193,12 @@ function guidesCopy(locale: Locale): GuidesCopy {
         {
           id: 'getting-started',
           eyebrow: 'Getting Started',
-          title: '认识 OpenIM',
-          description: '先理解 OpenIM 的产品定位、核心模型、开源能力边界和版本选择。',
+          title: '认识 OpenIMSDK',
+          description: '先理解 OpenIMSDK 的产品定位、核心模型、开源能力边界和版本选择。',
           items: [
             {
-              title: 'OpenIM 概述',
-              description: '了解 OpenIM 的定位、生态组件、部署方式和典型使用场景。',
+              title: 'OpenIMSDK 概述',
+              description: '了解 OpenIMSDK 的定位、生态组件、部署方式和典型使用场景。',
               href: legacy(locale, '/guides/introduction/product'),
               badge: 'Intro',
               slug: 'overview',
@@ -205,7 +219,8 @@ function guidesCopy(locale: Locale): GuidesCopy {
             },
             {
               title: '版本选择',
-              description: '生产环境使用稳定 tag，明确 Server、ChatServer 和 SDK 版本来源。',
+              description:
+                '生产环境使用稳定 tag，明确 OpenIMServer、ChatServer 和 OpenIMClientSDK 的版本来源。',
               href: legacy(locale, '/guides/introduction/version'),
               badge: 'Version',
               slug: 'versions',
@@ -215,7 +230,7 @@ function guidesCopy(locale: Locale): GuidesCopy {
         {
           id: 'deployment',
           eyebrow: 'Deployment',
-          title: '部署 OpenIM',
+          title: '部署 OpenIMServer 与 ChatServer',
           description: '从环境规划到生产验证，覆盖单机、内网和集群部署路径。',
           items: [
             {
@@ -286,12 +301,12 @@ function guidesCopy(locale: Locale): GuidesCopy {
         {
           id: 'integration',
           eyebrow: 'Integration',
-          title: '集成 OpenIM',
-          description: '把业务账号、业务后端、客户端和 OpenIM 的服务端能力连接起来。',
+          title: '集成 OpenIMSDK',
+          description: '把业务账号、业务后端、OpenIMClientSDK 和 OpenIMServer 服务端能力连接起来。',
           items: [
             {
               title: '业务系统集成',
-              description: '将账号体系、业务后端和 OpenIM 的 API / Webhook 串起来。',
+              description: '将账号体系、业务后端和 OpenIMServer 的 API / Webhook 串起来。',
               href: legacy(locale, '/guides/solution/integrate'),
               badge: 'Integrate',
               slug: 'business-system',
@@ -305,7 +320,7 @@ function guidesCopy(locale: Locale): GuidesCopy {
             },
             {
               title: '数据迁移',
-              description: '评估从现有云 IM 或自研系统迁移到 OpenIM 的接入路径。',
+              description: '评估从现有云 IM 或自研系统迁移到 OpenIMSDK 的接入路径。',
               href: legacy(locale, '/guides/solution/migrate'),
               badge: 'Migrate',
               slug: 'migration',
@@ -315,8 +330,8 @@ function guidesCopy(locale: Locale): GuidesCopy {
         {
           id: 'extension',
           eyebrow: 'Extension',
-          title: '扩展 OpenIM',
-          description: '围绕服务端能力、对象存储和 AI 场景扩展 OpenIM。',
+          title: '扩展 OpenIMSDK',
+          description: '围绕 OpenIMServer、对象存储和 AI 场景扩展 OpenIMSDK。',
           items: [
             {
               title: '服务端二次开发',
@@ -393,12 +408,12 @@ function guidesCopy(locale: Locale): GuidesCopy {
         },
       ],
       heroDescription:
-        '从产品认知、部署和业务集成，到扩展、运维与可靠性验证，按实施阶段组织 OpenIM 指南。',
+        '从产品认知、部署和业务集成，到扩展、运维与可靠性验证，按实施阶段组织 OpenIMSDK 指南。',
       heroEyebrow: '指南',
-      heroTitle: 'OpenIM Guides',
+      heroTitle: 'OpenIMSDK 指南',
       referenceLabel: '指南目录',
       referenceTitle: '按实施阶段查阅',
-      referenceDescription: '先理解 OpenIM，再完成部署与集成，最后进入扩展、运维和可靠性验证。',
+      referenceDescription: '先理解 OpenIMSDK，再完成部署与集成，最后进入扩展、运维和可靠性验证。',
       sectionTitle: '指南目录',
       sectionDescription:
         '每个目录对应一个实施阶段，目录页面给出本阶段的内容范围，具体接口与 SDK 方法链接到对应参考文档。',
@@ -435,7 +450,8 @@ function guidesCopy(locale: Locale): GuidesCopy {
           },
           {
             title: 'Version Notes',
-            description: 'How to choose stable tags for Server, ChatServer, and client SDKs.',
+            description:
+              'How to choose stable tags for OpenIMServer, ChatServer, and OpenIMClientSDK.',
             href: legacy(locale, '/guides/introduction/version'),
             badge: 'Version',
           },
@@ -603,7 +619,7 @@ function guidesCopy(locale: Locale): GuidesCopy {
     heroDescription:
       'Guides for product concepts, deployment paths, integration, storage, and reliability testing, organized by implementation stage.',
     heroEyebrow: 'GUIDES',
-    heroTitle: 'OpenIM Guides',
+    heroTitle: 'OpenIMSDK Guides',
     referenceLabel: 'Guide directory',
     referenceTitle: 'Browse by implementation stage',
     referenceDescription:
@@ -618,7 +634,9 @@ function guidesCopy(locale: Locale): GuidesCopy {
 
 function currentEnglishGuidesCopy(copy: GuidesCopy): GuidesCopy {
   const items = new Map(
-    copy.groups.flatMap((group) => group.items).map((item) => [sourcePathFromHref(item.href), item]),
+    copy.groups
+      .flatMap((group) => group.items)
+      .map((item) => [sourcePathFromHref(item.href), item]),
   );
   const item = (sourcePath: string, slug: string, title?: string): GuideItem => ({
     ...items.get(sourcePath)!,
@@ -632,23 +650,33 @@ function currentEnglishGuidesCopy(copy: GuidesCopy): GuidesCopy {
       {
         id: 'getting-started',
         eyebrow: 'Getting Started',
-        title: 'Get to Know OpenIM',
-        description: 'Understand the product, core concepts, open-source scope, and release strategy.',
+        title: 'Get to Know OpenIMSDK',
+        description:
+          'Understand the product, core concepts, open-source scope, and release strategy.',
         items: [
-          item('/guides/introduction/product', 'overview', 'OpenIM Overview'),
+          item('/guides/introduction/product', 'overview', 'OpenIMSDK Overview'),
           item('/guides/introduction/termDefinition', 'concepts', 'Core Concepts'),
-          item('/guides/introduction/features', 'open-source-capabilities', 'Open-Source Capabilities'),
+          item(
+            '/guides/introduction/features',
+            'open-source-capabilities',
+            'Open-Source Capabilities',
+          ),
           item('/guides/introduction/version', 'versions', 'Choosing Versions'),
         ],
       },
       {
         id: 'deployment',
         eyebrow: 'Deployment',
-        title: 'Deploy OpenIM',
-        description: 'From environment planning through production verification for single-node, air-gapped, and cluster deployments.',
+        title: 'Deploy OpenIMServer and ChatServer',
+        description:
+          'From environment planning through production verification for single-node, air-gapped, and cluster deployments.',
         items: [
           item('/guides/gettingStarted/env-comp', 'components', 'Environment and Components'),
-          item('/guides/gettingStarted/dockerCompose', 'docker-compose', 'Docker Compose Deployment'),
+          item(
+            '/guides/gettingStarted/dockerCompose',
+            'docker-compose',
+            'Docker Compose Deployment',
+          ),
           item('/guides/gettingStarted/imSourceCodeDeployment', 'source', 'Source Deployment'),
           item('/guides/gettingStarted/internalDeployment', 'offline', 'Air-Gapped Deployment'),
           item('/guides/gettingStarted/cluster', 'cluster', 'Cluster Deployment'),
@@ -661,8 +689,9 @@ function currentEnglishGuidesCopy(copy: GuidesCopy): GuidesCopy {
       {
         id: 'integration',
         eyebrow: 'Integration',
-        title: 'Integrate OpenIM',
-        description: 'Connect your accounts, backend, clients, and OpenIM server capabilities.',
+        title: 'Integrate OpenIMSDK',
+        description:
+          'Connect your accounts, backend, OpenIMClientSDK, and OpenIMServer capabilities.',
         items: [
           item('/guides/solution/integrate', 'business-system'),
           item('/guides/solution/offlinePush', 'offline-push'),
@@ -672,8 +701,9 @@ function currentEnglishGuidesCopy(copy: GuidesCopy): GuidesCopy {
       {
         id: 'extension',
         eyebrow: 'Extension',
-        title: 'Extend OpenIM',
-        description: 'Extend OpenIM with server development, object storage, and AI integrations.',
+        title: 'Extend OpenIMSDK',
+        description:
+          'Extend OpenIMSDK through OpenIMServer development, object storage, and AI integrations.',
         items: [
           item('/guides/solution/developNewFeatures', 'server-development', 'Server Development'),
           item('/guides/solution/s3', 'object-storage', 'Object Storage'),
@@ -685,19 +715,27 @@ function currentEnglishGuidesCopy(copy: GuidesCopy): GuidesCopy {
         id: 'operations',
         eyebrow: 'Operations & Reliability',
         title: 'Operations and Reliability',
-        description: 'Monitor, troubleshoot, and validate the capacity and reliability of your deployment.',
+        description:
+          'Monitor, troubleshoot, and validate the capacity and reliability of your deployment.',
         items: [
           item('/guides/gettingStarted/admin', 'monitoring', 'Monitoring and Alerting'),
           item('/guides/solution/howToDebug', 'debugging', 'Source Debugging'),
           item('/guides/gettingStarted/faq', 'troubleshooting', 'Troubleshooting'),
-          item('/guides/benchmark/benchmark_test', 'benchmark-results', 'Performance and Reliability Report'),
+          item(
+            '/guides/benchmark/benchmark_test',
+            'benchmark-results',
+            'Performance and Reliability Report',
+          ),
           item('/guides/benchmark/benchmark_guide', 'benchmark-tools', 'Benchmark Tools'),
         ],
       },
     ],
-    heroDescription: 'OpenIM guides organized by implementation stage, from product concepts and deployment to integration, extension, operations, and reliability.',
-    referenceDescription: 'Understand OpenIM first, complete deployment and integration, then move into extension, operations, and reliability validation.',
-    sectionDescription: 'Each directory represents an implementation stage and links its APIs and SDK methods to the corresponding reference documentation.',
+    heroDescription:
+      'OpenIMSDK guides organized by implementation stage, from product concepts and deployment to integration, extension, operations, and reliability.',
+    referenceDescription:
+      'Understand OpenIMSDK first, complete deployment and integration, then move into extension, operations, and reliability validation.',
+    sectionDescription:
+      'Each directory represents an implementation stage and links its APIs and SDK methods to the corresponding reference documentation.',
   };
 }
 
