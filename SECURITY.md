@@ -21,7 +21,7 @@ Please do not disclose a suspected vulnerability in a public issue, discussion, 
 
 Report it privately through one of these channels:
 
-- [GitHub private security advisory](https://github.com/Bloomingg/openim-chat-docs-next/security/advisories/new)
+- [GitHub private security advisory](https://github.com/openimsdk/docs/security/advisories/new)
 - Email: [contact@openim.io](mailto:contact@openim.io)
 
 Include the affected URL or component, reproduction steps, expected impact, and any suggested mitigation. Do not include production credentials, personal data, or secrets in the report.

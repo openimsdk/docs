@@ -1,38 +1,60 @@
 # OpenIM Documentation
 
-The documentation website for OpenIM client SDKs and Platform API. It is built with Next.js, Fumadocs, TypeScript, and MDX, and publishes English and Simplified Chinese content from the same route structure.
+[![CI](https://github.com/openimsdk/docs/actions/workflows/ci.yml/badge.svg)](https://github.com/openimsdk/docs/actions/workflows/ci.yml)
+[![Documentation](https://img.shields.io/badge/docs-docs.openim.io-1769ff)](https://docs.openim.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-OpenIM 是面向应用开发者的开源通信基础设施。本仓库提供 OpenIM 客户端 SDK 与 Platform API 的中英文文档站点。
+This repository contains the source for the official [OpenIM documentation](https://docs.openim.io). It provides implementation guides and API documentation for OpenIM client SDKs and the server-side Platform API in English and Simplified Chinese.
 
-## Documentation coverage
+OpenIM is an open-source instant messaging infrastructure for building messaging, group chat, realtime event, and audio/video calling experiences into applications. Product source code and SDK repositories are maintained by the [OpenIMSDK organization](https://github.com/openimsdk).
 
-The public SDK navigation currently covers:
+## Documentation links
 
-- iOS
-- Flutter
-- JavaScript SDK (WASM)
-- Electron
-- Mini Program and lightweight Web runtimes
+| Resource                         | Link                                                  |
+| -------------------------------- | ----------------------------------------------------- |
+| Documentation                    | [docs.openim.io](https://docs.openim.io)              |
+| Simplified Chinese documentation | [docs.openim.io/zh](https://docs.openim.io/zh)        |
+| OpenIM website                   | [openim.io](https://openim.io/)                       |
+| Enterprise edition               | [openim.io/enterprise](https://openim.io/enterprise/) |
+| OpenIMSDK on GitHub              | [github.com/openimsdk](https://github.com/openimsdk)  |
 
-WASM, iOS, Flutter, Electron, and Mini Program pages have reviewed English and Simplified Chinese versions. Additional platform routes may remain in the repository for future work but are hidden until their content is ready.
+## Documentation scope
 
-The Platform API section documents server-to-server authentication, users, relationships, groups, conversations, messages, third-party services, webhooks, and commercial capabilities. API facts must come from OpenIMServer definitions and the pinned documentation evidence; the navigation label must never be used to infer an unsupported API.
+The public documentation currently covers:
 
-## Open source and Enterprise
+- OpenIM product concepts, deployment guidance, and integration workflows
+- iOS SDK
+- Flutter SDK
+- Electron SDK
+- JavaScript SDK for lightweight Web and Mini Program runtimes
+- JavaScript SDK (WASM) for full Web IM applications and Electron renderer processes
+- Platform API, including authentication, users, relationships, groups, conversations, messages, Webhooks, and operational APIs
 
-OpenIM's open-source server and SDKs support self-hosted messaging and custom client integration. Pages marked **Enterprise** or **商业版** require the corresponding commercial delivery.
+Only reviewed platforms and pages appear in the public navigation, search index, and sitemap. Draft structures for additional platforms may remain in the repository without being published.
 
-- [OpenIM platform](https://openim.io/)
-- [OpenIM Enterprise and edition comparison](https://openim.io/enterprise/)
-- [OpenIMSDK on GitHub](https://github.com/openimsdk)
-- Enterprise and licensing contact: [contact@openim.io](mailto:contact@openim.io)
+Capabilities marked **Enterprise** require the corresponding commercial edition or delivery. See the [Enterprise edition](https://openim.io/enterprise/) for product information, or contact [contact@openim.io](mailto:contact@openim.io) for licensing and commercial support.
+
+## Technology
+
+The documentation application is built with:
+
+- [Next.js](https://nextjs.org/) and React
+- [Fumadocs](https://fumadocs.dev/) for MDX content integration
+- TypeScript
+- Tailwind CSS
+- pnpm and Corepack
+
+English and Simplified Chinese pages share one audited route structure. Navigation, search indexes, localized SDK packages, and publication metadata are derived from reviewed MDX and structural records.
 
 ## Local development
 
-Requirements:
+### Requirements
 
-- Node.js 22.12 or newer
-- pnpm 11, managed through Corepack
+- Node.js 22.12 or later
+- Corepack
+- The pnpm version declared in `package.json`
+
+### Start the development server
 
 ```bash
 corepack enable
@@ -41,11 +63,25 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Open the English home page at `http://localhost:3000/` or the Simplified Chinese home page at `http://localhost:3000/zh`.
+Open the local site at:
 
-## Content layout
+- English: [http://localhost:3000](http://localhost:3000)
+- Simplified Chinese: [http://localhost:3000/zh](http://localhost:3000/zh)
 
-Public URLs omit internal product-version segments:
+## Repository structure
+
+```text
+app/                    Next.js routes, metadata, search, and sitemap
+content/docs/           English MDX content
+content/zh/docs/        Simplified Chinese MDX content
+data/structure/         Navigation, ownership, scope, and review records
+docs/                   Architecture and authoring documentation
+scripts/                Content validation and deterministic generators
+src/components/         Documentation and site UI
+src/generated/          Generated route, navigation, search, and locale data
+```
+
+Public URLs do not expose internal product-version directories. For example:
 
 ```text
 /sdk/wasm/overview
@@ -55,76 +91,99 @@ Public URLs omit internal product-version segments:
 └── content/zh/docs/chat/sdk/wasm/overview.mdx
 ```
 
-English content lives under `content/docs/chat/**`. Simplified Chinese content lives under `content/zh/docs/chat/**`. The route manifest, navigation, localized SDK packages, and search indexes are derived or audited data; do not treat generated output as editorial evidence.
+Generated files are build inputs, not editorial evidence. Documentation facts must be verified against the pinned OpenIM SDK declarations, OpenIMServer definitions, OpenAPI documents, or the immutable sources recorded in the relevant audit file.
 
-Before editing any SDK page, read [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/CONTENT_AUTHORING.md](docs/CONTENT_AUTHORING.md). SDK body text must be reviewed and edited one page at a time. Scripts may maintain structure and deterministic metadata, but they must not generate or machine-translate final MDX prose.
+## Authoring and localization
 
-## Common commands
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [content authoring guide](docs/CONTENT_AUTHORING.md) before changing documentation pages.
 
-| Command                 | Purpose                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| `pnpm dev`              | Synchronize derived content and start the development server.                  |
-| `pnpm content:status`   | Report publication status by product and template.                             |
-| `pnpm content:sync`     | Rebuild localized SDK packages and search indexes.                             |
-| `pnpm content:metadata` | Refresh route and navigation metadata from reviewed MDX frontmatter.           |
-| `pnpm content:check`    | Validate routes, links, navigation, frontmatter, and search records.           |
-| `pnpm check`            | Run linting, type checks, content audits, SDK checks, OpenAPI lint, and tests. |
-| `pnpm build`            | Run a production Next.js standalone build.                                     |
-| `pnpm structure:report` | Refresh the active route and navigation report.                                |
+The client SDK localization workflow is Chinese-first:
 
-`pnpm check` must be green before release. If a check fails in an unrelated subsystem, record and fix that failure rather than presenting the release as fully verified.
+1. Review the complete Simplified Chinese page and its technical evidence.
+2. Edit and audit the page manually.
+3. Translate the reviewed page into fluent English.
+4. Verify API names, parameters, examples, results, events, and links against the target SDK.
+5. Publish the English route only after its review record is complete.
 
-## Publication workflow
+Final MDX prose must be reviewed page by page. Scripts may update deterministic structure and generated metadata, but they must not generate or machine-translate final documentation text.
 
-1. Complete and review the Simplified Chinese source page.
-2. Update the page's audit record and verify APIs, parameters, results, and events against the pinned SDK or server source.
-3. Translate the reviewed page manually into fluent English.
-4. Publish the English locale only after its audit state and example evidence are complete.
-5. Run `pnpm check` and `pnpm build`.
-6. Review the resulting navigation, search results, mobile layout, canonical URLs, and language alternates.
+## Validation
 
-Route or navigation changes also require synchronized Chinese and English content, audit records, ownership data, and any approved redirects.
+Run the complete validation suite before submitting or publishing changes:
+
+```bash
+pnpm check
+pnpm build
+```
+
+`pnpm check` includes linting, TypeScript validation, content integrity checks, SDK publication audits, example checks, OpenAPI linting, and Platform API tests. `pnpm build` validates the production application and prepares the standalone server output.
+
+Frequently used commands:
+
+| Command                 | Purpose                                                              |
+| ----------------------- | -------------------------------------------------------------------- |
+| `pnpm dev`              | Synchronize derived content and start the development server.        |
+| `pnpm content:status`   | Report publication status by product and page type.                  |
+| `pnpm content:sync`     | Rebuild localized SDK packages and search indexes.                   |
+| `pnpm content:metadata` | Refresh route and navigation metadata from reviewed frontmatter.     |
+| `pnpm content:check`    | Validate routes, links, navigation, frontmatter, and search records. |
+| `pnpm structure:report` | Refresh the active route and navigation report.                      |
+| `pnpm check`            | Run the complete quality and content validation suite.               |
+| `pnpm build`            | Create the production Next.js build and standalone output.           |
+
+## Configuration
+
+Copy `.env.example` to `.env.local` for local development. The following public environment variables configure canonical URLs and external navigation:
+
+```dotenv
+NEXT_PUBLIC_SITE_URL=https://docs.openim.io
+NEXT_PUBLIC_WEBSITE_URL=https://openim.io/
+NEXT_PUBLIC_ENTERPRISE_URL=https://openim.io/enterprise/
+NEXT_PUBLIC_GITHUB_URL=https://github.com/openimsdk
+NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/openimsdk/docs/edit/main
+```
+
+Leave `NEXT_PUBLIC_EDIT_BASE_URL` empty if edit links should not be displayed.
 
 ## Deployment
 
 ### Vercel
 
-The repository includes `vercel.json`; Vercel installs dependencies with pnpm and runs `pnpm build`. Set `NEXT_PUBLIC_SITE_URL` to the final production origin before deployment.
-
-### Docker
+The repository includes `vercel.json`. Configure the production environment variables, import the repository into Vercel, and use the committed pnpm lockfile. Vercel runs:
 
 ```bash
-docker compose up --build
+pnpm install --frozen-lockfile
+pnpm build
 ```
 
 ### Standalone Node.js
 
 ```bash
+corepack enable
 pnpm install --frozen-lockfile
 pnpm build
 PORT=3000 HOSTNAME=0.0.0.0 pnpm start
 ```
 
-The production server runs from `.next/standalone/server.js`.
+The production server is generated at `.next/standalone/server.js`.
 
-## Configuration
+## Contributing
 
-```dotenv
-NEXT_PUBLIC_SITE_URL=https://docs.example.com
-NEXT_PUBLIC_GITHUB_URL=https://github.com/openimsdk
-NEXT_PUBLIC_WEBSITE_URL=https://openim.io/
-NEXT_PUBLIC_ENTERPRISE_URL=https://openim.io/enterprise/
-NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/your-org/your-repo/edit/main
-```
+Contributions that improve correctness, examples, navigation, accessibility, or developer experience are welcome. Pull requests should identify the affected documentation area, the SDK or server evidence used, and the validation commands that were run.
 
-Leave `NEXT_PUBLIC_EDIT_BASE_URL` empty to hide the edit link.
+See:
 
-## Contributing and security
+- [Contribution guide](CONTRIBUTING.md)
+- [Content authoring rules](docs/CONTENT_AUTHORING.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Current publication scope](docs/CONTENT_SCOPE.md)
 
-- Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Content rules: [docs/CONTENT_AUTHORING.md](docs/CONTENT_AUTHORING.md)
-- Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Active scope: [docs/CONTENT_SCOPE.md](docs/CONTENT_SCOPE.md)
-- Security policy: [SECURITY.md](SECURITY.md)
+## Support and security
 
-This repository is licensed under the [MIT License](LICENSE).
+Use [GitHub Issues](https://github.com/openimsdk/docs/issues) for reproducible documentation defects and content corrections. For product, deployment, licensing, or commercial support, contact [contact@openim.io](mailto:contact@openim.io).
+
+Do not report security vulnerabilities in a public issue. Follow the private reporting process in [SECURITY.md](SECURITY.md).
+
+## License
+
+This documentation project is licensed under the [MIT License](LICENSE).
