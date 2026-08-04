@@ -4,7 +4,7 @@
 
 - `scope.json`：允许进入当前结构的产品、平台、版本和模板。
 - `docsets.json`：上游仓库与本地目标目录的同步绑定。
-- `chat-pages.json`：当前范围的结构快照。
+- `chat-pages.json`：当前范围的结构快照，与活动路由清单保持一致；已排除平台不得继续留在其中。
 - `report.json`：由 `pnpm structure:report` 生成的统计报告。
 - `*-content-audit.json`：逐页人工审核记录。
 - `wasm-api-ownership.json`：WASM API 与事件的正文归属。

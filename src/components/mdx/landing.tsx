@@ -493,11 +493,6 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     description: '在当前活跃会话中显示实时输入状态。',
     meta: '输入中',
   },
-  Unity: {
-    title: 'Unity',
-    description: '在 Unity 游戏和互动应用中接入用户、群组和实时消息。',
-    meta: 'C#',
-  },
   'JavaScript SDK': {
     title: 'JavaScript SDK',
     description:
@@ -613,11 +608,6 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     title: '发送消息',
     description: '从可信服务端向单聊用户或群组发送消息。',
     meta: '消息',
-  },
-  'Unity demo': {
-    title: 'Unity Demo',
-    description: '查看 Unity Demo，适用于游戏和互动应用聊天场景。',
-    meta: 'GitHub / Unity',
   },
   'uni-app demo': {
     title: 'uni-app Demo',

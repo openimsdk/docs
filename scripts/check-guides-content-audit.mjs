@@ -13,8 +13,12 @@ const generatedContent = JSON.parse(
 const errors = [];
 const referencedLocalAssets = new Set();
 
+const guideTracePaths = ['./content/zh/docs/guides/**/*.mdx', './content/en/docs/guides/**/*.mdx'];
 for (const route of ['/docs/guides/[...slug]', '/[locale]/docs/guides/[...slug]']) {
-  if (!nextConfig.includes(`'${route}': ['./content/zh/docs/guides/**/*.mdx', './content/en/docs/guides/**/*.mdx']`)) {
+  const entry = new RegExp(`${escapeRegExp(`'${route}'`)}\\s*:\\s*\\[([\\s\\S]*?)\\]`).exec(
+    nextConfig,
+  )?.[1];
+  if (!entry || !guideTracePaths.every((path) => entry.includes(`'${path}'`))) {
     errors.push(`${route}: missing standalone output tracing for reviewed guide MDX`);
   }
 }
@@ -68,7 +72,8 @@ for (const page of pages) {
     try {
       const body = await readFile(resolve(root, page.enManualFile), 'utf8');
       if (!body.trim()) errors.push(`${page.currentPath}: English MDX is empty`);
-      if (body.startsWith('---')) errors.push(`${page.currentPath}: English MDX must not contain frontmatter`);
+      if (body.startsWith('---'))
+        errors.push(`${page.currentPath}: English MDX must not contain frontmatter`);
       if (/docs\.openim\.io|raw\.githubusercontent\.com\/openimsdk\/docs/i.test(body)) {
         errors.push(`${page.currentPath}: English MDX depends on an old documentation host`);
       }
@@ -166,6 +171,10 @@ function checkUnique(values, label) {
     if (seen.has(value)) errors.push(`${value}: duplicate ${label}`);
     seen.add(value);
   }
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function headingId(value) {

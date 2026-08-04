@@ -21,13 +21,12 @@ export const platformLabels: Record<string, string> = {
   electron: 'Electron',
   miniprogram: 'Mini Program',
   'react-native': 'React Native',
-  unity: 'Unity',
 };
 
 export const webCompatibleSdkPlatforms = ['wasm', 'electron', 'miniprogram'] as const;
 
 /** Temporarily hidden from SDK nav, home cards, and platform switcher. Routes remain. */
-export const hiddenSdkPlatforms = ['android', 'uniapp', 'react-native', 'unity'] as const;
+export const hiddenSdkPlatforms = ['android', 'uniapp', 'react-native'] as const;
 
 export function isSdkPlatformVisible(platform?: string | null): boolean {
   if (!platform) return true;

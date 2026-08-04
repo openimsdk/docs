@@ -18,7 +18,7 @@
 | `/sdk/miniprogram/**`          | JavaScript SDK 的小程序运行时实现                   | 已进入公开导航       |
 | `/platform-api/**`             | OpenIM REST API、Webhook 与固定 OpenAPI             | 已进入公开导航       |
 | Android、React Native、uni-app | 对应 SDK 源码与声明                                 | 保留但不对外宣称完成 |
-| Unity                          | 历史内容                                            | 排除在当前 scope     |
+| Unity                          | 历史脚手架                                          | 已从当前结构移除     |
 
 ## 3. 页面决策规则
 
@@ -52,6 +52,6 @@ pnpm content:status -- --status scaffold --limit 100
 
 公开入口、导航、搜索和 Sitemap 必须与状态一致。不能仅因为路由可以访问，就把草稿或脚手架计入已发布文档。
 
-## 5. 历史材料
+## 5. 历史追溯
 
-`docs/superpowers/plans` 与 `docs/superpowers/specs` 保存早期方案和实施记录。它们可能包含旧页面数量、旧版本路径或已放弃的 Sendbird 映射，只用于追溯，不应作为当前开发指南。当前事实以根目录说明、`docs/ARCHITECTURE.md`、`docs/CONTENT_SCOPE.md` 和生成结构为准。
+早期方案、一次性迁移脚本和已排除的脚手架不再保留在当前维护目录中，需要时可通过 Git 历史追溯。当前事实以根目录说明、`docs/ARCHITECTURE.md`、`docs/CONTENT_SCOPE.md`、审核记录和生成结构为准。

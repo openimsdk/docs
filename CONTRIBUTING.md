@@ -43,7 +43,7 @@ Adding, deleting, merging, or moving a page requires coordinated updates to:
 - approved redirects, when compatibility is required
 - tests covering the affected structure
 
-Historical design documents under `docs/superpowers/` are archival records. Do not rewrite their old paths as if they were current implementation guidance.
+Completed migration plans and one-time rewrite tools are retained in Git history rather than the current maintenance interface. Use the current architecture, scope, audit records, and active package scripts as the source of truth.
 
 ## Validation
 

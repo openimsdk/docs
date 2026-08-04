@@ -71,14 +71,17 @@ Open the local site at:
 ## Repository structure
 
 ```text
+api/chat/platform-api/  Versioned OpenAPI source documents
 app/                    Next.js routes, metadata, search, and sitemap
-content/docs/           English MDX content
-content/zh/docs/        Simplified Chinese MDX content
+content/docs/           English SDK and Platform API MDX
+content/en/docs/guides/ Reviewed English guide snapshots
+content/zh/docs/        Simplified Chinese MDX and guide snapshots
 data/structure/         Navigation, ownership, scope, and review records
-docs/                   Architecture and authoring documentation
-scripts/                Content validation and deterministic generators
+docs/                   Current architecture and authoring documentation
+public/                 Versioned images, brand assets, and downloads
+scripts/                Active validation, synchronization, and build tools
 src/components/         Documentation and site UI
-src/generated/          Generated route, navigation, search, and locale data
+src/generated/          Committed route, navigation, search, and locale data
 ```
 
 Public URLs do not expose internal product-version directories. For example:
@@ -116,7 +119,7 @@ pnpm check
 pnpm build
 ```
 
-`pnpm check` includes linting, TypeScript validation, content integrity checks, SDK publication audits, example checks, OpenAPI linting, and Platform API tests. `pnpm build` validates the production application and prepares the standalone server output.
+`pnpm check` includes linting, TypeScript validation, content integrity checks, SDK publication audits, example checks, OpenAPI linting, and Platform API tests. `pnpm build` validates the production application. Local and Docker builds also prepare the standalone server output; managed platforms use their own Next.js runtime.
 
 Frequently used commands:
 
@@ -147,6 +150,12 @@ Leave `NEXT_PUBLIC_EDIT_BASE_URL` empty if edit links should not be displayed.
 
 ## Deployment
 
+### Netlify
+
+The production site at [docs.openim.io](https://docs.openim.io) is deployed from `main` through Netlify. [`netlify.toml`](netlify.toml) fixes the build command, publish directory, Node.js version, and Next.js Runtime in version control.
+
+Every production deployment must reach `ready` and pass smoke tests for the home pages, SDK and Platform API routes, search, redirects, Sitemap, and Robots. See the [deployment audit](docs/DEPLOYMENT_AUDIT.md) for the verified production chain.
+
 ### Vercel
 
 The repository includes `vercel.json`. Configure the production environment variables, import the repository into Vercel, and use the committed pnpm lockfile. Vercel runs:
@@ -156,7 +165,15 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-### Standalone Node.js
+### Docker and standalone Node.js
+
+Build and run the maintained container image with:
+
+```bash
+docker compose up --build
+```
+
+For a direct Node.js deployment:
 
 ```bash
 corepack enable

@@ -29,7 +29,6 @@
 - Android：保留迁移内容，待完成正文和双语审核后发布。
 - React Native：目前只有草稿入口，不作为完成能力发布。
 - uni-app：目前只有草稿入口，不作为完成能力发布。
-- Unity：历史物理文件已排除在当前 scope 和导航之外。
 
 这些页面不得出现在首页 SDK 卡片、公开侧栏、Sitemap 或“已完成平台”描述中。
 
@@ -41,8 +40,9 @@
 - `/v4/**` 历史兼容 Reference 路由。
 - `/sdk/v4/**` 与 `/platform-api/v3/**` 旧公开地址。
 - 手写的空 SDK Reference 占位页。
+- 不属于当前 OpenIM 发布范围的 Unity 脚手架。
 
-历史设计与迁移材料保存在 `docs/superpowers` 供追溯，不代表当前实现或公开路径。
+已经完成的设计与迁移过程不作为当前维护文档保留；需要追溯时使用 Git 历史。当前实现以 `docs/ARCHITECTURE.md`、本文件和结构数据为准。
 
 ## 5. Reference 边界
 
