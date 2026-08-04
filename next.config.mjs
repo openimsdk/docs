@@ -9,8 +9,8 @@ import { buildWasmLegacyRedirects } from './scripts/lib/wasm-legacy-redirects.mj
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Keep standalone for Docker/self-host; Vercel uses its own Next.js runtime.
-  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
+  // Keep standalone for Docker/self-host; managed platforms use their own Next.js runtime.
+  ...(process.env.VERCEL || process.env.NETLIFY ? {} : { output: 'standalone' }),
   distDir: process.env.NODE_ENV === 'development' ? '.next-local' : '.next',
   reactStrictMode: true,
   allowedDevOrigins: ['127.0.0.1'],
