@@ -1,16 +1,276 @@
 ---
 title: 'Authenticate and manage a session'
-description: 'OpenIM WASM SDK guide for Authenticate and manage a session.'
+description: 'Sign in with the WASM SDK, inspect the sign-in state, handle connection events, and sign out the current user.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/getting-started/authenticate-and-manage-session'
 ---
 
-## Overview
+The WASM SDK uses `login()` to establish a session for the current user. Before authenticating, complete the prerequisites in [Before you start](/sdk/wasm/getting-started/before-you-start): OpenIMServer, user sign-in details, browser-accessible service addresses, and SDK runtime assets.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+Follow this sequence for a complete sign-in flow:
+
+1. Publish the WASM assets and create an SDK instance with `getSDK()`.
+2. Register connection, token, and account sign-out events so that no state changes are missed during sign-in.
+3. Obtain the `userID`, token, `apiAddr`, and `wsAddr` described in “Before you start” from a trusted backend.
+4. Call `login()`, wait for its Promise to succeed, and then wait for `OnConnectSuccess` to confirm that the connection is ready.
+5. Query user, friend, conversation, group, and message data only after the connection succeeds.
+6. When the user signs out or switches accounts, call `logout()`, then clear application state and event listeners for the current account.
+
+## Initialize the SDK with application configuration
+
+Publish the WASM assets required by the browser SDK before creating the SDK instance. `coreWasmPath` and `sqlWasmPath` must point to assets the browser can access.
+
+```ts
+import { CbEvents, getSDK } from '@openim/wasm-client-sdk';
+
+const openimsdk = getSDK({
+  coreWasmPath: '/openIM.wasm',
+  sqlWasmPath: '/sql-wasm.wasm',
+});
+```
+
+### Parameters
+
+`getSDK()` accepts the following configuration fields:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `coreWasmPath` | `string` | No | Browser-accessible URL for `openIM.wasm`. Defaults to `/openIM.wasm` when omitted. |
+| `sqlWasmPath` | `string` | No | Browser-accessible URL for `sql-wasm.wasm`. Set it explicitly when the project changes its static asset directory or uses a CDN. |
+| `debug` | `boolean` | No | Controls diagnostic output from the JavaScript wrapper and local database bridge. It is enabled by default and is normally disabled explicitly in production. |
+
+### Understand the browser package
+
+`@openim/wasm-client-sdk` is the browser WASM package. `getSDK()` reuses an SDK instance within the same page runtime, so application components should not create separate instances. Do not initialize it during server-side rendering, in a Node.js API route, or in the Electron main process.
+
+The OpenIMSDK application configuration has two parts: WASM asset paths are passed to `getSDK()`, while the OpenIMServer addresses and user credentials are passed to `login()`.
+
+## Obtain sign-in details for the current user
+
+Call an endpoint on your application backend to obtain the current user's `userID`, token, and OpenIMServer addresses. See [Before you start](/sdk/wasm/getting-started/before-you-start) for the endpoint's responsibilities and response shape.
+
+```ts
+const { userID, token, apiAddr, wsAddr } = await loadOpenIMSDKSession();
+```
+
+`userID` identifies the current OpenIMSDK user; it is not an authentication credential. It must match the token. The browser consumes the sign-in details returned by the backend and must not create users or issue tokens.
+
+## Register connection events before signing in
+
+Register connection events before calling `login()`. This lets the application capture errors caused by network access, service addresses, tokens, or server conditions during sign-in and surface them in the UI and logs.
+
+```ts
+const handleConnecting = () => {
+  setConnectionState('connecting');
+};
+
+const handleConnectSuccess = () => {
+  setConnectionState('connected');
+};
+
+const handleConnectFailed = ({ errCode, errMsg }) => {
+  setConnectionState('failed');
+  console.error('OpenIMClientSDK connection failed', { errCode, errMsg });
+};
+
+openimsdk.on(CbEvents.OnConnecting, handleConnecting);
+openimsdk.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
+openimsdk.on(CbEvents.OnConnectFailed, handleConnectFailed);
+```
+
+## Sign in the current user
+
+Pass an `InitAndLoginConfig` object to `login()`. The following example uses `Platform.Web` instead of placing a numeric platform value in application code:
+
+```ts
+import { LogLevel, Platform } from '@openim/wasm-client-sdk';
+
+try {
+  await openimsdk.login({
+    userID,
+    token,
+    platformID: Platform.Web,
+    apiAddr,
+    wsAddr,
+    logLevel: LogLevel.Warn,
+    isLogStandardOutput: false,
+  });
+} catch ({ errCode, errMsg }) {
+  console.error('OpenIMClientSDK sign-in failed', { errCode, errMsg, userID });
+  throw new Error(`OpenIMClientSDK login failed: ${errCode} ${errMsg}`);
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `string` | Yes | The current OpenIMSDK user ID, which must match the token. It is not a nickname, phone number, or temporary application session ID. |
+| `token` | `string` | Yes | The current user's OpenIMSDK token, obtained from a trusted backend. Do not use an administrator token or issue tokens in the frontend. |
+| `platformID` | `number` | Yes | The current client platform. Use `Platform.Web` in a browser. Desktop and mobile clients should select the appropriate enum according to their runtime and the server's multi-device sign-in policy. |
+| `apiAddr` | `string` | Yes | The OpenIMServer HTTP API address, which must be reachable from the current browser. Use an HTTPS address on an HTTPS page. |
+| `wsAddr` | `string` | Yes | The OpenIMServer WebSocket address, which must accept connections from the current browser. An HTTPS page normally uses WSS. |
+| `logLevel` | `LogLevel` | No | The SDK log level. Use `Debug` during development and normally `Warn` or `Error` in production. |
+| `isLogStandardOutput` | `boolean` | No | Whether to send core SDK logs to the browser console. Disabling this option does not disable JavaScript wrapper logs controlled by `getSDK({ debug })`. |
+
+A successful `login()` Promise means that the sign-in request has completed. `OnConnectSuccess` means that the SDK connection is ready. These are separate stages: do not call message, conversation, group, or user APIs that depend on the connection solely because the Promise succeeded.
+
+If the user clicks the sign-in button repeatedly, reuse the in-progress sign-in request and its Promise instead of invoking `login()` concurrently.
+
+## Handle API results
+
+Asynchronous WASM SDK APIs return Promises. On success, read business data from the response's `data` field. On failure, the Promise rejects with an error containing `errCode` and `errMsg`. The “Return result” section on each API page describes only the business shape of `data` and does not repeat this shared response envelope.
+
+```ts
+try {
+  const { data } = await openimsdk.getSelfUserInfo();
+  useCurrentUser(data);
+} catch ({ errCode, errMsg }) {
+  console.error('getSelfUserInfo failed', { errCode, errMsg });
+}
+```
+
+For a query API, `data` is a snapshot at the time of the call. When a state-changing API has no business data with which to refresh the UI, await the Promise and then process the relevant event or query again as described on that API page. Do not treat Promise completion, event delivery, and the final UI state as the same stage.
+
+Complex objects have a complete field reference on one primary query page. Other API pages explain the fields used by that operation and link to the shared object reference, avoiding inconsistent field tables for the same type.
+
+## Inspect the current sign-in state
+
+Neither `getLoginStatus()` nor `getLoginUserID()` accepts business parameters:
+
+```ts
+import { LoginStatus } from '@openim/wasm-client-sdk';
+
+const { data: loginStatus } = await openimsdk.getLoginStatus();
+
+if (loginStatus === LoginStatus.Logged) {
+  const { data: currentUserID } = await openimsdk.getLoginUserID();
+  restoreSessionFor(currentUserID);
+}
+```
+
+`LoginStatus` has three values:
+
+| Value | Description |
+| --- | --- |
+| `LoginStatus.Logout` | The current SDK instance is signed out. |
+| `LoginStatus.Logging` | Sign-in is in progress. Do not start another sign-in concurrently. |
+| `LoginStatus.Logged` | The SDK is signed in. Continue to use connection events to determine whether the network connection is currently available. |
+
+`getLoginUserID()` returns the user ID currently signed in to the SDK. Use it to verify that the application account and SDK account match; it does not replace application authentication. When either query Promise succeeds, use its `data` value to establish the current sign-in snapshot. The queries themselves do not trigger connection events.
+
+When switching accounts, do not overwrite the current session by calling `login()` with new parameters. Call `logout()` first and clear the previous account's state, then call `login()` with the new account.
+
+## Report browser runtime state
+
+Call `networkStatusChanged()` when browser connectivity is restored so the SDK can check its connection again. It accepts no business parameters. Call `setAppBackgroundStatus()` when the page moves between foreground and background: pass `true` when entering the background and `false` when returning to the foreground. While the application is in the background, newly delivered messages generally arrive through `OnRecvOfflineNewMessages`. See [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages) for the complete listener.
+
+```ts
+const handleOnline = () => {
+  void openimsdk.networkStatusChanged();
+};
+
+const handleVisibilityChange = () => {
+  void openimsdk.setAppBackgroundStatus(document.hidden);
+};
+
+window.addEventListener('online', handleOnline);
+document.addEventListener('visibilitychange', handleVisibilityChange);
+
+function removeRuntimeListeners() {
+  window.removeEventListener('online', handleOnline);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+}
+```
+
+These methods only report runtime changes. They do not establish a new user session and cannot replace `login()` or token refresh. Call `removeRuntimeListeners()` when unmounting the application. See [Integrate by runtime](/sdk/wasm/getting-started/environment-specific-implementation) for other environments.
+
+### Use access tokens
+
+A trusted backend must issue the OpenIMSDK token and return it to the browser. The frontend only passes it to `login()` and restarts authentication when the token expires, becomes invalid, or the user deliberately switches accounts.
+
+```ts
+const handleUserTokenExpired = async () => {
+  console.warn('OpenIMSDK token has expired');
+  await refreshSessionAndRelogin();
+};
+
+const handleUserTokenInvalid = () => {
+  console.warn('OpenIMSDK token is invalid');
+  redirectToSignIn();
+};
+
+openimsdk.on(CbEvents.OnUserTokenExpired, handleUserTokenExpired);
+openimsdk.on(CbEvents.OnUserTokenInvalid, handleUserTokenInvalid);
+```
+
+To refresh a token, request a new `userID`, token, and service addresses from the trusted backend, then call `login()` again or direct the user to sign in according to your product policy.
+
+### Access tokens and session tokens
+
+The browser sign-in flow in the OpenIM WASM SDK does not expose separate “access token” and “session token” client credentials. From the frontend's perspective, `login()` accepts an OpenIMSDK token. Your backend and OpenIMServer configuration determine how that token is issued, how long it remains valid, and how it is refreshed or revoked.
+
+If the product requires short-lived sessions, one-time sign-in, or a multi-device policy, implement it on the backend and use token lifecycle events to tell the frontend to authenticate again.
+
+## Handle the connection lifecycle
+
+In addition to connection and token events, handle forced sign-out. This event normally means that the same account signed in from another client, a server policy requires the current client to sign out, or the current token is no longer suitable for continued use.
+
+```ts
+const handleKickedOffline = () => {
+  clearCurrentSession();
+  showSignedInElsewhereDialog();
+};
+
+openimsdk.on(CbEvents.OnKickedOffline, handleKickedOffline);
+```
+
+When `OnKickedOffline` arrives, the WASM SDK has already signed out the current session automatically. Do not call `logout()` again. The event handler only needs to clear the application's current user, conversation list, message view, and page state, then prompt the user to sign in again or navigate to the sign-in page according to product policy.
+
+## Disconnect from OpenIMServer
+
+When the user deliberately signs out or switches accounts, call `logout()` and then clear the current user's conversation list, message cache, unread counts, and application state. A forced sign-out through `OnKickedOffline` is not a deliberate sign-out and must not run this `logout()` flow.
+
+```ts
+await openimsdk.logout();
+
+clearCurrentSession();
+```
+
+A successful `logout()` Promise means that the current SDK session has signed out. Clear application state afterward. Do not wait for a connection event as the sole indication that a deliberate sign-out has completed.
+
+`logout()` accepts no business parameters. When switching accounts, wait for the old account's `logout()` Promise, remove its event listeners, and clear its state before calling `login()` for the new account. Do not run sign-in and sign-out for two accounts concurrently.
+
+### Disconnect only the WebSocket
+
+The OpenIM WASM SDK does not provide a separate method that disconnects only the WebSocket while retaining the signed-in session. Use `logout()` to deliberately end the current user's session. To report foreground/background or network changes, use the application lifecycle, `setAppBackgroundStatus()`, and `networkStatusChanged()` together with connection events.
+
+## Remove session event listeners
+
+This page owns the complete listener examples for connection, token, and account sign-out events. When signing out, switching accounts, or destroying the SDK scope, remove them with the same function references used during registration:
+
+```ts
+function removeSessionListeners() {
+  openimsdk.off(CbEvents.OnConnecting, handleConnecting);
+  openimsdk.off(CbEvents.OnConnectSuccess, handleConnectSuccess);
+  openimsdk.off(CbEvents.OnConnectFailed, handleConnectFailed);
+  openimsdk.off(CbEvents.OnUserTokenExpired, handleUserTokenExpired);
+  openimsdk.off(CbEvents.OnUserTokenInvalid, handleUserTokenInvalid);
+  openimsdk.off(CbEvents.OnKickedOffline, handleKickedOffline);
+}
+```
+
+Connection events have no business-entity merge key. Isolate their state by SDK instance and signed-in user, and remove the old instance's listeners before switching accounts. After signing in again, each business domain uses its own events to synchronize changes. Query the data required by a page when it first opens to establish a snapshot.
+
+## Next steps
+
+- [Before you start](/sdk/wasm/getting-started/before-you-start)
+- [Send your first message](/sdk/wasm/getting-started/send-first-message)
+- [Events overview](/sdk/wasm/events/overview-events)
+- [Logging](/sdk/wasm/logger)

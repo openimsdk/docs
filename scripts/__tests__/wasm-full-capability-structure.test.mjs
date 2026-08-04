@@ -419,7 +419,10 @@ function findNavigationNode(nodes, href) {
   return undefined;
 }
 
-test('every active WASM page has Chinese content and an English deferred scaffold', () => {
+test('every active WASM page has Chinese content and English content matching its audit state', () => {
+  const audit = readJson('data/structure/wasm-content-audit.json');
+  const auditByPath = new Map(audit.pages.map((page) => [page.currentPath, page]));
+
   for (const path of activePages) {
     for (const [locale, file] of [
       ['zh', zhContentFile(path)],
@@ -429,8 +432,15 @@ test('every active WASM page has Chinese content and an English deferred scaffol
       const source = readFileSync(file, 'utf8');
       assert.match(source, new RegExp(`sourcePath: '${path}'`), file);
       if (locale === 'en') {
-        assert.match(source, /English version .* is deferred/);
-        assert.doesNotMatch(source, /```|## (?!Overview)/);
+        const reviewStatus = auditByPath.get(path)?.locales.en.reviewStatus;
+        if (reviewStatus === 'published') {
+          assert.match(source, /status: 'published'/, file);
+          assert.doesNotMatch(source, /English version .* is deferred/, file);
+        } else {
+          assert.equal(reviewStatus, 'deferred', path);
+          assert.match(source, /English version .* is deferred/, file);
+          assert.doesNotMatch(source, /```|## (?!Overview)/, file);
+        }
       }
     }
   }
@@ -642,13 +652,13 @@ test('the rendered WASM overview links only to active capability pages', () => {
   assert.match(source, /OpenIM WASM SDK 为浏览器应用/);
 });
 
-test('the custom SDK overviews render only for reviewed Chinese content', () => {
+test('custom SDK overviews render for Chinese pages and the reviewed English WASM overview', () => {
   const source = readFileSync('src/components/docs/documentation-page.tsx', 'utf8');
   const wasmOverview = readFileSync(
     'content/zh/docs/chat/sdk/wasm/overview.mdx',
     'utf8',
   );
-  assert.match(source, /locale === 'zh' \? getSdkOverviewPlatform\(effectiveRoute\.path\)/);
+  assert.match(source, /candidateSdkOverviewPlatform === 'wasm'/);
   assert.match(source, /'\/sdk\/flutter\/overview': 'flutter'/);
   assert.match(source, /'\/sdk\/ios\/overview': 'ios'/);
   assert.match(source, /'\/sdk\/wasm\/overview': 'wasm'/);

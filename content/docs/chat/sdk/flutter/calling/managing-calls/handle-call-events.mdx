@@ -1,17 +1,38 @@
 ---
 title: 'Handle call events'
-description: 'OpenIM Flutter SDK guide for Handle call events.'
+description: 'Configure the Flutter SDK call-signaling listener in one place.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/managing-calls/handle-call-events'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Configure `OnSignalingListener` once when initializing the application's call module:
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+```dart
+Future<void> registerCallListener() {
+  return OpenIM.iMManager.signalingManager.setSignalingListener(
+    OnSignalingListener(
+      onReceiveNewInvitation: handleIncomingCall,
+      onInviteeAccepted: handleInviteeAccepted,
+      onInviteeRejected: handleInviteeRejected,
+      onInvitationCancelled: handleInvitationCancelled,
+      onInvitationTimeout: handleInvitationTimeout,
+      onInviteeAcceptedByOtherDevice: handleAcceptedElsewhere,
+      onInviteeRejectedByOtherDevice: handleRejectedElsewhere,
+      onHangup: handleHangup,
+      onRoomParticipantConnected: handleParticipantConnected,
+      onRoomParticipantDisconnected: handleParticipantDisconnected,
+      onStreamChange: handleStreamChange,
+    ),
+  );
+}
+```
+
+This page is the sole complete owner of these 11 non-custom signaling callbacks. Merge invitation events by `SignalingInfo.invitation.roomID`. For participant and media-stream state, use both `RoomCallingInfo.roomID` and the user ID.
+
+`SignalingManager` retains only one listener, so a later call replaces the previous instance. The pinned SDK does not expose a removal method. When switching accounts, stop writing events into the old account's state and replace the listener with the complete instance for the new account.

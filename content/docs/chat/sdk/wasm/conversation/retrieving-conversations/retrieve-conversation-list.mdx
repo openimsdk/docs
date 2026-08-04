@@ -1,16 +1,104 @@
 ---
-title: 'Retrieve a conversation list'
-description: 'OpenIM WASM SDK guide for Retrieve a conversation list.'
+title: 'Get the conversation list'
+description: 'Page through the current user’s conversation list with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-## Overview
+The conversation list belongs to the signed-in user. Each `ConversationItem` contains state such as the conversation identifier, unread count, latest message, pinning, and draft. Use the paginated API instead of loading the entire list at once.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Get conversations by page
+
+Use `getConversationListSplit()` to page through conversations. `offset` is the starting position and `count` is the page size. The first page must start with `offset: 0`.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Starting offset. Pass `0` for the first page. |
+| `count` | `number` | Yes | Number of conversations to read. |
+
+```ts
+const pageSize = 50;
+
+async function loadConversationPage(offset = 0) {
+  const { data } = await openimsdk.getConversationListSplit(
+    { offset, count: pageSize }
+  );
+
+  mergeConversations(data);
+  return data;
+}
+```
+
+After the Promise succeeds, `data` contains the current page of `ConversationItem[]`.
+
+### Conversation fields
+
+`ConversationItem` includes the chat target, list display data, and the current account's conversation settings:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | Stable conversation ID and the merge key for lists and events. |
+| `conversationType` | `SessionType` | Conversation type, such as one-to-one or group chat. |
+| `userID` | `string` | The other user's ID in a one-to-one chat; normally empty in a group chat. |
+| `groupID` | `string` | The group ID in a group chat; normally empty in a one-to-one chat. |
+| `showName` | `string` | Snapshot of the conversation's display name. |
+| `faceURL` | `string` | Snapshot of the conversation's display avatar. |
+| `latestMsg` | `string` | Serialized content of the latest message. An empty value means that no latest message is available for display. |
+| `latestMsgSendTime` | `number` | Send time of the latest message, used for list ordering. |
+| `unreadCount` | `number` | Number of messages unread by the current account in this conversation. |
+| `recvMsgOpt` | `MessageReceiveOptType` | Message reception and notification behavior for this conversation. |
+| `groupAtType` | `GroupAtType` | Mention reminder state in a group chat; not used for one-to-one chats. |
+| `draftText` | `string` | Conversation draft stored on the current device. |
+| `draftTextTime` | `number` | Time when the draft was updated. |
+| `isPinned` | `boolean` | Whether the conversation is pinned. |
+| `isMarked` | `boolean` | Whether the conversation is marked. This works with the “Marked” conversation group. |
+| `isPrivateChat` | `boolean` | Whether burn after reading is enabled for the private chat. |
+| `burnDuration` | `number` | Burn-after-reading duration for the private chat. |
+| `isMsgDestruct` | `boolean` | Whether scheduled server-message deletion is enabled. |
+| `msgDestructTime` | `number` | Scheduled deletion interval for server messages. |
+| `isNotInGroup` | `boolean` | Whether the current account is no longer in the group. |
+| `remark` | `string` (optional) | Conversation remark. |
+| `attachedInfo` | `string` | SDK attachment data. Parse it only according to a confirmed application contract. |
+| `ex` | `string` (optional) | Conversation extension string. |
+
+Use `showName` and `faceURL` directly for list titles and avatars, but reconcile friend or group profile changes through the data and events in their respective domains. Never derive a conversation ID from the display name.
+
+To load more, advance `offset` by the number of items requested. Merge results by `conversationID` to prevent a conversation from appearing twice when it is present in both a query result and an event.
+
+When fewer than `count` items are returned, the list has reached its end. On a manual refresh, clear previous pagination state and start again from `offset: 0`. After signing in again, conversation events synchronize subsequent changes.
+
+## Keep the list synchronized
+
+After `getConversationListSplit()` succeeds, merge the returned `ConversationItem[]` into the current paginated snapshot. The query itself does not trigger conversation events. While the list is open, listen for `CbEvents.OnNewConversation` and `CbEvents.OnConversationChanged`. Both events carry `ConversationItem[]` in `data`; merge new and changed conversations by `conversationID`.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleNewConversation = ({ data }) => {
+  mergeConversations(data);
+};
+
+const handleConversationChanged = ({ data }) => {
+  mergeConversations(data);
+};
+
+openimsdk.on(CbEvents.OnNewConversation, handleNewConversation);
+openimsdk.on(CbEvents.OnConversationChanged, handleConversationChanged);
+
+function removeConversationListListeners() {
+  openimsdk.off(CbEvents.OnNewConversation, handleNewConversation);
+  openimsdk.off(CbEvents.OnConversationChanged, handleConversationChanged);
+}
+```
+
+Call `removeConversationListListeners()` when the component unmounts, the user signs out, or the account changes. [Track the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count) owns the total unread count, while [Report typing status](/sdk/wasm/message/composing-messages/update-typing-status) owns typing state.
+
+Do not use the joined-group list as a substitute for the conversation list. A user can belong to a group without a corresponding conversation, or retain a historical conversation after leaving the group.

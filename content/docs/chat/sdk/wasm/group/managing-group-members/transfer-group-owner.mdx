@@ -1,16 +1,29 @@
 ---
-title: 'Transfer group owner'
-description: 'OpenIM WASM SDK guide for Transfer group owner.'
+title: 'Transfer group ownership'
+description: 'Transfer ownership of a group to another member.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/managing-group-members/transfer-group-owner'
 ---
 
-## Overview
+Only the current group owner can call `transferGroupOwner()`. `groupID` is the ID of the target group, and `newOwnerUserID` is the new owner's user ID. The target user must be an active member of the group.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+await openimsdk.transferGroupOwner({
+  groupID,
+  newOwnerUserID: targetUserID,
+});
+```
+
+## State changes after the call
+
+When the Promise resolves, OpenIMServer has completed the ownership transfer: the previous owner becomes a regular member, and the new owner receives the owner role. Role changes are delivered incrementally through `OnGroupMemberInfoChanged`, whose `data` is a single `GroupMemberItem`. A transfer can update both the previous and new owner's member records; merge each one by `groupID:userID`.
+
+For the complete listener and cleanup implementation, see [List group members](/sdk/wasm/group/retrieving-group-members/get-group-member-list). Do not infer the transfer result from the number of events alone. When you need a current snapshot of the owner and administrators, call `getGroupMemberOwnerAndAdmin(groupID)`. After a new login, subsequent changes are synchronized through member events.
+
+If the group owner needs to leave the group, transfer ownership before calling `quitGroup()`. If the group is no longer needed, the owner can instead call `dismissGroup()`, but dismissing the group affects every member and is not a substitute for an ordinary ownership transfer.

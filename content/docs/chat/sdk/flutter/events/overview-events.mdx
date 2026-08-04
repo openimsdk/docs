@@ -1,17 +1,160 @@
 ---
-title: 'Events overview'
-description: 'OpenIM Flutter SDK guide for Events overview.'
+title: 'Event overview'
+description: 'Configure OpenIM Flutter SDK listeners centrally and dispatch events by business domain.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/events/overview-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM Flutter SDK uses listeners to deliver connection, synchronization, user, relationship, conversation, conversation-group, group, message, and call changes. Each manager retains only one corresponding listener, and a later configuration replaces the Dart instance stored previously. Compose every callback when initializing the application state layer, and configure each listener type exactly once. Do not configure listeners in a widget's `build()` method or separately on each feature screen.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Configure listeners centrally
+
+The following example shows an application-level composition entry point. The complete merge logic for each `handle*` function belongs on the ownership page linked in the table below.
+
+```dart
+Future<void> registerOpenIMListeners() async {
+  await OpenIM.iMManager.userManager.setUserListener(
+    OnUserListener(
+      onSelfInfoUpdated: handleSelfInfoUpdated,
+      onUserStatusChanged: handleUserStatusChanged,
+    ),
+  );
+
+  await OpenIM.iMManager.friendshipManager.setFriendshipListener(
+    OnFriendshipListener(
+      onBlackAdded: handleBlackAdded,
+      onBlackDeleted: handleBlackDeleted,
+      onFriendAdded: handleFriendChanged,
+      onFriendDeleted: handleFriendDeleted,
+      onFriendInfoChanged: handleFriendChanged,
+      onFriendApplicationAdded: handleFriendApplicationChanged,
+      onFriendApplicationAccepted: handleFriendApplicationChanged,
+      onFriendApplicationRejected: handleFriendApplicationChanged,
+      onFriendApplicationDeleted: handleFriendApplicationDeleted,
+    ),
+  );
+
+  await OpenIM.iMManager.conversationManager.setConversationListener(
+    OnConversationListener(
+      onNewConversation: handleNewConversations,
+      onConversationChanged: handleConversationsChanged,
+      onTotalUnreadMessageCountChanged: handleTotalUnreadChanged,
+      onInputStatusChanged: handleInputStatusChanged,
+      onSyncServerStart: handleSyncStart,
+      onSyncServerProgress: handleSyncProgress,
+      onSyncServerFinish: handleSyncFinish,
+      onSyncServerFailed: handleSyncFailed,
+    ),
+  );
+
+  await OpenIM.iMManager.groupManager.setGroupListener(
+    OnGroupListener(
+      onJoinedGroupAdded: handleJoinedGroupAdded,
+      onJoinedGroupDeleted: handleJoinedGroupDeleted,
+      onGroupInfoChanged: handleGroupInfoChanged,
+      onGroupDismissed: handleGroupDismissed,
+      onGroupMemberAdded: handleGroupMemberAdded,
+      onGroupMemberDeleted: handleGroupMemberDeleted,
+      onGroupMemberInfoChanged: handleGroupMemberInfoChanged,
+      onGroupApplicationAdded: handleGroupApplicationChanged,
+      onGroupApplicationAccepted: handleGroupApplicationChanged,
+      onGroupApplicationRejected: handleGroupApplicationChanged,
+      onGroupApplicationDeleted: handleGroupApplicationDeleted,
+    ),
+  );
+
+  await OpenIM.iMManager.messageManager.setAdvancedMsgListener(
+    OnAdvancedMsgListener(
+      onRecvNewMessage: handleNewMessage,
+      onRecvOfflineNewMessage: handleOfflineMessage,
+      onRecvOnlineOnlyMessage: handleOnlineOnlyMessage,
+      onMsgDeleted: handleMessageDeleted,
+      onNewRecvMessageRevoked: handleMessageRevoked,
+      onRecvC2CReadReceipt: handleC2CReadReceipts,
+      onMessageModified: handleMessageModified,
+      onChangedPinnedMsg: handlePinnedMessagesChanged,
+    ),
+  );
+
+  await OpenIM.iMManager.messageManager.setCustomBusinessListener(
+    OnCustomBusinessListener(
+      onRecvCustomBusinessMessage: handleCustomBusinessMessage,
+    ),
+  );
+
+  await OpenIM.iMManager.signalingManager.setSignalingListener(
+    OnSignalingListener(
+      onReceiveNewInvitation: handleIncomingCall,
+      onInviteeAccepted: handleInviteeAccepted,
+      onInviteeRejected: handleInviteeRejected,
+      onInvitationCancelled: handleInvitationCancelled,
+      onInvitationTimeout: handleInvitationTimeout,
+      onInviteeAcceptedByOtherDevice: handleAcceptedElsewhere,
+      onInviteeRejectedByOtherDevice: handleRejectedElsewhere,
+      onHangup: handleHangup,
+      onRoomParticipantConnected: handleParticipantConnected,
+      onRoomParticipantDisconnected: handleParticipantDisconnected,
+      onStreamChange: handleStreamChange,
+      onReceiveCustomSignal: handleCustomSignal,
+    ),
+  );
+}
+```
+
+`ConversationGroupManager` retains the conversation-group listener separately, so it is not configured again in this combined entry point. See [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) for its complete registration, five callback types, and state-merging rules.
+
+The pinned SDK does not expose corresponding remove or unset APIs. On sign-out, account switch, or state-layer disposal, stop dispatching callbacks to the old account and disposed widgets, and release the application's own references. After signing in again, overwrite the configurations with the complete listener set for the new account.
+
+## Event ownership
+
+| Event scope                     | Merge identifier                                  | Complete handling page                                                                                 |
+| ------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| User profile and online status  | `userID`                                          | [User overview](/sdk/flutter/user/overview-user)                                                       |
+| Friends and blocklist           | `userID`                                          | [Retrieve the friend list by page](/sdk/flutter/user/friends/get-friend-list-page)                     |
+| Conversation list               | `conversationID`                                  | [Retrieve the conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Conversation groups             | `conversationGroupID`                             | [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) |
+| Total unread count              | Current signed-in user                            | [Maintain the total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count) |
+| Typing status                   | `conversationID:userID`                           | [Report typing status](/sdk/flutter/message/composing-messages/update-typing-status)                   |
+| Groups                          | `groupID`                                         | [Group overview](/sdk/flutter/group/overview-group)                                                    |
+| Group members                   | `groupID:userID`                                  | [Group-member retrieval](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members) |
+| Group applications              | `groupID:userID`                                  | [Group applications overview](/sdk/flutter/group/group-applications/overview-group-applications)       |
+| New messages                    | `conversationID:clientMsgID`                      | [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)                           |
+| Message deletion                | `conversationID:clientMsgID`                      | [Delete a message](/sdk/flutter/message/managing-messages/delete-saved-message)                        |
+| Message recall                  | `conversationID:clientMsgID`                      | [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message)                            |
+| Message modification            | `conversationID:clientMsgID`                      | [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message)                            |
+| Pinned messages                 | `conversationID`; messages by `clientMsgID`       | [Pin or unpin a message](/sdk/flutter/message/managing-messages/set-message-pinned)                    |
+| One-to-one read receipts        | `conversationID:clientMsgID`                      | [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read) |
+| Custom business notifications   | ID or idempotency key from the business protocol  | [Receive custom business messages](/sdk/flutter/message/receiving-messages/custom-business-listener)  |
+| Calls                           | `roomID`; participants also use user IDs          | [Call events](/sdk/flutter/calling/managing-calls/handle-call-events)                                 |
+| Custom call signals             | `roomID:eventID`                                  | [Send a custom signal](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal)              |
+
+## Listen for initial synchronization
+
+The synchronization lifecycle also belongs to the application's single `OnConversationListener`. It describes SDK data synchronization and is not the Future callback of any query API.
+
+```dart
+void handleSyncStart(bool? reinstalled) {
+  setSyncState(status: 'syncing', progress: 0, reinstalled: reinstalled == true);
+}
+
+void handleSyncProgress(int? progress) {
+  setSyncState(status: 'syncing', progress: progress ?? 0);
+}
+
+void handleSyncFinish(bool? reinstalled) {
+  setSyncState(status: 'ready', progress: 100, reinstalled: reinstalled == true);
+  reloadVisibleSnapshots();
+}
+
+void handleSyncFailed(bool? reinstalled) {
+  setSyncState(status: 'failed', reinstalled: reinstalled == true);
+}
+```
+
+Use `onSyncServerStart` to enter the synchronizing state and `onSyncServerProgress` to update progress. After completion, re-query the snapshots required by the current UI. On failure, record the error and wait for retry or connection recovery. Always treat event increments, query snapshots, and Future completion as separate stages.

@@ -1,84 +1,46 @@
 ---
-title: '<Verb phrase for endpoint>'
-description: '<One sentence describing the endpoint result and target resource.>'
+title: '<面向业务结果的端点标题>'
+description: '<说明目标资源、操作结果和关键范围。>'
 product: 'platform-api'
 context: 'chat/platform-api'
 template: 'api'
 status: 'draft'
 lastUpdated: 'YYYY-MM-DD'
-version: 'v3'
-sourcePath: '/platform-api/<sendbird-style-route>'
+version: '<verified-version>'
+sourcePath: '/platform-api/<current-route>'
 ---
 
-## Overview
+说明调用场景、目标资源、调用者权限，以及该端点是只读还是会改变状态。
 
-Explain the Sendbird-style workflow this page represents, then document the OpenIM endpoint or composition that implements it. Mention whether the OpenIM operation is read-only or mutates state.
+## 接口
 
-## Endpoint
+`<METHOD> <exact-openim-path>`
 
-`<METHOD> <path>`
+| 属性   | 说明                                 |
+| ------ | ------------------------------------ |
+| 资源   | `<OpenIM 真实资源>`                  |
+| 操作   | `<创建、查询、更新、删除或动作>`     |
+| 认证   | `<管理员 token、回调签名或无需认证>` |
+| 幂等性 | `<是、否或有条件>`                   |
 
-Use the exact method and path from the current OpenIM REST API page. If OpenIM has no one-to-one endpoint for this Sendbird-style slot, write `Not one-to-one` and explain the supported OpenIM composition.
+## 参数说明
 
-| Property       | Value                                                             |
-| -------------- | ----------------------------------------------------------------- |
-| Product area   | `<application, user, channel, message, moderation, bot, push-notifications, organization, webhook>` |
-| Resource       | `<resource name>`                                                 |
-| Operation type | `<create, read, update, delete, action, bulk action>`             |
-| Auth scope     | `<APP administrator token, admin secret, webhook callback, none>` |
-| Idempotent     | `<yes, no, conditional>`                                          |
+按请求位置分别说明真实的 path、query、header 和 body 字段。没有某类参数时直接省略对应小节。不要把示例变量、响应字段或其他端点参数写进本端点表格。
 
-## Authentication
+### Header
 
-Describe the required credential and where it is passed. Most OpenIM REST APIs require `operationID` and `token` headers. Token-issuing endpoints such as `get_admin_token` use `operationID` plus request body credentials instead.
-
-```http
-operationID: <unique-trace-id>
-token: <admin-token>
-Content-Type: application/json
-```
-
-## Request
-
-### Path parameters
-
-| Parameter | Type     | Required | Description     |
-| --------- | -------- | -------- | --------------- |
-| `<name>`  | `<type>` | Yes      | `<description>` |
-
-Write `Not applicable.` when the endpoint has no path parameters.
-
-### Query parameters
-
-| Parameter | Type     | Required | Default     | Description     |
-| --------- | -------- | -------- | ----------- | --------------- |
-| `<name>`  | `<type>` | No       | `<default>` | `<description>` |
-
-Write `Not applicable.` when the endpoint has no query parameters.
-
-### Headers
-
-| Header                           | Required | Description                                |
-| -------------------------------- | -------- | ------------------------------------------ |
-| `operationID`                    | Yes      | Unique trace ID for this request.          |
-| `token`                          | Yes      | APP administrator token when required.     |
-| `Content-Type: application/json` | Yes      | Required when the request has a JSON body. |
+| 参数          | 类型   | 必填       | 说明                                    |
+| ------------- | ------ | ---------- | --------------------------------------- |
+| `operationID` | string | 是         | 本次服务端请求的唯一追踪标识。          |
+| `token`       | string | 视端点而定 | 需要管理员权限时传入 APP 管理员 token。 |
 
 ### Body
 
-| Field     | Type     | Required | Description     |
-| --------- | -------- | -------- | --------------- |
-| `<field>` | `<type>` | Yes      | `<description>` |
+| 参数      | 类型     | 必填  | 说明                     |
+| --------- | -------- | ----- | ------------------------ |
+| `<field>` | `<type>` | 是/否 | `<真实语义、范围和约束>` |
 
-```json
-{
-  "<field>": "<value>"
-}
-```
-
-Write `Not applicable.` when the endpoint has no request body.
-
-### Request example
+## 请求示例
 
 ```bash
 curl -X <METHOD> 'https://<host><path>' \
@@ -88,11 +50,9 @@ curl -X <METHOD> 'https://<host><path>' \
   -d '{"<field>":"<value>"}'
 ```
 
-## Response
+## 返回结果
 
-### Success response
-
-Document the exact success envelope and payload for this endpoint.
+说明 `errCode: 0` 时 `data` 的业务意义。只有返回对象包含多个需要查阅的字段、分页或嵌套结构时才使用表格。
 
 ```json
 {
@@ -103,50 +63,15 @@ Document the exact success envelope and payload for this endpoint.
 }
 ```
 
-### Response fields
+## 错误与限制
 
-| Field     | Type   | Description                   |
-| --------- | ------ | ----------------------------- |
-| `errCode` | number | OpenIM business status code; `0` means success. |
-| `errMsg`  | string | Human-readable error summary.                  |
-| `errDlt`  | string | Detailed error information.                     |
-| `data`    | object | Endpoint-specific payload.                      |
+只记录有规范或实现证据的 HTTP 状态、业务错误、角色权限、数组上限、数据范围、重试条件和版本限制。不要推断不存在的错误码。
 
-Write `Not applicable.` when a nested object or list has no additional fields.
+## 幂等性与后续影响
 
-## Errors
+说明重复请求是否安全、哪些资源会改变，以及是否可能产生 Webhook、SDK 事件、计数或最终一致性延迟。没有证据时，要求调用方以响应、事件或重新查询校准，不写确定触发关系。
 
-List HTTP errors and OpenIM business errors separately when both are available. Explain whether each error is retryable.
+## 相关页面
 
-| HTTP status | `errCode` | Cause     | Retry              |
-| ----------- | --------- | --------- | ------------------ |
-| `<status>`  | `<code>`  | `<cause>` | `<yes/no and why>` |
-
-## Idempotency and side effects
-
-State whether repeating the same request is safe. Include:
-
-- Which resource state changes.
-- Whether repeated calls create duplicates, overwrite fields, or return existing state.
-- Whether webhooks, SDK events, counters, unread counts, or audit logs can be emitted.
-- Whether the operation is eventually consistent.
-
-## Permissions and limits
-
-Document caller role requirements, target-user restrictions, pagination caps, payload size limits, and validation rules. The current OpenIM REST API docs limit all array request fields to 1000 items.
-
-Write `Not applicable.` for rules that do not apply.
-
-## Verify
-
-- Confirm the endpoint returns the expected `errCode`.
-- Confirm the target resource changes or remains unchanged as expected.
-- Confirm the corresponding SDK or webhook event when this endpoint emits one.
-- Confirm behavior for missing, invalid, and duplicate input.
-
-## Related pages
-
-- [Platform API overview](/platform-api/overview)
-- [Prepare to use API](/platform-api/prepare-to-use-api)
-- [Error codes](/platform-api/error-codes)
-- [Related SDK guide](/sdk/<platform>/<section>/<page-slug>)
+- [Platform API 使用准备](/platform-api/prepare-to-use-api)
+- [错误码](/platform-api/error-codes)

@@ -1,17 +1,59 @@
 ---
 title: 'Get joined groups by page'
-description: 'OpenIM WASM SDK guide for Get joined groups by page.'
+description: 'Page through groups joined by the current user.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/retrieving-groups/get-joined-group-list-page'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Use `getJoinedGroupListPage()` when the user belongs to many groups.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Starting offset. Pass `0` for the first page. |
+| `count` | `number` | Yes | Number of groups to read. |
+
+```ts
+const { data: firstPage } = await openimsdk.getJoinedGroupListPage({
+  offset: 0,
+  count: 50,
+});
+```
+
+## Return result
+
+After the Promise succeeds, `data` contains the current page of `GroupItem[]`. Increase `offset` by the number of items requested, not by the length of an array that has already incorporated event updates.
+
+### Group profile fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | Stable group ID and merge key for group lists and events. |
+| `groupName` | `string` | Group name. |
+| `faceURL` | `string` | Group avatar URL. |
+| `introduction` | `string` | Group introduction. |
+| `notification` | `string` | Current group announcement. |
+| `notificationUserID` | `string` | User ID that most recently updated the announcement. |
+| `notificationUpdateTime` | `number` | Time when the announcement was last updated. |
+| `ownerUserID` | `string` | Current group owner's user ID. |
+| `creatorUserID` | `string` | User ID that created the group. |
+| `createTime` | `number` | Time when the group was created. |
+| `memberCount` | `number` | Snapshot of the current member count. |
+| `groupType` | `GroupType` | Group type. |
+| `status` | `GroupStatus` | Current group state, such as normal, blocked, dismissed, or group-wide muted. |
+| `needVerification` | `GroupVerificationType` | Policy determining whether joining requires approval. |
+| `applyMemberFriend` | `AllowType` | Whether members may send friend applications to one another. |
+| `lookMemberInfo` | `AllowType` | Whether ordinary members may view other member profiles. |
+| `displayIsRead` | `boolean` | Whether the group displays group-message read state. Browser clients cannot change this field through the group profile API. |
+| `ex` | `string` | Application-defined group extension string. |
+
+The group name, avatar, and member count are snapshots at call time. While the list is open, merge group events by `groupID`. Do not rely only on stale cached data for permission decisions.
+
+If a group-add or group-delete event arrives during pagination, reset pagination and reload from the first page. See [Group overview](/sdk/wasm/group/overview-group) for complete event handling.

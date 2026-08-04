@@ -1,17 +1,50 @@
 ---
-title: 'Get received friend applications'
-description: 'OpenIM iOS SDK guide for Get received friend applications.'
+title: 'Retrieve received friend requests'
+description: 'Retrieve friend requests received by the current iOS user with pagination.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+```objc
+GetFriendApplicationListAsRecipientReq *req = [GetFriendApplicationListAsRecipientReq new];
+req.handleResults = @[@(OIMApplicationStatusNormal)];
+req.offset = 0;
+req.count = 20;
+[[OIMManager manager] getFriendApplicationListAsRecipientWithReq:req
+                                                       onSuccess:^(NSArray<OIMFriendApplication *> *items) {
+                                                           [requestStore replaceReceived:items];
+                                                       }
+                                                       onFailure:nil];
+```
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+`handleResults` filters requests by pending, accepted, or rejected status. `offset` and `count` control pagination. The success callback returns the current page snapshot. Merge records by `fromUserID:toUserID`. The query does not trigger a friend-request delegate.
+
+## Synchronize friend-request changes
+
+This page is the sole owner of the complete handlers for `onFriendApplicationAdded:`, `onFriendApplicationAccepted:`, `onFriendApplicationRejected:`, and `onFriendApplicationDeleted:`:
+
+```objc
+- (void)onFriendApplicationAdded:(OIMFriendApplication *)item {
+    [requestStore upsertApplication:item];
+}
+
+- (void)onFriendApplicationAccepted:(OIMFriendApplication *)item {
+    [requestStore upsertApplication:item];
+}
+
+- (void)onFriendApplicationRejected:(OIMFriendApplication *)item {
+    [requestStore upsertApplication:item];
+}
+
+- (void)onFriendApplicationDeleted:(OIMFriendApplication *)item {
+    [requestStore removeFromUserID:item.fromUserID toUserID:item.toUserID];
+}
+```
+
+Implement these methods on your application's single, stable `OIMFriendshipListener` instance. For the registration and removal lifecycle, see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page). Route a record to the received or sent list according to whether the current user is its `toUserID`. A successful callback, a friend-request delegate, a friendship delegate, and a reconciliation query are separate stages.

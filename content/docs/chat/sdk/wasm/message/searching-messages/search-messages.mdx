@@ -1,16 +1,151 @@
 ---
 title: 'Search messages'
-description: 'OpenIM WASM SDK guide for Search messages.'
+description: 'Search locally synchronized messages by keyword and conversation criteria.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/searching-messages/search-messages'
 ---
 
-## Overview
+The WASM SDK uses `searchLocalMessages()` to search messages visible to the current user in local storage. To search group messages, pass the group's `conversationID`, not the `groupID` used when sending. If your interface stores only `groupID`, first obtain the group conversation ID through [Get a conversation ID](/sdk/wasm/conversation/retrieving-conversations/get-conversation-id).
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+The search scope consists of messages that the SDK has synchronized to the browser's local cache. Cross-user auditing, complete server-side search, complex permission filtering, and global sorting should be handled by a backend search service. Return the matching `conversationID` and `clientMsgID` to the client so it can locate each message.
+
+## Create a search query
+
+`keywordList` accepts one or more keywords. A search box typically represents one user input. Trim it and filter out empty values before calling the SDK.
+
+```ts
+import { MessageType } from '@openim/wasm-client-sdk';
+
+type SearchGroupMessagesOptions = {
+  conversationID: string;
+  keyword: string;
+  pageIndex?: number;
+  count?: number;
+  senderUserIDList?: string[];
+};
+
+const searchGroupMessagesByKeyword = async ({
+  conversationID,
+  keyword,
+  pageIndex = 1,
+  count = 20,
+  senderUserIDList,
+}: SearchGroupMessagesOptions) => {
+  const normalizedKeyword = keyword.trim();
+
+  if (!normalizedKeyword) {
+    return {
+      totalCount: 0,
+      messages: [],
+    };
+  }
+
+  const { data } = await openimsdk.searchLocalMessages({
+    conversationID,
+    keywordList: [normalizedKeyword],
+    senderUserIDList,
+    messageTypeList: [MessageType.TextMessage, MessageType.AtTextMessage],
+    pageIndex,
+    count,
+  });
+
+  return toSearchRows(data);
+};
+```
+
+## Advanced search
+
+In addition to keywords, `searchLocalMessages()` can filter by sender, message type, and time window. Use these criteria to narrow results to specific group members, text messages, or a particular period.
+
+```ts
+const { data } = await openimsdk.searchLocalMessages({
+  conversationID,
+  keywordList: ['release'],
+  senderUserIDList: [senderUserID],
+  messageTypeList: [MessageType.TextMessage],
+  searchTimePosition,
+  searchTimePeriod,
+  pageIndex: 1,
+  count: 20,
+});
+```
+
+If the search interface supports images, files, or custom messages, include the corresponding `MessageType` values in `messageTypeList`. If no message-type restriction is needed, omit the field and let the SDK search its default set of local message types.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | ID of the conversation to search. |
+| `keywordList` | `string[]` | Yes | Search keywords. For a single search box, usually pass one normalized keyword. |
+| `keywordListMatchType` | `number` | No | Match mode for multiple keywords, using the SDK's numeric convention. Omit it when no special matching behavior is needed. |
+| `senderUserIDList` | `string[]` | No | Search only messages sent by these users. |
+| `messageTypeList` | `MessageType[]` | No | Search only specified message types, such as text and @ mention messages. |
+| `searchTimePosition` | `number` | No | Starting timestamp of the search window. |
+| `searchTimePeriod` | `number` | No | Length of the time window beginning at `searchTimePosition`. |
+| `pageIndex` | `number` | No | Search result page number. |
+| `count` | `number` | No | Number of results per page. |
+
+## Handle paginated results
+
+The returned `SearchMessageResult` contains `totalCount` and `searchResultItems`. Each result item represents one conversation and contains matching `MessageItem[]` in `messageList`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `totalCount` | `number` | Total number of messages matching the current criteria. |
+| `searchResultItems` | `SearchMessageResultItem[]` (optional) | Results grouped by conversation from `searchLocalMessages()`. |
+| `findResultItems` | `SearchMessageResultItem[]` (optional) | Results grouped by conversation when `findMessageList()` locates messages by ID. |
+
+Each `SearchMessageResultItem` has the following structure:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | ID of the conversation containing the result. |
+| `conversationType` | `SessionType` | Type of the conversation containing the result. |
+| `showName` | `string` | Snapshot of the conversation's display name. |
+| `faceURL` | `string` | Snapshot of the conversation's avatar URL. |
+| `messageCount` | `number` | Number of matching messages in this result item. |
+| `messageList` | `MessageItem[]` | Matching messages. For field descriptions, see [Message overview](/sdk/wasm/message/overview-message). |
+
+```ts
+import type { SearchMessageResult } from '@openim/wasm-client-sdk';
+
+const toSearchRows = (result: SearchMessageResult) => {
+  return {
+    totalCount: result.totalCount,
+    messages: (result.searchResultItems ?? []).flatMap((item) => {
+      return item.messageList.map((message) => ({
+        conversationID: item.conversationID,
+        clientMsgID: message.clientMsgID,
+        senderUserID: message.sendID,
+        sentAt: message.sendTime,
+        message,
+      }));
+    }),
+  };
+};
+```
+
+For subsequent pages, keep `conversationID`, `keywordList`, and all filters unchanged and increment only `pageIndex`. If the user changes the keywords, member filter, or time range, reset `pageIndex` to `1` and clear old results so results from different criteria are not mixed.
+
+When the `searchLocalMessages()` Promise resolves, use its return value to establish the search result snapshot. The query does not trigger message events. Within one search view, deduplicate by `conversationID + clientMsgID`; do not persist a selected result by its array position.
+
+## Handle changes to search results
+
+A matched message may be revoked or deleted while the search view is open, and newly synchronized messages may change the search scope. Update results through the shared event handlers on [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages), [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages), and [Revoke a message](/sdk/wasm/message/managing-messages/revoke-a-message). This page handles only search queries and pagination and does not register those message events again.
+
+When navigating to a search result, use its `conversationID` and `clientMsgID` to locate the target conversation and message. To display the surrounding chat history, use the matched `MessageItem` as the anchor for a context query. For parameters, an example, and the result structure, see [Load message context](/sdk/wasm/message/retrieving-messages/load-message-context). Do not use `findMessageList()` to assemble nearby history.
+
+To refresh results at the current point in time, run the current page again with the same criteria. The search Promise, incremental message events, and a re-query are three independent paths. After a new login, message changes are synchronized through events.
+
+## Related pages
+
+- [Find messages by ID](/sdk/wasm/message/retrieving-messages/find-messages-by-id)
+- [Load message history](/sdk/wasm/message/retrieving-messages/load-older-messages)
+- [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages)

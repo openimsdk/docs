@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 
 const root = process.cwd();
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const localRoot = '/docs/chat/platform-api/v3/relation';
-const contentRoot = 'content/docs/chat/platform-api/v3/relation';
-const zhContentRoot = 'content/zh/docs/chat/platform-api/v3/relation';
-const contextKey = 'chat/platform-api/v3';
+const localRoot = '/platform-api/relation';
+const contentRoot = 'content/docs/chat/platform-api/relation';
+const zhContentRoot = 'content/zh/docs/chat/platform-api/relation';
+const contextKey = 'chat/platform-api';
 const contextTitle = 'Platform API';
 
 // Mirrors open-im-server/internal/api/router.go friendRouterGroup.POST order.
@@ -244,7 +244,10 @@ const friendApis = [
       ['handleMsg', '否', 'string', '处理说明。'],
     ],
     sideEffects: '更新好友申请处理状态；同意时会建立好友关系，并下发处理通知。',
-    limits: ['`fromUserID`、`toUserID` 和 `handleResult` 必填。', '`handleResult` 只能为 1 或 -1。'],
+    limits: [
+      '`fromUserID`、`toUserID` 和 `handleResult` 必填。',
+      '`handleResult` 只能为 1 或 -1。',
+    ],
   },
   {
     slug: 'set-friend-remark',
@@ -345,7 +348,11 @@ const friendApis = [
       ['friendUserIDs', '是', 'array', '要导入为好友的用户 ID 列表，最多 1000 个。'],
     ],
     sideEffects: '直接建立好友关系，并向相关用户下发好友申请同意通知。',
-    limits: ['仅 APP 管理员可调用。', '`ownerUserID` 和 `friendUserIDs` 必填。', '`friendUserIDs` 最多 1000 个，且不能包含 `ownerUserID` 或重复值。'],
+    limits: [
+      '仅 APP 管理员可调用。',
+      '`ownerUserID` 和 `friendUserIDs` 必填。',
+      '`friendUserIDs` 最多 1000 个，且不能包含 `ownerUserID` 或重复值。',
+    ],
   },
   {
     slug: 'is-friend',
@@ -414,7 +421,11 @@ const friendApis = [
       ['ex', '否', 'string', '扩展字段；传入字段时会更新。'],
     ],
     sideEffects: '批量更新好友资料，并下发好友资料变更通知。',
-    limits: ['`ownerUserID` 和 `friendUserIDs` 必填。', '`friendUserIDs` 最多 1000 个，且不能重复。', '`isPinned`、`remark`、`ex` 使用包装类型，只有传入字段时才更新。'],
+    limits: [
+      '`ownerUserID` 和 `friendUserIDs` 必填。',
+      '`friendUserIDs` 最多 1000 个，且不能重复。',
+      '`isPinned`、`remark`、`ex` 使用包装类型，只有传入字段时才更新。',
+    ],
   },
   {
     slug: 'get-incremental-friends',
@@ -631,7 +642,11 @@ console.log(
 
 async function writeMdx(file, body) {
   await mkdir(dirname(resolve(root, file)), { recursive: true });
-  await writeFile(resolve(root, file), body, 'utf8');
+  await writeFile(
+    resolve(root, file),
+    body.replaceAll('/docs/chat/platform-api/v3', '/platform-api'),
+    'utf8',
+  );
 }
 
 function renderMdx(record, spec, localized) {

@@ -1,17 +1,78 @@
 ---
-title: 'Environment-specific implementation'
-description: 'OpenIM iOS SDK guide for Environment-specific implementation.'
+title: 'Integrate for the runtime environment'
+description: 'Configure and initialize OpenIM SDK across physical devices, simulators, and the iOS application lifecycle.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/getting-started/environment-specific-implementation'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+## Choose the runtime environment
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+OpenIM iOS SDK uses the same Objective-C APIs on iPhone, iPad, physical devices, and simulators. The main differences between environments are network endpoints, data directories, system permissions, and the application lifecycle, not business APIs.
+
+| Environment | Integration focus |
+| --- | --- |
+| Simulator | Service endpoints must be reachable from the simulator. Do not use an address that is accessible only inside the server container. |
+| Physical device | Verify Wi-Fi and mobile networks, TLS certificates, background recovery, and system permissions. |
+| Objective-C project | Import `OpenIMSDK` directly and call its public selectors. |
+| Swift project | Use the same SDK through its Objective-C module; delegate methods follow automatically bridged names. |
+
+## Configure and initialize the SDK
+
+Initialize the SDK only once during the application lifecycle. If `dataDir` is omitted, the SDK uses its default directory. Reduce logging in production and avoid recording tokens.
+
+```objc
+OIMInitConfig *config = [OIMInitConfig new];
+config.platform = iPhone;
+config.apiAddr = apiAddr;
+config.wsAddr = wsAddr;
+config.logLevel = 4;
+config.isLogStandardOutput = NO;
+
+BOOL accepted = [[OIMManager manager]
+    initSDKWithConfig:config
+    onConnecting:nil
+    onConnectFailure:nil
+    onConnectSuccess:nil
+    onKickedOffline:nil
+    onUserTokenExpired:nil
+    onUserTokenInvalid:nil];
+```
+
+The example uses `nil` callbacks to focus on runtime configuration. A production application should provide stable callbacks and handle connection state through an application-level session object. `accepted` means only that the SDK accepted the initialization request; the connection is usable only after `onConnectSuccess`. For complete connection and token callbacks, see [Authenticate and manage the session](/sdk/ios/getting-started/authenticate-and-manage-session).
+
+### Parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `platform` | `OIMPlatform` | Current client platform. Use `iPhone` for iPhone and `iPad` for iPad. |
+| `apiAddr` | `NSString *` | OpenIMServer HTTP API endpoint. |
+| `wsAddr` | `NSString *` | OpenIMServer WebSocket endpoint. |
+| `dataDir` | `NSString *` | Optional local data directory. |
+| `logLevel` | `NSInteger` | SDK log level. |
+| `isLogStandardOutput` | `BOOL` | Whether to output SDK core logs. |
+
+## Lifecycle boundaries
+
+- Do not initialize or log in again from every view controller. Keep session state in an application-level object.
+- A view appearing or disappearing should add or remove only the business delegates owned by that view; it should not destroy the SDK.
+- Call `logoutWithOnSuccess:onFailure:` when the user explicitly logs out. Call `unInitSDK` only when the application will no longer use the SDK.
+- `OIMManager` already observes `UIApplicationDidEnterBackgroundNotification`, `UIApplicationWillEnterForegroundNotification`, and network reachability changes. It calls `Open_im_sdkSetAppBackgroundStatus` and `Open_im_sdkNetworkStatusChanged` internally.
+- The business layer does not need to observe the same system events or call those Core functions again. Duplicate reports make connection recovery and foreground/background state harder to diagnose. The application only needs to manage view tasks, system permissions, and connection-state presentation according to its product logic.
+
+## Verify and troubleshoot
+
+- Verify `apiAddr`, `wsAddr`, and TLS certificates in the simulator and on at least one physical device.
+- Confirm that initialization is accepted and that `onConnectSuccess` arrives before calling business APIs.
+- Test network recovery, foreground/background transitions, token expiration, and forced logout.
+- Verify log levels, the data directory, and privacy permissions in the release configuration.
+
+## Next steps
+
+- [Authenticate and manage the session](/sdk/ios/getting-started/authenticate-and-manage-session)
+- [Send your first message](/sdk/ios/getting-started/send-first-message)

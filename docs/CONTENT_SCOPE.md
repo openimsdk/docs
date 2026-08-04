@@ -1,86 +1,69 @@
-# 当前内容范围
+# 当前内容与发布范围
 
-## 1. 默认策略
+## 1. 范围原则
 
-该工程使用 `current-only` 策略：只为当前需要维护的 OpenIM SDK 指南和 Server API 保留页面槽位，不把参考站的全部历史资产原样带入新项目。
+仓库采用 `current-only` 策略：公开 URL 只表达当前维护版本，不把版本号放在路径中，也不保留参考站的历史产品模型。允许的结构范围由 `data/structure/scope.json` 约束，实际公开入口由 `src/config/docs.ts`、路由状态和导航共同决定。
 
-范围约束位于：
+“仓库中有文件”“结构允许该平台”和“正式对外可见”是三个不同状态，不能混为一谈。
 
-```text
-data/structure/scope.json
-```
+## 2. 正式公开范围
 
-`npm run content:check` 会验证每条路由是否符合该文件的产品、版本、平台和模板约束。
+本轮对外发布的文档包括：
 
-## 2. 当前保留
+| 公开路径              | 内容                                      |
+| --------------------- | ----------------------------------------- |
+| `/`、`/zh`            | OpenIM Chat 文档首页                      |
+| `/sdk/ios/**`         | iOS SDK                                   |
+| `/sdk/flutter/**`     | Flutter SDK                               |
+| `/sdk/wasm/**`        | JavaScript SDK WASM                       |
+| `/sdk/electron/**`    | Electron SDK                              |
+| `/sdk/miniprogram/**` | JavaScript SDK（兼容 Web 与小程序运行时） |
+| `/platform-api/**`    | Platform API 与 Webhook                   |
 
-| 分支                                | 当前范围                     |
-| ----------------------------------- | ---------------------------- |
-| `/`                           | Chat 文档总入口              |
-| `/sdk/ios/**`              | iOS 当前 SDK 指南            |
-| `/sdk/android/**`          | Android 当前 SDK 指南        |
-| `/sdk/flutter/**`          | Flutter 当前 SDK 指南        |
-| `/sdk/uniapp/**`           | uni-app 当前 SDK 指南        |
-| `/sdk/wasm/**`             | WASM 当前 SDK 指南           |
-| `/sdk/electron/**`         | Electron 当前 SDK 指南       |
-| `/sdk/miniprogram/**`      | 小程序当前 SDK 指南          |
-| `/sdk/react-native/**`     | React Native 当前 SDK 指南   |
-| `/sdk/unity/**`            | Unity 当前 SDK 指南          |
-| `/platform-api/**`         | 当前 Server API 指南与接口页 |
+中文页面在对应路径前增加 `/zh`。WASM、Electron 和小程序在首页归入“兼容 Web 的 SDK”，但各自保留独立文档和适用场景说明。
 
-当前 default / 最新版的公开 URL **省略版本段**（例如 `/sdk/wasm/**`、`/platform-api/**`）。`version` 仍作为页面元数据保留（SDK `v4`、Server API `v3`）。以后若保留历史版，历史版继续使用带版本段的路径（如 `/sdk/v4/wasm/**`），default 版仍省略。正式写文档时，应把页面内的产品版本说明替换为 OpenIM 真实发布版本和兼容范围。
+## 3. 暂不公开的上下文
 
-## 3. 当前删除
+以下平台可能已有结构或物理文件，但未进入本轮正式公开入口：
 
-- 全部 `/uikit/**`。
-- 全部 SDK v3 历史页面。
+- Android：保留迁移内容，待完成正文和双语审核后发布。
+- React Native：目前只有草稿入口，不作为完成能力发布。
+- uni-app：目前只有草稿入口，不作为完成能力发布。
+- Unity：历史物理文件已排除在当前 scope 和导航之外。
+
+这些页面不得出现在首页 SDK 卡片、公开侧栏、Sitemap 或“已完成平台”描述中。
+
+## 4. 已移除的历史范围
+
+- UIKit 文档。
+- SDK v3 历史页面。
 - `/v3/**` Legacy Server API 路由。
 - `/v4/**` 历史兼容 Reference 路由。
-- 所有 `template: reference` 的手写 SDK Reference 占位页。
+- `/sdk/v4/**` 与 `/platform-api/v3/**` 旧公开地址。
+- 手写的空 SDK Reference 占位页。
 
-这些分支不会出现在侧栏、搜索、Sitemap、迁移统计或构建产物中。
+历史设计与迁移材料保存在 `docs/superpowers` 供追溯，不代表当前实现或公开路径。
 
-## 4. 为什么不预建 SDK Reference
+## 5. Reference 边界
 
-SDK Reference 的数量通常由类、方法、参数、枚举和平台绑定自动决定。把参考站的 Reference 路由预先复制为 MDX，会产生大量与 OpenIM 代码不一致的空页面，并让后续维护出现双重事实源。
+SDK Reference 应由源码、类型声明或代码注释生成：
 
-推荐做法：
+- iOS：DocC/Jazzy 或等价工具。
+- Flutter：Dartdoc。
+- JavaScript/WASM、Electron、小程序：TypeScript 声明或 TypeDoc。
+- 后续平台按各自源码生态生成。
 
-- JavaScript/TypeScript：从类型声明或 TypeDoc 生成。
-- Android：从 Kotlin/Java 注释生成 Dokka/Javadoc。
-- iOS：从 Swift/Objective-C 注释生成 DocC/Jazzy。
-- Flutter：从 Dart API 注释生成 Dartdoc。
-- Web/WASM、Electron、小程序：保持核心 API 兼容，按运行环境补充打包、资源和生命周期差异。
-- React Native、uni-app：按对应 SDK 类型、源码注释或示例工程生成。
-- Unity：从 C# XML documentation 或专用生成器生成。
+手写 MDX 负责概念、操作、流程、边界和完整示例。生成 Reference 与手写指南必须有清晰归属，避免同一 API 出现两个相互矛盾的事实源。
 
-生成内容可以部署到独立 `/reference/**` 路由，也可以在构建阶段转换为 Fumadocs 可读取的数据。概念、流程、最佳实践和完整示例仍保留在当前 MDX 指南中。
+## 6. 增加平台或版本
 
-## 5. Server API 的后续选择
+新增公开平台时必须同时完成：
 
-当前保留 Server API 接口页，便于团队逐页替换。OpenIM 的 OpenAPI 规范稳定后，可以进一步改为：
+1. 明确正式支持状态、包名、版本和运行时范围。
+2. 完成中文正文并逐页审核。
+3. 逐页完成英文翻译与审核。
+4. 更新 `scope.json`、`routes.json`、`navigation.json` 和 `src/config/docs.ts`。
+5. 更新审核记录、搜索索引、Sitemap 与发布测试。
+6. 运行 `pnpm check` 和 `pnpm build`。
 
-1. MDX 只维护鉴权、概念、工作流和最佳实践。
-2. 端点参数、Schema、请求与响应由 OpenAPI 自动生成。
-3. 手写 MDX 为重点接口提供补充示例和业务说明。
-
-这一步不是当前项目启动的前置条件。
-
-## 6. 后续增加平台或版本
-
-需要扩展范围时，同时修改：
-
-1. `data/structure/scope.json`。
-2. `src/generated/routes.json`。
-3. `src/generated/navigation.json`。
-4. 对应 `content/docs/**/*.mdx`。
-5. `src/components/site/product-nav.tsx` 中的公开入口。
-
-然后执行：
-
-```bash
-npm run content:sync
-npm run structure:report
-npm run check
-npm run build
-```
+历史版本若未来需要长期保留，应单独设计版本化信息架构；不得直接恢复已经移除的旧路径。

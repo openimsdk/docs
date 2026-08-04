@@ -1,17 +1,112 @@
 ---
 title: 'Get received group applications'
-description: 'OpenIM WASM SDK guide for Get received group applications.'
+description: 'Retrieve group applications that the current user is authorized to process.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-recipient'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Group owners and administrators can call `getGroupApplicationListAsRecipient()` to retrieve the group applications they have received.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string[]` | Yes | IDs of the groups to query. |
+| `handleResults` | `number[]` | Yes | Application processing results to include. |
+| `offset` | `number` | Yes | Starting offset. Pass `0` for the first page. |
+| `count` | `number` | Yes | Maximum number of applications to retrieve. |
+
+| Enum value | Numeric value | Meaning |
+| --- | --- | --- |
+| `ApplicationHandleResult.Unprocessed` | `0` | Pending. |
+| `ApplicationHandleResult.Agree` | `1` | Accepted. |
+| `ApplicationHandleResult.Reject` | `-1` | Rejected. |
+
+```ts
+import { ApplicationHandleResult } from '@openim/wasm-client-sdk';
+
+const { data: applications } =
+  await openimsdk.getGroupApplicationListAsRecipient({
+    groupID: [groupID],
+    handleResults: [ApplicationHandleResult.Unprocessed],
+    offset: 0,
+    count: 20,
+  });
+```
+
+## Return result
+
+When the Promise resolves, `data` is a `GroupApplicationItem[]` containing applications that the current user is authorized to process. This query does not trigger any events.
+
+### Group application fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | ID of the group the user applied to join. |
+| `userID` | `string` | Applicant's user ID. Together with `groupID`, it forms the merge key for the application record. |
+| `nickname` | `string` | Snapshot of the applicant's nickname. |
+| `userFaceURL` | `string` | Snapshot of the applicant's avatar URL. |
+| `reqMsg` | `string` | Message included with the application. |
+| `reqTime` | `number` | Time when the application was submitted. |
+| `joinSource` | `GroupJoinSource` | Source of the application, such as search or a QR code. |
+| `handleResult` | `ApplicationHandleResult` | Current result: pending, accepted, or rejected. |
+| `handleUserID` | `string` | User ID of the owner or administrator who processed the application. It may be empty while the application is pending. |
+| `handledMsg` | `string` | Message provided when the application was processed. |
+| `handledTime` | `number` | Processing time. Do not treat it as valid while the application is pending. |
+| `groupName` | `string` | Snapshot of the target group's name. |
+| `groupFaceURL` | `string` | Snapshot of the target group's avatar URL. |
+| `groupType` | `GroupType` | Type of the target group. |
+| `ownerUserID` | `string` | User ID of the target group's owner. |
+| `creatorUserID` | `string` | User ID of the target group's creator. |
+| `introduction` | `string` | Snapshot of the target group's introduction. |
+| `notification` | `string` | Snapshot of the target group's announcement. |
+| `memberCount` | `number` | Snapshot of the target group's member count. |
+| `status` | `GroupStatus` | Snapshot of the target group's status. |
+| `createTime` | `number` | Time when the application record was created. |
+| `ex` | `string` | Extension string stored with the application record. |
+
+The applicant and group profiles are snapshots stored with the application. If you need to display current information, query the user profile and group profile separately. Do not write the nickname, avatar, or member count from an application back to the corresponding entity cache.
+
+## Listen for application changes
+
+This page is the canonical reference for group application event listeners. Use `groupID:userID` as the merge key for an application record:
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handlers = {
+  added: ({ data }) => mergeGroupApplication(data),
+  accepted: ({ data }) => mergeGroupApplication(data),
+  rejected: ({ data }) => mergeGroupApplication(data),
+  deleted: ({ data }) => removeGroupApplication(data),
+  badgeChanged: ({ data }) => updateGroupApplicationBadge(data),
+};
+
+openimsdk.on(CbEvents.OnGroupApplicationAdded, handlers.added);
+openimsdk.on(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
+openimsdk.on(CbEvents.OnGroupApplicationRejected, handlers.rejected);
+openimsdk.on(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+openimsdk.on(
+  CbEvents.OnGroupApplicationBadgeCountChanged,
+  handlers.badgeChanged,
+);
+
+function removeGroupApplicationListeners() {
+  openimsdk.off(CbEvents.OnGroupApplicationAdded, handlers.added);
+  openimsdk.off(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
+  openimsdk.off(CbEvents.OnGroupApplicationRejected, handlers.rejected);
+  openimsdk.off(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+  openimsdk.off(
+    CbEvents.OnGroupApplicationBadgeCountChanged,
+    handlers.badgeChanged,
+  );
+}
+```
+
+If an application is added, processed, or deleted while you are paging through the list, reset pagination and reload from the first page. Call `removeGroupApplicationListeners()` when the component unmounts, the user logs out, or the active account changes.

@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 
 const root = process.cwd();
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const localRoot = '/docs/chat/platform-api/v3/conversation';
-const contentRoot = 'content/docs/chat/platform-api/v3/conversation';
-const zhContentRoot = 'content/zh/docs/chat/platform-api/v3/conversation';
-const contextKey = 'chat/platform-api/v3';
+const localRoot = '/platform-api/conversation';
+const contentRoot = 'content/docs/chat/platform-api/conversation';
+const zhContentRoot = 'content/zh/docs/chat/platform-api/conversation';
+const contextKey = 'chat/platform-api';
 const contextTitle = 'Platform API';
 
 // Mirrors open-im-server/internal/api/router.go conversationGroup.POST order.
@@ -266,7 +266,10 @@ const conversationApis = [
     endpoint: '/conversation/set_conversations',
     summary: '为多个用户批量设置同一个会话的可更新字段，例如免打扰、置顶、扩展字段或阅后即焚配置。',
     sample: { userIDs: ['user_001', 'user_003'], conversation: conversationReq },
-    fields: [['userIDs', '是', 'array', '需要设置会话字段的用户 ID 列表。'], ...conversationReqFields],
+    fields: [
+      ['userIDs', '是', 'array', '需要设置会话字段的用户 ID 列表。'],
+      ...conversationReqFields,
+    ],
     sideEffects: '批量更新用户会话设置，并可能触发会话变更通知。',
     limits: [
       '`userIDs` 和 `conversation` 必填。',
@@ -393,7 +396,9 @@ const navigation = JSON.parse(await readFile(navigationPath, 'utf8'));
 const platformApiZh = JSON.parse(await readFile(platformApiZhPath, 'utf8'));
 
 const routesWithoutConversation = routes.filter((route) => !route.path.startsWith(`${localRoot}/`));
-const maxSourceIndex = Math.max(...routesWithoutConversation.map((route) => route.sourceIndex ?? 0));
+const maxSourceIndex = Math.max(
+  ...routesWithoutConversation.map((route) => route.sourceIndex ?? 0),
+);
 const maxNavOrder = Math.max(...routesWithoutConversation.map((route) => route.navOrder ?? 0));
 
 const newRoutes = [];
@@ -499,7 +504,11 @@ console.log(
 
 async function writeMdx(file, body) {
   await mkdir(dirname(resolve(root, file)), { recursive: true });
-  await writeFile(resolve(root, file), body, 'utf8');
+  await writeFile(
+    resolve(root, file),
+    body.replaceAll('/docs/chat/platform-api/v3', '/platform-api'),
+    'utf8',
+  );
 }
 
 function renderMdx(record, spec, localized) {
@@ -550,7 +559,9 @@ function renderFrontmatter(values) {
 
 function validateGoConversationApiOrder() {
   const endpoints = new Set(conversationApis.map((api) => api.endpoint));
-  const missingOrder = [...endpoints].filter((endpoint) => !goConversationApiOrderIndex.has(endpoint));
+  const missingOrder = [...endpoints].filter(
+    (endpoint) => !goConversationApiOrderIndex.has(endpoint),
+  );
   if (missingOrder.length > 0) {
     throw new Error(`Missing Go conversation API order for: ${missingOrder.join(', ')}`);
   }

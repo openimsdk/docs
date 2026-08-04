@@ -1,17 +1,37 @@
 ---
-title: 'Track the total unread count'
-description: 'OpenIM iOS SDK guide for Track the total unread count.'
+title: 'Retrieve and maintain the total unread count'
+description: 'Retrieve and continuously maintain the account’s total unread count with OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/get-total-unread-count'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+This query returns a snapshot of the total unread count across all conversations for the current account. Do not derive it by summing `unreadCount` values from the currently loaded pages.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+```objc
+[[OIMManager manager] getTotalUnreadMsgCountWithOnSuccess:^(NSInteger count) {
+    [badgeStore setTotalUnread:count];
+} onFailure:nil];
+```
+
+The query itself does not trigger a delegate. This page is the sole owner of subsequent total-count updates:
+
+```objc
+@interface TotalUnreadSync : NSObject <OIMConversationListener>
+@end
+
+@implementation TotalUnreadSync
+- (void)onTotalUnreadMessageCountChanged:(NSInteger)count {
+    [badgeStore setTotalUnread:count];
+}
+@end
+
+[[OIMManager callbacker] addConversationListener:totalUnreadSync];
+// When the account scope ends:
+[[OIMManager callbacker] removeConversationListener:totalUnreadSync];
+```

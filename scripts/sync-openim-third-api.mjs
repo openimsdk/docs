@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 
 const root = process.cwd();
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const localRoot = '/docs/chat/platform-api/v3/third';
-const contentRoot = 'content/docs/chat/platform-api/v3/third';
-const zhContentRoot = 'content/zh/docs/chat/platform-api/v3/third';
-const contextKey = 'chat/platform-api/v3';
+const localRoot = '/platform-api/third';
+const contentRoot = 'content/docs/chat/platform-api/third';
+const zhContentRoot = 'content/zh/docs/chat/platform-api/third';
+const contextKey = 'chat/platform-api';
 const contextTitle = 'Platform API';
 
 // Mirrors open-im-server/internal/api/router.go thirdGroup/logs/objectGroup order.
@@ -642,7 +642,11 @@ console.log(`Wrote ${externalThirdApis.length} OpenIM third API page(s).`);
 
 async function writeMdx(file, body) {
   await mkdir(dirname(resolve(root, file)), { recursive: true });
-  await writeFile(resolve(root, file), body, 'utf8');
+  await writeFile(
+    resolve(root, file),
+    body.replaceAll('/docs/chat/platform-api/v3', '/platform-api'),
+    'utf8',
+  );
 }
 
 function renderMdx(record, spec, localized) {

@@ -1,17 +1,61 @@
 ---
 title: 'Send a custom signal'
-description: 'OpenIM Flutter SDK guide for Send a custom signal.'
+description: 'Send and receive custom signaling in a call room with the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Use `signalingSendCustomSignal()` to send lightweight application negotiation data to a call room, such as a raised-hand action, layout-change hint, or application state update. It is not a chat-message API and cannot replace the media engine's data channel.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Send a signal
+
+`roomID` and `customInfo` are required strings. To send structured data, define a stable format and serialize it as JSON:
+
+```dart
+final signal = jsonEncode({
+  'version': 1,
+  'eventID': eventID,
+  'type': 'hand-raised',
+  'userID': currentUserID,
+  'sentAt': DateTime.now().millisecondsSinceEpoch,
+});
+
+await OpenIM.iMManager.signalingManager.signalingSendCustomSignal(
+  roomID: roomID,
+  customInfo: signal,
+);
+```
+
+Future completion means that OpenIMServer accepted the send request; it does not mean that other participants have processed the signal. Keep custom signals compact and include a protocol version and business idempotency ID. Do not put large files, chat history, long-lived state, or sensitive credentials in `customInfo`.
+
+## Receive signals
+
+`OnSignalingListener.onReceiveCustomSignal` carries `CustomSignaling`, whose `roomID` and `customInfo` are nullable. Validate the room and business protocol before updating the UI:
+
+```dart
+void handleCustomSignal(CustomSignaling info) {
+  final signalRoomID = info.roomID;
+  final customInfo = info.customInfo;
+  if (signalRoomID != activeRoomID || customInfo == null) return;
+
+  final signal = parseAndValidateCallSignal(customInfo);
+  if (hasAppliedSignal(signalRoomID!, signal.eventID)) return;
+  applyCallSignal(signal);
+}
+
+Future<void> registerCustomSignalListener() {
+  return OpenIM.iMManager.signalingManager.setSignalingListener(
+    OnSignalingListener(onReceiveCustomSignal: handleCustomSignal),
+  );
+}
+```
+
+This page is the complete owner of `onReceiveCustomSignal`. `SignalingManager` retains only one listener, and a later configuration replaces the previous Dart instance. In production, combine this callback with every other call callback in one application-level `OnSignalingListener`; do not configure separate listeners in individual widgets. The pinned SDK has no remove or unset API. When switching accounts, stop dispatching to the previous account's state and replace the listener with the complete instance for the new account.
+
+`parseAndValidateCallSignal()` should validate the JSON structure, protocol version, `eventID`, `type`, and business fields. Apply each signal idempotently by `roomID:eventID`. Do not rely on event order, and do not trust client signaling to grant host, payment, or privacy permissions. After reconnecting, reconcile long-lived state through a room query or trusted backend.

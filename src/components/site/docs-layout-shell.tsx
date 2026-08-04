@@ -22,7 +22,20 @@ export function DocsLayoutShell({
           <strong>{siteConfig.productName}</strong>
           <span>{text.chrome.footerLabel}</span>
         </div>
-        <p>{text.chrome.footerText}</p>
+        <p>
+          {text.chrome.footerText}{' '}
+          <a href={siteConfig.websiteUrl} rel="noreferrer" target="_blank">
+            Website
+          </a>{' '}
+          ·{' '}
+          <a href={siteConfig.enterpriseUrl} rel="noreferrer" target="_blank">
+            {text.chrome.enterprise}
+          </a>{' '}
+          ·{' '}
+          <a href={siteConfig.githubUrl} rel="noreferrer" target="_blank">
+            GitHub
+          </a>
+        </p>
       </footer>
     </div>
   );

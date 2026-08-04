@@ -1,17 +1,52 @@
 ---
 title: 'Subscribe to online status'
-description: 'OpenIM WASM SDK guide for Subscribe to online status.'
+description: 'Subscribe to the online status of selected users.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/user/online-status/subscribe-users-status'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Online status indicates only whether a user is connected to OpenIMServer. Subscribe only to users visible in the current interface. Each account can subscribe to at most 3,000 users.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+const { data: states } = await openimsdk.subscribeUsersStatus(
+  [...new Set(visibleUserIDs.filter(Boolean))],
+);
+```
+
+After the Promise succeeds, `data` contains the current `UserOnlineState[]` for those users. Subsequent changes arrive through `OnUserStatusChanged`. Do not subscribe to the entire user directory at once.
+
+### Online status fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | The user whose status this is, and the merge key for the status cache. |
+| `status` | `OnlineState` | Aggregate online status. `OnlineState.Online` means online and `OnlineState.Offline` means offline. |
+| `platformIDs` | `Platform[]` | Platforms on which the user is currently online. Do not infer a particular device when the field is missing or empty. |
+
+Online status reflects only the connection to OpenIMServer. It does not mean that the user is currently viewing the application, a conversation, or a message.
+
+## Listen for online status changes
+
+This page owns the complete `OnUserStatusChanged` listener. Merge both the initial snapshot and subsequent events by `userID`.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleStatusChanged = ({ data }) => {
+  presenceByUserID.set(data.userID, data);
+};
+
+openimsdk.on(CbEvents.OnUserStatusChanged, handleStatusChanged);
+
+function removeStatusListener() {
+  openimsdk.off(CbEvents.OnUserStatusChanged, handleStatusChanged);
+}
+```
+
+Call `removeStatusListener()` when signing out, switching accounts, or destroying the online-status state layer.

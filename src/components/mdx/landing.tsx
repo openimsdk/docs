@@ -138,12 +138,12 @@ const apiTopics: HomeCard[] = [
   },
   {
     title: 'Groups',
-    href: '/platform-api/channel/creating-a-channel/create-a-group-channel',
+    href: '/platform-api/group/managing-groups/create-group',
     description: 'Create or update groups, manage members, and handle invitations.',
   },
   {
     title: 'Messages',
-    href: '/platform-api/message/messaging-basics/send-a-message',
+    href: '/platform-api/message/sending-messages/send-msg',
     description: 'Send messages from trusted services, or migrate historical message data.',
   },
 ];
@@ -196,7 +196,7 @@ const featuredSamples: HomeCard[] = [
   },
   {
     title: 'Create a group',
-    href: '/platform-api/channel/creating-a-channel/create-a-group-channel',
+    href: '/platform-api/group/managing-groups/create-group',
     description: 'Create a group from a trusted service and set the owner and initial members.',
     meta: 'API',
   },
@@ -245,20 +245,20 @@ const featureGroups: FeatureGroup[] = [
       },
       {
         title: 'Create a group',
-        href: '/platform-api/channel/creating-a-channel/create-a-group-channel',
+        href: '/platform-api/group/managing-groups/create-group',
         description: 'Create a group with Platform API and set the owner, admins, and members.',
         meta: 'Groups',
       },
       {
         title: 'List group members',
-        href: '/platform-api/channel/listing-users/list-members-of-a-group-channel',
+        href: '/platform-api/group/group-members/get-group-member-list',
         description: 'Read group members from the backend for admin tools and sync jobs.',
         meta: 'Members',
       },
       {
-        title: 'Join and leave flows',
-        href: '/platform-api/channel/managing-a-channel/join-a-channel',
-        description: 'Let users join or leave groups from trusted backend services.',
+        title: 'Join a group',
+        href: '/platform-api/group/group-applications/join-group',
+        description: 'Submit a group join request from a trusted backend service.',
         meta: 'Members',
       },
     ],
@@ -269,13 +269,13 @@ const featureGroups: FeatureGroup[] = [
     links: [
       {
         title: 'Send messages',
-        href: '/platform-api/message/messaging-basics/send-a-message',
+        href: '/platform-api/message/sending-messages/send-msg',
         description: 'Send messages from a trusted service to one-to-one or group sessions.',
         meta: 'Message',
       },
       {
         title: 'Message history',
-        href: '/sdk/wasm/message/retrieving-messages/retrieve-message-history',
+        href: '/sdk/wasm/message/retrieving-messages/load-older-messages',
         description: 'Page through conversation history from the client SDK.',
         meta: 'History',
       },
@@ -296,31 +296,31 @@ const featureGroups: FeatureGroup[] = [
   {
     title: 'Message state and UX',
     description:
-      'Keep unread counts, read receipts, typing indicators, and message extras in sync.',
+      'Keep unread counts, read receipts, typing indicators, and custom message payloads in sync.',
     links: [
       {
         title: 'Unread counts',
-        href: '/sdk/wasm/conversation/managing-conversations/manage-read-status',
-        description: 'Read conversation and account unread counts for list badges and app badges.',
+        href: '/sdk/wasm/conversation/managing-conversations/get-total-unread-count',
+        description: 'Read the account total unread count for navigation and app badges.',
         meta: 'Unread',
       },
       {
         title: 'Read receipts',
-        href: '/sdk/wasm/message/managing-read-status/manage-message-read-receipts',
-        description: 'Show read state and inspect which members have read a group message.',
+        href: '/sdk/wasm/message/managing-read-status/send-group-read-receipts',
+        description: 'Report selected group messages as read from the current client.',
         meta: 'Read',
       },
       {
         title: 'Typing indicators',
-        href: '/sdk/wasm/message/composing-messages/manage-typing-status',
+        href: '/sdk/wasm/message/composing-messages/update-typing-status',
         description: 'Show realtime typing state in the active conversation.',
         meta: 'Typing',
       },
       {
-        title: 'Message extensions',
-        href: '/sdk/wasm/message/composing-messages/custom-message-and-extra-data',
-        description: 'Carry shared or local extras with custom messages, ex, and localEx.',
-        meta: 'Data',
+        title: 'Custom messages',
+        href: '/sdk/wasm/message/creating-messages/create-custom-message',
+        description: 'Create an application-defined message with a custom payload and description.',
+        meta: 'Custom',
       },
     ],
   },
@@ -330,26 +330,26 @@ const featureGroups: FeatureGroup[] = [
     links: [
       {
         title: 'Block users',
-        href: '/platform-api/moderation/blocking-users/block-users',
+        href: '/platform-api/relation/blacklist/add-black',
         description: 'Create or remove block relationships that control one-to-one messaging.',
         meta: 'Block',
       },
       {
         title: 'Mute group members',
-        href: '/platform-api/moderation/muting-a-user/mute-a-member-in-a-group-channel',
+        href: '/platform-api/group/group-moderation/mute-group-member',
         description: 'Mute or unmute a member inside a group from the backend.',
         meta: 'Mute',
       },
       {
         title: 'List blocked users',
-        href: '/platform-api/moderation/listing-blocked-and-blocking-users/list-blocked-and-blocking-users',
+        href: '/platform-api/relation/blacklist/list-blacks',
         description: 'Query block relationships for admin tools and troubleshooting.',
         meta: 'Audit',
       },
       {
-        title: 'Mute groups or members',
-        href: '/sdk/wasm/group/moderating-groups/mute-a-group-or-member',
-        description: 'Restrict sending for an entire group or a specific member from the SDK.',
+        title: 'Mute a group',
+        href: '/sdk/wasm/group/change-group-mute',
+        description: 'Enable or disable group-wide mute from the client SDK.',
         meta: 'Mute',
       },
     ],
@@ -357,20 +357,19 @@ const featureGroups: FeatureGroup[] = [
   {
     title: 'Advanced messaging',
     description:
-      'Add group read receipts, delete or revoke messages, conversation groups, and pinned messages.',
+      'Inspect group message readers, revoke messages, organize conversations, and pin important messages.',
     links: [
       {
-        title: 'Group message read receipts',
-        href: '/sdk/wasm/message/managing-read-status/manage-message-read-receipts',
-        description: 'Report group message read state and query who has or has not read a message.',
+        title: 'Group message readers',
+        href: '/sdk/wasm/message/managing-read-status/get-group-message-readers',
+        description: 'Query which group members have or have not read a message.',
         meta: 'Read',
       },
       {
-        title: 'Delete or revoke messages',
-        href: '/sdk/wasm/message/managing-messages/delete-a-message',
-        description:
-          'Delete messages locally or on the server, or revoke them for conversation members.',
-        meta: 'Delete',
+        title: 'Revoke a message',
+        href: '/sdk/wasm/message/managing-messages/revoke-a-message',
+        description: 'Revoke a sent message for participants in the conversation.',
+        meta: 'Revoke',
       },
       {
         title: 'Conversation groups',
@@ -380,7 +379,7 @@ const featureGroups: FeatureGroup[] = [
       },
       {
         title: 'Pinned messages',
-        href: '/sdk/wasm/message/managing-messages/pin-conversation-messages',
+        href: '/sdk/wasm/message/managing-messages/set-message-pinned',
         description: 'Pin important messages in a conversation and sync pin changes.',
         meta: 'Pin',
       },
@@ -466,7 +465,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Read receipts': {
     title: '已读回执',
-    description: '展示已读状态，并查询群消息的已读成员。',
+    description: '从当前客户端上报指定群消息已读。',
     meta: '已读',
   },
   'Search message history': {
@@ -518,7 +517,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Unread counts': {
     title: '未读数',
-    description: '读取会话未读数和账号总未读数，更新会话列表与应用角标。',
+    description: '读取账号总未读数，更新导航和应用角标。',
     meta: '未读',
   },
   'User profiles': {
@@ -575,9 +574,9 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     description: '查看 iOS 原生 Demo 及其 OpenIM SDK 接入路径。',
     meta: 'GitHub / iOS',
   },
-  'Join and leave flows': {
-    title: '加入与退出群组',
-    description: '从可信服务端处理用户加入或退出群组。',
+  'Join a group': {
+    title: '加入群组',
+    description: '从可信服务端提交用户入群请求。',
     meta: '成员',
   },
   'List blocked users': {
@@ -649,20 +648,20 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     description: '通过 SDK 获取会话，并维护草稿、未读数和其他客户端会话状态。',
     meta: '会话',
   },
-  'Message extensions': {
-    title: '消息附加数据',
-    description: '使用自定义消息、ex 和 localEx 承载共享或本地附加数据。',
-    meta: '扩展',
+  'Custom messages': {
+    title: '自定义消息',
+    description: '创建包含自定义载荷和描述的业务消息。',
+    meta: '自定义',
   },
-  'Group message read receipts': {
-    title: '群聊已读回执',
-    description: '上报群消息已读状态，并查询已读成员和未读成员。',
+  'Group message readers': {
+    title: '群消息已读成员',
+    description: '查询已读或未读指定群消息的成员。',
     meta: '已读',
   },
-  'Delete or revoke messages': {
-    title: '删除或撤回消息',
-    description: '删除本地或服务端消息，或将会话中的消息撤回。',
-    meta: '删除',
+  'Revoke a message': {
+    title: '撤回消息',
+    description: '撤回已经发送的消息，并同步给会话参与者。',
+    meta: '撤回',
   },
   'Conversation groups': {
     title: '会话分组',
@@ -674,9 +673,9 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     description: '置顶会话中的重要消息，并通过事件同步变更。',
     meta: '置顶',
   },
-  'Mute groups or members': {
-    title: '群组与成员禁言',
-    description: '限制整个群组或指定群成员发送消息。',
+  'Mute a group': {
+    title: '群组全员禁言',
+    description: '通过客户端开启或关闭群组全员禁言。',
     meta: '禁言',
   },
   'WASM SDK': {
@@ -711,11 +710,11 @@ const zhFeatureGroupText: Record<string, Pick<FeatureGroup, 'title' | 'descripti
   },
   'Message state and UX': {
     title: '消息状态与体验',
-    description: '同步未读数、已读回执、输入状态和消息附加数据。',
+    description: '同步未读数、已读回执和输入状态，并承载自定义消息载荷。',
   },
   'Advanced messaging': {
     title: '高级功能',
-    description: '接入群聊已读、删除与撤回、会话分组和消息置顶等进阶能力。',
+    description: '查询群消息已读成员、撤回消息、管理会话分组，并置顶重要消息。',
   },
   'Moderation and governance': {
     title: '关系与群组管控',

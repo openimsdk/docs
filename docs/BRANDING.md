@@ -1,16 +1,31 @@
-# OpenIM 品牌替换手册
+# OpenIM 品牌与公开入口
 
-## 1. 站点名称与外部链接
+## 1. 官方链接
 
-编辑 `src/config/site.ts`：
+站点统一使用以下公开入口：
 
-- `name`：浏览器标题模板与站点名。
-- `productName`：产品导航显示名。
-- `description`：站点默认描述。
-- `primaryNavigation`：顶部主导航。
-- GitHub、编辑链接优先通过环境变量配置。
+- OpenIM 官网：<https://openim.io/>
+- OpenIM 商业版：<https://openim.io/enterprise/>
+- GitHub：由 `NEXT_PUBLIC_GITHUB_URL` 配置
+- 文档编辑地址：由 `NEXT_PUBLIC_EDIT_BASE_URL` 配置
 
-## 2. Logo、Favicon 与分享图
+商业版文案应说明其面向企业部署、技术支持和增强能力，并链接到商业版官网；不要把商业版能力描述为开源版默认包含。
+
+## 2. 站点配置
+
+`src/config/site.ts` 维护站点名、默认描述和外部链接。生产环境可设置：
+
+```dotenv
+NEXT_PUBLIC_SITE_URL=https://docs.example.com
+NEXT_PUBLIC_WEBSITE_URL=https://openim.io/
+NEXT_PUBLIC_ENTERPRISE_URL=https://openim.io/enterprise/
+NEXT_PUBLIC_GITHUB_URL=https://github.com/openimsdk
+NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/your-org/your-repo/edit/main
+```
+
+全局页头位于 `src/components/site/global-header.tsx`，产品和平台卡片配置位于 `src/config/docs.ts`。修改显示名称不会改变 URL；修改 URL 必须同步结构数据和测试。
+
+## 3. Logo、Favicon 与分享图
 
 | 资源               | 文件                         |
 | ------------------ | ---------------------------- |
@@ -18,87 +33,32 @@
 | Favicon            | `public/favicon.svg`         |
 | 默认 Open Graph 图 | `public/og/default.svg`      |
 
-可直接替换文件并保留路径，也可修改 `src/components/site/logo.tsx` 与 `app/layout.tsx` 指向新的资源。
-
-不要把商业字体文件打包进仓库；优先使用系统字体、开源 Web 字体服务或团队有明确授权的字体加载方案。
-
-## 3. 图标
-
-通用图标集中在：
-
-```text
-src/components/ui/icons.tsx
-```
-
-这些图标是本项目自有的轻量 SVG React 组件。替换时保持组件名称和 `currentColor` 机制，可避免修改使用方。
-
-MDX Landing 使用的图标映射位于：
-
-```text
-src/components/mdx/landing.tsx
-```
+更换资源时确认浅色、深色和小尺寸显示效果。只使用 OpenIM 自有、开源或已经取得授权的字体和图像素材。
 
 ## 4. 颜色与视觉 token
 
-`app/globals.css` 顶部定义浅色与暗色 token。优先修改：
+`app/globals.css` 集中定义浅色和暗色 token，包括 accent、surface、text、border、code background 和 shadow。组件应优先使用 token，不在局部重复硬编码品牌色。
 
-- `--accent` / `--accent-strong`
-- `--surface` / `--surface-raised`
-- `--text` / `--text-muted`
-- `--border`
-- `--code-bg`
-- `--shadow-*`
+通用图标位于 `src/components/ui/icons.tsx`，首页卡片图标和布局位于 `src/components/mdx/landing.tsx`。
 
-组件样式使用这些 token，调整后会同步影响导航、按钮、卡片、代码块、侧栏和搜索弹窗。
+## 5. 首页与 SDK 命名
 
-## 5. 首页文案与视觉
+首页正文位于 `content/docs/chat/index.mdx` 及其中文版本。当前 Web 兼容 SDK 的公开命名是：
 
-编辑：
+- JavaScript SDK WASM：适合浏览器、现代 Web 应用及需要 WASM 核心能力的场景。
+- JavaScript SDK：适合 Web 与小程序等 JavaScript 运行时。
+- Electron SDK：适合桌面应用，并提供 Electron 进程与本地资源相关说明。
 
-```text
-content/docs/chat/index.mdx
-src/components/mdx/landing.tsx
-```
+每个平台使用独立卡片，避免把运行环境、包形态和适用场景混成一个入口。
 
-MDX 控制标题、介绍、卡片和链接；React 组件控制布局与右侧抽象聊天视觉。若替换为 OpenIM 产品截图，建议使用 `next/image` 并将图片放到 `public/images/docs/landing/`。
+## 6. 商业版能力标识
 
-## 6. 产品、平台与版本名称
+SDK 页面中的商业版标识必须与 Platform API 的视觉和文案一致。标识应紧贴能力说明，并提供商业版官网入口。阅后即焚、定期删除服务端消息、设置会话备注、群组全员禁言的 `muteBypassUserIDs`、保存本地转写结果等能力不得被误写为开源版默认能力。
 
-显示映射位于 `src/config/docs.ts`：
+## 7. 发布前品牌检查
 
-```ts
-export const productLabels = {
-  /* ... */
-};
-export const platformLabels = {
-  /* ... */
-};
-```
-
-这里只影响显示名称，不改变 URL 与导航上下文键。更改路由结构需按架构文档执行结构变更流程。
-
-## 7. 页头与产品导航
-
-- 全局页头：`src/components/site/global-header.tsx`
-- 产品导航：`src/components/site/product-nav.tsx`
-- Logo：`src/components/site/logo.tsx`
-- 主题切换：`src/components/site/theme-toggle.tsx`
-
-可在这些组件中接入 OpenIM 官网、控制台、社区、GitHub、语言切换或账号入口。
-
-## 8. SEO 与域名
-
-生产环境设置：
-
-```dotenv
-NEXT_PUBLIC_SITE_URL=https://your-docs-domain.example
-NEXT_PUBLIC_GITHUB_URL=https://github.com/openimsdk
-NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/your-org/your-repo/edit/main
-```
-
-上线前检查：
-
-- `app/layout.tsx` 的 metadata 与图标。
-- `app/robots.ts` 的抓取策略。
-- `app/sitemap.ts` 是否包含应公开页面。
-- 默认分享图是否符合 OpenIM 品牌规范。
+- 页头、首页、README 和安全说明中的官网、商业版、GitHub 与联系地址一致。
+- 中英文产品名和商业版提示语义一致。
+- 页面不残留参考站品牌、旧 URL 或内部域名。
+- `app/layout.tsx`、`app/robots.ts`、`app/sitemap.ts` 和分享图与正式域名匹配。
+- 外链使用 HTTPS，并在新窗口打开时带安全的 `rel` 属性。

@@ -1,17 +1,85 @@
 ---
 title: 'Get the blacklist'
-description: 'OpenIM WASM SDK guide for Get the blacklist.'
+description: 'Get the current user’s blacklist with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/user/blacklist/get-black-list'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+The OpenIMSDK blacklist records users whom the current user has blocked. Call `getBlackList()` to retrieve the complete list, where each record is a `BlackUserItem`. Use this data to build a blacklist settings page, show relationship state on profile cards, or restrict entry points to chat.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+Blacklists and group management are separate capabilities. Use group member APIs to mute or remove group members or to change group roles. `getBlackList()` reads only the blacklist maintained by the current user.
+
+## Get the blacklist
+
+After initializing the SDK and calling `login()`, use `getBlackList()` to read the current user's blacklist. An empty array means that no users are blocked.
+
+```ts
+async function loadBlockedUsers() {
+  try {
+    const { data } = await openimsdk.getBlackList();
+    return data;
+  } catch (error) {
+    console.error('getBlackList failed', { error });
+    throw error;
+  }
+}
+
+const blockedUsers = await loadBlockedUsers();
+replaceBlockedUsers(blockedUsers);
+```
+
+Profile cards, conversation menus, and contact lists normally need only determine whether a `userID` is in the blacklist. Build a set by `userID`; use fields such as nickname and avatar only for display.
+
+```ts
+const blockedUserIDs = new Set(blockedUsers.map((user) => user.userID));
+
+function isBlocked(userID: string) {
+  return blockedUserIDs.has(userID);
+}
+```
+
+## Blacklist record fields
+
+`getBlackList()` returns `BlackUserItem[]`. Use `userID` as the stable list key when rendering; the other fields are display data.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | User ID blocked by the current user. |
+| `nickname` | `string` | Target user's nickname for display in the list. |
+| `faceURL` | `string` | Target user's avatar URL. |
+| `ownerUserID` | `string` | Owner of this blacklist relationship, which is the current user ID. |
+| `operatorUserID` | `string` | User ID that performed the block operation. |
+| `createTime` | `number` | Time when the blacklist relationship was created. |
+| `addSource` | `number` | Value describing how the blacklist relationship was added. |
+| `ex` | `string` | Extension field. Parse only content defined by the application contract. |
+
+If the blacklist page also displays public profiles or friend remarks, merge those sources by `userID` and keep the origins of `BlackUserItem`, `FriendUserItem`, and `PublicUserItem` distinct.
+
+## Results and incremental changes
+
+After `getBlackList()` succeeds, replace the current blacklist snapshot with the returned `BlackUserItem[]`. This query does not trigger blacklist-add or blacklist-delete events. Call it again to establish the full list when the page first opens or the user refreshes it.
+
+This page owns the complete listeners for `OnBlackAdded` and `OnBlackDeleted`. Merge events by `userID`. Muting group members and platform-level bans are separate capabilities.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleBlackAdded = ({ data }) => mergeBlockedUser(data);
+const handleBlackDeleted = ({ data }) => removeBlockedUser(data.userID);
+
+openimsdk.on(CbEvents.OnBlackAdded, handleBlackAdded);
+openimsdk.on(CbEvents.OnBlackDeleted, handleBlackDeleted);
+
+function removeBlacklistListeners() {
+  openimsdk.off(CbEvents.OnBlackAdded, handleBlackAdded);
+  openimsdk.off(CbEvents.OnBlackDeleted, handleBlackDeleted);
+}
+```
+
+After a user is added to the blacklist, that user cannot send messages to the current user, but the current user can still send messages to them. Enforce bidirectional restrictions separately in the application layer. Call `removeBlacklistListeners()` when signing out, switching accounts, or destroying the blacklist state layer.

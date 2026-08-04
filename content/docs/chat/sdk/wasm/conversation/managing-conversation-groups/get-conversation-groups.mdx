@@ -1,16 +1,46 @@
 ---
-title: 'getConversationGroups'
-description: 'OpenIM WASM SDK guide for getConversationGroups.'
+title: 'Get conversation groups'
+description: 'Get the current user’s conversation groups by type.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/get-conversation-groups'
 ---
 
-## Overview
+Use `getConversationGroups()` to establish a snapshot of the signed-in user's conversation groups for one group type.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+import { ConversationGroupType } from '@openim/wasm-client-sdk';
+
+const { data: groups } = await openimsdk.getConversationGroups(
+  ConversationGroupType.ConversationGroupTypeNormal,
+);
+```
+
+The parameter is a `ConversationGroupType`. Pass `ConversationGroupTypeNormal` for normal custom groups or `ConversationGroupTypeAll` for all types.
+
+## Return result
+
+After the Promise succeeds, `data` contains the matching `ConversationGroup[]`. Identify groups by `conversationGroupID` when rendering or caching them.
+
+### Conversation group fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationGroupID` | `string` | Stable conversation group ID and merge key for group events. |
+| `name` | `string` | Group name. |
+| `conversationGroupType` | `ConversationGroupType` | Group type, such as a normal custom group or filtered group. |
+| `conversationIDs` | `string[]` | Conversation IDs directly contained in the group. |
+| `serial` | `number` | Group ordering value stored by the server. |
+| `hidden` | `boolean` | Whether the group is hidden. |
+| `unreadCount` | `number` | Aggregate unread count for conversations in the group. |
+| `version` | `number` | Group data version used to distinguish older and newer snapshots. |
+| `ex` | `string` (optional) | Application-defined group extension string. |
+
+The group stores only `conversationIDs`, not complete conversation details. Use [Get conversations in a group](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) when both are required.
+
+This query establishes a snapshot only and does not trigger a group event. Merge later changes from incremental events and query again when needed for reconciliation. See [Conversation group overview](/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups) for the event list.

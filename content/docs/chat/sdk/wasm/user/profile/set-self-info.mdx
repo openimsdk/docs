@@ -1,17 +1,56 @@
 ---
 title: 'Update your profile'
-description: 'OpenIM WASM SDK guide for Update your profile.'
+description: 'Update the signed-in user’s nickname, avatar, and extension data.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/user/profile/set-self-info'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+`setSelfInfo()` updates the signed-in user's basic display profile. Pass only the `nickname`, `faceURL`, or `ex` fields that need to change.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `nickname` | `string` | No | New nickname. |
+| `faceURL` | `string` | No | New avatar URL. |
+| `ex` | `string` | No | New extension string. It completely replaces the previous value. |
+
+Pass at least one profile field that actually needs to be updated.
+
+```ts
+await openimsdk.setSelfInfo({
+  nickname: nickname.trim(),
+  faceURL,
+  ex: mergedExtra,
+});
+```
+
+`ex` is a complete string; the SDK does not merge JSON automatically. If several application modules share it, read the current value first and merge each module's namespace before updating it.
+
+Although `globalRecvMsgOpt` is also written through `setSelfInfo()`, it is an account-level messaging policy and should not be saved together with ordinary profile fields. See [Set global message reception](/sdk/wasm/user/profile/set-global-message-reception) for its enum values and interaction with conversation-level settings.
+
+A successful Promise means that the update request has completed, not that the profile event has arrived. Reconcile the final profile through `OnSelfInfoUpdated` or `getSelfUserInfo()`.
+
+## Listen for changes to the current user profile
+
+This page owns the complete `OnSelfInfoUpdated` listener. The event carries the updated `SelfUserInfo`; replace the current user snapshot with it.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleSelfInfoUpdated = ({ data }) => setCurrentUser(data);
+
+openimsdk.on(CbEvents.OnSelfInfoUpdated, handleSelfInfoUpdated);
+
+function removeProfileListener() {
+  openimsdk.off(CbEvents.OnSelfInfoUpdated, handleSelfInfoUpdated);
+}
+```
+
+Call `removeProfileListener()` when signing out, switching accounts, or destroying the user state layer.

@@ -293,7 +293,10 @@ test('legacy Channel audit records are migrated or removed', () => {
     assert.equal(page.sourceKind, 'openim-specific', path);
     assert.equal(page.disposition, 'adapt', path);
     assert.equal(page.locales.zh.reviewStatus, 'published', path);
-    assert.equal(page.locales.en.reviewStatus, 'deferred', path);
+    assert.ok(
+      ['deferred', 'published'].includes(page.locales.en.reviewStatus),
+      `${path}: unexpected English review status`,
+    );
   }
 
   for (const [path, redirectTo] of Object.entries(migratedLegacyPages)) {

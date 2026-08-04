@@ -17,6 +17,9 @@ const byTemplate = Object.fromEntries(
     a.localeCompare(b),
   ),
 );
+const byStatus = Object.fromEntries(
+  [...groupCount(routes, (route) => route.status).entries()].sort(([a], [b]) => a.localeCompare(b)),
+);
 const contexts = navigation.contexts.map((context) => ({
   key: context.key,
   title: context.title,
@@ -29,6 +32,7 @@ const report = {
   contextCount: contexts.length,
   byProduct,
   byTemplate,
+  byStatus,
   contexts,
 };
 
@@ -67,6 +71,12 @@ function renderMarkdown(value) {
         `| \`${context.key}\` | ${context.title} | ${context.pageCount.toLocaleString()} |`,
     )
     .join('\n');
+  const statusRows = Object.entries(value.byStatus)
+    .map(
+      ([key, count]) =>
+        `| \`${key}\` | ${count.toLocaleString()} | ${percentage(count, value.pageCount)} |`,
+    )
+    .join('\n');
 
   return `# 当前结构报告
 
@@ -77,12 +87,12 @@ function renderMarkdown(value) {
 
 ## 当前保留范围
 
-- Chat 文档入口。
-- SDK v4 的当前指南页：iOS、Android、Flutter、uni-app、WASM、Electron、小程序、React Native。
-- Platform API v3 的当前指南与接口页。
-- 不包含 UIKit、SDK v3、旧兼容路由或手写 SDK Reference 占位页。
+- 当前 Chat 首页、SDK 指南、Platform API 与 Webhook 结构。
+- 公开 URL 使用 \`/sdk/<platform>/**\` 和 \`/platform-api/**\`，不包含默认版本段。
+- 本报告统计结构内路由；实际公开的平台入口由 \`src/config/docs.ts\` 控制。
+- UIKit、历史版本、旧兼容路由和手写 SDK Reference 占位页不属于当前结构。
 
-SDK Reference 应从代码注释或类型定义自动生成；Platform API 后续也可从 OpenAPI 规范生成，而不是预建无内容的参考页。
+SDK Reference 应从代码注释或类型定义生成。Platform API 的结构化定义可以来自 OpenAPI，正式正文仍需逐页人工审核。
 
 ## 按产品分支
 
@@ -96,6 +106,12 @@ ${productRows}
 | --- | ---: | ---: |
 ${templateRows}
 
+## 按发布状态
+
+| 状态 | 页面数 | 占比 |
+| --- | ---: | ---: |
+${statusRows}
+
 ## 导航上下文
 
 | 上下文键 | 显示名称 | 页面数 |
@@ -106,6 +122,7 @@ ${contextRows}
 
 - 本报告由 \`pnpm structure:report\` 同时写入 Markdown 与 JSON。
 - 页面正文迁移进度使用 \`pnpm content:status\` 查看。
-- \`data/structure/scope.json\` 是结构范围约束；\`pnpm content:check\` 会阻止 UIKit、历史版本或 Reference 占位页重新混入当前结构。
+- \`data/structure/scope.json\` 是结构范围约束，不等同于公开发布清单。
+- \`published\`、\`draft\` 和 \`scaffold\` 必须反映真实审核状态，生成本报告不会改变页面状态。
 `;
 }

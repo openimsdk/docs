@@ -1,179 +1,132 @@
 # 技术架构
 
-## 1. 目标
+## 1. 设计目标
 
-项目把页面结构与正文内容分离：作者主要维护 MDX，路由、导航、面包屑、上下页、搜索和 SEO 由统一数据层推导。
+本项目以 MDX 作为文档正文的事实源，并从结构数据生成路由、导航、搜索、面包屑和上下页关系。公开 URL 不包含内部版本目录：SDK 使用 `/sdk/<platform>/**`，Platform API 使用 `/platform-api/**`，中文页面在路径前增加 `/zh`。
 
-默认采用 `current-only` 范围，共 556 个页面和 10 个导航上下文。UIKit、历史版本、兼容路由与 SDK Reference 占位页均不参与运行和构建。Platform API 保持 Sendbird Platform API v3 的目录组织、侧栏层级和页面风格，内容、接口签名与使用细节映射到 OpenIM 官方 REST API 与 webhook 文档。
+当前发布范围采用 `current-only` 策略。站点只公开已经完成并通过审核的产品上下文；仓库中用于后续迁移或历史追踪的文件，不会因为物理存在而自动进入导航、搜索或 Sitemap。
 
-## 2. 请求链路
+## 2. 页面请求链路
 
 ```text
-浏览器请求 /sdk/... 或 /platform-api/...
-        │
-        ▼
-app/sdk/[[...slug]]/page.tsx
-app/platform-api/[[...slug]]/page.tsx
-        │
-        ├── src/generated/routes.json      定位页面结构记录
-        ├── Fumadocs dynamic source        按需加载对应 MDX
-        ├── src/generated/navigation.json  生成当前上下文侧栏
-        └── MDX frontmatter                提供标题、描述、状态等内容元数据
-        │
-        ▼
-DocsShell
+/sdk/** 或 /platform-api/**
+            │
+            ▼
+Next.js App Router
+            │
+            ├── src/generated/routes.json       URL 与 MDX 文件映射
+            ├── src/generated/navigation.json   当前上下文的侧栏结构
+            ├── src/generated/search-index*.json 中英文搜索索引
+            └── content/docs/**/*.mdx            页面元数据与正文
+            │
+            ▼
+DocumentationPage
 ├── GlobalHeader / ProductNav
-├── ContextPicker
 ├── SidebarNav
 ├── ArticleHeader
 ├── MDX body
-├── Feedback / Pagination
+├── Pagination / Feedback
 └── TableOfContents
 ```
 
-中文文档分别由 `app/[locale]/sdk/[[...slug]]/page.tsx` 和 `app/[locale]/platform-api/[[...slug]]/page.tsx` 渲染。Chat 首页由 `/` 与 `/zh` 独立渲染；`/docs/chat/**` 和 `/zh/docs/chat/**` 不提供兼容跳转。
+英文页面由 `/sdk` 和 `/platform-api` 路由渲染；中文页面由 `/zh/sdk` 和 `/zh/platform-api` 路由渲染。首页分别使用 `/` 和 `/zh`。旧的 `/docs/chat/**`、`/sdk/v4/**` 与 `/platform-api/v3/**` 不属于当前公开地址。
 
 ## 3. 数据源与职责
 
 ### `content/docs/**/*.mdx`
 
-正文的唯一事实源。已有页面的标题、描述、状态、平台、版本和正文都从这里维护。
+页面正文与 frontmatter 的唯一人工维护入口。正文改动必须逐页阅读、逐页修改，并同步更新对应审核记录。
 
 ### `data/structure/scope.json`
 
-当前结构范围约束。它定义允许出现的产品、版本、平台，以及是否允许 `reference` 模板。完整性检查会拒绝超出范围的路由。
+约束允许进入当前结构的产品、平台、版本和模板。它描述“可以维护什么”，不等同于“已经公开什么”。
 
 ### `src/generated/routes.json`
 
-页面级结构清单，包含 URL、内容文件、上下文、模板、平台、版本和排序。同步脚本会从 frontmatter 更新可变字段。
+记录公开 URL、内容文件、语言、上下文、模板、平台、版本、状态和排序。页面移动、合并、删除或新增时必须同步修改。
 
 ### `src/generated/navigation.json`
 
-7 个现行产品/平台上下文的树形侧栏。标题会从对应 MDX 刷新；层级和排序属于结构数据。
+记录各产品和平台上下文的树形侧栏。导航名称应描述用户任务或业务能力，不直接把方法名当作菜单名称。
 
-### `src/generated/search-index.json`
+### `src/config/docs.ts`
 
-由 MDX 和路由元数据生成的搜索索引，不手工维护。
+定义首页和全局导航中可见的产品、平台以及显示名称。一个平台即使已有物理文件，也只有在这里启用且页面状态符合发布要求时才对外展示。
 
-### `data/structure/chat-pages.json`
+### `src/generated/search-index.json` 与 `search-index-zh.json`
 
-按当前范围裁剪的结构快照。它不是运行时依赖，主要用于审计和批量重建。
+由当前路由和正文生成，不手工编辑。
 
-### `.source/dynamic.ts`
+### `data/structure/*-content-audit.json`
 
-Fumadocs 自动生成的动态 MDX 导入表。该目录不提交，由安装或构建流程生成。
+记录逐页人工审核状态。生成产物不能替代人工审核；修改正文后必须更新对应页面的审核记录。
 
-## 4. 动态 MDX
+### `data/structure/chat-pages.json` 与 `report.json`
 
-`source.config.ts` 为文档集合启用动态模式，使页面正文只在请求对应路由时编译和加载。这样在后续继续增加文档时，开发启动与构建不会被所有正文的静态导入放大。
+前者是结构快照，后者由 `pnpm structure:report` 生成，用于审计，不作为页面运行时事实源。
 
-导航、路由和搜索使用轻量 JSON 索引，因此侧栏、上下页和搜索不需要预编译全部正文。
+## 4. 动态 MDX 与构建
+
+`source.config.ts` 使用 Fumadocs 的动态内容源。安装阶段运行 `fumadocs-mdx` 生成 `.source/dynamic.ts`，页面在请求或构建时按路由加载对应 MDX。Next.js 使用 `output: 'standalone'`，`scripts/prepare-standalone.mjs` 会把静态资源复制到独立部署产物。
+
+`outputFileTracingIncludes` 必须继续覆盖 `content/docs/**/*.mdx`，否则 standalone 运行时可能找不到动态页面。
 
 ## 5. 内容同步流程
 
-`npm run content:sync` 执行：
+`pnpm content:sync` 依次：
 
-1. `sync-content-metadata.mjs`：读取 MDX frontmatter，更新路由记录和导航标题。
-2. `build-search-index.mjs`：根据最新路由和正文重建搜索索引。
+1. 从已审核的英文 SDK 页面构建 WASM、iOS 和 Flutter 中文派生内容。
+2. 重建中英文搜索索引。
 
-`pnpm dev` 与 `pnpm build` 都配置了对应 pre-script，日常编辑已有文档无需手工同步。
+该命令不会自动修改路由和导航。结构性调整必须显式维护 `routes.json`、`navigation.json` 和审核数据；需要刷新 frontmatter 元数据时，运行 `pnpm content:metadata` 并审查 diff。`pnpm structure:report` 会先执行该元数据同步，确保报告中的发布状态与正文一致。
 
-## 6. 页面模板
+`pnpm dev`、`pnpm check` 和 `pnpm build` 都会通过 pre-script 执行内容同步，因此运行这些命令后应检查工作区，确认生成产物与正文一致。
 
-| 模板       | 默认脚手架                   | 典型内容                                | 作者模板                                                                      |
-| ---------- | ---------------------------- | --------------------------------------- | ----------------------------------------------------------------------------- |
-| `landing`  | `ChatHero`、`LandingSection` | 产品入口和能力导航                      | 暂无                                                                          |
-| `overview` | `OverviewScaffold`           | 平台概览、模块概览和迁移入口            | `docs/templates/sdk-overview.mdx`、`docs/templates/platform-api-overview.mdx` |
-| `guide`    | `DocScaffold`                | 概念、步骤、教程和最佳实践              | `docs/templates/sdk-guide.mdx`                                                |
-| `api`      | `ApiScaffold`                | Server API 方法、路径、参数、响应和错误 | `docs/templates/platform-api-endpoint.mdx`                                    |
+## 6. 内容与事件边界
 
-SDK Reference 不使用手写 MDX 模板，后续应由源码或类型定义生成。
+- 任务型 SDK 页面按“操作”组织，不按固定模板堆叠章节。
+- 单个操作只有在字段复杂时才使用参数表；多个 API 的参数不得混在一张表中。
+- Promise 成功、事件到达和重新查询校准是三个不同阶段。
+- 每个事件只有一个完整监听示例的归属页，归属由 `data/structure/wasm-api-ownership.json` 等清单确定。
+- 查询 API 建立快照，事件合并增量；状态合并必须使用稳定业务标识。
+- Platform API 的方法、路径、参数和响应以 OpenIM 的真实接口定义为准，不按参考站栏目推断能力。
 
-## 7. 搜索
+更完整的写作规则见 `docs/CONTENT_AUTHORING.md` 和仓库根目录 `AGENTS.md`。
 
-`/api/search?q=...&limit=...` 使用构建时生成的本地 JSON 索引，按标题、描述、上下文、关键词和正文计算权重。该实现无外部服务依赖，适合项目初期和中等规模访问。
+## 7. 结构变更流程
 
-后续可在不改变页面层的情况下替换为 Algolia、Meilisearch、Typesense 或自建服务。
+新增、删除、移动页面或改变侧栏层级时：
 
-## 8. 样式与品牌层
-
-`app/globals.css` 负责：
-
-- Tailwind CSS 与 Fumadocs CSS 导入。
-- 浅色/深色 CSS token。
-- 双层导航、三栏文档布局、Landing、搜索和移动端布局。
-- MDX 正文、代码块、表格、提示块和脚手架样式。
-
-核心视觉变量集中在文件顶部的 `:root` 与 `[data-theme='dark']`。
-
-## 9. 结构变更
-
-编辑已有页面时无需修改结构。新增、删除、移动 URL 或改变侧栏层级时：
-
-1. 先确认 `data/structure/scope.json` 是否允许目标产品、版本和平台。
-2. 修改 `src/generated/routes.json`。
-3. 修改 `src/generated/navigation.json`。
-4. 增删对应 MDX 文件。
-5. 更新顶部公开入口（如需要）。
-6. 执行：
+1. 完整阅读目标页面及其相关页面，确认能力和 API 归属。
+2. 核对 `data/structure/scope.json` 和 `src/config/docs.ts` 的发布范围。
+3. 修改 `src/generated/routes.json` 与 `src/generated/navigation.json`。
+4. 逐页增删或修改中英文 MDX；不使用脚本生成正文。
+5. 更新 API/事件所有权、审核记录、搜索索引和必要测试。
+6. 运行：
 
 ```bash
-npm run content:sync
-npm run structure:report
-npm run check
-npm run build
+pnpm content:status
+pnpm structure:report
+pnpm check
+pnpm build
 ```
 
-批量补齐当前路由清单中的缺失文件：
+构建若改写 `next-env.d.ts`，应恢复仓库约定的 `.next/dev/types/routes.d.ts` 导入。
 
-```bash
-npm run structure:sync -- --dry-run
-npm run structure:sync
-```
+## 8. Platform API 与 Guides
 
-不要对已完成正文的仓库使用 `--force`。
+Platform API 页面位于 `content/docs/chat/platform-api`，公开路径为 `/platform-api/**`。同步工具只负责确定性的结构和上游数据导入；正式正文仍需人工核对。端点页可以由 OpenAPI 提供结构化证据，但不得与手写指南形成两个相互矛盾的事实源。
 
-## 10. API Reference 接入边界
+Guides 使用独立路由 `/docs/guides`，目录在 `src/components/docs/guides-page.tsx` 中维护，正文快照位于 `src/generated/guides-content.json`。运行 `pnpm guides:sync` 可刷新来源，刷新后仍需审查内容和链接。
 
-SDK Reference 建议部署到独立生成目录或路由，例如 `/reference/sdk/<platform>/...`。生成器负责符号、签名、参数和类型；MDX 指南负责概念、工作流和完整示例。
+## 9. 可替换边界
 
-Server API 可继续维护当前 MDX 端点页，也可逐步接入 OpenAPI。无论采用哪种方式，都应保证接口定义只有一个权威来源。
-
-当前 Platform API 有两个输入来源：路由与侧栏结构来自 Sendbird Platform API v3，正文中的 API 签名、请求参数、响应和实现说明来自 OpenIM 官方文档仓库中的 `docs/restapi` Markdown。运行：
-
-```bash
-pnpm platform-api:sync
-```
-
-会重新生成 301 个 Sendbird 风格 Platform API 页面、结构索引、导航和搜索索引。不要把 Platform API 目录改回 OpenIM REST API 原始分组；如果 OpenIM 没有一一对应的接口，应在对应 Sendbird 风格页面中标明 partial 或 no direct endpoint。
-
-Guides 使用独立的代码路由 `/docs/guides`，不写入 `src/generated/routes.json`。目录结构维护在 `src/components/docs/guides-page.tsx`，正文通过：
-
-```bash
-pnpm guides:sync
-```
-
-从 OpenIM 官方 `docs/guides` Markdown 同步到 `src/generated/guides-content.json`，页面渲染时只读取本地 JSON。
-
-## 11. 生产构建
-
-Next.js 使用 `output: 'standalone'`。`scripts/prepare-standalone.mjs` 会把 `public` 和 `.next/static` 复制到 standalone 目录：
-
-```bash
-npm run build
-npm start
-```
-
-`outputFileTracingIncludes` 显式包含 `content/docs/**/*.mdx`，确保动态页面在 standalone 产物中可用。
-
-## 12. 可替换边界
-
-以下模块可独立替换而不影响 MDX 路由：
+以下模块可在不改变 MDX 路由的情况下独立演进：
 
 - 搜索：`src/lib/search.ts`、`app/api/search/route.ts`
 - 页头与产品导航：`src/components/site/**`
 - 上下文选择器：`src/components/docs/context-picker.tsx`
-- 反馈：`src/components/docs/feedback.tsx`
+- 文档布局：`src/components/docs/documentation-page.tsx`
 - MDX 组件：`src/components/mdx-components.tsx`
 - 视觉系统：`app/globals.css`
-- SEO：`app/sdk/[[...slug]]/page.tsx`、`app/platform-api/[[...slug]]/page.tsx`、`app/sitemap.ts`
+- SEO：`app/sitemap.ts`、`app/robots.ts` 与各产品路由页

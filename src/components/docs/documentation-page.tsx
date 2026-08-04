@@ -210,8 +210,11 @@ export async function renderDocumentationPage(
   const commercialNames =
     commercial?.kind === 'partial' ? getPageCommercialNames(effectiveRoute.path) : undefined;
 
+  const candidateSdkOverviewPlatform = getSdkOverviewPlatform(effectiveRoute.path);
   const sdkOverviewPlatform =
-    locale === 'zh' ? getSdkOverviewPlatform(effectiveRoute.path) : undefined;
+    locale === 'zh' || candidateSdkOverviewPlatform === 'wasm'
+      ? candidateSdkOverviewPlatform
+      : undefined;
 
   if (sdkOverviewPlatform) {
     return (

@@ -1,16 +1,57 @@
 ---
 title: 'User overview'
-description: 'OpenIM WASM SDK guide for User overview.'
+description: 'Understand user profiles, friendships, blacklists, and online status in the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/user/overview-user'
 ---
 
-## Overview
+The WASM SDK identifies users by `userID`. When implementing profile cards, friend requests, contacts, or blacklists, distinguish between an application's public user profile, the current user's friendship data, and blacklist state.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+Group member lists, in-group nicknames, group roles, and member management belong to the group domain. See [List group members](/sdk/wasm/group/retrieving-group-members/get-group-member-list).
+
+## User types
+
+The WASM SDK returns different user objects for different scenarios:
+
+| Type | Use case | Primary APIs |
+| --- | --- | --- |
+| `SelfUserInfo` | The signed-in user's profile, settings page, avatar, and nickname | `getSelfUserInfo()`, `setSelfInfo()` |
+| `PublicUserItem` | Application user lookup, friend candidates, and profiles for users who are not friends | `getUsersInfo()` |
+| `FriendUserItem` | The signed-in user's friend list, friend remarks, pinning, and relationship extension data | `getFriendListPage()`, `getSpecifiedFriendsInfo()` |
+| `BlackUserItem` | Users on the signed-in user's blacklist | `getBlackList()`, `addBlack()`, `removeBlack()` |
+| `UserOnlineState` | User online status | `subscribeUsersStatus()`, `getSubscribeUsersStatus()` |
+
+The same `userID` can appear in public profiles, friend profiles, the blacklist, and group member profiles. Prefer `FriendUserItem` when displaying contacts, `PublicUserItem` when only account-level public information is needed, and `GroupMemberItem` when displaying group members. Conversation list and chat-page titles come from conversation data and should use `ConversationItem.showName`.
+
+## Feature pages
+
+The following table maps common user-related tasks to their documentation:
+
+| Task | Recommended page |
+| --- | --- |
+| Query public profiles by `userID` for friend candidates or profile cards | [Get user profiles](/sdk/wasm/user/profile/get-users-info) |
+| Page through, search, or query friendships by ID | [Get the friend list](/sdk/wasm/user/friends/get-friend-list-page) |
+| Send or process friend applications | [Send a friend application](/sdk/wasm/user/friend-applications/add-friend), [Get received friend applications](/sdk/wasm/user/friend-applications/get-friend-application-list-as-recipient) |
+| Update friend information | [Update friend information](/sdk/wasm/user/friends/update-friends) |
+| Delete a friendship | [Delete a friend](/sdk/wasm/user/friends/delete-friend) |
+| View and maintain the current user's blacklist | [Get the blacklist](/sdk/wasm/user/blacklist/get-black-list) |
+| Read or update the current user's nickname, avatar, and extension data | [Update your profile](/sdk/wasm/user/profile/set-self-info) |
+| Set account-level message reception and do-not-disturb behavior | [Set global message reception](/sdk/wasm/user/profile/set-global-message-reception) |
+| Subscribe to and read online status | [Subscribe to online status](/sdk/wasm/user/online-status/subscribe-users-status) |
+| List and search group members or retrieve selected member profiles | [List group members](/sdk/wasm/group/retrieving-group-members/get-group-member-list) |
+
+## State updates
+
+Each user-related event is listened for and merged on the page that owns that capability:
+
+- Changes to the current user's profile: [Update your profile](/sdk/wasm/user/profile/set-self-info).
+- Friend application changes: [Get received friend applications](/sdk/wasm/user/friend-applications/get-friend-application-list-as-recipient).
+- Friendship and friend profile changes: [Get the friend list](/sdk/wasm/user/friends/get-friend-list-page).
+- Blacklist changes: [Get the blacklist](/sdk/wasm/user/blacklist/get-black-list).
+- Online status changes: [Subscribe to online status](/sdk/wasm/user/online-status/subscribe-users-status).

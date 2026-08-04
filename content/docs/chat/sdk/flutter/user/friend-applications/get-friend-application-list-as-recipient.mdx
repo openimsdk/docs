@@ -1,17 +1,41 @@
 ---
-title: 'Get received friend applications'
-description: 'OpenIM Flutter SDK guide for Get received friend applications.'
+title: 'Retrieve received friend applications'
+description: 'Retrieve friend applications received by the current Flutter user by page.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+```dart
+final items = await OpenIM.iMManager.friendshipManager
+    .getFriendApplicationListAsRecipient(
+  req: GetFriendApplicationListAsRecipientReq(offset: 0, count: 20),
+);
+```
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+Use `handleResults` in the request to filter by handling state. The pinned Flutter SDK does not expose a corresponding Dart enum, so pass only values explicitly defined by the server contract. `offset` and `count` control pagination.
+
+The `Future` returns the current page as `List<FriendApplicationInfo>`. This query establishes a snapshot only and does not trigger application events.
+
+## Synchronize friend-application changes
+
+This page owns state handling for the friend-application listener. Locate an application by `fromUserID:toUserID`:
+
+```dart
+void handleFriendApplicationChanged(FriendApplicationInfo item) {
+  mergeFriendApplication(item);
+}
+
+void handleFriendApplicationDeleted(FriendApplicationInfo item) {
+  removeFriendApplication(item.fromUserID, item.toUserID);
+}
+```
+
+In the application's single `OnFriendshipListener`, route `onFriendApplicationAdded`, `onFriendApplicationAccepted`, and `onFriendApplicationRejected` to `handleFriendApplicationChanged`. Route `onFriendApplicationDeleted` to `handleFriendApplicationDeleted`. See [Events overview](/sdk/flutter/events/overview-events) for the complete composition entry point.
+
+Use `toUserID == currentUserID` to distinguish received applications from sent applications. The Flutter SDK does not expose a method for deleting application records. Do not simulate deletion by rejecting an application or deleting a friend relationship.

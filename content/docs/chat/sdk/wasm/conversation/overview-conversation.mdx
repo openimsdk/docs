@@ -1,16 +1,70 @@
 ---
 title: 'Conversation overview'
-description: 'OpenIM WASM SDK guide for Conversation overview.'
+description: 'Understand ConversationItem, conversationID, conversation settings, and conversation events in the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/overview-conversation'
 ---
 
-## Overview
+In OpenIMSDK, a conversation is the client-side chat state maintained for a one-to-one or group chat. The signed-in user has one `ConversationItem` record for each conversation. It stores list state such as unread count, latest message, pinning, drafts, message reception options, and extension data. A conversation record and its chat target have separate identifiers: `conversationID` identifies the current account's conversation state, while a one-to-one target uses the other user's `userID` and a group target uses `groupID`.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+Both one-to-one and group chats use conversation records for chat-list state. Group profiles, membership, and permissions remain under the group APIs. A group chat page uses `groupID` for group capabilities and `conversationID` for conversation settings, unread counts, drafts, and message history.
+
+## Conversation identifiers
+
+A one-to-one conversation uses the target user ID as `sourceID` with `SessionType.Single`. A group conversation uses `groupID` as `sourceID` with `SessionType.WorkingGroup`. Call `getConversationIDBySessionType()` to obtain a stable `conversationID`, then use it for conversation settings, read state, hiding, and deletion.
+
+| Identifier | Purpose |
+| --- | --- |
+| `conversationID` | The current account's conversation record ID, used for conversation settings, message history, and unread state. |
+| `userID` | The other user's ID in a one-to-one conversation. |
+| `groupID` | The group ID for a group conversation and the target identifier for group APIs. |
+| `sourceID` | The chat target passed to a type-based conversation query: `userID` for a one-to-one conversation and `groupID` for a group conversation. |
+
+## Conversation data
+
+`ConversationItem` contains both list display information and the current account's conversation settings. Its fields can be grouped by responsibility:
+
+| Responsibility | Fields | Description |
+| --- | --- | --- |
+| Identity and type | `conversationID`, `conversationType` | Locate the conversation record and distinguish one-to-one from group conversations. |
+| List display | `showName`, `faceURL`, `latestMsg`, `latestMsgSendTime` | Render the conversation name, avatar, and latest message. |
+| Unread state and reminders | `unreadCount`, `groupAtType` | Display the unread count and group mention reminders. |
+| List organization | `isPinned`, `isMarked`, `draftText`, `remark` | Maintain pinning, marks, drafts, and a remark set by the current user. |
+| Message policy | `recvMsgOpt`, `isPrivateChat`, `burnDuration`, `isMsgDestruct`, `msgDestructTime` | Control message reception, burn after reading, and scheduled server-message deletion. |
+| Application extension | `ex` | Store the complete extension string defined by the application. |
+
+## Find pages by task
+
+| Task | Pages |
+| --- | --- |
+| Get one, several, or a paginated list of conversations | [Get a conversation by target](/sdk/wasm/conversation/retrieving-conversations/get-conversation-by-target), [Get conversations by ID](/sdk/wasm/conversation/retrieving-conversations/get-conversations-by-id), [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Organize the conversation list | [Pin or unpin a conversation](/sdk/wasm/conversation/managing-conversations/pin-conversation), [Mark or unmark a conversation](/sdk/wasm/conversation/managing-conversations/mark-conversation), [Conversation groups](/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups) |
+| Maintain drafts, remarks, and extension data | [Set a conversation draft](/sdk/wasm/conversation/managing-conversations/set-conversation-draft), [Set a conversation remark](/sdk/wasm/conversation/managing-conversations/set-conversation-remark), [Set conversation extension data](/sdk/wasm/conversation/managing-conversations/set-conversation-extension) |
+| Set message reception and retention policy | [Set conversation message reception](/sdk/wasm/conversation/managing-conversations/set-message-receive-option), [Enable or disable burn after reading](/sdk/wasm/conversation/managing-conversations/set-private-chat), [Schedule server message deletion](/sdk/wasm/conversation/managing-conversations/set-message-destruct) |
+| Handle unread counts and group reminders | [Mark a conversation as read](/sdk/wasm/conversation/managing-conversations/mark-conversation-read), [Track the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count), [Reset group mention status](/sdk/wasm/conversation/managing-conversations/clear-group-mentions) |
+
+## Delete and clear data
+
+Hiding, deleting, and clearing affect different scopes:
+
+| Operation | Effect |
+| --- | --- |
+| [Hide a conversation](/sdk/wasm/conversation/managing-conversations/hide-a-conversation) | Hide the record from the current client's conversation list. It may reappear when a new message arrives. |
+| [Delete a conversation and its messages](/sdk/wasm/conversation/managing-conversations/delete-conversation-with-messages) | Delete the conversation record and its message data. |
+| [Clear messages in a conversation](/sdk/wasm/conversation/managing-conversations/clear-conversation-messages) | Keep the conversation record but clear its messages. |
+
+## State updates
+
+Queries establish page snapshots, while events merge subsequent changes:
+
+- [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list) owns new-conversation and conversation-property events.
+- [Track the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count) owns changes to the current account's total unread count.
+- [Conversation group overview](/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups) owns conversation group changes.
+
+The overview only identifies event owners and does not register handlers. Treat a button operation succeeding, an incremental event arriving, and a reconciliation query as separate stages. Do not infer the final conversation state from the user action alone.

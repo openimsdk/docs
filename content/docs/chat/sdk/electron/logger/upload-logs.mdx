@@ -1,16 +1,43 @@
 ---
 title: 'Upload logs'
-description: 'OpenIM Electron SDK guide for Upload logs.'
+description: 'Use the Electron FFI uploadLogs method to upload client diagnostic logs.'
 product: 'sdk'
 context: 'chat/sdk/electron'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-21'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'electron'
 sourcePath: '/sdk/electron/logger/upload-logs'
 ---
 
-## Overview
+Electron FFI provides `uploadLogs()` to upload diagnostic logs already written by the native SDK to the log-collection service configured for the current OpenIMServer. See [WASM logging](/sdk/wasm/logger) for browser-side log levels and `operationID`. The WASM package does not provide an equivalent `uploadLogs()` method.
 
-The English version of this OpenIM Electron SDK guide is deferred until the reviewed Chinese documentation is complete.
+Upload logs only when troubleshooting, when a user explicitly submits diagnostics, or when operations staff request them. Before uploading, confirm that logs do not contain tokens, message content, or other sensitive fields. If business context is required, use `ex` for a non-sensitive diagnostic label; never put credentials in it.
+
+## Upload logs
+
+### Parameters
+
+| Parameter  | Type     | Required | Description                                                                                           |
+| ---------- | -------- | -------- | ----------------------------------------------------------------------------------------------------- |
+| `line`     | `number` | Yes      | Number of log lines or line-range configuration to read for the upload, as required by Electron FFI. |
+| `cancelID` | `string` | No       | Cancellation identifier. When omitted, the SDK can use the current call's operation ID.              |
+| `ex`       | `string` | No       | Additional description attached to the upload. Omit it or pass an empty string when not needed.      |
+
+```ts
+await openimsdk.uploadLogs({
+  line: 2000,
+  ex: 'desktop-diag-session',
+});
+```
+
+## Result
+
+When the `uploadLogs()` Promise succeeds, the current upload request has completed. It does not change conversations, messages, or user profiles, and it does not trigger business-domain events. If the upload fails, record `errCode`, `errMsg`, and the current user ID to correlate the failure with OpenIMServer logs. Do not repeat the complete log content in the failure log.
+
+## Related pages
+
+- [Electron SDK overview](/sdk/electron/overview)
+- [WASM logging](/sdk/wasm/logger)
+- [Authenticate and initialize](/sdk/electron/getting-started/authenticate-and-init)

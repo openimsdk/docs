@@ -1,16 +1,105 @@
 ---
-title: 'Create media from full path'
-description: 'OpenIM Electron SDK guide for Create media from full path.'
+title: 'Create media messages from full paths'
+description: 'Use the Electron FFI *FromFullPath APIs to create image, video, audio, and file messages from absolute local paths.'
 product: 'sdk'
 context: 'chat/sdk/electron'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-21'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'electron'
 sourcePath: '/sdk/electron/message/create-media-from-full-path'
 ---
 
-## Overview
+Electron FFI provides a set of APIs for creating media messages from **complete local file paths**. They are intended for desktop applications that already have an absolute disk path, such as one returned by a system file picker. Browser applications and Electron applications using WASM should use the corresponding `*ByFile` or `*ByURL` methods. For images, see [Create an image message from a file](/sdk/wasm/message/creating-messages/create-image-message-by-file) and [Create an image message from a URL](/sdk/wasm/message/creating-messages/create-image-message-by-url). For independent file uploads, see [Upload a file](/sdk/wasm/file-uploads/upload-file).
 
-The English version of this OpenIM Electron SDK guide is deferred until the reviewed Chinese documentation is complete.
+After creating a `MessageItem`, send it with `sendMessage()` just like any message that uses the shared message model. See [Send a message](/sdk/wasm/message/sending-messages/send-message) for sending parameters and events.
+
+## Supported methods
+
+| Method                                      | Purpose                                                      |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| `createImageMessageFromFullPath(imagePath)` | Create an image message from an absolute local image path.   |
+| `createSoundMessageFromFullPath(params)`    | Create an audio message from an absolute local audio path.   |
+| `createVideoMessageFromFullPath(params)`    | Create a video message from absolute video and snapshot paths. |
+| `createFileMessageFromFullPath(params)`     | Create a regular file message from an absolute local path.   |
+
+These methods create message objects only. They do not send a message automatically or trigger a new-message event.
+
+## Image messages
+
+`createImageMessageFromFullPath()` accepts the image's absolute file path directly.
+
+```ts
+const { data: message } = await openimsdk.createImageMessageFromFullPath(
+  '/absolute/path/to/photo.jpg',
+);
+
+await openimsdk.sendMessage({
+  recvID,
+  groupID: '',
+  message,
+});
+```
+
+## Audio messages
+
+### Parameters
+
+| Parameter   | Type     | Required | Description                                                   |
+| ----------- | -------- | -------- | ------------------------------------------------------------- |
+| `soundPath` | `string` | Yes      | Absolute path to the audio file.                              |
+| `duration`  | `number` | Yes      | Audio duration. Pass an integer rather than a decimal value.  |
+
+```ts
+const { data: message } = await openimsdk.createSoundMessageFromFullPath({
+  soundPath: '/absolute/path/to/voice.m4a',
+  duration: 3200,
+});
+```
+
+## Video messages
+
+### Parameters
+
+| Parameter      | Type     | Required | Description                                                   |
+| -------------- | -------- | -------- | ------------------------------------------------------------- |
+| `videoPath`    | `string` | Yes      | Absolute path to the video file.                              |
+| `videoType`    | `string` | Yes      | Video type, such as `mp4`.                                    |
+| `duration`     | `number` | Yes      | Video duration. Pass an integer rather than a decimal value.  |
+| `snapshotPath` | `string` | Yes      | Absolute path to the video cover snapshot.                    |
+
+```ts
+const { data: message } = await openimsdk.createVideoMessageFromFullPath({
+  videoPath: '/absolute/path/to/clip.mp4',
+  videoType: 'mp4',
+  duration: 12000,
+  snapshotPath: '/absolute/path/to/cover.jpg',
+});
+```
+
+## File messages
+
+### Parameters
+
+| Parameter  | Type     | Required | Description                                      |
+| ---------- | -------- | -------- | ------------------------------------------------ |
+| `filePath` | `string` | Yes      | Absolute path to the file.                       |
+| `fileName` | `string` | Yes      | File name displayed to conversation members.    |
+
+```ts
+const { data: message } = await openimsdk.createFileMessageFromFullPath({
+  filePath: '/absolute/path/to/report.pdf',
+  fileName: 'report.pdf',
+});
+```
+
+## Results
+
+When any of the four `*FromFullPath` Promises succeeds, its `data` is a `MessageItem` ready to send. A subsequent successful `sendMessage()` Promise means only that the send request completed. The recipient confirms delivery through its new-message event.
+
+## Related pages
+
+- [Electron SDK overview](/sdk/electron/overview)
+- [Send a message](/sdk/wasm/message/sending-messages/send-message)
+- [Upload a file](/sdk/wasm/file-uploads/upload-file)

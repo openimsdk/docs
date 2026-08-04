@@ -1,16 +1,69 @@
 ---
 title: 'Before you start'
-description: 'OpenIM WASM SDK guide for Before you start.'
+description: 'Prepare OpenIMServer, user sign-in details, and the browser runtime before authenticating or sending messages.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-17'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/getting-started/before-you-start'
 ---
 
-## Overview
+Before integrating the OpenIM WASM SDK into a browser application, prepare an accessible OpenIMServer deployment, a trusted user authentication flow, and the SDK runtime assets. These prerequisites apply to both [authenticating and managing a session](/sdk/wasm/getting-started/authenticate-and-manage-session) and [sending your first message](/sdk/wasm/getting-started/send-first-message).
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Prepare OpenIMServer
+
+If you do not yet have an OpenIMServer deployment, follow the [Docker deployment guide](/docs/guides/quick-deployment/docker). Then verify that the browser can reach `apiAddr` and `wsAddr`, including HTTPS/WSS, reverse proxy, and cross-origin settings.
+
+Browser sign-in requires the following service addresses:
+
+| Field | Description |
+| --- | --- |
+| `apiAddr` | The OpenIMServer HTTP API address used for sign-in, synchronization, and resource requests. Pages served over HTTPS must use an HTTPS address that the browser can reach. |
+| `wsAddr` | The OpenIMServer WebSocket address used to establish a persistent connection and receive realtime events. Pages served over HTTPS normally use a WSS address. |
+
+Do not only verify that the services are reachable from an internal network or the server itself. Test from the deployed application as well, and confirm that cross-origin settings, HTTPS certificates, reverse proxy rules, and WebSocket upgrades all work correctly.
+
+## Prepare the user and token
+
+`userID` identifies an OpenIMSDK user, while the token authenticates that user. A trusted backend must create or bind OpenIMSDK users, issue tokens, and enforce application permissions. Never store an administrator token, secret, or other server credential in the browser.
+
+Before integrating your backend with the OpenIMServer REST API, see [Prepare to use the Platform API](/platform-api/prepare-to-use-api) and [Issue a session token](/platform-api/user/managing-session-tokens/issue-a-session-token). If your product already has an account system, maintain a stable mapping between each application account and its OpenIMSDK `userID`, and make sure the returned token belongs to that `userID`.
+
+We recommend exposing a session endpoint from your application backend so that the browser receives only the minimum information required by the SDK:
+
+```ts
+type OpenIMSDKSession = {
+  userID: string;
+  token: string;
+  apiAddr: string;
+  wsAddr: string;
+};
+
+async function loadOpenIMSDKSession(): Promise<OpenIMSDKSession> {
+  const response = await fetch('/api/openim/session');
+  if (!response.ok) throw new Error('Failed to load OpenIMSDK session.');
+  return response.json();
+}
+```
+
+The application session endpoint must authenticate the current application account before returning its OpenIMSDK sign-in details. It must not accept an arbitrary `userID` from the browser and issue a token for that user without verification.
+
+## Prepare the browser runtime
+
+The OpenIM WASM SDK depends on WebAssembly, WebSocket, and IndexedDB in the browser. Your project must also publish `openIM.wasm`, `sql-wasm.wasm`, and `wasm_exec.js`, and the page must be able to load them from the configured static asset paths.
+
+If your application uses a server-rendering framework such as Next.js, Nuxt, or Remix, initialize the SDK, access the local database, and establish connections only in the browser. See [Integrate by runtime](/sdk/wasm/getting-started/environment-specific-implementation) for initialization locations and lifecycle handling in different environments.
+
+Before a production release, test the environments and networks your product actually supports:
+
+- All three SDK assets load successfully, and their responses have not been replaced by a sign-in page or error page.
+- `apiAddr` accepts HTTP requests and `wsAddr` completes a WebSocket connection.
+- IndexedDB can create and write to the local database.
+- Private browsing, low-storage conditions, and restoring the page after it enters the background behave as your product expects.
+
+## Continue the integration
+
+After preparing these shared prerequisites, [authenticate and manage the session](/sdk/wasm/getting-started/authenticate-and-manage-session). Once the connection succeeds, [send your first message](/sdk/wasm/getting-started/send-first-message) to a prepared user or group and verify the messaging flow.

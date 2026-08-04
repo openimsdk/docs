@@ -1,16 +1,112 @@
 ---
 title: 'Conversation group overview'
-description: 'OpenIM WASM SDK guide for conversation group concepts and events.'
+description: 'Understand the WASM SDK conversation-group model, capability boundaries, and incremental events.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups'
 ---
 
-## Overview
+Conversation groups organize the signed-in user's conversation list into categories such as “Work,” “Unread,” or “Later.” They manage relationships between `conversationID` values and groups. They do not create chat groups, change group membership, or alter message recipients.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Group types
+
+`ConversationGroupType` exposes three types:
+
+| Enum value | Numeric value | Meaning |
+| --- | ---: | --- |
+| `ConversationGroupTypeNormal` | `0` | A normal custom group that the user can create and maintain. |
+| `ConversationGroupTypeFilter` | `1` | A filtered group maintained by SDK or server rules. |
+| `ConversationGroupTypeAll` | `2` | Used when querying all types. |
+
+Use `ConversationGroupTypeNormal` for ordinary user-defined categories. The active OpenIMServer deployment determines how filtered groups are generated; do not fabricate system groups in the client from names alone.
+
+## Group data
+
+`ConversationGroup` represents a conversation group. Merge snapshots and event increments by the stable `conversationGroupID`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationGroupID` | `string` | Conversation group ID. |
+| `name` | `string` | Group name. |
+| `serial` | `number` | Group sequence returned by the SDK. |
+| `version` | `number` | Group data version. |
+| `ex` | `string` | Application-defined extension string. |
+| `conversationGroupType` | `ConversationGroupType` | Group type. |
+| `hidden` | `boolean` | Whether the group is hidden. |
+| `unreadCount` | `number` | Snapshot of the total unread count for conversations in the group. |
+| `conversationIDs` | `string[]` | Conversation IDs that currently belong to the group. |
+
+## Available operations
+
+- [Create a conversation group](/sdk/wasm/conversation/managing-conversation-groups/create-conversation-group)
+- [Get conversation groups by type](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-groups)
+- [Page through conversations in a group](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [Get the groups for a conversation](/sdk/wasm/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Update a conversation group](/sdk/wasm/conversation/managing-conversation-groups/update-conversation-group)
+- [Reorder conversation groups](/sdk/wasm/conversation/managing-conversation-groups/set-conversation-group-order)
+- [Add conversations to groups](/sdk/wasm/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [Remove conversations from groups](/sdk/wasm/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [Delete a conversation group](/sdk/wasm/conversation/managing-conversation-groups/delete-conversation-group)
+
+## Listen for group changes
+
+Queries establish a snapshot at call time; events merge subsequent increments. An active-call Promise succeeding, a related event arriving, and a reconciliation query are three separate stages.
+
+| Event | `data` type | Handling |
+| --- | --- | --- |
+| `OnConversationGroupAdded` | `ConversationGroup[]` | Merge newly added groups. |
+| `OnConversationGroupChanged` | `ConversationGroup[]` | Update groups by `conversationGroupID`. |
+| `OnConversationGroupDeleted` | `ConversationGroup[]` | Remove deleted groups. |
+| `OnConversationGroupMemberAdded` | `ConversationGroupMemberChangedCallbackData` | Merge newly associated conversations and conversation details. |
+| `OnConversationGroupMemberDeleted` | `ConversationGroupMemberChangedCallbackData` | Remove the corresponding conversation associations. |
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+function handleConversationGroupAdded({ data }) {
+  mergeConversationGroups(data);
+}
+
+function handleConversationGroupChanged({ data }) {
+  mergeConversationGroups(data);
+}
+
+function handleConversationGroupDeleted({ data }) {
+  for (const group of data) {
+    removeConversationGroup(group.conversationGroupID);
+  }
+}
+
+function handleConversationGroupMemberAdded({ data }) {
+  mergeConversationGroupMembers(
+    data.group.conversationGroupID,
+    data.conversationIDs,
+    data.conversations,
+  );
+}
+
+function handleConversationGroupMemberDeleted({ data }) {
+  removeConversationGroupMembers(data.group.conversationGroupID, data.conversationIDs);
+}
+
+openimsdk.on(CbEvents.OnConversationGroupAdded, handleConversationGroupAdded);
+openimsdk.on(CbEvents.OnConversationGroupChanged, handleConversationGroupChanged);
+openimsdk.on(CbEvents.OnConversationGroupDeleted, handleConversationGroupDeleted);
+openimsdk.on(CbEvents.OnConversationGroupMemberAdded, handleConversationGroupMemberAdded);
+openimsdk.on(CbEvents.OnConversationGroupMemberDeleted, handleConversationGroupMemberDeleted);
+
+function disposeConversationGroupEvents() {
+  openimsdk.off(CbEvents.OnConversationGroupAdded, handleConversationGroupAdded);
+  openimsdk.off(CbEvents.OnConversationGroupChanged, handleConversationGroupChanged);
+  openimsdk.off(CbEvents.OnConversationGroupDeleted, handleConversationGroupDeleted);
+  openimsdk.off(CbEvents.OnConversationGroupMemberAdded, handleConversationGroupMemberAdded);
+  openimsdk.off(CbEvents.OnConversationGroupMemberDeleted, handleConversationGroupMemberDeleted);
+}
+```
+
+An event may arrive after the active call completes. Merge state idempotently by ID instead of simply appending arrays.

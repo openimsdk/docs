@@ -1,16 +1,64 @@
 ---
 title: 'Send a custom signal'
-description: 'OpenIM WASM SDK guide for Send a custom signal.'
+description: 'Send and receive custom signaling data within a call room.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-## Overview
+Use `signalingSendCustomSignal()` to send lightweight business negotiation data to a specified call room, such as a raised-hand action, a layout-change hint, or application state synchronization. It is not a chat-message API and does not replace the media engine's data channel.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Send a signal
+
+`customInfo` is a string. To send structured data, define a stable format and serialize it as JSON.
+
+```ts
+const signal = {
+  version: 1,
+  eventID: crypto.randomUUID(),
+  type: 'hand-raised',
+  userID: currentUserID,
+  sentAt: Date.now(),
+};
+
+await openimsdk.signalingSendCustomSignal({
+  roomID,
+  customInfo: JSON.stringify(signal),
+});
+```
+
+Promise completion means that OpenIMServer accepted the custom signal for sending; it does not mean other participants have processed it. Keep custom signals compact and include a protocol version and business idempotency ID so old and new clients can interoperate without applying an event twice. Do not place large files, chat history, long-term state, or sensitive credentials in `customInfo`.
+
+## Receive a signal
+
+Listen for custom room signaling through `CbEvents.OnReceiveCustomSignal`. The event's `data` contains `roomID` and the `customInfo` string. Validate the room and your application protocol before updating the interface.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+function handleCustomSignal({ data }) {
+  try {
+    const signal = parseAndValidateCallSignal(data.customInfo);
+    if (data.roomID !== activeRoomID) return;
+    if (hasAppliedSignal(data.roomID, signal.eventID)) return;
+    applyCallSignal(signal);
+  } catch (error) {
+    console.warn('Unable to parse the custom call signal', { error });
+  }
+}
+
+openimsdk.on(CbEvents.OnReceiveCustomSignal, handleCustomSignal);
+
+function removeCustomSignalListener() {
+  openimsdk.off(CbEvents.OnReceiveCustomSignal, handleCustomSignal);
+}
+```
+
+`parseAndValidateCallSignal()` should validate the JSON structure, protocol version, `eventID`, `type`, and business fields before returning an application object. This page is the canonical listener reference for the event. Process business signals idempotently by `roomID:eventID`, and combine that key with the protocol's user ID for participant state. Do not depend on event order. Call `removeCustomSignalListener()` when leaving the call view, logging out, or changing accounts.
+
+Do not trust client-provided custom signals to grant host, paid-feature, or privacy permissions. State requiring authoritative validation must be stored and evaluated by a trusted backend. After reconnecting, reconcile long-term state through a room query or the business backend; custom signals are not a replayable authoritative record.

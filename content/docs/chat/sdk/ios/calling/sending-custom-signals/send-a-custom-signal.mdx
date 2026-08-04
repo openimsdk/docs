@@ -1,17 +1,87 @@
 ---
 title: 'Send a custom signal'
-description: 'OpenIM iOS SDK guide for Send a custom signal.'
+description: 'Send and receive custom signals in a call room with the OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/sending-custom-signals/send-a-custom-signal'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Use `signalingSendCustomSignal:customInfo:onSuccess:onFailure:` to send lightweight coordination data to a call room, such as a raised-hand event, a layout-change hint, or application-specific state synchronization. This is not a chat-message API and does not replace the media engine's data channel.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Send a signal
+
+`customInfo` is a string. To send structured data, define a stable schema and serialize it as JSON.
+
+```objc
+NSDictionary *signal = @{
+    @"version": @1,
+    @"eventID": NSUUID.UUID.UUIDString.lowercaseString,
+    @"type": @"hand-raised",
+    @"userID": currentUserID,
+    @"sentAt": @((NSInteger64)(NSDate.date.timeIntervalSince1970 * 1000)),
+};
+
+NSData *data = [NSJSONSerialization dataWithJSONObject:signal options:0 error:nil];
+NSString *customInfo = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+
+[[OIMManager manager] signalingSendCustomSignal:roomID
+                                      customInfo:customInfo
+                                       onSuccess:^{
+    [self markSignalSubmitted:signal[@"eventID"]];
+}
+                                       onFailure:^(NSInteger code, NSString * _Nullable message) {
+    [self showCallError:code message:message ?: @"Failed to send the custom signal"];
+}];
+```
+
+### Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `roomID` | The current call room ID. It must match the call the sender is handling. |
+| `customInfo` | An application-defined string. When using JSON, include a protocol version and an application-level idempotency ID. |
+
+The success callback means that OpenIMServer accepted the send request. It does not mean that other participants have processed the data. Keep custom signals small. Do not put large files, chat history, durable state, or sensitive credentials in `customInfo`.
+
+## Receive signals
+
+Implement `onReceiveCustomSignal:` from `OIMSignalingListener` to receive custom signals. The public iOS enterprise SDK delegate exposes only the raw `NSString *`; it does not declare an object containing separate `roomID` and `customInfo` fields. Your app must parse the string according to the format agreed upon by the server and all clients, then validate the room and protocol.
+
+```objc
+@interface CallSignalStore () <OIMSignalingListener>
+@end
+
+@implementation CallSignalStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addSignalingListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeSignalingListener:self];
+}
+
+- (void)onReceiveCustomSignal:(NSString *)rawSignal {
+    NSDictionary *signal = [self parseAndValidateCallSignal:rawSignal];
+    if (signal == nil) return;
+    if (![signal[@"roomID"] isEqualToString:self.activeRoomID]) return;
+    if ([self hasAppliedSignal:signal[@"eventID"]]) return;
+
+    [self applySignal:signal];
+}
+
+@end
+```
+
+This page is the canonical listener page for `onReceiveCustomSignal:`. Use the same listener instance with `addSignalingListener:` and `removeSignalingListener:`. Remove it when the user logs out or switches accounts, when the app leaves the calling feature, or when the state layer is destroyed.
+
+Because the receive callback does not provide a separate SDK `roomID` field, include `roomID` in your application protocol if signals must be filtered by room, and verify it against the active room on receipt. Deduplicate signals with `eventID` or another stable idempotency key from that protocol; do not rely on arrival order.
+
+## Signals and durable state
+
+Custom signals are real-time notifications, not queryable durable state. They alone cannot reliably reconstruct state after a page is reopened, a device was offline, or a listener had not yet been registered. Store data that requires long-term retention or auditing in your application backend or as regular messages. Reconcile call-room and participant snapshots with [Retrieve a room by group](/sdk/ios/calling/retrieving-call-information/get-room-by-group-id).

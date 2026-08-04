@@ -1,17 +1,31 @@
 ---
-title: 'Transfer group owner'
-description: 'OpenIM Flutter SDK guide for Transfer group owner.'
+title: 'Transfer group ownership'
+description: 'Transfer group ownership to another member with the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/managing-group-members/transfer-group-owner'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Only the current owner can call `transferGroupOwner()`, and the target user must be a valid group member.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+Both `groupID`, the target group ID, and `userID`, the new owner's user ID, are required non-empty strings:
+
+```dart
+await OpenIM.iMManager.groupManager.transferGroupOwner(
+  groupID: groupID,
+  userID: targetUserID,
+);
+```
+
+## State after the call
+
+A successful `Future` means that OpenIMServer completed the transfer: the previous owner becomes a regular member and the new owner receives the owner role. Their changes may arrive as separate `onGroupMemberInfoChanged` events, so one transfer can update two member records. Merge both by `groupID:userID`.
+
+For complete listening and merge rules, see [Group member queries overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members). Do not infer the result solely from the number of listener events. When displaying the current owner and administrator list, query [`getGroupOwnerAndAdmin()`](/sdk/flutter/group/retrieving-group-members/get-group-owner-and-admin) again.
+
+An owner who wants to leave must transfer ownership before calling the leave-group API. The owner can instead dismiss an unneeded group, but dismissal affects every member and does not replace an ordinary transfer.

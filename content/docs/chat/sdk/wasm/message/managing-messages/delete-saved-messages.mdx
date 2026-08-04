@@ -1,17 +1,50 @@
 ---
-title: 'Delete saved messages'
-description: 'OpenIM WASM SDK guide for Delete saved messages.'
+title: 'Delete messages in a batch'
+description: 'Delete multiple messages from one conversation for the current account with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/delete-saved-messages'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+## Parameters
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | ID of the conversation containing the messages to delete. |
+| `clientMsgIDs` | `string[]` | Yes | IDs of the messages to delete. Every ID in one batch must belong to the same conversation. |
+| `isSync` | `boolean` | Yes | Whether to synchronize the deletion to the current account's other clients. |
+
+```ts
+await openimsdk.deleteMessages({
+  conversationID,
+  clientMsgIDs: selectedMessageIDs,
+  isSync: true,
+});
+```
+
+With `isSync: false`, the operation deletes the current device's copy and the current account's server-side record. With `true`, it also requests deletion synchronization to the account's other clients. It does not delete copies held by other conversation members or display a revocation notice.
+
+Promise completion means that the deletion request has completed. When synchronization is enabled, it does not mean that other clients have already received the event or updated their interfaces.
+
+This page owns `CbEvents.OnMsgDeleted`. Its `data` is a `MessageItem`. Determine the conversation from the message routing fields, then remove it idempotently by `clientMsgID`.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleMessageDeleted = ({ data }) => {
+  removeMessage(resolveConversationID(data), data.clientMsgID);
+};
+
+openimsdk.on(CbEvents.OnMsgDeleted, handleMessageDeleted);
+
+function removeMessageDeletedListener() {
+  openimsdk.off(CbEvents.OnMsgDeleted, handleMessageDeleted);
+}
+```
+
+Call `removeMessageDeletedListener()` when the component unmounts, the user logs out, or the active account changes. To reconcile the current message snapshot, query the corresponding conversation history again.

@@ -1,17 +1,57 @@
 ---
-title: 'Overview'
-description: 'OpenIM Flutter SDK guide for Overview.'
+title: 'Users overview'
+description: 'Understand user profiles, friend relationships, the blocklist, and online status in OpenIMClientSDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/overview-user'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+OpenIMClientSDK identifies each user by `userID`. When implementing profile cards, friend requests, contacts, or a blocklist, distinguish an application's public user profile from the current user's friend relationship and blocklist state.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+Group member lists, in-group nicknames, group roles, and member administration belong to the Groups domain. See [Retrieve group members](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).
+
+## User types
+
+OpenIMSDK returns different user objects for different scenarios:
+
+| Type | Use case | Main APIs |
+| --- | --- | --- |
+| `UserInfo` | The current user's profile, settings page, avatar, nickname, and global receive setting | `getSelfUserInfo()`, `setSelfInfo()` |
+| `PublicUserInfo` | Application user lookup, friend candidates, and profiles for users who are not friends | `getUsersInfo()` |
+| `FriendInfo` | The current user's friend list, friend remarks, and relationship extension data. The SDK model does not contain `isPinned` | `getFriendListPage()`, `getFriendsInfo()` |
+| `BlacklistInfo` | Users blocked by the current user | `getBlacklist()`, `addBlacklist()`, `removeBlacklist()` |
+| `UserStatusInfo` | User online status and active platforms | `subscribeUsersStatus()`, `getSubscribeUsersStatus()` |
+
+The same `userID` can appear in public profile, friend, blocklist, and group member data. Prefer `FriendInfo` when displaying a contact, `PublicUserInfo` when only a public account profile is needed, and `GroupMembersInfo` for a group member. Conversation-list and chat-page titles belong to conversation data and should use `ConversationInfo.showName`.
+
+## Feature entry points
+
+| Requirement | Recommended page |
+| --- | --- |
+| Retrieve public profiles by `userID` for friend candidates or profile cards | [Retrieve public profiles by user ID](/sdk/flutter/user/retrieving-users/retrieve-users) |
+| Page through, search, or retrieve friend relationships by ID | [Retrieve the friend list by page](/sdk/flutter/user/friends/get-friend-list-page) |
+| Send, retrieve, accept, or reject friend applications | [Retrieve received friend applications](/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient) |
+| Update friend data | [`updateFriends()`](/sdk/flutter/user/friends/update-friends) |
+| Delete a friend relationship | [`deleteFriend()`](/sdk/flutter/user/friends/delete-friend) |
+| View and maintain the current user's blocklist | [Retrieve the blocklist](/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users) |
+| Read or update the current user's nickname, avatar, and extension data | [Update the current user's profile](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile) |
+| Configure account-level message reception and do-not-disturb behavior | [Set the global message receive option](/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception) |
+| Subscribe to and retrieve online status | [Subscribe to user status](/sdk/flutter/user/retrieving-and-updating-user-information/subscribe-user-status) |
+| Retrieve or search group members and read specified member profiles | [Retrieve group members](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members) |
+
+## State updates
+
+Each capability page owns the listener and merge behavior for its user-related events:
+
+- Current-user profile changes: [Update the current user's profile](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile).
+- Friend-application changes: [Retrieve received friend applications](/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient).
+- Friend relationship and profile changes: [Retrieve the friend list by page](/sdk/flutter/user/friends/get-friend-list-page).
+- Blocklist changes: [Block a user](/sdk/flutter/user/moderating-a-user/block-user).
+- Online-status changes: [Subscribe to user status](/sdk/flutter/user/retrieving-and-updating-user-information/subscribe-user-status).
+
+In the Flutter SDK, `UserManager` and `FriendshipManager` each retain one listener. Combine the required callbacks in a shared state layer and set each listener once. Do not let multiple widgets overwrite one another's listeners.

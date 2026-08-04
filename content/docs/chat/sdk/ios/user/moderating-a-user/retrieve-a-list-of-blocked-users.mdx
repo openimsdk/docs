@@ -1,17 +1,51 @@
 ---
-title: 'Retrieve a list of blocked users'
-description: 'OpenIM iOS SDK guide for Retrieve a list of blocked users.'
+title: 'Retrieve the blocklist'
+description: 'Retrieve the current user’s blocklist.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/moderating-a-user/retrieve-a-list-of-blocked-users'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIMSDK blocklist records users whom the current user has blocked. Call `getBlackListWithOnSuccess:onFailure:` to retrieve the complete list as `OIMBlackInfo` records. Use this data to build a blocklist settings page, display relationship status on profile cards, or restrict access to chat actions.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+Blocklists and group administration are separate capabilities. Use group-member APIs to mute or remove a member or change a group role. This query also does not indicate whether an account has been suspended at the platform level by the server.
+
+## Retrieve the blocklist
+
+Call this selector after initializing the SDK and signing in. An empty array in the success callback means that the current user's blocklist is empty.
+
+```objc
+[[OIMManager manager] getBlackListWithOnSuccess:^(NSArray<OIMBlackInfo *> *items) {
+    [blacklistStore replaceItems:items];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"getBlackList failed: %ld %@", (long)code, message);
+}];
+```
+
+Profile cards, conversation action menus, and contact lists normally need only determine whether a particular `userID` is in the blocklist. Build a set keyed by `userID`; use fields such as nickname and avatar only for display.
+
+## Blocklist record properties
+
+In the pinned SDK, `OIMBlackInfo` inherits from `OIMPublicUserInfo`. Use `userID` as the stable key when rendering the list. All string properties are declared nullable, so the UI should provide fallback values.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `NSString * _Nullable` | The ID of the user blocked by the current user and the key used to merge list items. |
+| `nickname` | `NSString * _Nullable` | The target user's nickname, for display only. |
+| `faceURL` | `NSString * _Nullable` | The target user's avatar URL. |
+| `createTime` | `NSInteger` | The time when the blocklist relationship was created. |
+| `addSource` | `NSInteger` | The source through which the blocklist relationship was added. |
+| `operatorUserID` | `NSString * _Nullable` | The ID of the user who performed the block operation. |
+| `attachedInfo` | `NSString * _Nullable` | Additional information reserved by the SDK; parse it only when your application has an established format. |
+| `ex` | `NSString * _Nullable` | An extension field; parse only content whose format your application has defined. |
+
+If the blocklist page also displays friend remarks or other public profile details, merge those data sources by `userID` and keep the origins of `OIMBlackInfo`, `OIMFriendInfo`, and `OIMPublicUserInfo` distinct.
+
+## Results and incremental changes
+
+The success callback returns the complete `NSArray<OIMBlackInfo *> *`; replace the current blocklist snapshot with it. This query only reads data and does not trigger a blocklist-added or blocklist-deleted delegate. Call the selector again to establish the complete list when first opening the page or when the user refreshes it. For write operations, see [Block a user](/sdk/ios/user/moderating-a-user/block-user) and [Unblock a user](/sdk/ios/user/moderating-a-user/unblock-user).

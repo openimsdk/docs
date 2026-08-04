@@ -1,17 +1,56 @@
 ---
-title: 'Retrieve a conversation list'
-description: 'OpenIM Flutter SDK guide for Retrieve a conversation list.'
+title: 'Retrieve the conversation list'
+description: 'Retrieve the current user’s conversation list by page with the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The conversation list belongs to the current logged-in user. Each `ConversationInfo` contains state such as the conversation identifiers, unread count, latest message, pin state, and draft. Retrieve conversations with the paginated API; do not load the entire list with a non-paginated API.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Retrieve conversations by page
+
+Use `getConversationListSplit()` for pagination. The first page starts with `offset: 0`.
+
+```dart
+const pageSize = 50;
+
+Future<List<ConversationInfo>> loadConversationPage(int offset) async {
+  final page = await OpenIM.iMManager.conversationManager
+      .getConversationListSplit(offset: offset, count: pageSize);
+  mergeConversations(page);
+  return page;
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `int` | Yes | Zero-based page offset. Reset it to `0` when refreshing. |
+| `count` | `int` | Yes | Desired number of conversations in the page. |
+
+A successful `Future` returns the current page as `List<ConversationInfo>`. For subsequent pages, advance `offset` by the number of items already requested and deduplicate by `conversationID`. Receiving fewer than `count` items means that the end has been reached. For a manual refresh, clear pagination state and reload from `0`.
+
+## Keep the list synchronized
+
+`getConversationListSplit()` establishes a snapshot only and does not trigger conversation callbacks. Add the following handlers to the application's single `OnConversationListener`:
+
+```dart
+void handleNewConversations(List<ConversationInfo> conversations) {
+  mergeConversations(conversations);
+}
+
+void handleConversationsChanged(List<ConversationInfo> conversations) {
+  mergeConversations(conversations);
+}
+```
+
+Both `onNewConversation` and `onConversationChanged` carry `List<ConversationInfo>`. Merge their items by `conversationID`. See [Events overview](/sdk/flutter/events/overview-events) for listener composition and the single setup entry point.
+
+Do not substitute the joined-group list for the conversation list. A user may have joined a group without creating its conversation yet, or may retain a historical conversation after leaving a group.

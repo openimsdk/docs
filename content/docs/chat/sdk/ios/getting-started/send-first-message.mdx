@@ -1,17 +1,88 @@
 ---
 title: 'Send your first message'
-description: 'OpenIM iOS SDK guide for Send your first message.'
+description: 'Verify the first one-to-one or group text-message flow in an iOS application.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/getting-started/send-first-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+This page installs and initializes OpenIM iOS SDK, logs in, and sends the first text message. A one-to-one chat uses the target user's `recvID`; a group chat uses the target group's `groupID`.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Prepare the message target
+
+| Scenario | Target identifier |
+| --- | --- |
+| One-to-one chat | An existing recipient user ID assigned to `recvID`. |
+| Group chat | An existing group ID assigned to `groupID`, with `recvID` set to `nil`. |
+
+OpenIMServer still validates sending permission according to relationships, group state, and member permissions.
+
+## Get started
+
+### Step 1: Install the SDK
+
+```ruby
+pod 'OpenIMSDK'
+```
+
+After installation, open the `.xcworkspace` and import the SDK:
+
+```objc
+@import OpenIMSDK;
+```
+
+### Step 2: Initialize and log in
+
+Initialize the SDK with `OIMInitConfig` and wait for the connection-success callback before entering the message flow. For initialization and token handling, see [Authenticate and manage the session](/sdk/ios/getting-started/authenticate-and-manage-session).
+
+```objc
+[[OIMManager manager] login:userID
+                         token:token
+                     onSuccess:nil
+                     onFailure:^(NSInteger code, NSString *message) {
+                         NSLog(@"OpenIMSDK login failed: %ld %@", (long)code, message);
+                     }];
+```
+
+### Step 3: Choose the target
+
+```objc
+NSString *recvID = @"user_b";
+NSString *groupID = nil;
+```
+
+For a group chat, set `recvID = nil` and provide the actual `groupID`.
+
+### Step 4: Create and send a text message
+
+```objc
+OIMMessageInfo *message = [OIMManager createTextMessage:@"Hello, OpenIMSDK"];
+
+[[OIMManager manager] sendMessage:message
+                           recvID:recvID
+                          groupID:groupID
+                     isOnlineOnly:NO
+                  offlinePushInfo:nil
+                        onSuccess:^(OIMMessageInfo *sentMessage) {
+                            [messageStore upsertMessage:sentMessage
+                                           clientMsgID:sentMessage.clientMsgID];
+                        }
+                       onProgress:^(NSInteger progress) {
+                            // Text messages generally do not need visible progress.
+                        }
+                        onFailure:^(NSInteger code, NSString *message) {
+                            NSLog(@"OpenIMSDK send failed: %ld %@", (long)code, message);
+                        }];
+```
+
+`createTextMessage:` creates only a local `OIMMessageInfo`; it does not trigger a shared message event. The send success callback returns the sent message, which the current client merges by `clientMsgID`. The receiving client obtains it through its message delegate. Callback completion and arrival of the remote event are separate stages and should be verified independently.
+
+## Next steps
+
+- [Send a message](/sdk/ios/message/sending-messages/send-message)
+- [Receive messages](/sdk/ios/message/receiving-messages/receive-messages)

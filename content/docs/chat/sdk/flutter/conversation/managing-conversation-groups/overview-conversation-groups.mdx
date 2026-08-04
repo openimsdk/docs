@@ -1,17 +1,67 @@
 ---
-title: 'Conversation group overview'
-description: 'OpenIM Flutter SDK guide for Conversation group overview.'
+title: 'Conversation groups overview'
+description: 'Understand conversation-group data and the listener lifecycle in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Conversation groups organize the current user's conversation list. They manage relationships between `conversationID` values and groups. They do not create chat groups, change group membership, or alter message destinations.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Group types
+
+| Enum value | Number | Purpose |
+| --- | ---: | --- |
+| `ConversationGroupType.custom` | `0` | A regular custom group. |
+| `ConversationGroupType.preset` | `1` | A preset group maintained by SDK or server rules. |
+| `ConversationGroupType.all` | `2` | Used when querying all group types. |
+
+Use `custom` for ordinary user-defined categories. The rules that generate preset groups depend on the OpenIMServer deployment.
+
+Common `ConversationGroupInfo` fields include `conversationGroupID`, `name`, `serial`, `version`, `ex`, `conversationGroupType`, `hidden`, `unreadCount`, and `conversationIDs`. All of these fields are nullable in the pinned version.
+
+## Available operations
+
+- [Create a conversation group](/sdk/flutter/conversation/managing-conversation-groups/create-conversation-group)
+- [Retrieve conversation groups](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-groups)
+- [Retrieve conversations in a group](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [Retrieve the groups containing a conversation](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Update a conversation group](/sdk/flutter/conversation/managing-conversation-groups/update-conversation-group)
+- [Reorder conversation groups](/sdk/flutter/conversation/managing-conversation-groups/set-conversation-group-order)
+- [Add conversations to groups](/sdk/flutter/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [Remove conversations from groups](/sdk/flutter/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [Delete a conversation group](/sdk/flutter/conversation/managing-conversation-groups/delete-conversation-group)
+
+## Listen for group changes
+
+```dart
+Future<void> registerConversationGroupListener() {
+  return OpenIM.iMManager.conversationGroupManager
+      .setConversationGroupListener(
+    OnConversationGroupListener(
+      onConversationGroupAdded: mergeConversationGroups,
+      onConversationGroupChanged: mergeConversationGroups,
+      onConversationGroupDeleted: removeConversationGroups,
+      onConversationGroupMemberAdded: mergeConversationGroupMembers,
+      onConversationGroupMemberDeleted: removeConversationGroupMembers,
+    ),
+  );
+}
+```
+
+| Listener | Payload | Handling |
+| --- | --- | --- |
+| `onConversationGroupAdded` | `List<ConversationGroupInfo>` | Merge newly added groups. |
+| `onConversationGroupChanged` | `List<ConversationGroupInfo>` | Update by `conversationGroupID`. |
+| `onConversationGroupDeleted` | `List<ConversationGroupInfo>` | Remove deleted groups. |
+| `onConversationGroupMemberAdded` | `List<ConversationGroupMemberChangedInfo>` | Merge `group`, `conversationIDs`, and `conversations`. |
+| `onConversationGroupMemberDeleted` | `List<ConversationGroupMemberChangedInfo>` | Remove the corresponding relationships. |
+
+Member-change fields may be empty. Check `group?.conversationGroupID` and each conversation ID first. Merge groups idempotently by `conversationGroupID`, then combine that ID with `conversationID` for membership relationships.
+
+`ConversationGroupManager` retains only one listener, and the pinned SDK has no remove or unset method. Set the listener centrally once. When switching accounts, stop dispatching events to the old state, then replace the listener with a complete one for the new account. Future completion, listener arrival, and a reconciliation query are three separate stages.

@@ -1,16 +1,94 @@
 ---
-title: 'Authenticate and init'
-description: 'OpenIM Electron SDK guide for Authenticate and init.'
+title: 'Authenticate and initialize'
+description: 'Use the Electron FFI initSDK, login, and unInitSDK methods to establish a session, and understand how their parameters differ from WASM login.'
 product: 'sdk'
 context: 'chat/sdk/electron'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-21'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'electron'
 sourcePath: '/sdk/electron/getting-started/authenticate-and-init'
 ---
 
-## Overview
+The Electron FFI SDK separates SDK initialization from user authentication. First call `initSDK()` to configure the OpenIMServer addresses and local runtime directory, then call `login()` with the `userID` and token. This differs from [WASM authentication and session management](/sdk/wasm/getting-started/authenticate-and-manage-session), where a single `InitAndLoginConfig` is passed to `login()`.
 
-The English version of this OpenIM Electron SDK guide is deferred until the reviewed Chinese documentation is complete.
+This page covers only the Electron FFI lifecycle APIs. For complete listener registration and cleanup for connection success, token expiration, and forced sign-out, follow the WASM authentication page. Shared capabilities use the same method names and `CbEvents` values.
+
+## Differences from WASM
+
+| Step                                      | Electron FFI                  | WASM                                                               |
+| ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------ |
+| Configure server addresses and runtime    | `initSDK(InitConfig)`         | Included in `login(InitAndLoginConfig)`                            |
+| Submit user credentials                   | `login({ userID, token })`    | Included in the same `login()` call                                |
+| Release the native SDK                    | `unInitSDK()`                 | No equivalent public unload API; use `logout()` to end the session |
+
+If the Electron renderer uses the WASM package, follow the WASM authentication page directly and do not call the `initSDK()` described here.
+
+## Initialize the SDK
+
+At initialization, `InitConfig` supplies server addresses, platform information, a local data directory, and logging options.
+
+### Parameters
+
+| Field                 | Type       | Required | Description                                                                                      |
+| --------------------- | ---------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `apiAddr`             | `string`   | Yes      | OpenIMServer HTTP API address.                                                                   |
+| `wsAddr`              | `string`   | Yes      | OpenIMServer WebSocket address.                                                                  |
+| `platformID`          | `number`   | Yes      | Current client platform value. It must conform to the OpenIMServer multi-device login policy.   |
+| `dataDir`             | `string`   | Yes      | Writable absolute path for the native SDK's local data.                                          |
+| `systemType`          | `string`   | Yes      | System-type identifier required by the Electron FFI SDK.                                         |
+| `logLevel`            | `LogLevel` | No       | Logging level.                                                                                   |
+| `logFilePath`         | `string`   | No       | Log-file path.                                                                                   |
+| `isLogStandardOutput` | `boolean`  | No       | Whether to write logs to standard output.                                                        |
+
+```ts
+await openimsdk.initSDK({
+  apiAddr,
+  wsAddr,
+  platformID,
+  dataDir: '/absolute/path/to/openim-data',
+  systemType: 'electron',
+  logLevel: LogLevel.Warn,
+  isLogStandardOutput: false,
+});
+```
+
+When the `initSDK()` Promise succeeds, the native SDK has initialized and can proceed to login. It has not established a user session, and a connection event has not necessarily arrived.
+
+## Log in the current user
+
+Call `login()` after initialization succeeds. FFI login accepts only the user's credentials.
+
+### Parameters
+
+| Field    | Type     | Required | Description                                                              |
+| -------- | -------- | -------- | ------------------------------------------------------------------------ |
+| `userID` | `string` | Yes      | Current OpenIMSDK user ID. It must match the token.                       |
+| `token`  | `string` | Yes      | OpenIMSDK token issued by a trusted backend.                              |
+
+```ts
+await openimsdk.login({
+  userID,
+  token,
+});
+```
+
+When the `login()` Promise succeeds, the login request has completed. Use connection events such as `OnConnectSuccess` to decide when business APIs that require a connection are available. See the [WASM authentication page](/sdk/wasm/getting-started/authenticate-and-manage-session) for event registration.
+
+## Log out and uninitialize
+
+When the user signs out or switches accounts, first call the shared `logout()` method to end the session. Call `unInitSDK()` afterward when the native resources must be released.
+
+```ts
+await openimsdk.logout();
+await openimsdk.unInitSDK();
+```
+
+`unInitSDK()` takes no business parameters. When switching accounts, finish signing out the old account and clear its state before calling `initSDK()` and `login()` again when necessary. Do not initialize two native instances concurrently.
+
+## Next steps
+
+- [Electron SDK overview](/sdk/electron/overview)
+- [WASM authentication and session management](/sdk/wasm/getting-started/authenticate-and-manage-session)
+- [Create media messages from full paths](/sdk/electron/message/create-media-from-full-path)

@@ -13,8 +13,15 @@ const reviewStatuses = new Set([
   'example-verified',
   'published',
 ]);
+const englishReviewStatuses = new Set(['deferred', 'published']);
 
-export function validateClientSdkAudit({ platform, sidebar, audit, manualPages }) {
+export function validateClientSdkAudit({
+  platform,
+  sidebar,
+  audit,
+  manualPages,
+  englishPages = new Map(),
+}) {
   const errors = [];
   const activePaths = new Set(getClientSdkSidebarPaths(sidebar));
   const auditPaths = new Set();
@@ -41,18 +48,24 @@ export function validateClientSdkAudit({ platform, sidebar, audit, manualPages }
     if (!reviewStatuses.has(page.locales?.zh?.reviewStatus)) {
       errors.push(`${path}: invalid Chinese review status`);
     }
-    if (page.locales?.en?.reviewStatus !== 'deferred') {
-      errors.push(`${path}: English review status must remain deferred`);
+    if (!englishReviewStatuses.has(page.locales?.en?.reviewStatus)) {
+      errors.push(`${path}: invalid English review status`);
     }
 
     const manual = manualPages.get(path);
+    const english = englishPages.get(path);
     if (isActive && !manual) errors.push(`${path}: active page is missing manual Chinese MDX`);
     if (!isActive && manual) errors.push(`${path}: omitted page must not have manual Chinese MDX`);
     if (manual && page.locales?.zh?.reviewStatus === 'structure-only') {
       errors.push(`${path}: manual Chinese MDX requires a reviewed audit state`);
     }
     if (manual) validateManualPage({ platform, page, path, source: manual, errors });
-    validatePublishedState({ page, path, source: manual, errors });
+    validatePublishedState({ page, path, source: manual, locale: 'zh', errors });
+    if (page.locales?.en?.reviewStatus === 'published') {
+      if (!english) errors.push(`${path}: published English page is missing manual MDX`);
+      if (english) validateManualPage({ platform, page, path, source: english, errors });
+      validatePublishedState({ page, path, source: english, locale: 'en', errors });
+    }
 
     if (page.locales?.zh?.reviewStatus !== 'structure-only') {
       if (!(page.openimSources ?? []).some((source) => source.includes(platform.sdkCommit))) {
@@ -94,22 +107,23 @@ export function validateClientSdkAudit({ platform, sidebar, audit, manualPages }
   return errors.sort();
 }
 
-function validatePublishedState({ page, path, source, errors }) {
-  const state = page.locales?.zh;
+function validatePublishedState({ page, path, source, locale, errors }) {
+  const state = page.locales?.[locale];
   if (state?.reviewStatus !== 'published') return;
-  if (!state.reviewer?.trim()) errors.push(`${path}: published requires a reviewer`);
+  const label = locale === 'en' ? 'published English' : 'published Chinese';
+  if (!state.reviewer?.trim()) errors.push(`${path}: ${label} requires a reviewer`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(state.reviewedAt ?? '')) {
-    errors.push(`${path}: published requires a reviewedAt date`);
+    errors.push(`${path}: ${label} requires a reviewedAt date`);
   }
 
   const verification = state.exampleVerification;
   const hasCodeExample = /```[A-Za-z0-9_-]+\n/.test(source ?? '');
   if (hasCodeExample) {
     if (verification?.status !== 'verified' || !(verification.evidence ?? []).some(hasText)) {
-      errors.push(`${path}: published code examples require verification evidence`);
+      errors.push(`${path}: ${label} code examples require verification evidence`);
     }
   } else if (verification?.status !== 'not-applicable' || !verification.reason?.trim()) {
-    errors.push(`${path}: published page without code requires a not-applicable reason`);
+    errors.push(`${path}: ${label} page without code requires a not-applicable reason`);
   }
 }
 
@@ -182,12 +196,22 @@ async function main() {
   let failed = false;
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);
-    const [sidebar, audit, manualPages] = await Promise.all([
+    const [sidebar, audit, manualPages, englishPages] = await Promise.all([
       readJson(platform.sidebarPath),
       readJson(platform.auditPath),
-      readManualPages(platform),
+      readManualPages(platform.manualRoot, platform.routePrefix),
+      readManualPages(
+        platform.manualRoot.replace(/^content\/zh\//, 'content/'),
+        platform.routePrefix,
+      ),
     ]);
-    const errors = validateClientSdkAudit({ platform, sidebar, audit, manualPages });
+    const errors = validateClientSdkAudit({
+      platform,
+      sidebar,
+      audit,
+      manualPages,
+      englishPages,
+    });
     if (errors.length > 0) {
       failed = true;
       console.error(`${platformId} SDK audit check failed: ${errors.length}`);
@@ -199,13 +223,13 @@ async function main() {
   if (failed) process.exitCode = 1;
 }
 
-async function readManualPages(platform) {
+async function readManualPages(manualRoot, routePrefix) {
   const pages = new Map();
-  for (const filePath of await listMdxFiles(resolve(root, platform.manualRoot))) {
-    const suffix = relative(resolve(root, platform.manualRoot), filePath)
+  for (const filePath of await listMdxFiles(resolve(root, manualRoot))) {
+    const suffix = relative(resolve(root, manualRoot), filePath)
       .replaceAll('\\', '/')
       .slice(0, -'.mdx'.length);
-    pages.set(`${platform.routePrefix}/${suffix}`, await readFile(filePath, 'utf8'));
+    pages.set(`${routePrefix}/${suffix}`, await readFile(filePath, 'utf8'));
   }
   return pages;
 }

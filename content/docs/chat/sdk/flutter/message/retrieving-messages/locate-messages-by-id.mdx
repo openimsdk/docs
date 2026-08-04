@@ -1,17 +1,99 @@
 ---
 title: 'Locate messages by ID'
-description: 'OpenIM Flutter SDK guide for Locate messages by ID.'
+description: 'Locate one or more messages by conversationID and clientMsgID.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/message/retrieving-messages/locate-messages-by-id'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Search results, quoted messages, and notification links should retain both `conversationID` and `clientMsgID`. Use `findMessageList()` with these stable identifiers to retrieve messages already synchronized to local storage.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Find a message by `clientMsgID`
+
+```dart
+final result = await OpenIM.iMManager.messageManager.findMessageList(
+  searchParams: [
+    SearchParams(
+      conversationID: conversationID,
+      clientMsgIDList: [clientMsgID],
+    ),
+  ],
+);
+
+final items = result.findResultItems ?? const <SearchResultItems>[];
+final messages = items.isEmpty
+    ? const <Message>[]
+    : (items.first.messageList ?? const <Message>[]);
+final target = messages.isEmpty ? null : messages.first;
+```
+
+### Parameters
+
+| Field             | Type            | Required                    | Description                                                   |
+| ----------------- | --------------- | --------------------------- | ------------------------------------------------------------- |
+| `conversationID`  | `String?`       | Optional in SDK; required in app | ID of the conversation containing the target message.     |
+| `clientMsgIDList` | `List<String>?` | Optional in SDK; required in app | Message IDs to locate. Pass one item when locating one message. |
+
+When the Future succeeds, matches are in the `messageList` of `SearchResult.findResultItems`. The list can be empty when the cache has not synchronized, the message was deleted, or the ID does not exist, so check it before accessing an item.
+
+`clientMsgID` is the stable client-side identifier of an OpenIMSDK message. Retain it with messages from sending, receiving, search, and history. Do not substitute an array index, display timestamp, or current page length.
+
+## Load messages before and after the target
+
+The pinned Flutter SDK does not expose WASM's `fetchSurroundingMessages()`. After locating `target`, use it as `startMsg` in both `getAdvancedHistoryMessageList()` and `getAdvancedHistoryMessageListReverse()`, then combine the older and newer context with `conversationID:clientMsgID` deduplication.
+
+```dart
+final older = await OpenIM.iMManager.messageManager
+    .getAdvancedHistoryMessageList(
+      conversationID: conversationID,
+      startMsg: target,
+      count: 20,
+    );
+final newer = await OpenIM.iMManager.messageManager
+    .getAdvancedHistoryMessageListReverse(
+      conversationID: conversationID,
+      startMsg: target,
+      count: 20,
+    );
+```
+
+Before combining older messages, the target, and newer messages, discard nullable or empty `clientMsgID` values and deduplicate within the current `conversationID`. Do not rely on a fixed array position in either result to identify the target.
+
+A lookup can return no result when the local cache has not synchronized or the message has been deleted or recalled. Retry a miss after synchronization when appropriate. Recall and deletion remain handled by the shared handlers on their owning pages; do not configure another listener here.
+
+## Retrieve the latest group message
+
+If you only need the last message in a group, such as for a conversation-list preview or group entry point, retrieve the group's `ConversationInfo`:
+
+```dart
+final conversation = await OpenIM.iMManager.conversationManager
+    .getOneConversation(
+  sourceID: groupID,
+  sessionType: ConversationType.superGroup,
+);
+
+renderConversationPreview(
+  conversationID: conversation.conversationID,
+  latestMessage: conversation.latestMsg,
+  unreadCount: conversation.unreadCount,
+);
+```
+
+Flutter's `ConversationInfo.latestMsg` is already a nullable `Message`; unlike the WASM serialized string, it does not require JSON decoding. To open its surrounding context, first confirm that `latestMsg` and its `clientMsgID` are valid, then use the current `conversationID` to load messages in both directions.
+
+## Query results
+
+When their Futures succeed, `findMessageList()`, the two directional history queries, and `getOneConversation()` return the lookup result, history page, and conversation snapshot respectively. None of these queries triggers a message or conversation callback, so the page can render the return value directly.
+
+Re-run the original query when a fresh snapshot is required. Handle re-query results and listener increments for new, recalled, or deleted messages separately, then merge them consistently by conversation identifier and `clientMsgID`.
+
+## Related pages
+
+- [Load message history](/sdk/flutter/message/retrieving-messages/load-older-messages)
+- [Search messages](/sdk/flutter/message/searching-messages/search-messages)
+- [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)

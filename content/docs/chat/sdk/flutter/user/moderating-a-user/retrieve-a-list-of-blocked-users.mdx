@@ -1,17 +1,68 @@
 ---
-title: 'Retrieve a list of blocked users'
-description: 'OpenIM Flutter SDK guide for Retrieve a list of blocked users.'
+title: 'Retrieve the blocklist'
+description: 'Retrieve the current user’s blocklist with the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIMSDK blocklist records users whom the current user has blocked. Call `getBlacklist()` to retrieve the complete list as `BlacklistInfo` records. Use this data to build a blocklist settings page, show relationship state on a profile card, or restrict entry into a chat.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+The blocklist and group administration are separate capabilities. To mute or remove a group member or change a group role, use the group member APIs. `getBlacklist()` reads only the blocklist maintained by the current user.
+
+## Retrieve the blocklist
+
+After initializing the SDK and calling `login()`, use `getBlacklist()` to read the current user's blocklist. An empty result means that no users are blocked.
+
+```dart
+Future<List<BlacklistInfo>> loadBlockedUsers() async {
+  try {
+    return await OpenIM.iMManager.friendshipManager.getBlacklist();
+  } catch (error) {
+    debugPrint('getBlacklist failed: $error');
+    rethrow;
+  }
+}
+
+final blockedUsers = await loadBlockedUsers();
+replaceBlockedUsers(blockedUsers);
+```
+
+Profile cards, conversation action menus, and contact lists generally need only determine whether a `userID` is present in the blocklist. Build a set by `userID`; use nicknames, avatars, and other fields only for display.
+
+```dart
+final blockedUserIDs = blockedUsers
+    .map((user) => user.userID)
+    .whereType<String>()
+    .toSet();
+
+bool isBlocked(String userID) => blockedUserIDs.contains(userID);
+```
+
+## Blocklist fields
+
+`getBlacklist()` returns `List<BlacklistInfo>`. Use `userID` as the stable list key; all other fields are display or relationship metadata.
+
+| Field | Description |
+| --- | --- |
+| `userID` | ID of the user blocked by the current user. |
+| `nickname` | Target user's nickname for display. |
+| `faceURL` | Target user's avatar URL. |
+| `ownerUserID` | Owner of this blocklist relationship, which is the current user. |
+| `blockUserID` | Blocked user ID in the relationship record. Continue to use `userID` consistently when merging list data. |
+| `operatorUserID` | ID of the user who performed the block operation. |
+| `createTime` | Time when the blocklist relationship was created. |
+| `addSource` | Source through which the relationship was added. |
+| `gender` | Target user's gender value. |
+| `ex` | Extension field. Parse only content defined by your application. |
+
+If the blocklist UI also displays public profiles or friend remarks, merge those sources by `userID` and keep `BlacklistInfo`, `FriendInfo`, and `PublicUserInfo` clearly separated.
+
+## Call result and incremental changes
+
+After `getBlacklist()` succeeds, replace the entire blocklist snapshot with the returned `List<BlacklistInfo>`. This query does not trigger callbacks for adding or removing a blocked user. Call it again when the page first opens or when the user refreshes. For write operations, see [Block a user](/sdk/flutter/user/moderating-a-user/block-user) and [Unblock a user](/sdk/flutter/user/moderating-a-user/unblock-user).

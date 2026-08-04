@@ -1,22 +1,53 @@
 ---
-title: 'OpenIM SDK for Mini Program'
-description: 'Mini Program hub for WASM shared guides plus unavailable local search and clear APIs.'
+title: 'OpenIM Mini Program SDK overview'
+description: 'Use WASM documentation as the shared API baseline and understand Mini Program runtime differences and unavailable local search and clearing APIs.'
 product: 'sdk'
 context: 'chat/sdk/miniprogram'
 template: 'overview'
-status: 'draft'
-lastUpdated: '2026-07-21'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'miniprogram'
 sourcePath: '/sdk/miniprogram/overview'
 ---
 
-## Overview
+The OpenIM Mini Program SDK is designed for Mini Programs and lightweight Web scenarios. Its method-level models for users, conversations, messages, groups, and events are consistent with other OpenIMClientSDKs. However, it **does not provide local message storage** or several search and clearing APIs that depend on a local database. Follow the [WASM SDK documentation](/sdk/wasm/overview) for shared capabilities. This page covers only runtime differences and unavailable APIs.
 
-The English version of this OpenIM Mini Program SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Relationship to WASM
 
-## Next steps
+- Follow the corresponding WASM guide for method semantics, events, and data models.
+- Differences are limited to the initialization entry point, domain allowlists, file selection and uploads, platform lifecycle, and the unavailable APIs listed below.
+- A Web client that needs a complete local message database, conversation cache, and persistent history should use the WASM SDK instead.
 
-- [WASM SDK overview](/sdk/wasm/overview)
-- [Authenticate and manage session](/sdk/wasm/getting-started/authenticate-and-manage-session)
-- [Send your first message](/sdk/wasm/getting-started/send-first-message)
+## APIs unavailable compared with WASM
+
+The Mini Program SDK does not currently provide the following methods. Do not design a product around local full-text search or locally clearing conversation history. Use a business backend for search, or retrieve data with an available paginated query and filter it in the application.
+
+| Unavailable API                     | WASM reference                                                                             | Recommended alternative                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `clearConversationAndDeleteAllMsg`  | [Clear conversation messages](/sdk/wasm/conversation/managing-conversations/clear-conversation-messages) | Handle history cleanup through server policy or a business API, then refresh only the current conversation view. |
+| `searchLocalMessages`               | [Search messages](/sdk/wasm/message/searching-messages/search-messages)                    | Use a trusted backend message index, then open the result by `conversationID` and `clientMsgID`.            |
+| `searchFriends`                     | [Search friends](/sdk/wasm/user/friends/search-friends)                                   | Retrieve friends by page and filter them in the application, or use business-directory search.             |
+| `searchGroupMembers`                | [Search group members](/sdk/wasm/group/retrieving-group-members/search-group-members)      | Page through `getGroupMemberList` results and filter them, or use backend member search.                    |
+| `searchGroups`                      | [Search groups](/sdk/wasm/group/retrieving-groups/search-groups)                           | Page through joined groups and filter them, or use backend group discovery.                                |
+| `findMessageList`                   | [Find messages by ID](/sdk/wasm/message/retrieving-messages/find-messages-by-id)           | Retain message IDs in server or conversation state, then load context through an available history query.  |
+
+## Shared capabilities documented under WASM
+
+| Domain          | WASM entry point |
+| --------------- | ---------------- |
+| Authentication  | [Authenticate and manage a session](/sdk/wasm/getting-started/authenticate-and-manage-session) |
+| Getting started | [Integrate by runtime environment](/sdk/wasm/getting-started/environment-specific-implementation) and [Send your first message](/sdk/wasm/getting-started/send-first-message) |
+| Users           | [User overview](/sdk/wasm/user/overview-user) |
+| Conversations   | [Conversation overview](/sdk/wasm/conversation/overview-conversation) |
+| Groups          | [Group overview](/sdk/wasm/group/overview-group) |
+| Messages        | [Message overview](/sdk/wasm/message/overview-message) |
+| Events          | [Event overview](/sdk/wasm/events/overview-events) |
+
+## Runtime considerations
+
+- Before testing login, allow the required request, WebSocket, and upload domains in the target platform configuration.
+- Do not make business logic depend on the SDK's local message database or local conversation persistence. Synchronize the required data again after restoring a page.
+- Validate file messages against the target platform's file picker, temporary paths, upload APIs, and size limits.
+- Continue to issue tokens from a trusted backend. The client should receive only short-lived credentials.
+- When using the Mini Program SDK on the Web, limit it to lightweight scenarios. Use the WASM SDK for a full-featured Web IM client.

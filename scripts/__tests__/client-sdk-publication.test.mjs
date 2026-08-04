@@ -20,7 +20,8 @@ test('detects all registered active SDK routes and excludes legacy native routes
 
 test('reads locale publication state per platform audit', () => {
   assert.equal(isClientSdkLocalePublished('/sdk/ios/overview', 'zh'), true);
-  assert.deepEqual(getPublishedClientSdkLocales('/sdk/flutter/overview'), ['zh']);
+  assert.deepEqual(getPublishedClientSdkLocales('/sdk/flutter/overview'), ['en', 'zh']);
+  assert.equal(isClientSdkLocalePublished('/sdk/flutter/overview', 'en'), true);
   assert.equal(isClientSdkLocalePublished('/sdk/wasm/overview', 'zh'), true);
 });
 

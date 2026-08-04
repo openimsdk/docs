@@ -180,7 +180,7 @@ async function platformApiDocumentationOperations(): Promise<Set<string>> {
         route !== undefined &&
         route.contextKey === 'chat/platform-api' &&
         route.edition !== 'enterprise' &&
-        !route.contentFile.includes('/platform-api/v3/webhooks/') &&
+        !route.contentFile.includes('/platform-api/webhooks/') &&
         route.status === 'published' &&
         route.template === 'api',
     );

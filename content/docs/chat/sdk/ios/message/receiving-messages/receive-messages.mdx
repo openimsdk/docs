@@ -1,17 +1,113 @@
 ---
 title: 'Receive messages'
-description: 'OpenIM iOS SDK guide for Receive messages.'
+description: 'Register the iOS message listener and merge new messages into conversation state.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/receiving-messages/receive-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The iOS SDK delivers regular new messages, online-only messages, revocations, deletions, and read receipts through `OIMAdvancedMsgListener`. Register it once when initializing the message state layer and retain the listener strongly because `OIMCallbacker` holds only a weak reference.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Message types
+
+Each regular event returns one `OIMMessageInfo`. Choose text, @ text, custom, image, audio, video, file, or fallback rendering according to the message element. Do not assume that every message contains `textElem`. For media messages, read the remote URL, size, name, duration, and snapshot from the element; do not upload the resource again.
+
+A message may belong to a conversation that is not currently open. Determine the target conversation first from `sessionType`, `sendID`, `recvID`, and `groupID`, then merge idempotently by `clientMsgID`.
+
+Common `OIMMessageInfo` properties used by the pinned SDK for reception, routing, and merging are:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `clientMsgID` | `NSString * _Nullable` | The client message ID. When present, use it as the stable merge key. |
+| `serverMsgID` | `NSString * _Nullable` | The server message ID. It does not replace `clientMsgID` for local merging. |
+| `sessionType` | `OIMConversationType` | The conversation-type enum used to choose one-to-one or group routing. |
+| `sendID` | `NSString * _Nullable` | The sender's user ID. |
+| `recvID` | `NSString * _Nullable` | The recipient's user ID. |
+| `groupID` | `NSString * _Nullable` | The group ID for a group message. |
+| `contentType` | `OIMMessageContentType` | The content-type enum that determines which content element to render. |
+| `sendTime` | `NSTimeInterval` | The send time used for ordering; it is not a unique message identifier. |
+| `status` | `OIMMessageStatus` | The message-send status enum. |
+| `isRead` | `BOOL` | The read state currently recorded by the SDK. |
+
+Content properties such as `textElem`, `pictureElem`, `soundElem`, `videoElem`, `fileElem`, `atTextElem`, and `customElem` may be `nil`. Check both `contentType` and the corresponding element when rendering. Show a fallback when the expected content is missing instead of force-unwrapping it.
+
+## Register the new-message listener
+
+```objc
+@interface MessageStore () <OIMAdvancedMsgListener>
+@end
+
+@implementation MessageStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addAdvancedMsgListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeAdvancedMsgListener:self];
+}
+
+- (void)onRecvNewMessage:(OIMMessageInfo * _Nullable)message {
+    if (message.clientMsgID.length == 0) {
+        return;
+    }
+    [self mergeMessage:message];
+}
+
+- (void)onRecvOnlineOnlyMessage:(OIMMessageInfo * _Nullable)message {
+    if (message.clientMsgID.length == 0) {
+        return;
+    }
+    [self handleOnlineOnlyMessage:message];
+}
+
+@end
+```
+
+Register the global message listener after `initSDK` succeeds and before `login`. Remove the same instance when signing out, switching accounts, or destroying the state layer. The pinned version's closure types allow a nullable message, so the example also validates `clientMsgID`. Each callback in this version supplies one `OIMMessageInfo`, not an array, and there is no separate offline-new-message selector. Do not register singular or plural event names from other platforms alongside it.
+
+Online-only messages are not stored in regular history and are suitable for transient hints or business notifications. For sending parameters, see [Send a message](/sdk/ios/message/sending-messages/send-message).
+
+## Merge messages
+
+Resolve the conversation from the routing fields first, then merge idempotently by `clientMsgID`. A new-message event can overlap with a send-success callback or history result, so never append it directly to an array without deduplication.
+
+History queries establish the current snapshot, `onRecvNewMessage:` provides online increments, and the SDK synchronizes offline changes after a new login. After synchronization completes, query the current conversation's history again to reconcile the list when needed.
+
+## Retrieve history when first opening a conversation
+
+Events cover only newly arriving messages. Use `getAdvancedHistoryMessageList:onSuccess:onFailure:` to retrieve history when opening a conversation for the first time, paging upward, or filling in a list after synchronization. Pass `nil` as `startClientMsgID` for the first page and use the boundary message's `clientMsgID` afterward. See [Load message history](/sdk/ios/message/retrieving-messages/load-older-messages) for the complete flow.
+
+The query callback directly establishes a message snapshot and does not trigger the new-message listener. Pagination and events may contain the same message, so both paths must use identical conversation routing and `clientMsgID` deduplication.
+
+## Mark the conversation as read
+
+After the user actually opens the conversation and reads the visible messages, call `markConversationMessageAsRead:onSuccess:onFailure:` to clear its unread count. For one-to-one receipt handling, see [Mark a conversation as read](/sdk/ios/conversation/managing-conversations/mark-conversation-read). For member-level group receipts, see [Report group-message read status](/sdk/ios/message/managing-read-status/send-group-read-receipts).
+
+## Other message events
+
+- For the complete revocation handler, see [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message).
+- For deletion events, see [Delete messages in batches](/sdk/ios/message/managing-messages/delete-saved-messages).
+- For one-to-one read receipts, see [Mark a conversation as read](/sdk/ios/conversation/managing-conversations/mark-conversation-read); for group read receipts, see [Report group-message read status](/sdk/ios/message/managing-read-status/send-group-read-receipts).
+- For custom business notifications, see [Receive custom business messages](/sdk/ios/message/receiving-messages/custom-business-listener).
+
+Query APIs, local insertion, and message creation do not trigger `onRecvNewMessage:`.
+
+## Verify the receiving flow
+
+- Send a message to the target one-to-one or group chat from another account and confirm that it is merged exactly once by target conversation and `clientMsgID`.
+- Send an online-only message and confirm that it arrives through `onRecvOnlineOnlyMessage:` and is not replayed by a history query.
+- Revoke or delete a message and confirm that the handler on the owning page updates the original bubble by `clientMsgID`.
+- After signing out or switching accounts, confirm that the listener was removed and does not process messages twice after the next login.
+
+## Related pages
+
+- [Messages overview](/sdk/ios/message/overview-message)
+- [Send a message](/sdk/ios/message/sending-messages/send-message)
+- [Load message history](/sdk/ios/message/retrieving-messages/load-older-messages)
+- [Mark a conversation as read](/sdk/ios/conversation/managing-conversations/mark-conversation-read)

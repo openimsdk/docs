@@ -136,6 +136,9 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
           >
             {text.chrome.platformApi}
           </Link>
+          <a href={siteConfig.enterpriseUrl} rel="noreferrer" target="_blank">
+            {text.chrome.enterprise}
+          </a>
         </nav>
         <div className="header-actions">
           <SearchDialog locale={locale} />

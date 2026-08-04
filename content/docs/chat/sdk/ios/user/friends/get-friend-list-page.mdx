@@ -1,17 +1,63 @@
 ---
-title: 'Get the friend list'
-description: 'OpenIM iOS SDK guide for Get the friend list.'
+title: 'Retrieve the friend list by page'
+description: 'Retrieve the current iOS user’s friend list with pagination.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/get-friend-list-page'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Use the paginated selector to retrieve `OIMFriendInfo` objects instead of loading the entire friend list at once.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+```objc
+[[OIMManager manager] getFriendListPageWithOffset:0
+                                             count:50
+                                       filterBlack:YES
+                                         onSuccess:^(NSArray<OIMFriendInfo *> *friends) {
+                                             [friendStore replaceFirstPage:friends];
+                                         }
+                                         onFailure:nil];
+```
+
+`offset` starts at `0`, `count` is the page size, and `filterBlack` determines whether blocked users are excluded. The success callback returns the current page. When loading more, increment the offset by the number of requested items and deduplicate results by `userID`.
+
+The query only establishes a snapshot and does not trigger a friendship delegate.
+
+## Synchronize friendship changes
+
+This page is the sole owner of the complete handlers for `onFriendAdded:`, `onFriendInfoChanged:`, and `onFriendDeleted:`. Your application must retain a strong reference to one `OIMFriendshipListener` instance and use that same instance when adding and removing the listener.
+
+```objc
+@interface FriendshipStore () <OIMFriendshipListener>
+@end
+
+@implementation FriendshipStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addFriendListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeFriendListener:self];
+}
+
+- (void)onFriendAdded:(OIMFriendInfo *)info {
+    [friendStore mergeFriend:info];
+}
+
+- (void)onFriendInfoChanged:(OIMFriendInfo *)info {
+    [friendStore mergeFriend:info];
+}
+
+- (void)onFriendDeleted:(OIMFriendInfo *)info {
+    [friendStore removeUserID:info.userID];
+}
+
+@end
+```
+
+Handle the query snapshot and delegate updates separately, always merging them by `userID`. Call `stopListening` when signing out, switching accounts, or destroying the contacts state layer.

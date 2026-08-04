@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 
 const root = process.cwd();
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const localRoot = '/docs/chat/platform-api/v3/group';
-const contentRoot = 'content/docs/chat/platform-api/v3/group';
-const zhContentRoot = 'content/zh/docs/chat/platform-api/v3/group';
-const contextKey = 'chat/platform-api/v3';
+const localRoot = '/platform-api/group';
+const contentRoot = 'content/docs/chat/platform-api/group';
+const zhContentRoot = 'content/zh/docs/chat/platform-api/group';
+const contextKey = 'chat/platform-api';
 const contextTitle = 'Platform API';
 
 // Mirrors open-im-server/internal/api/router.go groupRouterGroup.POST order.
@@ -964,7 +964,11 @@ console.log(
 
 async function writeMdx(file, body) {
   await mkdir(dirname(resolve(root, file)), { recursive: true });
-  await writeFile(resolve(root, file), body, 'utf8');
+  await writeFile(
+    resolve(root, file),
+    body.replaceAll('/docs/chat/platform-api/v3', '/platform-api'),
+    'utf8',
+  );
 }
 
 function renderMdx(record, spec, localized) {

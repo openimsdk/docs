@@ -1,16 +1,132 @@
 ---
 title: 'Send your first message'
-description: 'OpenIM WASM SDK guide for Send your first message.'
+description: 'Verify the complete path for sending a first text message in a one-to-one or group conversation.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/getting-started/send-first-message'
 ---
 
-## Overview
+This page shows how to install and initialize the OpenIM WASM SDK in a browser application and send the first text message after signing in. Before you begin, complete the service, user, token, and browser environment preparation in [Before you start](/sdk/wasm/getting-started/before-you-start).
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+An OpenIMSDK message can target either a user or a group. For a one-to-one message, use the recipient's `recvID`. For a group message, use the destination group's `groupID`.
+
+## Prepare a message target
+
+To test a one-to-one message, prepare an existing recipient user. To test a group message, prepare an existing `groupID`. A group message does not include a recipient user ID, and you do not select an individual group member as its recipient.
+
+| Scenario | Required target identifier |
+| --- | --- |
+| One-to-one conversation | An existing recipient user ID, passed as `recvID` when sending. |
+| Group conversation | An existing `groupID`, passed as `groupID` while `recvID` remains empty. |
+
+### Verify the target
+
+The first message is normally used to verify the end-to-end integration. Before sending it, confirm that:
+
+- The one-to-one recipient exists and server policy allows the current user to send messages to that recipient.
+- The destination `groupID` exists. OpenIMServer group state and permission checks determine whether the current user may speak in the group.
+
+## Get started
+
+Follow these steps to send the first text message.
+
+### Step 1: Install the OpenIM WASM SDK
+
+Install the browser SDK package with `pnpm` and publish the WASM runtime assets to the frontend static asset directory.
+
+```bash
+pnpm add @openim/wasm-client-sdk@3.8.5-hotfix.0
+cp node_modules/@openim/wasm-client-sdk/assets/openIM.wasm public/
+cp node_modules/@openim/wasm-client-sdk/assets/sql-wasm.wasm public/
+cp node_modules/@openim/wasm-client-sdk/assets/wasm_exec.js public/
+```
+
+Load `wasm_exec.js` before creating the SDK instance.
+
+```html
+<script src="/wasm_exec.js"></script>
+```
+
+### Step 2: Initialize the OpenIM WASM SDK
+
+Create one SDK instance for the browser session and reuse it. `coreWasmPath` and `sqlWasmPath` must point to static assets that are actually accessible.
+
+```ts
+import { getSDK, Platform } from '@openim/wasm-client-sdk';
+
+const openimsdk = getSDK({
+  coreWasmPath: '/openIM.wasm',
+  sqlWasmPath: '/sql-wasm.wasm',
+});
+```
+
+### Step 3: Connect to OpenIMServer
+
+Use the application endpoint prepared in [Before you start](/sdk/wasm/getting-started/before-you-start) to load the sign-in details. Before signing in, register connection and token events as described in [Authenticate and manage a session](/sdk/wasm/getting-started/authenticate-and-manage-session). This page keeps only the main first-message flow and does not redefine those handlers.
+
+```ts
+const { userID, token, apiAddr, wsAddr } = await loadOpenIMSDKSession();
+
+await openimsdk.login({
+  userID,
+  token,
+  platformID: Platform.Web,
+  apiAddr,
+  wsAddr,
+});
+```
+
+A successful `login()` Promise means that the sign-in request completed. Wait for `OnConnectSuccess`, which is handled by the authentication page, before calling message APIs that depend on the connection.
+
+### Step 4: Select the message target
+
+A one-to-one conversation needs only the recipient user ID. Put an existing, verified user ID in `recvID`. Whether the message is allowed remains subject to server policy and the relationship state between the two users.
+
+```ts
+const target = {
+  recvID: 'user_b',
+  groupID: '',
+};
+```
+
+A group conversation uses only an OpenIMSDK group ID as its target. You can reuse an existing `groupID` from your application, or create a test group through an admin console, your application backend, or the group APIs and retain the returned `groupID`. A group can have initial members, but sending the group message does not include an individual recipient user ID.
+
+```ts
+const target = {
+  recvID: '',
+  groupID: 'group_123',
+};
+```
+
+### Step 5: Send the message
+
+Sending an OpenIMSDK text message has two steps: create a `MessageItem`, then send it to a user or group with `sendMessage()`.
+
+```ts
+const { data: message } = await openimsdk.createTextMessage('Hello, OpenIMSDK');
+
+const { data: sentMessage } = await openimsdk.sendMessage({
+  recvID: target.recvID,
+  groupID: target.groupID,
+  message,
+});
+
+appendOutgoingMessage(sentMessage);
+```
+
+The `createTextMessage()` Promise returns an unsent `MessageItem` and does not trigger a message event. After the `sendMessage()` Promise succeeds, the current client merges `sentMessage` into its local message list by `clientMsgID`. Another signed-in client receives a `MessageItem[]` through `OnRecvNewMessages`. See [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages) for the complete listener, cleanup, and conversation-routing code; this page does not register the event again.
+
+After sending succeeds, check both the message returned to the current client and the new-message event on another signed-in client. Promise completion and delivery of the event to the other client are separate stages and should be verified independently. When troubleshooting, record `errCode`, `errMsg`, the current user ID, and the target user ID or group ID so that you can correlate them with OpenIMServer logs.
+
+## Next steps
+
+- [Before you start](/sdk/wasm/getting-started/before-you-start)
+- [User authentication](/sdk/wasm/getting-started/authenticate-and-manage-session)
+- [Integrate by runtime](/sdk/wasm/getting-started/environment-specific-implementation)
+- [Send messages](/sdk/wasm/message/sending-messages/send-message)
+- [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages)

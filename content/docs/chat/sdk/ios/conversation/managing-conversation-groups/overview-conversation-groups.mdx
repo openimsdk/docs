@@ -1,17 +1,82 @@
 ---
-title: 'Conversation group overview'
-description: 'OpenIM iOS SDK guide for Conversation group overview.'
+title: 'Conversation groups overview'
+description: 'Understand conversation-group data boundaries and listener lifecycle in OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Conversation groups organize the signed-in user's conversation list. They manage relationships between `conversationID` values and groups. They do not create chat groups, modify group membership, or change message targets.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+The iOS enterprise SDK exposes conversation-group capabilities through `OpenIMCore` Objective-C functions distributed with `OpenIMSDK`; they are not yet wrapped in high-level `OIMManager` model APIs. Requests, results, and listener payloads are JSON `NSString` values. Parse them with `NSJSONSerialization` instead of inventing an `OIMConversationGroup` class.
+
+## Group types
+
+| Value | Purpose |
+| ---: | --- |
+| `0` | A regular custom group that the user can create and manage. |
+| `1` | A group maintained by SDK or server-side filtering rules. |
+| `2` | Used to query all types; it cannot be used as a creation type. |
+
+Use `0` for ordinary user-defined categories. The rules that generate filtered groups depend on the current OpenIMServer deployment.
+
+## Available operations
+
+- [Create a conversation group](/sdk/ios/conversation/managing-conversation-groups/create-conversation-group)
+- [Retrieve conversation groups](/sdk/ios/conversation/managing-conversation-groups/get-conversation-groups)
+- [Retrieve conversations in a group](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [Retrieve the groups containing a conversation](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Update a conversation group](/sdk/ios/conversation/managing-conversation-groups/update-conversation-group)
+- [Set conversation-group order](/sdk/ios/conversation/managing-conversation-groups/set-conversation-group-order)
+- [Add conversations to groups](/sdk/ios/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [Remove conversations from groups](/sdk/ios/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [Delete a conversation group](/sdk/ios/conversation/managing-conversation-groups/delete-conversation-group)
+
+## Set the conversation-group listener
+
+`Open_im_sdkSetConversationGroupListener` stores only one `Open_im_sdk_callbackOnConversationGroupListener`. No public remove or unset function is available, so retain the listener in an account-scoped state layer and set it centrally once.
+
+```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
+@interface ConversationGroupStore () <Open_im_sdk_callbackOnConversationGroupListener>
+@end
+
+@implementation ConversationGroupStore
+
+- (void)startListening {
+    Open_im_sdkSetConversationGroupListener(self);
+}
+
+- (void)onConversationGroupAdded:(NSString * _Nullable)json {
+    [self mergeConversationGroupsJSON:json];
+}
+
+- (void)onConversationGroupChanged:(NSString * _Nullable)json {
+    [self mergeConversationGroupsJSON:json];
+}
+
+- (void)onConversationGroupDeleted:(NSString * _Nullable)json {
+    [self removeConversationGroupsJSON:json];
+}
+
+- (void)onConversationGroupMemberAdded:(NSString * _Nullable)json {
+    [self mergeConversationGroupMembersJSON:json];
+}
+
+- (void)onConversationGroupMemberDeleted:(NSString * _Nullable)json {
+    [self removeConversationGroupMembersJSON:json];
+}
+
+@end
+```
+
+The added, changed, and deleted payloads are JSON arrays of groups. Membership-change payloads contain `group`, `conversationIDs`, and `conversations`. Merge groups idempotently by `conversationGroupID`, and identify membership using both `conversationGroupID` and `conversationID`.
+
+When switching accounts, stop the old listener from dispatching updates to the UI, then replace it with the new account's complete listener. A successful call, an incremental listener update, and a newly queried snapshot are three separate stages.

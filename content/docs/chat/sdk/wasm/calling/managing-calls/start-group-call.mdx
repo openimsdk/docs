@@ -1,17 +1,62 @@
 ---
 title: 'Start a group call'
-description: 'OpenIM WASM SDK guide for Start a group call.'
+description: 'Start a group audio or video call with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/managing-calls/start-group-call'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+`signalingInviteInGroup()` starts a group call. It invites only the group members explicitly listed in `inviteeUserIDList`; setting `groupID` does not automatically invite the entire group.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `RtcInvite` | Yes | Invitation for this call. |
+| `invitation.inviterUserID` | `string` | Yes | User ID of the caller. |
+| `invitation.inviteeUserIDList` | `string[]` | Yes | IDs of the invited group members. Do not include the caller. |
+| `invitation.groupID` | `string` | Yes | Group ID. It cannot be empty for a group call. |
+| `invitation.roomID` | `string` | Yes | Unique room identifier for this call. Every participating client must use the same value. |
+| `invitation.timeout` | `number` | Yes | Invitation timeout in seconds. |
+| `invitation.mediaType` | `string` | Yes | Application-defined media type, usually `audio` or `video`. |
+| `invitation.sessionType` | `SessionType` | Yes | Use `SessionType.WorkingGroup` for a group call. |
+| `invitation.platformID` | `Platform` | Yes | Caller's platform. Use `Platform.Web` in a web application. |
+| `invitation.customData` | `string` | No | Business extension string carried with the invitation. |
+| `invitation.initiateTime` | `number` | No | Invitation start time. The signaling flow normally maintains it, so it does not need to be set manually. |
+| `invitation.busyLineUserIDList` | `string[]` | No | Busy-user list. Normally omit it when starting a new invitation. |
+| `offlinePushInfo` | `OfflinePush` | No | Push content used when an invitee is offline. |
+| `offlinePushInfo.title` | `string` | Conditional | Push title, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.desc` | `string` | Conditional | Push body, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.ex` | `string` | Conditional | Extension string, required when `offlinePushInfo` is provided. Pass an empty string if unused. |
+| `offlinePushInfo.iOSPushSound` | `string` | Conditional | iOS push sound, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditional | Whether to update the iOS badge, required when `offlinePushInfo` is provided. |
+
+```ts
+import { Platform, SessionType } from '@openim/wasm-client-sdk';
+
+const { data: roomCredentials } = await openimsdk.signalingInviteInGroup({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: selectedGroupMemberIDs,
+    customData: JSON.stringify({ source: 'group-call' }),
+    groupID,
+    roomID: groupID,
+    timeout: 30,
+    mediaType: 'video',
+    sessionType: SessionType.WorkingGroup,
+    platformID: Platform.Web,
+  },
+  offlinePushInfo,
+});
+```
+
+The example reuses the group ID as the room ID. If your application generates its own `roomID`, every participant must use the same value. Remove the current user, empty values, and duplicates from the invitee list before starting the call.
+
+When the Promise resolves, `data` is `RtcInviteResults`. For field descriptions, see [Start a one-to-one call](/sdk/wasm/calling/managing-calls/start-single-call).
+
+`busyLineUserIDList` indicates only that some members are busy and should not stop invitations to the others. Promise completion also does not mean that any invitee has answered.

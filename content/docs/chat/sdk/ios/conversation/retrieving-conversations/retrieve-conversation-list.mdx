@@ -1,17 +1,70 @@
 ---
-title: 'Retrieve a conversation list'
-description: 'OpenIM iOS SDK guide for Retrieve a conversation list.'
+title: 'Retrieve the conversation list'
+description: 'Retrieve the current user’s conversation list with pagination and merge subsequent changes through delegates.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The conversation list belongs to the signed-in user. Each `OIMConversationInfo` contains state such as the conversation identifier, unread count, latest message, pinned status, and draft. Always retrieve conversations through the paginated API; do not use the non-paginated full-list method.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Retrieve conversations by page
+
+`offset` is the starting position and `count` is the number of items to retrieve. The first page starts at `0`.
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `offset` | `NSInteger` | The starting offset. Pass `0` for the first page. |
+| `count` | `NSInteger` | The number of items to retrieve. Use a consistent page size. |
+
+```objc
+NSInteger pageSize = 50;
+[[OIMManager manager] getConversationListSplitWithOffset:offset
+                                                    count:pageSize
+                                                onSuccess:^(NSArray<OIMConversationInfo *> *items) {
+                                                    [conversationStore mergeByConversationID:items ?: @[]];
+                                                }
+                                                onFailure:nil];
+```
+
+The success callback's array is nullable, so treat `nil` as an empty array. When loading more, advance `offset` by the number of items requested and deduplicate by `conversationID`. A result containing fewer than `count` items indicates the end of the list. When the user refreshes, clear the previous pagination state and start again at `0`.
+
+## Keep the list synchronized
+
+The query establishes a snapshot, while `OIMConversationListener` merges newly created conversations and subsequent property changes. Add the listener after successful SDK initialization and before login. `OIMCallbacker` holds a weak reference to the listener, so the application must retain the same instance strongly and remove that instance when the account scope ends:
+
+```objc
+@interface ConversationListSync : NSObject <OIMConversationListener>
+@end
+
+@interface ConversationListController ()
+@property (nonatomic, strong) ConversationListSync *conversationListSync;
+@end
+
+@implementation ConversationListSync
+- (void)onNewConversation:(NSArray<OIMConversationInfo *> *)items {
+    [conversationStore mergeByConversationID:items];
+}
+- (void)onConversationChanged:(NSArray<OIMConversationInfo *> *)items {
+    [conversationStore mergeByConversationID:items];
+}
+@end
+
+ConversationListSync *sync = [ConversationListSync new];
+self.conversationListSync = sync;
+[[OIMManager callbacker] addConversationListener:sync];
+// When the account scope ends:
+[[OIMManager callbacker] removeConversationListener:self.conversationListSync];
+self.conversationListSync = nil;
+```
+
+Merge each update idempotently by `conversationID`. [Maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count) owns the total unread count, while [Report typing status](/sdk/ios/message/composing-messages/update-typing-status) owns typing-state updates.
+
+Do not substitute the joined-group list for the conversation list. A user may have joined a group without creating its conversation yet, or may retain a historical conversation after leaving the group.

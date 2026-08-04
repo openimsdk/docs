@@ -1,17 +1,40 @@
 ---
 title: 'Pin or unpin a message'
-description: 'OpenIM WASM SDK guide for Pin or unpin a message.'
+description: 'Pin or unpin one message with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/set-message-pinned'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+## Parameters
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | ID of the conversation containing the message. |
+| `clientMsgID` | `string` | Yes | ID of the message to pin or unpin. |
+| `pinned` | `boolean` | Yes | `true` to pin the message; `false` to unpin it. |
+
+```ts
+await openimsdk.setConversationPinnedMsg({
+  conversationID,
+  clientMsgID: message.clientMsgID,
+  pinned: true,
+});
+```
+
+OpenIMServer validates permissions, message types, and quantity limits. Promise completion means that the pinning request has completed; it does not mean the change event has already arrived.
+
+This page is the sole owner of `CbEvents.OnChangedPinnedMsg`. Replace the pinned set by `conversationID` and deduplicate it by `item.msg.clientMsgID`. Register a stable handler reference and call `off()` with that same reference when the account scope ends.
+
+```ts
+const handlePinnedChanged = ({ data }) =>
+  replacePinnedMessageDetails(data.conversationID, data.msgs);
+openimsdk.on(CbEvents.OnChangedPinnedMsg, handlePinnedChanged);
+const removePinnedListener = () =>
+  openimsdk.off(CbEvents.OnChangedPinnedMsg, handlePinnedChanged);
+```

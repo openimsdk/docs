@@ -1,17 +1,88 @@
 ---
-title: 'Get group members'
-description: 'OpenIM WASM SDK guide for Get group members.'
+title: 'List group members'
+description: 'Retrieve members of a specified group using pagination.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/retrieving-group-members/get-group-member-list'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+## Parameters
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string` | Yes | ID of the target group. |
+| `filter` | `GroupMemberFilter` | Yes | Member role filter. |
+| `offset` | `number` | Yes | Starting offset. Pass `0` for the first page. |
+| `count` | `number` | Yes | Maximum number of members to retrieve. |
+
+| Enum value | Numeric value | Meaning |
+| --- | --- | --- |
+| `GroupMemberFilter.All` | `0` | All members. |
+| `GroupMemberFilter.Owner` | `1` | Group owner only. |
+| `GroupMemberFilter.Admin` | `2` | Administrators only. |
+| `GroupMemberFilter.Normal` | `3` | Regular members only. |
+| `GroupMemberFilter.AdminAndNormal` | `4` | Administrators and regular members. |
+| `GroupMemberFilter.AdminAndOwner` | `5` | Administrators and the group owner. |
+
+```ts
+import { GroupMemberFilter } from '@openim/wasm-client-sdk';
+
+const { data: members } = await openimsdk.getGroupMemberList({
+  groupID,
+  filter: GroupMemberFilter.All,
+  offset: 0,
+  count: 50,
+});
+```
+
+When the Promise resolves, `data` is the current page of `GroupMemberItem[]`. For the next page, increase `offset` by the number of items requested, not by the length of an array that may already contain event-driven updates.
+
+### Group member fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | ID of the group to which the member belongs. |
+| `userID` | `string` | Member's user ID. Together with `groupID`, it forms the stable identifier for the member record. |
+| `nickname` | `string` | User's nickname within this group. |
+| `faceURL` | `string` | Snapshot of the group member's avatar URL. |
+| `roleLevel` | `GroupMemberRole` | Role in the group: regular member, administrator, or owner. |
+| `muteEndTime` | `number` | Time when the member's mute period ends. Compare it with the current time to determine whether the member is muted. |
+| `joinTime` | `number` | Time when the member joined the group. |
+| `joinSource` | `GroupJoinSource` | How the member joined, such as by invitation, search, or QR code. |
+| `inviterUserID` | `string` | User ID of the member who sent the invitation. It may be empty when there was no inviter. |
+| `operatorUserID` | `string` | User ID of the operator who most recently created or updated the member record. |
+| `ex` | `string` | Application-defined extension string for the group member. |
+
+`nickname` and `roleLevel` belong to the current group context and may differ for the same user in other groups. Do not overwrite the account-level `PublicUserItem` with group member profile data.
+
+The SDK does not provide a separate API for listing muted members. If needed, retrieve the member list page by page and filter it by `muteEndTime`.
+
+## Listen for member changes
+
+This page is the canonical reference for group member event listeners. Use `groupID:userID` as the merge key for member profiles:
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleAdded = ({ data }) => upsertGroupMember(data);
+const handleDeleted = ({ data }) =>
+  removeGroupMember(data.groupID, data.userID);
+const handleChanged = ({ data }) => upsertGroupMember(data);
+
+openimsdk.on(CbEvents.OnGroupMemberAdded, handleAdded);
+openimsdk.on(CbEvents.OnGroupMemberDeleted, handleDeleted);
+openimsdk.on(CbEvents.OnGroupMemberInfoChanged, handleChanged);
+
+function removeGroupMemberListeners() {
+  openimsdk.off(CbEvents.OnGroupMemberAdded, handleAdded);
+  openimsdk.off(CbEvents.OnGroupMemberDeleted, handleDeleted);
+  openimsdk.off(CbEvents.OnGroupMemberInfoChanged, handleChanged);
+}
+```
+
+If a member is added or removed while you are paging through the list, reset pagination and reload from the first page. Call `removeGroupMemberListeners()` when the component unmounts, the user logs out, or the active account changes.

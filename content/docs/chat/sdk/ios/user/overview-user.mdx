@@ -1,17 +1,59 @@
 ---
-title: 'Overview'
-description: 'OpenIM iOS SDK guide for Overview.'
+title: 'Users overview'
+description: 'Understand user profiles, friend relationships, blocklists, and online status in OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/overview-user'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+OpenIM SDK identifies each user by `userID`. When implementing profile cards, friend requests, contacts, or blocklists, distinguish between a user's public profile, the current user's friend relationships, and blocklist status.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+Group member lists, group nicknames, group roles, and member administration belong to the group domain. See [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members) for details.
+
+## User types
+
+OpenIM SDK returns different user objects for different scenarios:
+
+| Type | When to use it | Main APIs |
+| --- | --- | --- |
+| `OIMUserInfo` | The signed-in user's profile, settings page, avatar, nickname, and message-reception option | `getSelfInfoWithOnSuccess:onFailure:`, `setSelfInfo:onSuccess:onFailure:` |
+| `OIMPublicUserInfo` | Looking up application users, finding friend candidates, and displaying profiles for users who are not friends | `getUsersInfo:onSuccess:onFailure:` |
+| `OIMFriendInfo` | The signed-in user's friend list, friend remarks, and relationship extension fields | `getFriendListPageWithOffset:count:filterBlack:...`, `getSpecifiedFriendsInfo:filterBlack:...` |
+| `OIMBlackInfo` | Users blocked by the signed-in user | `getBlackListWithOnSuccess:onFailure:`, `addToBlackList:ex:onSuccess:onFailure:`, `removeFromBlackList:onSuccess:onFailure:` |
+| `OIMUserStatusInfo` | A user's online status and list of connected platforms | `subscribeUsersStatus:onSuccess:onFailure:` |
+
+The same `userID` can appear in public-profile, friend, blocklist, and group-member data. Prefer `OIMFriendInfo` when displaying a contact, `OIMPublicUserInfo` when only the account's public profile is needed, and `OIMGroupMemberInfo` when displaying a group member. Conversation-list and chat-page titles belong to conversation data and should use `OIMConversationInfo.showName`.
+
+## Feature guide
+
+The following table maps common user-related requirements to their recommended pages:
+
+| Requirement | Recommended page |
+| --- | --- |
+| Look up public profiles by `userID` to find friend candidates or display profile cards | [Retrieve public profiles by user ID](/sdk/ios/user/retrieving-users/retrieve-users) |
+| Paginate, search, or retrieve friend relationships by ID | [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page) |
+| Send, retrieve, accept, reject, or delete friend-request records | [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient) |
+| Update friend information | [`updateFriends:onSuccess:onFailure:`](/sdk/ios/user/friends/update-friends) |
+| Delete a friend relationship | [`deleteFriend:onSuccess:onFailure:`](/sdk/ios/user/friends/delete-friend) |
+| View and manage the current user's blocklist | [Retrieve the blocklist](/sdk/ios/user/moderating-a-user/retrieve-a-list-of-blocked-users) |
+| Read or update the current user's nickname, avatar, and extended profile | [Update your profile](/sdk/ios/user/retrieving-and-updating-user-information/update-self-profile) |
+| Configure account-level message reception and notification behavior | [Set global message reception](/sdk/ios/user/retrieving-and-updating-user-information/set-global-message-reception) |
+| Subscribe to and retrieve online status | [Subscribe to user status](/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status) |
+| Retrieve group-member lists, search members, or retrieve specified member profiles | [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members) |
+
+## State updates
+
+Each category of user-related events is handled and merged on its owning page:
+
+- Changes to the current user's profile: see [Update your profile](/sdk/ios/user/retrieving-and-updating-user-information/update-self-profile).
+- Changes to friend requests: see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient).
+- Changes to friend relationships and friend information: see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page).
+- Changes to the blocklist: see [Block a user](/sdk/ios/user/moderating-a-user/block-user).
+- Changes to online status: see [Subscribe to user status](/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status).
+
+Each page first retrieves a snapshot, then merges incremental updates through the delegate owned by that page.

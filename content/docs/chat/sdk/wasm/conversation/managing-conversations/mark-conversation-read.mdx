@@ -1,17 +1,38 @@
 ---
 title: 'Mark a conversation as read'
-description: 'OpenIM WASM SDK guide for Mark a conversation as read.'
+description: 'Mark the messages in a conversation as read with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/managing-conversations/mark-conversation-read'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Call `markConversationMessageAsRead()` after the user opens a conversation and finishes reading the currently visible messages. Do not mark them as read merely because a notification was previewed or the message arrived in the background.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+await openimsdk.markConversationMessageAsRead(conversationID);
+```
+
+A successful Promise means that the mark-read request has completed, not that a conversation event has arrived. `CbEvents.OnConversationChanged` subsequently provides a new `ConversationItem[]`; merge unread counts by `conversationID`. See [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list) for the complete listener. Query the conversation again when immediate reconciliation is required.
+
+For a one-to-one chat, after the current user marks the conversation as read, the other client can receive message read receipts through `CbEvents.OnRecvC2CReadReceipt`. This page owns the complete listener. `data` is `ReceiptInfo[]`; first locate the one-to-one conversation by the other user, then update read state by each `clientMsgID` in the item's `msgIDList`.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleC2CReadReceipt = ({ data }) => {
+  mergeC2CReadReceipts(data);
+};
+
+openimsdk.on(CbEvents.OnRecvC2CReadReceipt, handleC2CReadReceipt);
+
+function removeC2CReadReceiptListener() {
+  openimsdk.off(CbEvents.OnRecvC2CReadReceipt, handleC2CReadReceipt);
+}
+```
+
+Call `removeC2CReadReceiptListener()` when the component unmounts, the user signs out, or the account changes. In a group chat, this API clears only the current account's conversation unread count. To report member-level group read state, see [Send group message read receipts](/sdk/wasm/message/managing-read-status/send-group-read-receipts).

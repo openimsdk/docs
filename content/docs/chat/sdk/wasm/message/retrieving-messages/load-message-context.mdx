@@ -1,17 +1,40 @@
 ---
 title: 'Load message context'
-description: 'OpenIM WASM SDK guide for Load message context.'
+description: 'Retrieve messages before and after a specified message with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/retrieving-messages/load-message-context'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+When navigating from a search result or referenced message into its chat context, use the `MessageItem` you have already retrieved as the anchor.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `startMessage` | `MessageItem` | Yes | Previously retrieved anchor message. |
+| `viewType` | `ViewType` | Yes | Context viewing direction. Use `ViewType.History` for message history. |
+| `before` | `number` | Yes | Maximum number of messages to retrieve before the anchor. |
+| `after` | `number` | Yes | Maximum number of messages to retrieve after the anchor. |
+
+```ts
+import { ViewType } from '@openim/wasm-client-sdk';
+
+const { data: surrounding } = await openimsdk.fetchSurroundingMessages({
+  startMessage: targetMessage,
+  viewType: ViewType.History,
+  before: 20,
+  after: 20,
+});
+
+renderMessages(surrounding.messageList);
+```
+
+When the Promise resolves, `data.messageList` is the `MessageItem[]` retrieved before and after the anchor. For message fields, see [Message overview](/sdk/wasm/message/overview-message).
+
+`before` and `after` independently limit the number of messages on either side. The result can contain fewer messages than the requested total when the anchor is near a history boundary or some messages have been deleted. Merge by `conversationID:clientMsgID`; do not rely on fixed array positions. If you first need to locate the message, see [Find messages by ID](/sdk/wasm/message/retrieving-messages/find-messages-by-id).

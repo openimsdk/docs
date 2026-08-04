@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 
 const root = process.cwd();
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const localRoot = '/docs/chat/platform-api/v3/auth';
-const contentRoot = 'content/docs/chat/platform-api/v3/auth';
-const zhContentRoot = 'content/zh/docs/chat/platform-api/v3/auth';
-const contextKey = 'chat/platform-api/v3';
+const localRoot = '/platform-api/auth';
+const contentRoot = 'content/docs/chat/platform-api/auth';
+const zhContentRoot = 'content/zh/docs/chat/platform-api/auth';
+const contextKey = 'chat/platform-api';
 const contextTitle = 'Platform API';
 
 // Mirrors open-im-server/internal/api/router.go authRouterGroup.POST order.
@@ -257,7 +257,11 @@ console.log(`Wrote ${externalAuthApis.length} OpenIM auth API page(s).`);
 
 async function writeMdx(file, body) {
   await mkdir(dirname(resolve(root, file)), { recursive: true });
-  await writeFile(resolve(root, file), body, 'utf8');
+  await writeFile(
+    resolve(root, file),
+    body.replaceAll('/docs/chat/platform-api/v3', '/platform-api'),
+    'utf8',
+  );
 }
 
 function renderMdx(record, spec, localized) {

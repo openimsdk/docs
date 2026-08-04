@@ -81,7 +81,11 @@ test('native audit seeds and generated packages retain the fixed structural cont
     assert.equal(audit.sources[contract.sdkKey].tag, contract.tag);
     assert.equal(audit.sources[contract.sdkKey].commit, contract.commit);
     assert.equal(audit.pages.filter((page) => page.disposition !== 'omit').length, activePageCount);
-    assert.ok(audit.pages.every((page) => page.locales.en.reviewStatus === 'deferred'));
+    assert.ok(
+      audit.pages.every((page) =>
+        ['deferred', 'published'].includes(page.locales.en.reviewStatus),
+      ),
+    );
     for (const page of audit.pages) {
       assert.ok(
         [
@@ -101,11 +105,19 @@ test('native audit seeds and generated packages retain the fixed structural cont
         ),
       );
       assert.ok(Array.isArray(page.locales.zh.exampleVerification.evidence));
-      assert.deepEqual(page.locales.en.exampleVerification, {
-        status: 'pending',
-        evidence: [],
-        reason: null,
-      });
+      if (page.locales.en.reviewStatus === 'deferred') {
+        assert.deepEqual(page.locales.en.exampleVerification, {
+          status: 'pending',
+          evidence: [],
+          reason: null,
+        });
+      } else {
+        assert.ok(
+          ['verified', 'not-applicable'].includes(
+            page.locales.en.exampleVerification.status,
+          ),
+        );
+      }
     }
     assert.equal(generated.sourceContext, contract.context);
     assert.equal(generated.sourceRoot, contract.root);

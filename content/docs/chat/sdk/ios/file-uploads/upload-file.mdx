@@ -1,17 +1,42 @@
 ---
 title: 'Upload a file'
-description: 'OpenIM iOS SDK guide for Upload a file.'
+description: 'Upload a standalone file with the OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/file-uploads/upload-file'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Standalone file uploads can be used for user avatars, group avatars, profile attachments, or application files. They are independent of messages.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `fullPath` | An absolute file path that the app can read. |
+| `name` | The uploaded file name. Pass `nil` to use the final path component. |
+| `cause` | The upload reason defined by your application. |
+| `onProgress` | Reports saved, currently processed, and total bytes. |
+| `onCompletion` | Returns total bytes, the remote URL, and `putType`. |
+
+```objc
+[[OIMManager manager] uploadFile:fileURL.path
+                            name:fileURL.lastPathComponent
+                           cause:@"user-avatar"
+                      onProgress:^(NSInteger saved, NSInteger current, NSInteger total) {
+    [uploadStore updateCurrentBytes:current totalBytes:total];
+}
+                    onCompletion:^(NSInteger total, NSString *url, NSInteger putType) {
+    [profileService saveAvatarURL:url];
+}
+                       onSuccess:nil
+                       onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"uploadFile failed: %ld %@", (long)code, message);
+}];
+```
+
+`onCompletion` means that the resource result is available. The final outcome of the overall call is still reported by `onSuccess` or `onFailure`. This method does not update a user profile automatically, nor does it create or send a message. If the resource will be used in chat, use the returned URL to create a URL-based message and then send it explicitly.

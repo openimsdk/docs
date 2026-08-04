@@ -1,17 +1,156 @@
 ---
 title: 'Authenticate and manage a session'
-description: 'OpenIM Flutter SDK guide for Authenticate and manage a session.'
+description: 'Initialize OpenIMClientSDK, log in, inspect login state, handle connection callbacks, and sign out of the current account.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/getting-started/authenticate-and-manage-session'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Initialize the local OpenIM Flutter SDK with `initSDK()`, then establish the current user's session with `login()`. Before authenticating, complete the server, user, token, and mobile environment preparations described in [Before you start](/sdk/flutter/getting-started/before-you-start).
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+The complete flow is:
+
+1. Call `initSDK()` and provide an `OnConnectListener`.
+2. Obtain the `userID`, token, `apiAddr`, and `wsAddr` from a trusted backend.
+3. Call `login()`, wait for its `Future`, and then wait for `onConnectSuccess`.
+4. Once the connection is available, query user, friend, conversation, group, and message data.
+5. When signing out or switching accounts, call `logout()` and then clear application state for the current account.
+
+## Obtain credentials for the current user
+
+Your app should obtain the current user's `userID` and token, together with the environment's `apiAddr` and `wsAddr`, from a trusted backend. See [Before you start](/sdk/flutter/getting-started/before-you-start) for the API responsibilities and security boundaries.
+
+`userID` is an OpenIMSDK user identifier, not an authentication credential, and it must correspond to the token. The mobile client only consumes credentials returned by the backend; it must not create OpenIM users, issue tokens, or embed an administrator token in the app.
+
+## Initialize and configure the connection lifecycle
+
+Set the connection listener through `initSDK()` before logging in so the app does not miss state changes during login.
+
+```dart
+final initialized = await OpenIM.iMManager.initSDK(
+  platformID: platformID,
+  apiAddr: apiAddr,
+  wsAddr: wsAddr,
+  dataDir: dataDir,
+  listener: OnConnectListener(
+    onConnecting: () {
+      setConnectionState('connecting');
+    },
+    onConnectSuccess: () {
+      setConnectionState('connected');
+    },
+    onConnectFailed: (code, errorMsg) {
+      setConnectionState('failed');
+      logConnectionFailure(code, errorMsg);
+    },
+    onKickedOffline: () {
+      clearCurrentSession();
+      showSignedInElsewhereDialog();
+    },
+    onUserTokenExpired: () async {
+      await refreshSessionAndRelogin();
+    },
+    onUserTokenInvalid: () {
+      redirectToSignIn();
+    },
+  ),
+);
+
+if (initialized != true) {
+  throw StateError('OpenIMClientSDK initialization failed.');
+}
+```
+
+### Parameters
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `platformID` | `int` | Yes | The current client platform. It must match the runtime and the server's multi-device login policy. |
+| `apiAddr` | `String` | Yes | The OpenIMServer HTTP API address, which must be reachable from the current device. |
+| `wsAddr` | `String` | Yes | The OpenIMServer WebSocket address, to which the current device must be able to connect. |
+| `dataDir` | `String` | Yes | The SDK's local data directory. Use an app-readable and writable directory managed according to the account lifecycle. |
+| `listener` | `OnConnectListener` | Yes | Listener for the connection, token, and forced-sign-out lifecycle. |
+
+When the `initSDK()` `Future` succeeds and returns `true`, local SDK initialization is complete. This does not mean that a user is logged in or that the persistent connection is available. Initialize the SDK centrally once per application process; do not start separate initialization flows from multiple widgets.
+
+`OnConnectListener` is a Dart callback object, not the WASM `on()`/`off()` event model. The pinned version does not expose a method for removing the connection listener. Keep one listener in a central owner and avoid reinitializing the SDK during widget rebuilds.
+
+## Log in the current user
+
+```dart
+final UserInfo currentUser = await OpenIM.iMManager.login(
+  userID: session.userID,
+  token: session.token,
+);
+
+setCurrentUser(currentUser);
+```
+
+### Parameters
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `String` | Yes | The current OpenIMSDK user ID. It must correspond to the token. |
+| `token` | `String` | Yes | The current user's token returned by a trusted backend. |
+| `checkLoginStatus` | `bool` | No | Whether to check SDK login state first. The default is `true`. |
+| `defaultValue` | `Future<UserInfo> Function()?` | No | Fallback used when reading the logged-in user's profile fails. Usually leave this unset so the actual error remains visible. |
+
+After the `login()` `Future` succeeds, it returns the current account's `UserInfo`, which means that the login call and the SDK's internal profile read have completed. `onConnectSuccess` separately means that the persistent connection is available. Do not collapse these two stages into one check.
+
+Do not call `login()` concurrently. Reuse an in-flight `Future` from the login button, or disable repeated submission based on login state.
+
+## Inspect login state
+
+```dart
+final status = await OpenIM.iMManager.getLoginStatus();
+
+if (status == LoginStatus.logged) {
+  final currentUserID = await OpenIM.iMManager.getLoginUserID();
+  restoreSessionFor(currentUserID);
+}
+```
+
+| State | Description |
+| --- | --- |
+| `LoginStatus.logout` | The SDK is not logged in. |
+| `LoginStatus.logging` | Login is in progress. Do not start another login concurrently. |
+| `LoginStatus.logged` | The SDK is logged in. Use the connection listener to determine network connectivity separately. |
+
+`getLoginUserInfo()` returns the `UserInfo` cached by the Flutter wrapper during the current login. To read the current account's profile from the SDK again, use `userManager.getSelfUserInfo()`.
+
+After the `getLoginStatus()` and `getLoginUserID()` futures succeed, their results can establish a snapshot of the current login state. The queries themselves do not trigger connection callbacks. `getLoginUserID()` can verify that the application account and SDK account match, but it does not replace application authentication.
+
+When switching accounts, do not overwrite the current login with new parameters. Wait for `logout()` to complete, clear the previous account's state, and then log in with the new account's `userID` and token.
+
+## Handle token errors and forced sign-out
+
+When a token expires or becomes invalid, obtain new credentials from the trusted backend and either log in again or return to the sign-in page according to product policy. When `onKickedOffline` fires, clear user, list, and page state maintained by the app. Do not treat forced sign-out as if the user had deliberately selected Log out.
+
+The Flutter login flow passes one OpenIMSDK token to `login()`; it does not distinguish client-side “access tokens” from “session tokens.” Token issuance, expiration, refresh, and revocation are determined by the application backend and OpenIMServer configuration.
+
+These callbacks have no business-entity merge key. Isolate their state by the current SDK instance and logged-in user. Before switching accounts, clear the previous account's state so old asynchronous work cannot update the new account's pages.
+
+## Sign out deliberately
+
+```dart
+await OpenIM.iMManager.logout();
+clearCurrentSession();
+```
+
+A successful `logout()` `Future` means that the current SDK login session has ended. To switch accounts, wait for the previous account to log out, clear its state, and then call `login()` for the new account.
+
+For deliberate sign-out, the successful `Future`, connection callbacks, and business-page cleanup are separate stages. Wait for `logout()` first, then clear the current account's conversation list, message views, unread counts, and application state. Do not use one connection callback alone to decide that sign-out has completed.
+
+To release the SDK completely, call `unInitSDK()` after sign-out finishes. It releases the SDK runtime; it does not replace `logout()` and should not be called merely because an ordinary page is disposed.
+
+## Next steps
+
+- [Before you start](/sdk/flutter/getting-started/before-you-start)
+- [Send your first message](/sdk/flutter/getting-started/send-first-message)
+- [Events overview](/sdk/flutter/events/overview-events)
+- [Logging](/sdk/flutter/logger)

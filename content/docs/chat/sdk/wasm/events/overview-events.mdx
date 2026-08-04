@@ -1,16 +1,86 @@
 ---
 title: 'Events overview'
-description: 'OpenIM WASM SDK guide for Events overview.'
+description: 'Register WASM SDK events and synchronize connection and domain state over the appropriate application lifecycle.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/events/overview-events'
 ---
 
-## Overview
+The WASM SDK publishes connection, synchronization, user, friend, conversation, group, message, and call events through `CbEvents`. The instance returned by `getSDK()` provides the shared `on()` and `off()` methods; you do not need separate event-handler objects for each domain.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Register and remove events
+
+Keep stable references to handler functions. When cleaning up, pass the same event enum value and function reference used during registration to `off()`. The complete implementation for each event appears only on its canonical page linked below; this overview does not repeat events from other domains merely to demonstrate the general pattern.
+
+An event callback usually contains `data`, `errCode`, and `errMsg`. Validate `errCode`, merge `data` idempotently into application state, and include the event name and necessary business identifiers in error logs.
+
+## Choose when to register
+
+| Event scope | Recommended lifecycle | Corresponding page |
+| --- | --- | --- |
+| Connection and token | Register before `login()` and clean up when changing accounts | [Authenticate and manage the session](/sdk/wasm/getting-started/authenticate-and-manage-session) |
+| Users, friends, and blacklist | Register when initializing the contacts state layer | [User overview](/sdk/wasm/user/overview-user) |
+| Conversation list | Register when initializing the conversation-list state layer | [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Conversation unread count | Register when initializing the application badge state layer | [Maintain the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count) |
+| Group list | Register when initializing the group state layer | [Group overview](/sdk/wasm/group/overview-group) |
+| Group members | Register when initializing the group-member state layer | [List group members](/sdk/wasm/group/retrieving-group-members/get-group-member-list) |
+| Group applications | Register when initializing the group-application state layer | [Get received group applications](/sdk/wasm/group/group-applications/get-group-application-list-as-recipient) |
+| Messages | Register when initializing the message state layer | [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages) |
+| Calls | Register when initializing calling functionality | [Call events](/sdk/wasm/calling/managing-calls/handle-call-events) |
+
+Do not register handlers again on every component render. Duplicate registrations can insert messages more than once, repeatedly increment unread counts, and write state from an old account into the current interface.
+
+## Listen for initial synchronization
+
+After login, the SDK synchronizes data from OpenIMServer. Use the following events to drive global synchronization state and progress:
+
+| Event | Meaning |
+| --- | --- |
+| `OnSyncServerStart` | OpenIMServer data synchronization begins. `data` is a `boolean`: `true` means synchronization follows a local database rebuild caused by reinstalling the application, clearing site data, or an equivalent action; `false` means ordinary post-login synchronization. |
+| `OnSyncServerProgress` | Synchronization progress changes; `data` is the progress value. |
+| `OnSyncServerFinish` | The current synchronization completes. Interfaces that depend on a complete dataset can now refresh. |
+| `OnSyncServerFailed` | The current synchronization fails. Record the error and wait for a retry or connection recovery. |
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+function handleSyncStart({ data: reinstalled }) {
+  setSyncState({ status: 'syncing', progress: 0, reinstalled });
+}
+
+function handleSyncProgress({ data }) {
+  setSyncState({ status: 'syncing', progress: data });
+}
+
+function handleSyncFinish() {
+  setSyncState({ status: 'ready', progress: 100 });
+}
+
+function handleSyncFailed({ errCode, errMsg }) {
+  setSyncState({ status: 'failed' });
+  console.error('WASM SDK data synchronization failed', { errCode, errMsg });
+}
+
+openimsdk.on(CbEvents.OnSyncServerStart, handleSyncStart);
+openimsdk.on(CbEvents.OnSyncServerProgress, handleSyncProgress);
+openimsdk.on(CbEvents.OnSyncServerFinish, handleSyncFinish);
+openimsdk.on(CbEvents.OnSyncServerFailed, handleSyncFailed);
+
+function removeSyncListeners() {
+  openimsdk.off(CbEvents.OnSyncServerStart, handleSyncStart);
+  openimsdk.off(CbEvents.OnSyncServerProgress, handleSyncProgress);
+  openimsdk.off(CbEvents.OnSyncServerFinish, handleSyncFinish);
+  openimsdk.off(CbEvents.OnSyncServerFailed, handleSyncFailed);
+}
+```
+
+`OnSyncServerStart` enters the synchronizing state, and its `data` value indicates whether synchronization follows a reinstall or equivalent local database rebuild. When it is `true`, there is usually no usable local cache, so the interface can show a more complete synchronization guide or full-data loading notice. When it is `false`, synchronization is generally incremental. `OnSyncServerProgress.data` is the current progress value. The finish and failure events do not carry the reinstall boolean in the WASM declarations; they only mark the current synchronization as complete or failed. These events describe the SDK synchronization lifecycle, not the Promise callback of a particular query API, and they have no business-entity merge key. Isolate their state by SDK instance and signed-in user.
+
+This page is the canonical listener reference for all four synchronization events. Call `removeSyncListeners()` when logging out, changing accounts, or destroying the SDK scope.
+
+Data can continue changing after synchronization completes. Query the snapshots required by the current interface again, then keep the same state layer up to date through the incremental events owned by each domain page.

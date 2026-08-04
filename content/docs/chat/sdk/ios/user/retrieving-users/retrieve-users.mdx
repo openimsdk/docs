@@ -1,17 +1,89 @@
 ---
-title: 'Retrieve users'
-description: 'OpenIM iOS SDK guide for Retrieve users.'
+title: 'Retrieve public profiles by user ID'
+description: 'Batch-retrieve public application-user profiles as OIMPublicUserInfo objects by userID.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/retrieving-users/retrieve-users'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`getUsersInfo:onSuccess:onFailure:` retrieves public application-user profiles by `userID`. Use it for friend candidates and profile cards for users who are not friends. Searching users by nickname, phone number, organization, or email address must be handled by a trusted backend that performs authorization, rate limiting, data masking, and auditing. Pass the resulting `userID` values to the SDK. Never expose an administrator token in an iOS application.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Retrieve public profiles
+
+Deduplicate the IDs and limit the size of each request before calling the API. Friend remarks come from friend relationships, while group nicknames and roles come from group-member profiles.
+
+```objc
+NSArray<NSString *> *inputUserIDs = @[@"user_a", @"user_b", @"user_a"];
+NSArray<NSString *> *userIDs = [NSOrderedSet orderedSetWithArray:inputUserIDs].array;
+[[OIMManager manager] getUsersInfo:userIDs
+                         onSuccess:^(NSArray<OIMPublicUserInfo *> *users) {
+                             for (OIMPublicUserInfo *user in users) {
+                                 publicUsersByID[user.userID] = user;
+                             }
+                         }
+                         onFailure:^(NSInteger code, NSString *message) {
+                             NSLog(@"getUsersInfo failed: %ld %@", (long)code, message);
+                         }];
+```
+
+The success callback returns an array of the retrieved `OIMPublicUserInfo` objects:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `NSString *` | The user's OpenIMSDK ID. |
+| `nickname` | `NSString *` | The account-level public nickname. |
+| `faceURL` | `NSString *` | The URL of the account-level public avatar. |
+| `ex` | `NSString *` | An account-level extension field whose format is defined by your application. |
+
+The `ex` field is read-only here. An iOS client cannot use the User API to modify another account's public profile. Update the signed-in user's own extension field with `setSelfInfo:onSuccess:onFailure:`.
+
+## Results and profile refreshes
+
+This query only establishes the current snapshot and does not trigger a public-user profile event. Query again by `userID` when opening a profile card, refreshing manually, reconnecting, or receiving a profile-change notification from your application backend. When displaying multiple users, collect the IDs of visible items, deduplicate and batch-query them, then merge the results by `userID`.
+
+The SDK does not provide a general profile-change delegate for arbitrary users. `onSelfInfoUpdated:` carries only the signed-in user's `OIMUserInfo`; do not write it into the public-profile cache as another user's `OIMPublicUserInfo`.
+
+## Search before adding a friend
+
+When searching for and adding friends, a typical flow first retrieves candidate IDs from your application backend and then retrieves their public profiles:
+
+```objc
+[userDirectory searchUserIDs:keyword completion:^(NSArray<NSString *> *candidateIDs) {
+    if (candidateIDs.count == 0) {
+        [searchStore replaceResults:@[]];
+        return;
+    }
+
+    [[OIMManager manager] getUsersInfo:candidateIDs
+                             onSuccess:^(NSArray<OIMPublicUserInfo *> *users) {
+                                 [searchStore replaceResults:users];
+                             }
+                             onFailure:^(NSInteger code, NSString *message) {
+                                 NSLog(@"getUsersInfo failed: %ld %@", (long)code, message);
+                             }];
+}];
+```
+
+If your product supports only exact user-ID search, pass the entered value directly as the `userID`. Fuzzy search and searches involving sensitive fields must remain on a trusted backend.
+
+## Choose display data by scenario
+
+| Scenario | Preferred type |
+| --- | --- |
+| Application-user search or a profile card for a user who is not a friend | `OIMPublicUserInfo` |
+| Friend list, contacts, or friend remarks | `OIMFriendInfo` |
+| Group-member list, group nickname, or group role | `OIMGroupMemberInfo` |
+
+The same `userID` can have different display names and relationship data in different scenarios. Do not overwrite a friend remark or group nickname with the public nickname.
+
+## Next steps
+
+- [`getFriendListPageWithOffset:count:filterBlack:onSuccess:onFailure:`](/sdk/ios/user/friends/get-friend-list-page)
+- [`getSpecifiedFriendsInfo:filterBlack:onSuccess:onFailure:`](/sdk/ios/user/friends/get-specified-friends-info)
+- [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)
+- [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)

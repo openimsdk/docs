@@ -1,17 +1,43 @@
 ---
 title: 'Track the total unread count'
-description: 'OpenIM WASM SDK guide for Track the total unread count.'
+description: 'Get and continuously maintain the account’s total unread message count with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/managing-conversations/get-total-unread-count'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+`getTotalUnreadMsgCount()` returns a snapshot of the current account's total unread count across all conversations. Do not calculate it by adding `unreadCount` values from only the pages currently loaded.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+const { data: totalUnread } = await openimsdk.getTotalUnreadMsgCount();
+updateApplicationBadge(totalUnread);
+```
+
+The query itself does not trigger an event. While the application is in the foreground, this page exclusively handles `CbEvents.OnTotalUnreadMessageCountChanged`:
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleTotalUnreadChanged = ({ data }) => {
+  updateApplicationBadge(data);
+};
+
+openimsdk.on(
+  CbEvents.OnTotalUnreadMessageCountChanged,
+  handleTotalUnreadChanged,
+);
+
+function removeTotalUnreadListener() {
+  openimsdk.off(
+    CbEvents.OnTotalUnreadMessageCountChanged,
+    handleTotalUnreadChanged,
+  );
+}
+```
+
+Call `removeTotalUnreadListener()` when the component unmounts, the user signs out, or the account changes.

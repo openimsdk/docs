@@ -1,17 +1,107 @@
 ---
 title: 'Send your first message'
-description: 'OpenIM Flutter SDK guide for Send your first message.'
+description: 'Verify the first one-to-one or group text-message flow in a Flutter app.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/getting-started/send-first-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+This page shows how to install and initialize OpenIMClientSDK in a Flutter app, log in, and send the first text message. Complete the prerequisites in [Before you start](/sdk/flutter/getting-started/before-you-start) first.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+For a one-to-one message, provide the recipient's `userID`. For a group message, provide the destination `groupID`. Do not provide both destinations.
+
+## Step 1: Install the SDK
+
+```bash
+flutter pub add flutter_openim_sdk
+```
+
+This command selects the latest compatible version from pub.dev and updates `pubspec.yaml` and the dependency lockfile. Commit the lockfile in team projects. After an upgrade, verify initialization, login, sending, and receiving again.
+
+## Step 2: Initialize the SDK
+
+Follow [Integrate for each runtime](/sdk/flutter/getting-started/environment-specific-implementation) to obtain an application data directory and call `initSDK()`. Provide an `OnConnectListener` during initialization and use `onConnectSuccess` to determine when the connection is available.
+
+```dart
+import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
+
+final initialized = await OpenIM.iMManager.initSDK(
+  platformID: platformID,
+  apiAddr: session.apiAddr,
+  wsAddr: session.wsAddr,
+  dataDir: dataDir,
+  listener: connectListener,
+);
+```
+
+## Step 3: Log in
+
+```dart
+await OpenIM.iMManager.login(
+  userID: session.userID,
+  token: session.token,
+);
+```
+
+Completion of the `login()` `Future` and arrival of `OnConnectListener.onConnectSuccess` are separate stages. Send the message only after the connection-success callback arrives.
+
+## Step 4: Prepare the destination
+
+A one-to-one message requires an existing recipient:
+
+```dart
+const targetUserID = 'user_b';
+```
+
+A group message requires a group in which the current user is permitted to send messages:
+
+```dart
+const targetGroupID = 'group_123';
+```
+
+## Step 5: Create and send a text message
+
+First call `createTextMessage()` to create a local `Message`, then pass it to `sendMessage()`. Creating the message does not send it or trigger a receive event.
+
+```dart
+final message = await OpenIM.iMManager.messageManager.createTextMessage(
+  text: 'Hello, OpenIMSDK',
+);
+
+final sentMessage = await OpenIM.iMManager.messageManager.sendMessage(
+  message: message,
+  userID: targetUserID,
+  offlinePushInfo: OfflinePushInfo(
+    title: 'New message',
+    desc: 'You received a message',
+  ),
+);
+
+appendOutgoingMessage(sentMessage);
+```
+
+For a group message, provide `groupID` instead of `userID`:
+
+```dart
+final sentMessage = await OpenIM.iMManager.messageManager.sendMessage(
+  message: message,
+  groupID: targetGroupID,
+  offlinePushInfo: OfflinePushInfo(
+    title: 'New group message',
+    desc: 'A new message was sent to the group',
+  ),
+);
+```
+
+After the `sendMessage()` `Future` succeeds, merge the returned `Message` into the current client's local message list by `clientMsgID`. Another logged-in client receives the new message through the message listener; see [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) for the complete listener. Verify the successful `Future` and the recipient's callback separately.
+
+## Next steps
+
+- [User authentication](/sdk/flutter/getting-started/authenticate-and-manage-session)
+- [Send a message](/sdk/flutter/message/sending-messages/send-message)
+- [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)

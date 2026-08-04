@@ -1,17 +1,45 @@
 ---
-title: 'Delete messages from a user'
-description: 'OpenIM WASM SDK guide for Delete messages from a user.'
+title: 'Delete all messages from a user in a group chat'
+description: 'Delete every message sent by a specified user in a group chat with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/delete-user-messages'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+```ts
+await openimsdk.deleteUserAllMessagesInConv({
+  conversationID,
+  userID: targetUserID,
+});
+```
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+This API is available only for group chats and deletes every message sent by the specified user in the target group conversation. It is a high-impact group moderation action and should not appear in an ordinary single-message menu. OpenIMServer validates the operator's permission. Promise completion does not mean that the event has already arrived.
+
+This page owns `CbEvents.OnDeleteUserAllMsgsInConv`, whose payload is `{ conversationID, userID }`. When the event arrives, remove messages from that sender in the cached conversation or reload conversation history to reconcile the state.
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleUserMessagesDeleted = ({ data }) => {
+  removeMessagesBySender(data.conversationID, data.userID);
+};
+
+openimsdk.on(
+  CbEvents.OnDeleteUserAllMsgsInConv,
+  handleUserMessagesDeleted,
+);
+
+function removeUserMessagesDeletedListener() {
+  openimsdk.off(
+    CbEvents.OnDeleteUserAllMsgsInConv,
+    handleUserMessagesDeleted,
+  );
+}
+```
+
+Call `removeUserMessagesDeletedListener()` when the component unmounts, the user logs out, or the active account changes. Promise completion, event arrival, and a new history query are three independent stages.

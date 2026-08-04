@@ -1,17 +1,102 @@
 ---
-title: 'Logger'
-description: 'OpenIM Flutter SDK guide for Logger.'
+title: 'Logging'
+description: 'Configure OpenIM Flutter SDK logs and use operationID to trace a call.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/logger'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Development and staging environments can emit detailed SDK logs. In production, lower the logging level and disable unnecessary standard output. Never log tokens, complete message content, raw file URLs, or private user fields.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Configure logging during initialization
+
+The Flutter SDK configures logging in `initSDK()`, not in `login()`.
+
+```dart
+import 'dart:io';
+
+final platformID = Platform.isIOS
+    ? IMPlatform.ios
+    : IMPlatform.android;
+
+await OpenIM.iMManager.initSDK(
+  platformID: platformID,
+  apiAddr: apiAddr,
+  wsAddr: wsAddr,
+  dataDir: dataDir,
+  listener: connectListener,
+  logLevel: 5,
+  isLogStandardOutput: true,
+  logFilePath: logFilePath,
+);
+```
+
+This example targets Flutter on Android and iOS. Use `IMPlatform.android` on Android and `IMPlatform.ios` on iOS; do not hard-code the Android value into an iOS build.
+
+| Parameter             | Description                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `logLevel`            | Numeric SDK log level. The pinned SDK defaults to `6`; select a value for the environment. |
+| `isLogStandardOutput` | Whether to write to platform-standard logs. Enable it for development diagnostics.         |
+| `logFilePath`         | Optional log-file path, which must be in a directory writable by the application.          |
+
+In production, disable standard output and retain only the required levels. Log directories are subject to platform permissions and lifecycle rules; do not hard-code another application's directory or a system directory.
+
+## Write and upload logs
+
+```dart
+await OpenIM.iMManager.logs(
+  logLevel: 5,
+  file: 'chat_repository.dart',
+  line: 120,
+  msgs: 'load conversation page failed',
+  err: error.toString(),
+  keyAndValues: ['conversationID', conversationID],
+);
+```
+
+When a user explicitly submits diagnostic logs, listen for upload progress and call `uploadLogs()`:
+
+```dart
+OpenIM.iMManager.setUploadLogsListener(
+  OnUploadLogsListener(
+    onUploadProgress: (current, size) {
+      updateLogUploadProgress(current, size);
+    },
+  ),
+);
+
+await OpenIM.iMManager.uploadLogs(ex: 'user initiated diagnostics');
+```
+
+`setUploadLogsListener()` stores a manager-level singleton listener, so a later call replaces the earlier one. The pinned SDK does not expose a remove or unset API. Configure it once in the application's shared SDK binding layer and dispatch progress from there to the active UI; do not configure it separately in every screen or component. On sign-out or account switch, clear application-level subscriptions and the previous account's upload state so progress and errors cannot appear in the new account's UI.
+
+Before uploading, explain to the user what is collected and process logs according to applicable privacy and compliance requirements.
+
+## Use `operationID` to trace a call
+
+`operationID` identifies the call chain for one SDK request. Most Flutter SDK methods expose it as an optional named parameter. When omitted, `Utils.checkOperationID()` generates a UUID. Pass one explicitly only when you need to correlate the call precisely with OpenIMServer logs, and use a new value for every call.
+
+```dart
+final operationID = createUniqueTraceID();
+try {
+  await OpenIM.iMManager.conversationManager.getConversationListSplit(
+    offset: 0,
+    count: 50,
+    operationID: operationID,
+  );
+} catch (error) {
+  appLogger.error('openim_api_failed', {
+    'operationID': operationID,
+    'action': 'get_conversation_page',
+    'error': error.toString(),
+  });
+  rethrow;
+}
+```
+
+`createUniqueTraceID()` represents an existing unique trace-ID generator in your application. You do not need to add a dependency solely for logging, and you can simply omit `operationID`. It is not a credential, a business idempotency key, or a `conversationID`, and it cannot replace a token or business identifier.

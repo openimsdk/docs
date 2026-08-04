@@ -1,16 +1,69 @@
 ---
 title: 'Group overview'
-description: 'OpenIM WASM SDK guide for Group overview.'
+description: 'Understand group profiles, members, applications, roles, and events in the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/overview-group'
 ---
 
-## Overview
+OpenIMSDK uses groups to hold shared profiles, membership, and permissions for multi-user chats. `groupID` is the stable group identifier used to send group messages, read group profiles, manage members, and process join applications. A group conversation in the current user's chat list is still managed by `conversationID`; do not interchange the two.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Core data types
+
+| Type | Purpose |
+| --- | --- |
+| `GroupItem` | Group name, avatar, announcement, owner, verification settings, member count, and extension data. |
+| `GroupMemberItem` | A user's in-group nickname, role, mute state, and join information. |
+| `GroupApplicationItem` | A group application and its processing state. |
+
+Group member roles use `GroupMemberRole`: member is `20`, administrator is `60`, and owner is `100`. The client can use these values to control which actions are shown, but OpenIMServer performs the final permission check.
+
+## Find pages by task
+
+| Task | Pages |
+| --- | --- |
+| Create and maintain group profiles | [Create a group](/sdk/wasm/group/create-group), [Update the group name, introduction, and avatar](/sdk/wasm/group/update-group-profile), [Publish or update a group announcement](/sdk/wasm/group/set-group-announcement), [Set group extension data](/sdk/wasm/group/set-group-extension) |
+| Configure join and member permissions | [Set group join verification](/sdk/wasm/group/set-group-join-verification), [Set member profile access](/sdk/wasm/group/set-group-member-profile-access), [Set in-group friend request permission](/sdk/wasm/group/set-group-member-friend-permission) |
+| Join, leave, or dismiss groups | [Join a group](/sdk/wasm/group/join-group), [Leave a group](/sdk/wasm/group/quit-group), [Dismiss a group](/sdk/wasm/group/dismiss-group) |
+| Get joined groups or selected group profiles | [Get joined groups by page](/sdk/wasm/group/retrieving-groups/get-joined-group-list-page), [Get group information](/sdk/wasm/group/retrieving-groups/get-specified-groups-info), [Search joined groups](/sdk/wasm/group/retrieving-groups/search-groups) |
+| Get and process group applications | [Get received group applications](/sdk/wasm/group/group-applications/get-group-application-list-as-recipient), [Get sent group applications](/sdk/wasm/group/group-applications/get-group-application-list-as-applicant) |
+| Get and manage group members | [Get group members](/sdk/wasm/group/retrieving-group-members/get-group-member-list), [Invite users to a group](/sdk/wasm/group/managing-group-members/invite-user-to-group), [Remove group members](/sdk/wasm/group/managing-group-members/kick-group-member), [Manage group administrators](/sdk/wasm/group/managing-group-members/set-group-member-role-level), [Transfer group ownership](/sdk/wasm/group/managing-group-members/transfer-group-owner) |
+| Manage speaking permissions | [Set group mute status](/sdk/wasm/group/change-group-mute), [Mute or unmute a group member](/sdk/wasm/group/managing-group-members/change-group-member-mute) |
+
+## State updates
+
+This page owns the complete listeners for group profile changes, the current user joining or leaving, and group dismissal:
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handlers = {
+  joinedAdded: ({ data }) => mergeJoinedGroup(data),
+  joinedDeleted: ({ data }) => removeJoinedGroup(data.groupID),
+  groupChanged: ({ data }) => mergeGroup(data),
+  groupDismissed: ({ data }) => markGroupDismissed(data.groupID),
+};
+
+openimsdk.on(CbEvents.OnJoinedGroupAdded, handlers.joinedAdded);
+openimsdk.on(CbEvents.OnJoinedGroupDeleted, handlers.joinedDeleted);
+openimsdk.on(CbEvents.OnGroupInfoChanged, handlers.groupChanged);
+openimsdk.on(CbEvents.OnGroupDismissed, handlers.groupDismissed);
+
+function removeGroupListeners() {
+  openimsdk.off(CbEvents.OnJoinedGroupAdded, handlers.joinedAdded);
+  openimsdk.off(CbEvents.OnJoinedGroupDeleted, handlers.joinedDeleted);
+  openimsdk.off(CbEvents.OnGroupInfoChanged, handlers.groupChanged);
+  openimsdk.off(CbEvents.OnGroupDismissed, handlers.groupDismissed);
+}
+```
+
+Merge all four events idempotently by `groupID`. Promise completion, event delivery, and a reconciliation query are separate stages. If an add or delete event arrives during pagination, reset pagination and reload from the first page.
+
+[Get group members](/sdk/wasm/group/retrieving-group-members/get-group-member-list) owns member events, while [Get received group applications](/sdk/wasm/group/group-applications/get-group-application-list-as-recipient) owns application events.
+
+WASM SDK group APIs cover only OpenIM group profiles, membership, and permissions. Public discovery, complex directories, and capacity governance for large group chats belong to the application backend and OpenIMServer configuration; do not document them as nonexistent client group types.

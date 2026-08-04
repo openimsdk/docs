@@ -1,16 +1,76 @@
 ---
 title: 'Modify a message'
-description: 'OpenIM WASM SDK guide for Modify a message.'
+description: 'Modify the content of a sent message and synchronize the result to other clients.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/modify-a-message'
 ---
 
-## Overview
+Use `modifyMessage()` to change the content of an existing message in a conversation. This differs from [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages) and [Revoke a message](/sdk/wasm/message/managing-messages/revoke-a-message): deletion controls whether the current account can still see a message, revocation shows a revoked state to conversation members, and modification replaces the message content and synchronizes it to other clients.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Modify message content
+
+`modifyMessage()` accepts the message's `conversationID` and the complete modified `MessageItem`.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | ID of the conversation containing the message. |
+| `message` | `MessageItem` | Yes | Complete modified message object. It must retain the original `clientMsgID`. |
+
+```ts
+const { data: modifiedMessage } = await openimsdk.modifyMessage({
+  conversationID,
+  message: {
+    ...message,
+    textElem: {
+      ...message.textElem,
+      content: editedText,
+    },
+  },
+});
+
+replaceMessage(modifiedMessage);
+```
+
+This method does not perform a partial update. Copy the current message, change only the intended content, and preserve `clientMsgID` and all other message fields. OpenIMServer validates the sender, editing time window, and message type. If the call fails, do not leave the edited content only in local state.
+
+## Return result
+
+When the Promise resolves, `data` is the server-confirmed modified `MessageItem`. The calling client can immediately replace the message with the same `clientMsgID`; other clients subsequently merge the incremental update through an event.
+
+Promise completion means that the current modification request has completed, not that every client interface has already updated. Other clients receive the modified `MessageItem` through `CbEvents.OnMessageModified` and should replace the existing message by `clientMsgID`.
+
+## Listen for message modifications
+
+This page is the canonical reference for `OnMessageModified`. For deletion events, see [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages). For revocation events, see [Revoke a message](/sdk/wasm/message/managing-messages/revoke-a-message).
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleMessageModified = ({ data }) => {
+  replaceMessage(resolveConversationID(data), data.clientMsgID, data);
+};
+
+openimsdk.on(CbEvents.OnMessageModified, handleMessageModified);
+
+function removeMessageModifiedListener() {
+  openimsdk.off(CbEvents.OnMessageModified, handleMessageModified);
+}
+```
+
+`OnMessageModified` provides one `MessageItem` in `data`. Determine its conversation from the message routing fields and merge it by `clientMsgID`. Call `removeMessageModifiedListener()` when the component unmounts, the user logs out, or the active account changes.
+
+## Related pages
+
+- [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages)
+- [Revoke a message](/sdk/wasm/message/managing-messages/revoke-a-message)
+- [Send a message](/sdk/wasm/message/sending-messages/send-message)
+- [Find messages by ID](/sdk/wasm/message/retrieving-messages/find-messages-by-id)
+- [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages)

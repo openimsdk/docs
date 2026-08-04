@@ -1,17 +1,41 @@
 ---
-title: 'Get the friend list'
-description: 'OpenIM Flutter SDK guide for Get the friend list.'
+title: 'Retrieve the friend list by page'
+description: 'Retrieve the current user’s Flutter friend list by page.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/friends/get-friend-list-page'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+```dart
+final friends = await OpenIM.iMManager.friendshipManager.getFriendListPage(
+  offset: 0,
+  count: 40,
+  filterBlack: true,
+);
+```
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+`offset` starts at `0`, `count` is the page size, and `filterBlack` determines whether blocked users are excluded. A successful `Future` returns the current page as `List<FriendInfo>`. Append and deduplicate records by `userID`; receiving fewer items than the page size generally means that the last page has been reached.
+
+Use only the paginated API, not the non-paginated `getFriendList()`. A query does not trigger the friendship listener.
+
+## Synchronize friendship changes
+
+This page owns state handling for `onFriendAdded`, `onFriendInfoChanged`, and `onFriendDeleted`:
+
+```dart
+void handleFriendChanged(FriendInfo info) {
+  mergeFriend(info);
+}
+
+void handleFriendDeleted(FriendInfo info) {
+  final userID = info.userID;
+  if (userID != null) removeFriend(userID);
+}
+```
+
+The Flutter SDK retains only one `OnFriendshipListener`. Put these functions in the contacts state layer and set the application-level listener once through the composition entry point described in [Events overview](/sdk/flutter/events/overview-events). Do not let multiple widgets overwrite the listener. Merge both snapshots and increments by `userID`.

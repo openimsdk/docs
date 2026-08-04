@@ -1,17 +1,126 @@
 ---
 title: 'Receive messages'
-description: 'OpenIM Flutter SDK guide for Receive messages.'
+description: 'Handle ordinary, offline-synchronized, and online-only message events in the Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/message/receiving-messages/receive-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Ordinary real-time messages, offline messages synchronized after login, and online-only messages arrive through `onRecvNewMessage`, `onRecvOfflineNewMessage`, and `onRecvOnlineOnlyMessage`. Each Flutter callback carries one `Message`, not an array of messages.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+A message screen commonly handles an initial history snapshot, real-time messages, offline synchronization after login, and temporary online-only messages. History queries establish or reconcile the snapshot, while listeners merge increments. Do not treat listener delivery as the completion callback for a query or mark-as-read request.
+
+## Message types
+
+Choose a renderer from `contentType` or the non-null content element. `textElem`, `atTextElem`, and `customElem` represent text, @ mentions, and custom content. `pictureElem`, `soundElem`, `videoElem`, and `fileElem` contain the existing URL, size, name, duration, or snapshot, so the receiver does not upload the resource again. For an unknown type, show a safe unsupported-message placeholder; never render arbitrary custom data as HTML.
+
+If your product needs to send several files at once, you can send several file messages in sequence or use one custom message to carry file-group data. Regardless of how the UI groups them, the state layer must continue to identify each `Message` by its stable `clientMsgID`.
+
+Flutter's `Message` model does not contain `conversationID`. A global listener must resolve the message route first and then ask the SDK to confirm the conversation ID.
+
+The pinned SDK declares these commonly used receive, routing, and merge fields as nullable, except for `exMap`. A listener must therefore tolerate incomplete payloads:
+
+| Field          | Type      | Description                                                                 |
+| -------------- | --------- | --------------------------------------------------------------------------- |
+| `clientMsgID`  | `String?` | Client message ID. When non-empty, use it as the stable message merge key.  |
+| `serverMsgID`  | `String?` | Server message ID. It does not replace `clientMsgID` for local merging.      |
+| `sessionType`  | `int?`    | `ConversationType` value used to select one-to-one or group routing.        |
+| `sendID`       | `String?` | Sender user ID. In a one-to-one chat, combine it with the current user.     |
+| `recvID`       | `String?` | Recipient user ID, used to find the peer when the current user is sender.   |
+| `groupID`      | `String?` | Group ID used to resolve the group conversation ID.                         |
+| `contentType`  | `int?`    | `MessageType` value that determines which content element to render.        |
+| `sendTime`     | `int?`    | Send time used for ordering. It is not a unique message identifier.         |
+| `status`       | `int?`    | `MessageStatus` value for the sending state.                                |
+| `isRead`       | `bool?`   | Read state currently recorded by the SDK.                                   |
+
+Text, image, audio, video, file, @ mention, custom, quote, and merged content are stored in their corresponding nullable element properties. Render defensively by checking both `contentType` and the element. If the expected element is absent, show an unsupported-message placeholder instead of force-unwrapping it.
+
+```dart
+Future<String?> resolveMessageConversationID(
+  Message message,
+  String currentUserID,
+) async {
+  final sessionType = message.sessionType;
+  if (sessionType == null) return null;
+
+  final String? sourceID;
+  if (sessionType == ConversationType.single) {
+    sourceID = message.sendID == currentUserID ? message.recvID : message.sendID;
+  } else {
+    sourceID = message.groupID;
+  }
+
+  if (sourceID == null || sourceID.isEmpty) return null;
+  final value = await OpenIM.iMManager.conversationManager
+      .getConversationIDBySessionType(
+    sourceID: sourceID,
+    sessionType: sessionType,
+  );
+  final conversationID = value?.toString();
+  return conversationID == null || conversationID.isEmpty
+      ? null
+      : conversationID;
+}
+
+Future<void> mergeReceivedMessage(Message message) async {
+  final clientMsgID = message.clientMsgID;
+  if (clientMsgID == null || clientMsgID.isEmpty) return;
+
+  final conversationID =
+      await resolveMessageConversationID(message, currentUserID);
+  if (conversationID == null) return;
+  upsertMessage(conversationID, clientMsgID, message);
+}
+
+Future<void> handleNewMessage(Message message) =>
+    mergeReceivedMessage(message);
+
+Future<void> handleOfflineMessage(Message message) =>
+    mergeReceivedMessage(message);
+
+Future<void> handleOnlineOnlyMessage(Message message) async {
+  final conversationID =
+      await resolveMessageConversationID(message, currentUserID);
+  if (conversationID == null) return;
+  showEphemeralMessage(conversationID, message);
+}
+```
+
+Add these three functions to the application's single `OnAdvancedMsgListener`. See [Event overview](/sdk/flutter/events/overview-events) for centralized configuration. The pinned SDK does not expose a remove or unset API.
+
+Configure the listener only once during the SDK initialization and login lifecycle, then use a stable application-level dispatcher to route events to each conversation store. Do not configure it every time a chat screen opens: a later instance replaces earlier callbacks, and the screen cannot remove its listener independently when disposed.
+
+Merge ordinary and offline messages idempotently by the resolved `conversationID:clientMsgID` key so history pagination, login synchronization, and event delivery cannot insert duplicates. If only the current chat is visible, compare the resolved ID with the screen's `conversationID`. Route messages for other conversations to their own state containers rather than the current list.
+
+`onRecvOnlineOnlyMessage` corresponds to `isOnlineOnly: true` when sending. Such a message is not stored in local history and must not be persisted as replayable history by the application. Still resolve its conversation so a transient notification from another conversation is not displayed on the current screen.
+
+## History snapshots and event increments
+
+When a conversation is opened for the first time, load a history snapshot using the screen's `conversationID`. Use the boundary message when paging upward. History results and listeners may contain the same message, so use the same compound deduplication key for both. See [Load message history](/sdk/flutter/message/retrieving-messages/load-older-messages) for the complete pagination flow.
+
+After the user actually opens and reads the conversation, call `markConversationMessageAsRead(conversationID: conversationID)` to clear its unread count. This is not a member-level group-message read receipt.
+
+Future completion means only that the mark-as-read request completed. It does not mean that a conversation-list event has arrived or that every client is already updated. Continue merging conversation unread counts and the total unread badge from conversation events, and re-query for reconciliation when necessary.
+
+Event delivery does not mean the current history page has been queried again. After synchronization, you can reload the visible conversation to reconcile it. A failed reconciliation query should not undo an event that was already merged correctly. Deletion and read-receipt events belong to their own pages. When a recall callback arrives, update the matching message to its recalled state; see [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message) for the full handler.
+
+## Verify the receiving flow
+
+- From another signed-in account, send text, media, and custom messages. Confirm that each message is routed to the correct conversation and each `clientMsgID` renders only once.
+- Sign in again and confirm that offline synchronization does not duplicate messages already present in the history snapshot.
+- Send an `isOnlineOnly: true` message and confirm that only the online callback receives it and history queries do not return it.
+- Confirm that malformed payloads missing required routing fields or `clientMsgID` are ignored and diagnosed instead of causing a crash.
+- Recall a message and confirm that the matching `clientMsgID` is updated to the recalled state rather than inserted as another message.
+- After actually opening and reading a conversation, mark it as read and confirm that conversation events update both its unread count and the total unread badge.
+
+## Related pages
+
+- [Message overview](/sdk/flutter/message/overview-message)
+- [Send a message](/sdk/flutter/message/sending-messages/send-message)
+- [Load message history](/sdk/flutter/message/retrieving-messages/load-older-messages)
+- [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)

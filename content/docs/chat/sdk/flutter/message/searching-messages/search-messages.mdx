@@ -1,17 +1,107 @@
 ---
 title: 'Search messages'
-description: 'OpenIM Flutter SDK guide for Search messages.'
+description: 'Search locally synchronized messages by keyword and conversation criteria with the Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/message/searching-messages/search-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`searchLocalMessages()` searches messages already synchronized to the current user's local store. For a group, specify its `conversationID`, not the `groupID` used when sending. Cross-user auditing and complete server-side search belong in a backend service.
 
-The English version of this OpenIM Flutter SDK guide is deferred until the reviewed Chinese documentation is complete.
+If the entry point has only a user ID or group ID, call `getConversationIDBySessionType(sourceID:, sessionType:)` first. Use `ConversationType.single` for a one-to-one chat and the applicable conversation type for a group. Omit `conversationID` for a global search.
+
+The search scope is limited to messages synchronized into the current device's SDK cache. Use a backend search service when you need cross-user auditing, complete server retrieval, complex permission filtering, or global ordering, and return the matching conversation and message identifiers to the client for navigation.
+
+## Build a search query
+
+`keywordList` accepts a list, but the pinned Flutter implementation currently uses only one keyword. Trim the search input and discard empty values before submitting it to the SDK.
+
+```dart
+final keyword = input.trim();
+if (keyword.isNotEmpty) {
+  final result = await OpenIM.iMManager.messageManager.searchLocalMessages(
+    conversationID: conversationID,
+    keywordList: [keyword],
+    messageTypeList: [MessageType.text, MessageType.atText],
+    pageIndex: 1,
+    count: 20,
+  );
+  renderSearchResult(result);
+}
+```
+
+## Advanced search
+
+`searchLocalMessages()` also exposes fields for senders, message types, and a time window. The pinned Flutter implementation currently does not use `keywordListMatchType` or `senderUserIDList`, so do not present them as effective filters. If reliable sender filtering is required, verify the behavior in the SDK version you deploy or perform it in a backend search service.
+
+```dart
+final result = await OpenIM.iMManager.messageManager.searchLocalMessages(
+  conversationID: conversationID,
+  keywordList: ['release'],
+  messageTypeList: [MessageType.text],
+  searchTimePosition: searchTimePosition,
+  searchTimePeriod: searchTimePeriod,
+  pageIndex: 1,
+  count: 20,
+);
+```
+
+If the search UI includes images, files, or custom messages, add their numeric `MessageType` constants to `messageTypeList`. When no type restriction is needed, construct parameters according to the pinned SDK's default behavior; do not assume that every content type participates in keyword matching.
+
+### Parameters
+
+| Parameter              | Type           | Required | Description                                                                                              |
+| ---------------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `conversationID`       | `String?`      | No       | Conversation to search. When `null`, searches every locally stored conversation.                        |
+| `keywordList`          | `List<String>` | No       | Defaults to an empty list. For keyword search, pass one trimmed non-empty keyword. The current implementation uses only one. |
+| `keywordListMatchType` | `int`          | No       | Defaults to `0`. The current implementation does not use this multi-keyword matching field.             |
+| `senderUserIDList`     | `List<String>` | No       | Defaults to an empty list. The pinned implementation marks this field as currently unused.               |
+| `messageTypeList`      | `List<int>`    | No       | Numeric message types such as `MessageType.text`. Defaults to an empty list.                             |
+| `searchTimePosition`   | `int`          | No       | Start time in UTC seconds. The default `0` starts from the current time.                                 |
+| `searchTimePeriod`     | `int`          | No       | Number of seconds to search backward. The default `0` places no limit.                                  |
+| `pageIndex`            | `int`          | No       | One-based page number. Defaults to `1`.                                                                  |
+| `count`                | `int`          | No       | Number of results per page. Defaults to `40`.                                                            |
+
+## Handle paginated results
+
+The method returns `SearchResult`, whose fields are nullable in the pinned SDK:
+
+| Field               | Type                       | Description                                                                    |
+| ------------------- | -------------------------- | ------------------------------------------------------------------------------ |
+| `totalCount`        | `int?`                     | Total number of messages matching the current criteria.                        |
+| `searchResultItems` | `List<SearchResultItems>?` | Results from `searchLocalMessages()`, grouped by conversation.                  |
+| `findResultItems`   | `List<SearchResultItems>?` | Results used by `findMessageList()`; this is not the main field for this task. |
+
+Each `SearchResultItems` represents one conversation:
+
+| Field              | Type             | Description                                      |
+| ------------------ | ---------------- | ------------------------------------------------ |
+| `conversationID`   | `String?`        | ID of the conversation containing the matches.   |
+| `conversationType` | `int?`           | Conversation-type value.                         |
+| `showName`         | `String?`        | Conversation display name.                       |
+| `faceURL`          | `String?`        | Conversation avatar URL.                         |
+| `messageCount`     | `int?`           | Number of matches in this conversation.          |
+| `messageList`      | `List<Message>?` | Messages matched on this page.                   |
+
+Keep the keyword, sender, type, and time criteria unchanged while advancing only `pageIndex`. When any criterion changes, reset to page 1 and clear previous results. Deduplicate a search page by each result item's `conversationID` and each message's nullable `clientMsgID`. Do not retain a selection by result position.
+
+When the Futures for `getConversationIDBySessionType()` and `searchLocalMessages()` succeed, use their return values to establish the conversation ID and search snapshot directly. Neither query triggers a message event.
+
+## Handle changes to search results
+
+A matching message can be recalled or deleted while the page is open, and later synchronization can add matches. Update results through the shared handlers on [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages), [Delete messages](/sdk/flutter/message/managing-messages/delete-saved-message), and [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message). This page handles only search and pagination and must not configure another message listener.
+
+To navigate to a matching message, use the result item's `conversationID` and the message's `clientMsgID`. To display its surrounding context, follow [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id) and load older and newer messages separately. The pinned Flutter SDK does not expose WASM's `fetchSurroundingMessages()`, so do not copy that call directly.
+
+Re-run the query with the same criteria when the current search snapshot is needed. The search Future, message-event increments, and query-based reconciliation are three separate paths.
+
+## Related pages
+
+- [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)
+- [Load message history](/sdk/flutter/message/retrieving-messages/load-older-messages)
+- [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)

@@ -1,17 +1,50 @@
 ---
-title: 'Calling overview'
-description: 'OpenIM iOS SDK guide for Calling overview.'
+title: 'Audio and video calling overview'
+description: 'Understand the signaling, room information, and event boundaries of audio and video calls in the OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/overview-calling'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM iOS SDK provides the signaling APIs required to initiate, accept, reject, and cancel invitations, hang up calls, query rooms, and synchronize call state. It coordinates who joins which room and manages the call lifecycle. It does not capture camera input, play remote media streams, or render the call interface.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+Your app must pass the `roomID`, `token`, and `liveURL` returned by the SDK to your chosen real-time audio and video engine. The app is also responsible for system permissions, audio sessions, media tracks, poor-network handling, and UI state. Do not present the OpenIM iOS SDK signaling APIs as a complete WebRTC media SDK.
+
+## Call flow
+
+1. Call `signalingInvite:offlinePushInfo:onSuccess:onFailure:` to start a one-to-one call, or `signalingInviteInGroup:offlinePushInfo:onSuccess:onFailure:` to start a group call.
+2. The invitee receives an `OIMSignalingInfo` through `onReceiveNewInvitation:` and chooses whether to accept or reject the invitation.
+3. The invitee calls `signalingAccept:onSuccess:onFailure:`. Both parties then use the room credentials from the success callback to connect to the media engine.
+4. During the call, update local state from delegate callbacks for participants, media streams, and custom signals.
+5. The caller can cancel an invitation that has not been answered. Any participant can hang up an established call.
+
+## Core data types
+
+| Type | Description |
+| --- | --- |
+| `OIMInvitationInfo` | Contains the invitees, group, room, media type, timeout, and session type. |
+| `OIMSignalingInfo` | Contains the user, invitation details, and offline push information for the current signaling operation. |
+| `OIMInvitationResultInfo` | Contains the `roomID`, `token`, `liveURL`, and list of busy users returned by OpenIMServer. |
+| `OIMParticipantConnectedInfo` | Contains room, invitation, and participant information retrieved for a group. |
+
+Use custom signals only for coordination data that is safe to expose to the business participants. Never include long-lived credentials, administrator keys, or other sensitive data.
+
+## State updates and event ownership
+
+For write operations such as initiating, accepting, rejecting, canceling, or hanging up a call, handle both the success callback and the call delegate. A success callback means that OpenIMServer has accepted or completed the current signaling request. Delegate callbacks report incremental state observed by the caller, invitees, other devices, or room participants. These are not the same completion signal.
+
+For the complete invitation lifecycle and participant, hang-up, and media-stream listeners, see [Call events](/sdk/ios/calling/managing-calls/handle-call-events). For custom-signal events, see [Send a custom signal](/sdk/ios/calling/sending-custom-signals/send-a-custom-signal). Room and token queries return snapshots only through callbacks; see the three pages under Call information.
+
+Do not register delegates on this overview page. Use `roomID` as the primary key for call state and combine it with the user ID for participant state. After the app restarts, restore unresolved invitations with a query. Query room information again whenever the UI needs a current room snapshot.
+
+## Related pages
+
+- [Start a one-to-one call](/sdk/ios/calling/managing-calls/start-single-call)
+- [Call events](/sdk/ios/calling/managing-calls/handle-call-events)
+- [Restore a pending invitation](/sdk/ios/calling/retrieving-call-information/restore-pending-invitation)
+- [Send a custom signal](/sdk/ios/calling/sending-custom-signals/send-a-custom-signal)

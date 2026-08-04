@@ -1,17 +1,38 @@
 ---
-title: 'Update typing status'
-description: 'OpenIM WASM SDK guide for Update typing status.'
+title: 'Report typing status'
+description: 'Report the current user’s typing status with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/composing-messages/update-typing-status'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Pass `focus: true` when the user starts typing. Pass `false` after sending a message, when the input loses focus, when switching conversations, or when the user stops typing. Typing status is associated with `conversationID`; it neither saves a draft nor writes to the message list.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+await openimsdk.changeInputStates({ conversationID, focus: true });
+// When the user stops typing:
+await openimsdk.changeInputStates({ conversationID, focus: false });
+```
+
+Throttle the start-typing report and deduplicate state changes instead of reporting on every keyboard event. Promise completion means only that the server accepted the request; it does not mean a remote interface has already updated.
+
+This page is the sole owner of `CbEvents.OnConversationUserInputStatusChanged`. Use a stable handler reference, and replace the `platformIDs` snapshot by `conversationID:userID`:
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleInputStatusChanged = ({ data }) => {
+  updateTypingState(data.conversationID, data.userID, data.platformIDs);
+};
+
+openimsdk.on(CbEvents.OnConversationUserInputStatusChanged, handleInputStatusChanged);
+
+function removeInputStatusListener() {
+  openimsdk.off(CbEvents.OnConversationUserInputStatusChanged, handleInputStatusChanged);
+}
+```

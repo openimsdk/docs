@@ -1,17 +1,73 @@
 ---
 title: 'Events overview'
-description: 'OpenIM iOS SDK guide for Events overview.'
+description: 'Register OpenIM iOS SDK listeners and synchronize connection and data state with the application lifecycle.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/events/overview-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM iOS SDK defines listener protocols by domain. Add and remove listeners through `[OIMManager callbacker]`, and keep a strong reference to each listener in your application state layer because the callbacker holds weak references to them.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Registration lifecycle
+
+| Event scope | Protocol | Canonical page |
+| --- | --- | --- |
+| Connection and token | Connection blocks passed during initialization | [Authenticate and manage a session](/sdk/ios/getting-started/authenticate-and-manage-session) |
+| User, friend, and blocklist | `OIMUserListener`, `OIMFriendshipListener` | [Users overview](/sdk/ios/user/overview-user) |
+| Conversations and synchronization | `OIMConversationListener` | [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Conversation groups | `Open_im_sdk_callbackOnConversationGroupListener` | [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups) |
+| Groups and group members | `OIMGroupListener` | [Groups overview](/sdk/ios/group/overview-group) |
+| Messages | `OIMAdvancedMsgListener` | [Receive messages](/sdk/ios/message/receiving-messages/receive-messages) |
+| Custom business notifications | `OIMCustomBusinessListener` | [Receive custom business messages](/sdk/ios/message/receiving-messages/custom-business-listener) |
+| Audio and video calls | `OIMSignalingListener` | [Call events](/sdk/ios/calling/managing-calls/handle-call-events) |
+
+Register application-level listeners after `initSDK` succeeds and before `login`. Do not add them again every time a view renders or appears. When the user logs out or switches accounts, or when the state layer is destroyed, call the corresponding `remove...Listener:` method with the same instance.
+
+Conversation groups are an exception. OpenIMCore uses `Open_im_sdkSetConversationGroupListener` to set a single `Open_im_sdk_callbackOnConversationGroupListener`. It does not go through `[OIMManager callbacker]` and is not an `OIMCallbacker` listener that can be added repeatedly. The conversation state layer should retain this callback object for the SDK lifecycle and set it only once. For the complete callback and JSON payloads, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+
+## Listen for initial synchronization
+
+The synchronization lifecycle belongs to `OIMConversationListener`. This page is the canonical implementation page for its four synchronization callbacks:
+
+```objc
+@interface SDKSyncStore () <OIMConversationListener>
+@end
+
+@implementation SDKSyncStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addConversationListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeConversationListener:self];
+}
+
+- (void)onSyncServerStart:(BOOL)reInstall {
+    [self setSyncingWithProgress:0 reInstall:reInstall];
+}
+
+- (void)onSyncServerProgress:(NSInteger)progress {
+    [self setSyncingWithProgress:progress reInstall:self.reInstallSync];
+}
+
+- (void)onSyncServerFinish:(BOOL)reInstall {
+    [self setSyncReadyWithReInstall:reInstall];
+    [self reloadVisibleSnapshots];
+}
+
+- (void)onSyncServerFailed:(BOOL)reInstall {
+    [self setSyncFailedWithReInstall:reInstall];
+}
+
+@end
+```
+
+When `reInstall` is `YES`, synchronization follows a local database rebuild and generally requires a more comprehensive loading state. `onSyncServerProgress:` reports the current progress. After synchronization finishes, query the snapshots needed by the current UI again, then continue merging subsequent increments from each domain listener.
+
+A synchronization event is not the success callback of a query API and has no business-entity merge key. Handle synchronization completion, snapshot queries, and subsequent event increments as separate stages. Isolate their state by the current SDK instance and logged-in user.

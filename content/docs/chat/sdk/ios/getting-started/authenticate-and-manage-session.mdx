@@ -1,17 +1,130 @@
 ---
 title: 'Authenticate and manage a session'
-description: 'OpenIM iOS SDK guide for Authenticate and manage a session.'
+description: 'Initialize OpenIM iOS SDK, log in, query session state, and safely log out the current account.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/getting-started/authenticate-and-manage-session'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+OpenIM iOS SDK establishes the current user's session through `login:token:onSuccess:onFailure:`. Before authenticating, complete the server, user, token, and iOS environment preparation described in [Before you start](/sdk/ios/getting-started/before-you-start).
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+The complete flow is:
+
+1. Initialize the SDK with `OIMInitConfig` and provide connection, token, and forced-logout callbacks.
+2. Obtain the current user's `userID` and token from a trusted backend.
+3. Call the login method, wait for its success callback, and continue waiting for `onConnectSuccess`.
+4. Query users, friends, conversations, groups, and messages only after the connection becomes available.
+5. When logging out or changing accounts, call the logout method and then clear application state for the current account.
+
+## Obtain credentials for the current user
+
+Obtain the current user's `userID` and OpenIMSDK token from a trusted backend. `userID` is only the OpenIMSDK user identifier, not an authentication credential, and it must correspond to the token.
+
+The iOS client consumes credentials returned by the backend; it does not create OpenIM users or issue tokens. Do not bundle an administrator token in the application or write a complete token to ordinary logs.
+
+## Initialize and handle the connection lifecycle
+
+Connection, token, and forced-logout callbacks are supplied during initialization, so there is no gap between login and event registration. For all `OIMInitConfig` fields and environment settings, see [Integrate for the runtime environment](/sdk/ios/getting-started/environment-specific-implementation).
+
+```objc
+OIMInitConfig *config = [OIMInitConfig new];
+config.platform = iPhone;
+config.apiAddr = apiAddr;
+config.wsAddr = wsAddr;
+
+BOOL accepted = [[OIMManager manager]
+    initSDKWithConfig:config
+    onConnecting:^{ [sessionState setConnecting]; }
+    onConnectFailure:^(NSInteger code, NSString *message) {
+        [sessionState setFailedWithCode:code message:message];
+    }
+    onConnectSuccess:^{ [sessionState setConnected]; }
+    onKickedOffline:^{ [sessionState clearForForcedLogout]; }
+    onUserTokenExpired:^{ [sessionState refreshCredentials]; }
+    onUserTokenInvalid:^(NSString *message) {
+        [sessionState requireSignInWithMessage:message];
+    }];
+```
+
+A `YES` return value from `initSDKWithConfig:...` means only that the SDK accepted initialization. It does not mean the user is logged in or the persistent connection is ready. Initialize centrally once per application process; do not let multiple views create independent initialization flows.
+
+These callbacks have no business-entity merge key. Isolate their state by SDK instance and signed-in account. They are retained by the initialization flow and do not use the WASM `on()`/`off()` model. Before changing accounts or rebuilding the SDK, stop asynchronous work for the old account so its callbacks cannot update the new account's interface.
+
+## Log in the current user
+
+After obtaining the `userID` and token for the current business account from a trusted backend, call the login API:
+
+```objc
+[[OIMManager manager] login:userID
+                         token:token
+                     onSuccess:^(NSString *data) {
+                         // The login request completed; still wait for onConnectSuccess.
+                     }
+                     onFailure:^(NSInteger code, NSString *message) {
+                         NSLog(@"OpenIMSDK login failed: %ld %@", (long)code, message);
+                     }];
+```
+
+`userID` must be the current OpenIMSDK user ID, and `token` must have been issued by a trusted backend for that same user. The nullable string in the success callback is not a user snapshot. Query the current user's profile separately after login when it is needed.
+
+The login success callback means the login call completed. The initialization flow's `onConnectSuccess` means the persistent connection is ready for business APIs. These are separate stages. Do not start connection-dependent message, conversation, group, or user operations solely because the login callback succeeded.
+
+Do not call the login method concurrently. Reuse an in-flight request or disable duplicate submissions while the login state is `OIMLoginStatusLogging`.
+
+## Query the current login state
+
+`getLoginStatus` and `getLoginUserID` are synchronous queries and take no business parameters:
+
+```objc
+OIMLoginStatus status = [[OIMManager manager] getLoginStatus];
+if (status == OIMLoginStatusLogged) {
+    NSString *currentUserID = [[OIMManager manager] getLoginUserID];
+    [sessionState restoreForUserID:currentUserID];
+}
+```
+
+| State | Description |
+| --- | --- |
+| `OIMLoginStatusLogout` | The SDK is not currently logged in. |
+| `OIMLoginStatusLogging` | Login is in progress; do not start another login concurrently. |
+| `OIMLoginStatusLogged` | The SDK is logged in. Determine network availability separately from connection callbacks. |
+
+`getLoginUserID` returns the user ID currently logged in to the SDK. Use it to verify that the application account and SDK account match, but not as a replacement for business authentication. These queries establish only a current login snapshot and do not trigger connection callbacks.
+
+When changing accounts, do not overwrite the current session with new parameters. Wait for the old account to log out, clear its state, and then log in with the new account's `userID` and token.
+
+## Handle token state and forced logout
+
+After `onUserTokenExpired` or `onUserTokenInvalid`, request fresh credentials from a trusted backend, then log in again or return to the sign-in screen according to product policy. The iOS login flow passes only the OpenIMSDK token to the login method; it does not distinguish “access token” and “session token” on the client. The business backend and OpenIMServer determine token issuance, lifetime, refresh, and revocation policies.
+
+When `onKickedOffline` arrives, the SDK has already ended the current session. Clear the user, conversation, message, unread-count, and view state maintained by your application. Do not call logout concurrently. Depending on product policy, explain that the account signed in on another device or return to the sign-in screen.
+
+## Log out explicitly
+
+When the user logs out or changes accounts, call:
+
+```objc
+[[OIMManager manager] logoutWithOnSuccess:^(NSString *data) {
+    [sessionState clearCurrentSession];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"OpenIMSDK logout failed: %ld %@", (long)code, message);
+}];
+```
+
+The success callback means the current SDK session has logged out. During an explicit logout, callback completion, connection callbacks, and business-view cleanup are separate stages. Wait for logout to succeed, then clear the current account's conversation list, message views, unread counts, and business state.
+
+When changing accounts, wait for the old account to log out and remove its business delegates before logging in the new account. Do not run two accounts' login and logout flows concurrently.
+
+`unInitSDK` releases the runtime when the application will no longer use the SDK. It is not a substitute for closing a view or logging out an account. Uninitialize only after logout and all SDK work have finished.
+
+## Next steps
+
+- [Before you start](/sdk/ios/getting-started/before-you-start)
+- [Send your first message](/sdk/ios/getting-started/send-first-message)
+- [Events overview](/sdk/ios/events/overview-events)
+- [Logging](/sdk/ios/logger)

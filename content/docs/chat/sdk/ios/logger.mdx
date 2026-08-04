@@ -1,17 +1,87 @@
 ---
-title: 'Logger'
-description: 'OpenIM iOS SDK guide for Logger.'
+title: 'Logging'
+description: 'Configure OpenIM iOS SDK logs and use operationID to trace a call chain.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/logger'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+OpenIM iOS SDK logs help diagnose initialization, connection, and business API issues. Development builds can emit detailed information. Production builds should reduce log volume and must avoid recording tokens, message bodies, file URLs, or private user fields.
 
-The English version of this OpenIM iOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Configure logging during initialization
+
+Logging options belong to `OIMInitConfig` and must be set before `initSDKWithConfig:...`:
+
+```objc
+OIMInitConfig *config = [OIMInitConfig new];
+config.platform = iPhone;
+config.apiAddr = apiAddress;
+config.wsAddr = websocketAddress;
+config.dataDir = dataDirectory;
+config.logLevel = 4;
+config.isLogStandardOutput = YES;
+config.logFilePath = logDirectory;
+config.systemType = @"ios";
+```
+
+### Parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `logLevel` | `NSInteger` | The SDK log level. The default is `6`; follow the conventions of the SDK version in use. |
+| `isLogStandardOutput` | `BOOL` | Whether to emit standard SDK logs. |
+| `logFilePath` | `NSString *` | Optional directory for log files. |
+| `systemType` | `NSString *` | System-type label written into logs. |
+
+Do not leave the most verbose logging enabled indefinitely in production. Keep the log directory within an app-writable location and manage its capacity, retention period, and privacy requirements.
+
+## Write application diagnostic logs
+
+To include application context in SDK logs, call:
+
+```objc
+[[OIMManager manager] logs:[NSString stringWithUTF8String:__FILE__].lastPathComponent
+                      line:__LINE__
+                      msgs:@"send_message_failed"
+                       err:errorMessage
+              keyAndValues:@[@"conversationID", conversationID,
+                             @"clientMsgID", clientMsgID]
+                  logLevel:2];
+```
+
+Include only non-sensitive identifiers needed for diagnosis in `keyAndValues`. Never record access tokens, complete message content, or raw file URLs.
+
+## Trace a call with operationID
+
+Public Objective-C business selectors do not require your app to pass an `operationID`. The SDK generates identifiers for call chains. To obtain a new chain ID for application diagnostics, call:
+
+```objc
+NSString *operationID = [[OIMManager manager] operationId];
+```
+
+`operationID` is only for log correlation. It is not a user identity, authorization credential, business idempotency key, `conversationID`, or `clientMsgID`. Use a new value for each independent call chain. To correlate a multi-step business flow, use a separate trace ID defined by your application.
+
+## Upload logs
+
+After the user has explicitly agreed to submit diagnostic information, upload the SDK logs:
+
+```objc
+[[OIMManager manager] uploadLogsWithProgress:^(NSInteger saveBytes, NSInteger currentBytes, NSInteger totalBytes) {
+    [self updateLogUploadCurrentBytes:currentBytes totalBytes:totalBytes];
+}
+                                             line:2000
+                                               ex:@"support-ticket-42"
+                                        onSuccess:^(NSString * _Nullable data) {
+    [self showLogUploadCompleted];
+}
+                                        onFailure:^(NSInteger code, NSString *message) {
+    [self showLogUploadError:code message:message];
+}];
+```
+
+The progress callback reports saved, currently processed, and total bytes in that order. Explain the collection scope before uploading, and follow your product's privacy, consent, and retention policies.

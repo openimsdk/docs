@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path';
 
 const root = process.cwd();
 const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-const localRoot = '/docs/chat/platform-api/v3/user';
-const contentRoot = 'content/docs/chat/platform-api/v3/user';
-const zhContentRoot = 'content/zh/docs/chat/platform-api/v3/user';
-const contextKey = 'chat/platform-api/v3';
+const localRoot = '/platform-api/user';
+const contentRoot = 'content/docs/chat/platform-api/user';
+const zhContentRoot = 'content/zh/docs/chat/platform-api/user';
+const contextKey = 'chat/platform-api';
 const contextTitle = 'Platform API';
 
 // Mirrors open-im-server/internal/api/router.go userRouterGroup.POST order.
@@ -157,11 +157,16 @@ const userApis = [
     slug: 'update-user-info',
     title: '更新用户信息',
     endpoint: '/user/update_user_info',
-    summary: '使用完整 `UserInfo` 对象更新用户资料。该接口已被服务端标记为 deprecated，优先使用 `update_user_info_ex`。',
+    summary:
+      '使用完整 `UserInfo` 对象更新用户资料。该接口已被服务端标记为 deprecated，优先使用 `update_user_info_ex`。',
     sample: { userInfo },
     fields: userInfoFields,
     sideEffects: '更新用户资料，并可能触发用户资料变更通知。',
-    limits: ['`userInfo.userID` 必填。', '该接口不使用包装类型，传入零值可能覆盖原字段。', '新接入建议使用 `update_user_info_ex`。'],
+    limits: [
+      '`userInfo.userID` 必填。',
+      '该接口不使用包装类型，传入零值可能覆盖原字段。',
+      '新接入建议使用 `update_user_info_ex`。',
+    ],
   },
   {
     slug: 'update-user-info-ex',
@@ -433,7 +438,10 @@ const userApis = [
       ['data.appMangerLevel', 'int', '系统账号管理级别。'],
     ],
     sideEffects: '创建系统通知账号或机器人账号。',
-    limits: ['`nickName`、`faceURL` 和 `appMangerLevel` 必填。', '`appMangerLevel` 需使用服务端允许的系统账号级别。'],
+    limits: [
+      '`nickName`、`faceURL` 和 `appMangerLevel` 必填。',
+      '`appMangerLevel` 需使用服务端允许的系统账号级别。',
+    ],
   },
   {
     slug: 'update-notification-account',
@@ -515,7 +523,9 @@ const navigation = JSON.parse(await readFile(navigationPath, 'utf8'));
 const platformApiZh = JSON.parse(await readFile(platformApiZhPath, 'utf8'));
 
 const routesWithoutGeneratedUserApis = routes.filter((route) => !generatedPaths.has(route.path));
-const maxSourceIndex = Math.max(...routesWithoutGeneratedUserApis.map((route) => route.sourceIndex ?? 0));
+const maxSourceIndex = Math.max(
+  ...routesWithoutGeneratedUserApis.map((route) => route.sourceIndex ?? 0),
+);
 const maxNavOrder = Math.max(...routesWithoutGeneratedUserApis.map((route) => route.navOrder ?? 0));
 
 const newRoutes = [];
@@ -628,7 +638,11 @@ console.log(
 
 async function writeMdx(file, body) {
   await mkdir(dirname(resolve(root, file)), { recursive: true });
-  await writeFile(resolve(root, file), body, 'utf8');
+  await writeFile(
+    resolve(root, file),
+    body.replaceAll('/docs/chat/platform-api/v3', '/platform-api'),
+    'utf8',
+  );
 }
 
 function renderMdx(record, spec, localized) {
@@ -664,7 +678,9 @@ function renderBody(spec) {
     ['errCode', 'int', '业务错误码，0 表示成功。'],
     ['errMsg', 'string', '错误简要信息，成功时通常为空。'],
     ['errDlt', 'string', '错误详细信息，成功时通常为空。'],
-    ...(spec.responseData !== undefined ? [['data', Array.isArray(spec.responseData) ? 'array' : 'object', '接口返回数据。']] : []),
+    ...(spec.responseData !== undefined
+      ? [['data', Array.isArray(spec.responseData) ? 'array' : 'object', '接口返回数据。']]
+      : []),
     ...(spec.responseFields ?? []),
   ];
 

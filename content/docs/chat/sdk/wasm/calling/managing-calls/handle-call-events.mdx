@@ -1,17 +1,60 @@
 ---
 title: 'Handle call events'
-description: 'OpenIM WASM SDK guide for Handle call events.'
+description: 'Listen for WASM SDK call invitation, participant, and media-stream events in one place.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/managing-calls/handle-call-events'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+Register invitation lifecycle, participant connection, and media-stream listeners in a central call-state layer, and merge them into one local state object by `roomID`.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handlers = {
+  invitation: ({ data }) => upsertCall({ invitation: data, state: 'ringing' }),
+  accepted: ({ data }) => mergeCallEvent('accepted', data),
+  rejected: ({ data }) => mergeCallEvent('rejected', data),
+  cancelled: ({ data }) => mergeCallEvent('cancelled', data),
+  timeout: ({ data }) => mergeCallEvent('timeout', data),
+  acceptedByOtherDevice: ({ data }) => mergeCallEvent('accepted-by-other-device', data),
+  rejectedByOtherDevice: ({ data }) => mergeCallEvent('rejected-by-other-device', data),
+  hangUp: ({ data }) => finishCall(getCallRoomID(data)),
+  participantConnected: ({ data }) => addParticipant(data),
+  participantDisconnected: ({ data }) => removeParticipant(data),
+  streamChanged: ({ data }) => updateParticipantStream(data),
+};
+
+openimsdk.on(CbEvents.OnReceiveNewInvitation, handlers.invitation);
+openimsdk.on(CbEvents.OnInviteeAccepted, handlers.accepted);
+openimsdk.on(CbEvents.OnInviteeRejected, handlers.rejected);
+openimsdk.on(CbEvents.OnInvitationCancelled, handlers.cancelled);
+openimsdk.on(CbEvents.OnInvitationTimeout, handlers.timeout);
+openimsdk.on(CbEvents.OnInviteeAcceptedByOtherDevice, handlers.acceptedByOtherDevice);
+openimsdk.on(CbEvents.OnInviteeRejectedByOtherDevice, handlers.rejectedByOtherDevice);
+openimsdk.on(CbEvents.OnHangUp, handlers.hangUp);
+openimsdk.on(CbEvents.OnRoomParticipantConnected, handlers.participantConnected);
+openimsdk.on(CbEvents.OnRoomParticipantDisconnected, handlers.participantDisconnected);
+openimsdk.on(CbEvents.OnStreamChange, handlers.streamChanged);
+
+function removeCallListeners() {
+  openimsdk.off(CbEvents.OnReceiveNewInvitation, handlers.invitation);
+  openimsdk.off(CbEvents.OnInviteeAccepted, handlers.accepted);
+  openimsdk.off(CbEvents.OnInviteeRejected, handlers.rejected);
+  openimsdk.off(CbEvents.OnInvitationCancelled, handlers.cancelled);
+  openimsdk.off(CbEvents.OnInvitationTimeout, handlers.timeout);
+  openimsdk.off(CbEvents.OnInviteeAcceptedByOtherDevice, handlers.acceptedByOtherDevice);
+  openimsdk.off(CbEvents.OnInviteeRejectedByOtherDevice, handlers.rejectedByOtherDevice);
+  openimsdk.off(CbEvents.OnHangUp, handlers.hangUp);
+  openimsdk.off(CbEvents.OnRoomParticipantConnected, handlers.participantConnected);
+  openimsdk.off(CbEvents.OnRoomParticipantDisconnected, handlers.participantDisconnected);
+  openimsdk.off(CbEvents.OnStreamChange, handlers.streamChanged);
+}
+```
+
+This page is the sole canonical reference for the 11 call events above. Combine `roomID` with the user ID when updating participant state. Do not merge by event order, display name, or array index. Call `removeCallListeners()` when the user logs out, the active account changes, or the call-state layer is destroyed.

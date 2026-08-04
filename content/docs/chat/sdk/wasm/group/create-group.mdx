@@ -1,17 +1,49 @@
 ---
 title: 'Create a group'
-description: 'OpenIM WASM SDK guide for Create a group.'
+description: 'Create a group with an initial owner, administrators, and members.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/create-group'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+`createGroup()` accepts a group profile together with initial members, administrators, and owner settings.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `memberUserIDs` | `string[]` | Yes | Initial member user IDs. |
+| `adminUserIDs` | `string[]` | No | Initial administrator user IDs. |
+| `ownerUserID` | `string` | No | Group owner user ID. Defaults to the current user when omitted. |
+| `groupInfo` | `Partial<GroupItem>` | Yes | Initial group profile. |
+| `groupInfo.groupName` | `string` | No | Group name. Provide it when creating a group that will be displayed. |
+| `groupInfo.groupType` | `GroupType` | No | Group type. Use `GroupType.WorkingGroup` for a normal group chat. |
+| `groupInfo.faceURL` | `string` | No | Group avatar URL. |
+
+Members, administrators, and the owner must not overlap. Deduplicate the lists and check their intersections before calling the SDK.
+
+```ts
+import { GroupType } from '@openim/wasm-client-sdk';
+
+const { data: group } = await openimsdk.createGroup({
+  memberUserIDs: ['user-003', 'user-004'],
+  adminUserIDs: ['user-002'],
+  ownerUserID: currentUserID,
+  groupInfo: {
+    groupName: 'Project discussion',
+    groupType: GroupType.WorkingGroup,
+    faceURL: 'https://example.com/group.png',
+  },
+});
+```
+
+## Return result
+
+After the Promise succeeds, `data` is the new group's `GroupItem`. Use `groupID`, `groupName`, and `faceURL` immediately to open the group profile or group chat page. See [Get joined groups by page](/sdk/wasm/group/retrieving-groups/get-joined-group-list-page) for complete fields.
+
+Merge joined-group list increments through `OnJoinedGroupAdded`; see [Group overview](/sdk/wasm/group/overview-group) for the complete listener.

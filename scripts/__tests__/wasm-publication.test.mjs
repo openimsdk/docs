@@ -35,8 +35,8 @@ test('recognizes active WASM routes even when their audit record is missing', ()
 
 test('exposes locale publication state from the audit manifest', () => {
   assert.equal(isWasmLocalePublished(overview, 'zh'), true);
-  assert.equal(isWasmLocalePublished(overview, 'en'), false);
-  assert.deepEqual(getPublishedWasmLocales(overview), ['zh']);
+  assert.equal(isWasmLocalePublished(overview, 'en'), true);
+  assert.deepEqual(getPublishedWasmLocales(overview), ['en', 'zh']);
 });
 
 test('uses a neutral Chinese pending-review body', () => {

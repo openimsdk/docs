@@ -1,17 +1,75 @@
 ---
 title: 'Start a one-to-one call'
-description: 'OpenIM WASM SDK guide for Start a one-to-one call.'
+description: 'Start a one-to-one audio or video call with the WASM SDK.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-23'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/managing-calls/start-single-call'
-generatedBy: 'sync-refactored-sdk-english-skeletons'
 ---
 
-## Overview
+`signalingInvite()` starts a one-to-one call. The WASM SDK handles call signaling; your application still needs to connect to a real-time audio and video engine with the returned room credentials.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `RtcInvite` | Yes | Invitation for this call. |
+| `invitation.inviterUserID` | `string` | Yes | ID of the currently signed-in user. |
+| `invitation.inviteeUserIDList` | `string[]` | Yes | Invitee IDs. For a one-to-one call, include only the other user. |
+| `invitation.groupID` | `string` | Yes | Pass an empty string for a one-to-one call. |
+| `invitation.roomID` | `string` | Yes | Unique room identifier for this call and the merge key for subsequent state. |
+| `invitation.timeout` | `number` | Yes | Invitation timeout in seconds. |
+| `invitation.mediaType` | `string` | Yes | Application-defined media type, usually `audio` or `video`. |
+| `invitation.sessionType` | `SessionType` | Yes | Use `SessionType.Single` for a one-to-one call. |
+| `invitation.platformID` | `Platform` | Yes | Current client platform. Use `Platform.Web` in a web application. |
+| `invitation.customData` | `string` | No | Business extension string carried with the invitation. |
+| `invitation.initiateTime` | `number` | No | Invitation start time. The signaling flow normally maintains it, so it does not need to be set manually. |
+| `invitation.busyLineUserIDList` | `string[]` | No | Busy-user list. Normally omit it when starting a new invitation. |
+| `offlinePushInfo` | `OfflinePush` | No | Push content used when the invitee is offline. |
+| `offlinePushInfo.title` | `string` | Conditional | Push title, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.desc` | `string` | Conditional | Push body, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.ex` | `string` | Conditional | Extension string, required when `offlinePushInfo` is provided. Pass an empty string if unused. |
+| `offlinePushInfo.iOSPushSound` | `string` | Conditional | iOS push sound, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditional | Whether to update the iOS badge, required when `offlinePushInfo` is provided. |
+
+```ts
+import { Platform, SessionType } from '@openim/wasm-client-sdk';
+
+const { data: roomCredentials } = await openimsdk.signalingInvite({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: [peerUserID],
+    customData: JSON.stringify({ source: 'contact-card' }),
+    groupID: '',
+    roomID: crypto.randomUUID(),
+    timeout: 30,
+    mediaType: 'video',
+    sessionType: SessionType.Single,
+    platformID: Platform.Web,
+  },
+  offlinePushInfo: {
+    title: 'Video call',
+    desc: 'You have received a video call invitation',
+    ex: '',
+    iOSPushSound: 'default',
+    iOSBadgeCount: true,
+  },
+});
+```
+
+## Return result
+
+When the Promise resolves, `data` is `RtcInviteResults`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `roomID` | `string` | Media room ID for this call. It should match the room in the signaling invitation. |
+| `token` | `string` | Short-lived credential for joining the media room. Keep it in memory only. |
+| `liveURL` | `string` | Room connection URL returned by the media service. Whether it is used depends on the integrated media engine. |
+| `busyLineUserIDList` | `string[]` (optional) | IDs of users who could not enter the invitation flow because they were busy. |
+
+Connect to the media room only after obtaining a valid `token` and `roomID`. Promise completion means the signaling request completed and room credentials were returned; it does not mean the other user has answered. For subsequent state, see [Call events](/sdk/wasm/calling/managing-calls/handle-call-events).

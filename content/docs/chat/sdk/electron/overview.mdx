@@ -1,23 +1,62 @@
 ---
-title: 'OpenIM SDK for Electron'
-description: 'Electron hub for WASM shared guides plus FFI-only init, full-path media, and log upload differences.'
+title: 'OpenIM Electron SDK overview'
+description: 'Use WASM documentation as the shared API baseline and understand how Electron WASM and FFI integrations differ.'
 product: 'sdk'
 context: 'chat/sdk/electron'
 template: 'overview'
-status: 'draft'
-lastUpdated: '2026-07-21'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'electron'
 sourcePath: '/sdk/electron/overview'
 ---
 
-## Overview
+The Electron SDK supports both WASM and FFI integration. Shared user, conversation, group, message, call, and event capabilities are documented in the [WASM SDK documentation](/sdk/wasm/overview). This page explains how to choose an integration and covers the **additional FFI APIs and login-parameter differences compared with WASM**.
 
-The English version of this OpenIM Electron SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Choose an SDK integration
 
-## Next steps
+| Integration | Suitable scenarios | Documentation |
+| ----------- | ------------------ | ------------- |
+| WASM | Browser pages, Electron renderer processes, WebViews, and UIs shared with a Web client | Follow the [WASM SDK](/sdk/wasm/overview) integration and business guides directly. |
+| FFI | Packaged desktop applications, native runtimes, and applications that need absolute local file paths or a separate `initSDK` lifecycle | Use the Electron-specific pages in this hub together with the shared WASM business pages. |
+| WASM + FFI | Products that support both Web and packaged Electron distributions | Wrap a common application-layer interface and select the implementation at runtime. Do not sign the same user in through two SDK instances. |
 
-- [Authenticate and init](/sdk/electron/getting-started/authenticate-and-init)
-- [Create media from full path](/sdk/electron/message/create-media-from-full-path)
-- [Upload logs](/sdk/electron/logger/upload-logs)
-- [WASM SDK overview](/sdk/wasm/overview)
+## Integration differences for FFI
+
+The browser WASM package passes server addresses, platform information, and user credentials together in `login(InitAndLoginConfig)`. Electron FFI separates them into two calls:
+
+1. `initSDK(InitConfig)` configures `apiAddr`, `wsAddr`, `platformID`, `dataDir`, `systemType`, and logging options.
+2. `login({ userID, token })` submits only the current user's credentials.
+
+See [Authenticate and initialize](/sdk/electron/getting-started/authenticate-and-init) for complete parameters, examples, and `unInitSDK()`. Continue to follow [WASM authentication and session management](/sdk/wasm/getting-started/authenticate-and-manage-session) for shared connection, token, and forced-sign-out event handling.
+
+## Electron-specific FFI APIs
+
+| Capability                       | API                                                   | Documentation                                                                    |
+| -------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Authentication and lifecycle     | `initSDK` / `login` / `unInitSDK`                     | [Authenticate and initialize](/sdk/electron/getting-started/authenticate-and-init) |
+| Media from absolute local paths  | `createImageMessageFromFullPath` and related methods  | [Create media messages from full paths](/sdk/electron/message/create-media-from-full-path) |
+| Upload diagnostic logs           | `uploadLogs`                                          | [Upload logs](/sdk/electron/logger/upload-logs)                                  |
+
+Do not call these FFI-only methods from a browser or an Electron application using the WASM package. Continue to use the `*ByFile` and `*ByURL` workflows documented for WASM when creating media messages.
+
+## Shared capabilities documented under WASM
+
+| Domain                | WASM entry point |
+| --------------------- | ---------------- |
+| Getting started       | [Integrate by runtime environment](/sdk/wasm/getting-started/environment-specific-implementation) and [Send your first message](/sdk/wasm/getting-started/send-first-message) |
+| Users                 | [User overview](/sdk/wasm/user/overview-user) |
+| Conversations         | [Conversation overview](/sdk/wasm/conversation/overview-conversation) |
+| Groups                | [Group overview](/sdk/wasm/group/overview-group) |
+| Messages              | [Message overview](/sdk/wasm/message/overview-message) |
+| Audio and video calls | [Calling overview](/sdk/wasm/calling/overview-calling) |
+| Events                | [Event overview](/sdk/wasm/events/overview-events) |
+| Logging levels        | [Logging](/sdk/wasm/logger). Use the Electron-specific page to upload logs. |
+
+## Desktop considerations
+
+- When supporting both Web and Electron, define an application-level IM adapter first and choose WASM or FFI for the current runtime.
+- For a WASM integration, verify that `openIM.wasm`, `sql-wasm.wasm`, and `wasm_exec.js` remain accessible after packaging.
+- For an FFI integration, account for desktop packaging, permissions, `dataDir`, and upgrade strategy instead of applying browser WASM resource paths.
+- If both the main and renderer processes need IM state, define the IPC boundary and session ownership before implementation to avoid competing instances.
+- Never write user tokens to a preload script or main-process logs.

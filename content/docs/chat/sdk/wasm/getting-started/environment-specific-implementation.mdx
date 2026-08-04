@@ -1,16 +1,208 @@
 ---
 title: 'Environment-specific implementation'
-description: 'OpenIM WASM SDK guide for Environment-specific implementation.'
+description: 'Choose the appropriate OpenIM SDK for browsers, SSR frameworks, Electron, and Mini Program runtimes, and understand the boundaries of each environment.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-03'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/getting-started/environment-specific-implementation'
 ---
 
-## Overview
+## Choose a runtime
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+Before integrating an OpenIMSDK Web client, identify the target runtime. Browser pages, SSR frameworks, Electron applications, and Mini Program environments use the same user, conversation, message, group, and event models. However, their SDK distributions, asset-loading methods, local storage capabilities, and runtime lifecycles differ.
+
+This page helps you choose the right SDK distribution and configure the browser WASM SDK assets, initialization, and runtime constraints. For message, conversation, group, and event APIs, see the corresponding WASM SDK feature pages.
+
+## Compare runtime environments
+
+| Runtime | Recommended SDK distribution | Intended use |
+| --- | --- | --- |
+| Web browser | WASM SDK | Browser applications that need a local cache, conversation list, message history, and the full Web client feature set. |
+| SSR framework | WASM SDK, initialized only on the client | Browser pages built with Next.js, Nuxt, Remix, and similar frameworks. The server supplies only the credentials and service addresses required for sign-in. |
+| Electron Web or renderer layer | Electron SDK, WASM distribution | Electron renderer processes, WebViews, and other browser-style pages. Integration is similar to the Web. |
+| Electron native desktop layer | Electron SDK, FFI distribution | Desktop packaging, native runtime capabilities, and integration with the desktop-native runtime layer. |
+| Hybrid Web and Electron product | WASM and FFI | Products that support both a Web client and a packaged Electron application. Plan for both distributions and expose a unified application-layer adapter. |
+| Mini Program or lightweight Web | Mini Program SDK | Mini Programs and lightweight Web scenarios. It does not provide local message storage and is suitable when local caching is unnecessary. |
+| React Native | React Native SDK | React Native is not a WASM runtime. Use the React Native SDK or a native bridge. |
+
+## Prerequisites
+
+See [Before you start](/sdk/wasm/getting-started/before-you-start) for shared prerequisites such as service addresses, user tokens, and browser assets. Before publishing assets and initializing the SDK, confirm that:
+
+- The OpenIMServer HTTP API address, `apiAddr`, and WebSocket address, `wsAddr`, are reachable from the target client.
+- The current user has been bound to an OpenIMSDK user by your application backend and has a valid `userID` and token.
+- The Web application or Electron renderer can access `openIM.wasm`, `sql-wasm.wasm`, and `wasm_exec.js`.
+
+Then check the requirements specific to the target runtime:
+
+- SSR frameworks: initialize the SDK from a client component, browser lifecycle, or dynamic import.
+- Electron: separate the responsibilities of the Web or renderer layer from the native desktop layer. Products that support both Web and packaged desktop clients normally need both WASM and FFI distributions.
+- Mini Program SDK: make sure the product can operate without local message storage.
+
+## Publish the runtime assets
+
+Install the browser WASM SDK with pnpm and copy its runtime assets during your build or deployment. The following example publishes them at the root of the site's static assets:
+
+```bash
+pnpm add @openim/wasm-client-sdk@3.8.5-hotfix.0
+cp -R node_modules/@openim/wasm-client-sdk/assets/* public/
+```
+
+If the application is deployed behind a CDN, under a subpath, or inside an Electron package, replace the example paths with URLs that are actually accessible in that runtime.
+
+```html
+<script src="/wasm_exec.js"></script>
+```
+
+## Initialize the browser SDK
+
+A browser application normally creates one SDK instance and reuses it throughout the current browser session. Register the connection and token events once as described in [Authenticate and manage a session](/sdk/wasm/getting-started/authenticate-and-manage-session), then call `login()`. This page shows only environment initialization and does not repeat the event listeners.
+
+```ts
+import { getSDK, Platform } from '@openim/wasm-client-sdk';
+
+const openimsdk = getSDK({
+  coreWasmPath: '/openIM.wasm',
+  sqlWasmPath: '/sql-wasm.wasm',
+});
+
+await openimsdk.login(
+  {
+    userID,
+    token,
+    platformID: Platform.Web,
+    apiAddr,
+    wsAddr,
+  }
+);
+```
+
+The `login()` Promise succeeding and `OnConnectSuccess` arriving are separate stages. The former means that the sign-in request has completed; the latter means that the connection is ready for subsequent business APIs. The authentication page owns the complete handlers, error payloads, and cleanup code.
+
+Use `Platform.Web` for browser sign-in instead of entering a numeric platform value directly. If Electron or Mini Program clients participate in multi-device session eviction, online status, or client-type statistics, choose the appropriate `Platform` value according to the product's client types and the server's multi-device sign-in policy.
+
+## Implement each runtime
+
+### Web browsers
+
+For browsers, focus on assets, connectivity, and the local cache:
+
+- `wasm_exec.js`, `openIM.wasm`, and `sql-wasm.wasm` must be accessible from production paths, not only from the local development server.
+- The OpenIMServer HTTP API and WebSocket addresses must allow access from the current page and correctly handle HTTPS/WSS mixed-content restrictions.
+- The SDK local cache depends on browser storage. Do not read or write the SDK's IndexedDB or sql.js internals directly. Synchronize data into your application state through SDK APIs and events.
+- When the browser reconnects to the network, the page changes between foreground and background, or the application regains focus, call `networkStatusChanged()` or `setAppBackgroundStatus()` as appropriate for your application state.
+
+```ts
+const handleOnline = () => {
+  void openimsdk.networkStatusChanged();
+};
+
+const handleVisibilityChange = () => {
+  void openimsdk.setAppBackgroundStatus(document.hidden);
+};
+
+window.addEventListener('online', handleOnline);
+document.addEventListener('visibilitychange', handleVisibilityChange);
+
+function removeBrowserLifecycleListeners() {
+  window.removeEventListener('online', handleOnline);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+}
+```
+
+Call `removeBrowserLifecycleListeners()` when destroying the SDK scope or unmounting the application so that remounting does not report browser lifecycle changes more than once.
+
+### SSR frameworks
+
+Next.js, Nuxt, Remix, and similar frameworks execute some code on the server. Initialize the OpenIM WASM SDK only in a browser context.
+
+We recommend wrapping SDK creation in a client-side function and loading the package through a dynamic import:
+
+```ts
+import type { getSDK as createOpenIMClientSDK } from '@openim/wasm-client-sdk';
+
+let openimsdk: ReturnType<typeof createOpenIMClientSDK> | undefined;
+
+export async function getOpenIMClientSDK() {
+  if (typeof window === 'undefined') {
+    throw new Error('OpenIM WASM SDK must be initialized in the browser.');
+  }
+
+  if (!openimsdk) {
+    const { getSDK } = await import('@openim/wasm-client-sdk');
+    openimsdk = getSDK({
+      coreWasmPath: '/openIM.wasm',
+      sqlWasmPath: '/sql-wasm.wasm',
+    });
+  }
+
+  return openimsdk;
+}
+```
+
+Do not import and create an SDK instance in a React Server Component or server-side API route. The server is responsible only for creating users, issuing tokens, and returning sign-in parameters such as `apiAddr` and `wsAddr`.
+
+### Electron
+
+The Electron SDK has WASM and FFI distributions. Use WASM in an Electron renderer process, WebView, or browser-style page. Use FFI in the native desktop runtime layer. Choose the distribution based on the responsibilities of each runtime layer; use both when necessary.
+
+If one product supports both a Web client and a packaged Electron application, you normally need to plan for both WASM and FFI and expose a common business interface through an application-layer adapter.
+
+When implementing Electron, verify that:
+
+- With the WASM distribution, publish the WASM assets as you would for a browser and make sure the renderer can load scripts, WASM, WebSocket, HTTP API, and any Worker resources.
+- With the FFI distribution, do not reuse browser WASM asset paths. Follow the installation, packaging, permission, and runtime requirements of the Electron FFI SDK.
+- When using WASM and FFI together, decide which runtime layer owns sign-in, connectivity, message events, and local state so that multiple SDK instances do not compete for the same user session.
+- Do not write tokens, service addresses, or user state to main-process logs, hard-coded preload scripts, or locations readable by untrusted pages.
+- Desktop platform IDs may need to distinguish Windows, macOS, Linux, or Web clients. Follow the server's multi-device sign-in policy.
+
+### Mini Programs
+
+The Mini Program SDK can also be used in lightweight Web scenarios. It does not provide local message storage, making it suitable for customer-service entry points, campaign pages, admin pages, temporary conversations, and other lightweight experiences that do not depend on a local history cache.
+
+Before integrating it, confirm that:
+
+- Request, WebSocket, and upload domains are configured on the target Mini Program platform.
+- The application does not depend on the SDK's local message database, offline history cache, or local conversation persistence.
+- File messages use the target platform's supported file picker, temporary file paths, and upload APIs.
+- After a network change, entering the background, or process reclamation by the platform, restore the connection and synchronize data according to the platform lifecycle.
+- When method-level APIs match the WASM documentation, you can continue to consult the WASM feature pages. Follow the Mini Program SDK implementation for initialization, network adapters, and file uploads.
+
+## Unsupported environments
+
+React Native is not a browser WASM runtime. It does not provide the standard browser DOM, IndexedDB, or `wasm_exec.js` loading model, so do not use `@openim/wasm-client-sdk` directly as a mobile SDK.
+
+For a React Native client, start with the [React Native SDK overview](/sdk/react-native/overview) and use a mobile SDK or native bridge. Connection keepalive, push notifications, local caching, photo-library files, and background lifecycle handling require separate implementation.
+
+## Validate and troubleshoot
+
+- After a production build, the browser or Electron renderer can access `/wasm_exec.js`, `/openIM.wasm`, and `/sql-wasm.wasm` directly.
+- `login()` succeeds, and `CbEvents.OnConnectSuccess` has fired before you call message, conversation, or group APIs.
+- The connection state and conversation list recover after a page reload, network interruption and recovery, or tab foreground/background transition.
+- Test a packaged Electron installer, not only development mode.
+- For the Mini Program SDK, test requests, WebSocket connections, uploads, and background recovery, and confirm that the product does not depend on local message storage.
+
+## Common issues
+
+| Symptom | Possible cause | Resolution |
+| --- | --- | --- |
+| WASM assets return 404 | The `assets` directory was not copied to the production static directory, or a CDN/subpath rewrote the URL. | Copy the entire `assets` directory and use the browser Network panel to confirm that all three required assets are accessible. |
+| SSR reports `window is not defined` | The SDK was imported or instantiated during server rendering. | Move SDK initialization to a client component, browser lifecycle, or dynamically imported function. |
+| No successful connection after `login()` | `apiAddr`, `wsAddr`, the token, the platform ID, or network policy is incorrect. | Register connection events first, record `errCode`, `errMsg`, and the current user, then compare them with server logs. |
+| Electron works in development but fails after packaging | Production asset paths, CSP, or the WASM/FFI runtime boundary differs from development mode. | Inspect the packaged application's SDK distribution, asset paths, protocol, CSP, WebSocket, IPC boundary, and API permissions. |
+| Mini Program cannot connect or upload | The platform's allowed domains are not configured, or its file API differs from browser APIs. | Configure request, WebSocket, and upload domains in the platform console, and adapt file messages to the Mini Program's native file capabilities. |
+| Mini Program has no history after reload | The Mini Program SDK does not provide local message storage. | Reload the required data through the server or SDK queries, or use a client SDK that supports a local cache. |
+| Local cache behaves unexpectedly | Browser storage was cleared, private browsing restricts storage, or the application directly modified SDK internals. | Do not manipulate the SDK IndexedDB/sql.js data directly. Restore the UI through SDK APIs, events, and application state. |
+
+## Next steps
+
+- [Send your first message](/sdk/wasm/getting-started/send-first-message)
+- [User authentication](/sdk/wasm/getting-started/authenticate-and-manage-session)
+- [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages)
+- [Electron SDK overview](/sdk/electron/overview)
+- [Mini Program SDK overview](/sdk/miniprogram/overview)
+- [React Native SDK overview](/sdk/react-native/overview)

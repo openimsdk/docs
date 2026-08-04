@@ -1,21 +1,33 @@
-# Security notes
+# Security policy
 
-## Supported baseline
+## Supported version
 
-- Node.js 22.12 or newer.
-- Dependencies are pinned in `package-lock.json`.
-- React and React DOM are pinned to 19.2.7.
-- CI performs content validation, linting, TypeScript checks, and a production build.
-- Dependabot is configured to open weekly npm and GitHub Actions update pull requests.
+Security fixes are applied to the current `main` branch and to the production deployment built from it. This repository requires Node.js 22.12 or newer and uses `pnpm-lock.yaml` as the dependency lock source.
 
-## Known transitive audit item — 2026-06-24
+Before a public release, maintainers should run:
 
-`npm audit --omit=dev` reports a moderate PostCSS advisory (`GHSA-qx2v-qp2m-jg93`) through the private PostCSS copy bundled by Next.js 16.2.9. PostCSS 8.5.10 and newer contain the upstream fix, but the latest stable Next.js package used by this project still bundles an older private copy.
+```bash
+pnpm install --frozen-lockfile
+pnpm audit --prod
+pnpm check
+pnpm build
+```
 
-The current application does not accept, parse, or re-serialize user-supplied CSS, which is the affected usage pattern. Do not add such a feature without isolating and sanitizing the input. Upgrade Next.js when a compatible stable release ships with the patched PostCSS version, then remove this note after `npm audit --omit=dev` is clean.
+Dependabot checks npm and GitHub Actions dependencies weekly. Framework and documentation-tooling updates should be reviewed and validated with the full production build before merging.
 
-Do not run `npm audit fix --force` blindly: npm may propose a breaking framework downgrade or incompatible dependency graph.
+## Reporting a vulnerability
 
-## Reporting
+Please do not disclose a suspected vulnerability in a public issue, discussion, or pull request.
 
-Replace this section with the private security contact or disclosure process used by the OpenIM documentation team before publishing the repository.
+Report it privately through one of these channels:
+
+- [GitHub private security advisory](https://github.com/Bloomingg/openim-chat-docs-next/security/advisories/new)
+- Email: [contact@openim.io](mailto:contact@openim.io)
+
+Include the affected URL or component, reproduction steps, expected impact, and any suggested mitigation. Do not include production credentials, personal data, or secrets in the report.
+
+The maintainers will acknowledge the report, validate the impact, coordinate a fix, and publish an advisory when appropriate. Please allow time for remediation before public disclosure.
+
+## Scope
+
+This policy covers the documentation application and its build, routing, search, and content-processing code. Vulnerabilities in OpenIM Server or an OpenIM SDK should be reported through the corresponding OpenIM repository or the contact address above.

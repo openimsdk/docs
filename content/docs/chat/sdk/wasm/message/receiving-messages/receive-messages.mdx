@@ -1,16 +1,139 @@
 ---
 title: 'Receive messages'
-description: 'OpenIM WASM SDK guide for Receive messages.'
+description: 'Listen for online, offline, and online-only messages and merge them into conversations by clientMsgID.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-14'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/receiving-messages/receive-messages'
 ---
 
-## Overview
+A message view typically handles real-time messages, messages that arrive while the application is in the background, online-only messages, and history loaded when the user first opens a conversation. Incoming messages enter application state through `CbEvents`; history is loaded page by page for a `conversationID` through `getAdvancedHistoryMessageList()`.
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+Register event handlers on the same SDK instance. Before a component unmounts, the user logs out, or the active account changes, call `off()` with the same function references to prevent the same messages from being merged more than once.
+
+## Message types
+
+`CbEvents.OnRecvNewMessages` returns a `MessageItem[]`. Select the appropriate renderer for each message based on its content element or message type, including text, custom, @ mention, image, audio, video, and file messages.
+
+```ts
+function renderMessage(message: MessageItem) {
+  if (message.textElem) {
+    return renderTextMessage(message);
+  }
+
+  if (message.atTextElem) {
+    return renderMentionMessage(message);
+  }
+
+  if (message.customElem) {
+    return renderCustomMessage(message);
+  }
+
+  if (message.pictureElem || message.soundElem || message.videoElem || message.fileElem) {
+    return renderFileLikeMessage(message);
+  }
+
+  return renderUnsupportedMessage(message);
+}
+```
+
+A message event can include messages for conversations the current user does not have open. `MessageItem` does not directly contain `conversationID`. Derive or look up the target conversation from `sessionType`, `sendID`, `recvID`, and `groupID`, then deduplicate by `clientMsgID`.
+
+```ts
+function messagesForCurrentConversation(messages: MessageItem[]) {
+  return messages.filter(
+    (message) => getConversationIDForMessage(message) === conversationID
+  );
+}
+```
+
+### Image, audio, video, and file messages
+
+The WASM SDK represents images, audio, video, and ordinary files with different message elements. The receiving client does not upload these resources again. Read the existing URL, size, filename, duration, or snapshot fields from the message and render them according to your interface rules.
+
+To send multiple files in one action, an application commonly sends several file messages in sequence or sends a custom message containing a file-group payload. In either case, the receiving client should use each `MessageItem`'s `clientMsgID` as the stable key for rendering and state updates.
+
+## Event handlers
+
+`CbEvents.OnRecvNewMessages` is the primary new-message event for a chat view. In its handler, merge messages for the current conversation into the list and decide whether to scroll to the bottom based on the user's current scroll position.
+
+```ts
+function handleNewMessages({ data }: { data: MessageItem[] }) {
+  const messages = messagesForCurrentConversation(data);
+
+  if (messages.length === 0) {
+    return;
+  }
+
+  mergeMessagesByClientMsgID(messages);
+  scrollToLatestMessageIfNeeded();
+}
+
+openimsdk.on(CbEvents.OnRecvNewMessages, handleNewMessages);
+```
+
+After the application calls `setAppBackgroundStatus(true)` to enter the background, newly arrived messages generally use `CbEvents.OnRecvOfflineNewMessages` instead of the foreground `OnRecvNewMessages` event. Call `setAppBackgroundStatus(false)` when returning to the foreground. Handle these messages in the same way as real-time messages: filter for the current conversation, deduplicate by `clientMsgID`, and preserve chronological order. For foreground and background state calls, see [Authenticate and manage the session](/sdk/wasm/getting-started/authenticate-and-manage-session).
+
+```ts
+function handleOfflineMessages({ data }: { data: MessageItem[] }) {
+  mergeMessagesByClientMsgID(messagesForCurrentConversation(data));
+}
+
+openimsdk.on(CbEvents.OnRecvOfflineNewMessages, handleOfflineMessages);
+```
+
+When the sender sets `isOnlineOnly` to `true` in `sendMessage()` or `sendMessageNotOss()`, the receiving client obtains the message through `CbEvents.OnRecvOnlineOnlyMessages`. Online-only messages are not stored in the SDK's local message history and cannot be replayed through a history API. They are generally suitable only for transient prompts or business notifications; your product rules determine whether to display them in the current interface. For the send parameter, see [Send a message](/sdk/wasm/message/sending-messages/send-message).
+
+```ts
+function handleOnlineOnlyMessages({ data }: { data: MessageItem[] }) {
+  handleTransientMessages(messagesForCurrentConversation(data));
+}
+
+openimsdk.on(CbEvents.OnRecvOnlineOnlyMessages, handleOnlineOnlyMessages);
+
+function removeMessageListeners() {
+  openimsdk.off(CbEvents.OnRecvNewMessages, handleNewMessages);
+  openimsdk.off(CbEvents.OnRecvOfflineNewMessages, handleOfflineMessages);
+  openimsdk.off(CbEvents.OnRecvOnlineOnlyMessages, handleOnlineOnlyMessages);
+}
+```
+
+The SDK also exports the singular events `OnRecvNewMessage`, `OnRecvOfflineNewMessage`, and `OnRecvOnlineOnlyMessage`. New code should prefer the plural events, which return `MessageItem[]` and allow one consistent batch-merge flow. When maintaining an older deployment that emits only singular events, wrap `data` in an array and reuse the same deduplication logic. Do not listen to both the singular and plural variants, or the application may insert messages twice.
+
+This page is the canonical reference for all six receive-message events. The examples above use the three plural events. Their `data` values are all `MessageItem[]`; determine the target conversation from the message routing fields, then merge idempotently by target conversation and `clientMsgID`. Call `removeMessageListeners()` when the component unmounts, the user logs out, or the active account changes.
+
+When a conversation member revokes a message, the receiving client gets the update through `CbEvents.OnNewRecvMessageRevoked`. Update the corresponding bubble to a revoked state instead of removing it from the list. For the handler and cleanup implementation, see [Revoke a message](/sdk/wasm/message/managing-messages/revoke-a-message).
+
+## Load history when opening a conversation
+
+Events deliver only newly arrived messages. When a user first opens a conversation, pages upward, or needs to fill a gap created while disconnected, load a separate history snapshot. For pagination parameters, an example, and the `AdvancedGetMessageResult` structure, see [Load message history](/sdk/wasm/message/retrieving-messages/load-older-messages).
+
+A history query does not trigger a new-message event. Because an event and a paginated result can contain the same message, both paths must use the same `clientMsgID` deduplication rule.
+
+## Mark a group conversation as read
+
+After the user opens a group conversation and sees its latest messages, you can clear that conversation's unread count. This operation manages the conversation unread count and is not the same as a member-level group message read receipt. For the call and state synchronization flow, see [Mark a conversation as read](/sdk/wasm/conversation/managing-conversations/mark-conversation-read).
+
+For final synchronization of the conversation list and total unread badge, use the event handlers on [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list) and [Maintain the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count), respectively.
+
+If message events are registered in a global state layer, do not register the same global handlers again each time the user opens a group chat view. Load bounded history only when the view needs a current snapshot. After a new login, message changes are synchronized through events; do not treat an event as the completion callback for a particular history query or mark-as-read call.
+
+## Verify the receive flow
+
+- Send a message to the target `groupID` from another signed-in account and confirm that the current browser receives it through `CbEvents.OnRecvNewMessages`.
+- Confirm that the callback filters messages by the current group conversation's `conversationID` and renders each message only once after deduplication by `clientMsgID`.
+- Call `setAppBackgroundStatus(true)`, send another message from the other client, and confirm that the current client receives it through `CbEvents.OnRecvOfflineNewMessages`. Call `setAppBackgroundStatus(false)` after returning to the foreground.
+- Set `isOnlineOnly` to `true` on the sending client and confirm that the receiving client gets the message through `CbEvents.OnRecvOnlineOnlyMessages` and that the message does not enter local storage or history.
+- Revoke a group message and confirm that `CbEvents.OnNewRecvMessageRevoked` updates the corresponding `clientMsgID` to the revoked state on the receiving client.
+- After opening the group chat, call `markConversationMessageAsRead(conversationID)` and confirm that the conversation unread count and total unread badge update through their events.
+
+## Related pages
+
+- [Message overview](/sdk/wasm/message/overview-message)
+- [Send a message](/sdk/wasm/message/sending-messages/send-message)
+- [Load message history](/sdk/wasm/message/retrieving-messages/load-older-messages)
+- [Mark a conversation as read](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)

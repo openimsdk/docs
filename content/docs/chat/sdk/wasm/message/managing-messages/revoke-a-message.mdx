@@ -1,16 +1,65 @@
 ---
 title: 'Revoke a message'
-description: 'OpenIM WASM SDK guide for Revoke a message.'
+description: 'Revoke a sent message and synchronize its revoked state to conversation members.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/revoke-a-message'
 ---
 
-## Overview
+Use `revokeMessage()` when other conversation members should see that a message has been revoked. Do not substitute ordinary deletion, which affects only visibility for the current account. See [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages). To edit the content of a sent message, see [Modify a message](/sdk/wasm/message/managing-messages/modify-a-message).
 
-The English version of this OpenIM WASM SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Revoke one message
+
+`revokeMessage()` accepts the message's `conversationID` and target `clientMsgID`:
+
+```ts
+const { data } = await openimsdk.revokeMessage({
+  conversationID,
+  clientMsgID,
+});
+
+markMessageRevoked(data?.clientMsgID ?? clientMsgID);
+```
+
+After the Promise resolves, the calling client can update the message with the same `clientMsgID` to a revoked state. Online clients subsequently receive revocation information through `CbEvents.OnNewRecvMessageRevoked`. Update the corresponding message bubble by the event's `clientMsgID` instead of removing it from the list.
+
+OpenIMServer validates the sender, revocation time window, and message type. If the call fails, do not leave a locally fabricated revoked state in the interface.
+
+The SDK also retains `CbEvents.OnRecvMessageRevoked`, the legacy singular revocation event name. New code should prefer `OnNewRecvMessageRevoked`. When maintaining an existing deployment, first confirm which event it emits. If it emits only the legacy event, replace the registration below with the old name and reuse the same handler. Do not listen to both names and merge the same revocation twice.
+
+## Return result
+
+Promise completion means that the current revocation request has completed; it does not mean every client interface has already updated. Other clients merge the incremental change through the revocation event.
+
+## Listen for revocation events
+
+This page is the canonical reference for `OnNewRecvMessageRevoked`. For synchronized deletion, see [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages). For deleting every message sent by one group member, see [Delete all messages from a user in a group chat](/sdk/wasm/message/managing-messages/delete-user-messages).
+
+```ts
+import { CbEvents } from '@openim/wasm-client-sdk';
+
+const handleMessageRevoked = ({ data }) => {
+  markMessageRevoked(data.clientMsgID);
+};
+
+openimsdk.on(CbEvents.OnNewRecvMessageRevoked, handleMessageRevoked);
+
+function removeRevokeListener() {
+  openimsdk.off(CbEvents.OnNewRecvMessageRevoked, handleMessageRevoked);
+}
+```
+
+`OnNewRecvMessageRevoked` provides a `RevokedInfo` in `data`. Merge the message by `clientMsgID`. Call `removeRevokeListener()` when the component unmounts, the user logs out, or the active account changes. After a new login, revocation changes are synchronized through message events.
+
+## Related pages
+
+- [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages)
+- [Modify a message](/sdk/wasm/message/managing-messages/modify-a-message)
+- [Send a message](/sdk/wasm/message/sending-messages/send-message)
+- [Find messages by ID](/sdk/wasm/message/retrieving-messages/find-messages-by-id)
+- [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages)
