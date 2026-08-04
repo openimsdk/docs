@@ -4,10 +4,13 @@ import test from 'node:test';
 
 test('keeps the Netlify build and publish settings in version control', () => {
   const config = readFileSync('netlify.toml', 'utf8');
+  const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
   assert.match(config, /^\s*command = "pnpm build"$/m);
   assert.match(config, /^\s*publish = "\.next"$/m);
   assert.match(config, /^\s*NODE_VERSION = "22\.16\.0"$/m);
+  assert.match(config, /^\s*package = "@netlify\/plugin-nextjs"$/m);
+  assert.equal(packageJson.devDependencies['@netlify/plugin-nextjs'], '5.15.13');
   assert.equal(existsSync('pnpm-lock.yaml'), true);
   assert.equal(existsSync('package-lock.json'), false);
 });
