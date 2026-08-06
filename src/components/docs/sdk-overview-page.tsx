@@ -113,8 +113,13 @@ const copy = {
       },
       {
         title: 'Logging and diagnostics',
-        description: 'Capture errCode, errMsg, and operationID for client and server diagnostics.',
+        description: 'Capture error codes, messages, and the context needed for diagnosis.',
         href: '/sdk/wasm/logger',
+      },
+      {
+        title: 'Client SDK error codes',
+        description: 'Identify common client errors and choose the correct handling path.',
+        href: '/sdk/error-codes',
       },
     ],
   },
@@ -193,8 +198,13 @@ const copy = {
       },
       {
         title: '日志与诊断',
-        description: '记录 errCode、errMsg 和 operationID，串联客户端与服务端诊断。',
+        description: '记录错误码、错误信息和必要上下文，用于定位客户端与服务端问题。',
         href: '/sdk/wasm/logger',
+      },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
       },
     ],
   },
@@ -242,6 +252,11 @@ const mobileCopy = {
         description: '配置 SDK 日志，并保留错误码和错误信息用于诊断。',
         href: '/sdk/flutter/logger',
       },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
+      },
     ],
   },
   ios: {
@@ -284,6 +299,11 @@ const mobileCopy = {
         title: '日志与诊断',
         description: '配置 SDK 日志，并保留错误码和错误信息用于诊断。',
         href: '/sdk/ios/logger',
+      },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
       },
     ],
   },

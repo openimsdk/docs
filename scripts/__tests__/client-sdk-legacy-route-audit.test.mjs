@@ -19,7 +19,10 @@ test('tracks every replaced native SDK route with a deterministic disposition', 
     sources.add(record.source);
 
     if (record.disposition === 'merge') {
-      assert.ok(record.destination?.startsWith(`/sdk/${record.platform}/`));
+      assert.ok(
+        record.destination === '/sdk/error-codes' ||
+          record.destination?.startsWith(`/sdk/${record.platform}/`),
+      );
     } else {
       assert.equal(record.disposition, 'remove');
       assert.equal(record.destination, null);

@@ -299,7 +299,11 @@ for (const route of routes) {
         `Unsupported version in active scope: ${route.path} (${route.version ?? 'none'})`,
       );
     }
-    if (productScope.platforms?.length > 0 && !productScope.platforms.includes(route.platform)) {
+    if (
+      productScope.platforms?.length > 0 &&
+      route.platform &&
+      !productScope.platforms.includes(route.platform)
+    ) {
       errors.push(
         `Unsupported platform in active scope: ${route.path} (${route.platform ?? 'none'})`,
       );

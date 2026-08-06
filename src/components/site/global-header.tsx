@@ -122,7 +122,7 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
                         key={item.href}
                         onClick={closeSdkMenu}
                       >
-                        {item.label}
+                        {locale === 'zh' ? (item.labelZh ?? item.label) : item.label}
                       </Link>
                     ))}
                   </div>

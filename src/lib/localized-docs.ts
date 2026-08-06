@@ -42,6 +42,7 @@ const zhLabelOverrides: Record<string, string> = {
   'OpenIM Platform API': 'OpenIM 平台 API',
   'Platform API': '平台 API',
   'Server API': '服务端 API',
+  'SDKs · Common reference': 'SDKs · 公共参考',
 };
 
 export function getLocalizedDocPage(

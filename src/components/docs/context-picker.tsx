@@ -48,7 +48,7 @@ export function ContextPicker({
       .filter((option) => !current.platform || option.platform === current.platform)
       .map((option) => option.version),
   );
-  const hasPlatformSwitch = platforms.length > 0;
+  const hasPlatformSwitch = current.product === 'sdk' && !current.platform ? false : platforms.length > 0;
   const hasVersionSwitch = shouldShowVersion(current.version, versions);
   const platformSections = groupPlatforms(platforms, locale);
 

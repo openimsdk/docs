@@ -36,6 +36,7 @@ export function isSdkPlatformVisible(platform?: string | null): boolean {
 export type SdkPlatformItem = {
   href: string;
   label: string;
+  labelZh?: string;
   platform: string;
 };
 
@@ -66,6 +67,20 @@ export const sdkPlatformSections: SdkPlatformSection[] = [
         label: 'Mini Program',
         platform: 'miniprogram',
         href: '/sdk/miniprogram/overview',
+      },
+    ],
+  },
+  {
+    label: 'Common reference',
+    labelZh: '公共参考',
+    description: 'Shared by client SDKs',
+    descriptionZh: '各客户端 SDK 通用',
+    items: [
+      {
+        label: 'Error codes',
+        labelZh: '错误码',
+        platform: 'common',
+        href: '/sdk/error-codes',
       },
     ],
   },

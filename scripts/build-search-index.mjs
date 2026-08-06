@@ -34,7 +34,7 @@ export function buildSearchIndexes({
         indexes.en.push(createSearchRecord(route, sourcePage));
       }
       if (!route.locales || route.locales.includes('zh')) {
-        indexes.zh.push(createSearchRecord(route, sourcePage));
+        indexes.zh.push(createSearchRecord(route, manualZhPages.get(route.path) ?? sourcePage));
       }
       continue;
     }
@@ -82,7 +82,9 @@ export async function buildSearchIndexFiles(options = {}) {
       }),
     ),
   );
-  const clientSdkRoutes = routes.filter((route) => clientSdkContexts.has(route.contextKey));
+  const clientSdkRoutes = routes.filter(
+    (route) => clientSdkContexts.has(route.contextKey) || route.contextKey === 'chat/sdk/common',
+  );
   const manualEntries = await Promise.all(
     clientSdkRoutes.map(async (route) => {
       const path = resolve(root, route.contentFile.replace(/^content\/docs\//, 'content/zh/docs/'));

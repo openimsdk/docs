@@ -627,7 +627,10 @@ test('removed Sendbird capabilities do not have misleading redirects', () => {
       assert.equal(redirects.has(page.currentPath), false, page.currentPath);
     }
     if (page.disposition === 'merge') {
-      assert.ok(active.has(page.redirectTo), `${page.currentPath}: inactive redirect target`);
+      assert.ok(
+        active.has(page.redirectTo) || page.redirectTo === '/sdk/error-codes',
+        `${page.currentPath}: inactive redirect target`,
+      );
       assert.equal(redirects.get(page.currentPath), page.redirectTo, page.currentPath);
     }
   }

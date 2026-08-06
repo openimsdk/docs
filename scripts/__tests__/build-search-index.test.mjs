@@ -91,6 +91,27 @@ test('respects locale restrictions for non-SDK routes', () => {
   );
 });
 
+test('indexes the manual Chinese page for common client SDK references', () => {
+  const common = {
+    ...route('/sdk/error-codes', 'chat/sdk/common'),
+    platform: null,
+  };
+  const result = buildSearchIndexes({
+    routes: [common],
+    sourcePages: new Map([
+      [common.path, { body: 'English error codes', title: 'Client SDK error codes' }],
+    ]),
+    manualZhPages: new Map([
+      [common.path, { body: '客户端错误码', title: '客户端 SDK 错误码' }],
+    ]),
+    auditPages: new Map(),
+  });
+
+  assert.equal(result.en[0].title, 'Client SDK error codes');
+  assert.equal(result.zh[0].title, '客户端 SDK 错误码');
+  assert.match(result.zh[0].content, /客户端错误码/);
+});
+
 test('fails when a route source page is missing', () => {
   const nonWasm = route('/sdk/android/overview');
 

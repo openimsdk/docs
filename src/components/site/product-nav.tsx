@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDownIcon } from '@/src/components/ui/icons';
 import { sdkPlatformSections, type SdkPlatformSection } from '@/src/config/docs';
+import { localeFromPathname, toLocalizedPath, type Locale } from '@/src/lib/i18n';
 
 export function ProductNav() {
   const pathname = usePathname();
+  const locale = localeFromPathname(pathname);
 
   return (
     <div className="product-nav-shell">
@@ -14,7 +16,12 @@ export function ProductNav() {
         <Link className={active(pathname, '/', true)} href="/">
           Overview
         </Link>
-        <Dropdown active={pathname.includes('/sdk/')} sections={sdkPlatformSections} label="SDKs" />
+        <Dropdown
+          active={pathname.includes('/sdk/')}
+          label="SDKs"
+          locale={locale}
+          sections={sdkPlatformSections}
+        />
         <Link className={active(pathname, '/platform-api/')} href="/platform-api/overview">
           Server API
         </Link>
@@ -31,12 +38,14 @@ export function ProductNav() {
 
 function Dropdown({
   active: isActive,
-  sections,
   label,
+  locale,
+  sections,
 }: {
   active: boolean;
-  sections: SdkPlatformSection[];
   label: string;
+  locale: Locale;
+  sections: SdkPlatformSection[];
 }) {
   return (
     <details className={`product-dropdown ${isActive ? 'is-active' : ''}`}>
@@ -52,14 +61,18 @@ function Dropdown({
           >
             {section.label ? (
               <p className="sdk-menu-section-title">
-                <span>{section.label}</span>
-                {section.description ? <small>{section.description}</small> : null}
+                <span>{locale === 'zh' ? section.labelZh : section.label}</span>
+                {section.description ? (
+                  <small>
+                    {locale === 'zh' ? section.descriptionZh : section.description}
+                  </small>
+                ) : null}
               </p>
             ) : null}
             <div className="sdk-menu-section-items">
               {section.items.map((item) => (
-                <Link href={item.href} key={item.href}>
-                  {item.label}
+                <Link href={toLocalizedPath(item.href, locale)} key={item.href}>
+                  {locale === 'zh' ? (item.labelZh ?? item.label) : item.label}
                 </Link>
               ))}
             </div>

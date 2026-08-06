@@ -47,7 +47,7 @@ export function validateAuditManifest(manifest, context = {}) {
     if (!isWasmPath(page.currentPath)) {
       errors.push(`${path}: invalid currentPath`);
     }
-    if (!isWasmPath(page.targetPath)) {
+    if (!isWasmPath(page.targetPath) && page.targetPath !== '/sdk/error-codes') {
       errors.push(`${path}: invalid targetPath`);
     }
     if (!sourceKinds.includes(page.sourceKind)) {
@@ -129,8 +129,9 @@ function validateSources(sources, errors) {
 function validateDisposition(page, errors) {
   const path = page.currentPath ?? '(missing currentPath)';
   if (page.disposition === 'merge') {
-    if (!isWasmPath(page.redirectTo) || page.redirectTo === page.currentPath) {
-      errors.push(`${path}: merge requires redirectTo to a different WASM path`);
+    const sharedClientSdkTarget = page.redirectTo === '/sdk/error-codes';
+    if ((!isWasmPath(page.redirectTo) && !sharedClientSdkTarget) || page.redirectTo === page.currentPath) {
+      errors.push(`${path}: merge requires redirectTo to a different published SDK path`);
     }
   }
 

@@ -13,10 +13,18 @@ export function buildClientSdkLegacyRedirectEntries({
       source: source.replace('/sdk/wasm', prefix),
       destination: destination.replace('/sdk/wasm', prefix),
     }))
-    .filter(({ source, destination }) => source !== destination && activePaths.has(destination));
+    .filter(
+      ({ source, destination }) =>
+        source !== destination &&
+        (activePaths.has(destination) || destination === '/sdk/error-codes'),
+    );
   const unique = new Map();
   for (const entry of [...mapped, ...aliases]) {
-    if (!entry.source.startsWith(`${prefix}/`) || !activePaths.has(entry.destination)) continue;
+    if (
+      !entry.source.startsWith(`${prefix}/`) ||
+      (!activePaths.has(entry.destination) && entry.destination !== '/sdk/error-codes')
+    )
+      continue;
     unique.set(entry.source, entry);
   }
   return [...unique.values()].sort((a, b) => a.source.localeCompare(b.source));
