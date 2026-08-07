@@ -1896,1028 +1896,356 @@
     "content": "OpenIM iOS SDK logs help diagnose initialization, connection, and business API issues. Development builds can emit detailed information. Production builds should reduce log volume and must avoid recording tokens, message bodies, file URLs, or private user fields. Configure logging during initialization Logging options belong to OIMInitConfig and must be set before initSDKWithConfig:... : OIMInitConfig config = OIMInitConfig new ; config.platform = iPhone; config.apiAddr = apiAddress; config.wsAddr = websocketAddress; config.dataDir = dataDirectory; config.logLevel = 4; config.isLogStandardOutput = YES; config.logFilePath = logDirectory; config.systemType = @\"ios\"; Parameters | Field | Type | Description | | | | | | logLevel | NSInteger | The SDK log level. The default is 6 ; follow the conventions of the SDK version in use. | | isLogStandardOutput | BOOL | Whether to emit standard SDK logs. | | logFilePath | NSString | Optional directory for log files. | | systemType | NSString | System type label written into logs. | Do not leave the most verbose logging enabled indefinitely in production. Keep the log directory within an app writable location and manage its capacity, retention period, and privacy requirements. Write application diagnostic logs To include application context in SDK logs, call: OIMManager manager logs: NSString stringWithUTF8String: FILE .lastPathComponent line: LINE msgs:@\"send message failed\" err:errorMessage keyAndValues:@ @\"conversationID\", conversationID, @\"clientMsgID\", clientMsgID logLevel:2 ; Include only non sensitive identifiers needed for diagnosis in keyAndValues . Never record access tokens, complete message content, or raw file URLs. Trace a call with operationID Public Objective C business selectors do not require your app to pass an operationID . The SDK generates identifiers for call chains. To obtain a new chain ID for application diagnostics, call: NSString operationID = OIMManager manager operationId ; operationID is only for log correlation. It is not a user identity, authorization credential, business idempotency key, conversationID , or clientMsgID . Use a new value for each independent call chain. To correlate a multi step business flow, use a separate trace ID defined by your application. Upload logs After the user has explicitly agreed to submit diagnostic information, upload the SDK logs: OIMManager manager uploadLogsWithProgress:^ NSInteger saveBytes, NSInteger currentBytes, NSInteger totalBytes self updateLogUploadCurrentBytes:currentBytes totalBytes:totalBytes ; line:2000 ex:@\"support ticket 42\" onSuccess:^ NSString Nullable data self showLogUploadCompleted ; onFailure:^ NSInteger code, NSString message self showLogUploadError:code message:message ; ; The progress callback reports saved, currently processed, and total bytes in that order. Explain the collection scope before uploading, and follow your product's privacy, consent, and retention policies."
   },
   {
-    "path": "/sdk/android/channel/moderating-a-channel/freeze-and-unfreeze-a-channel",
-    "title": "Freeze and unfreeze a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Freeze and unfreeze a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/overview",
+    "title": "OpenIM Android SDK overview",
+    "description": "Integrate users, conversations, groups, messages, calling signals, and events into a native Android application with OpenIM Android SDK.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel moderating-a-channel freeze-and-unfreeze-a-channel",
-    "content": ""
+    "keywords": "sdk android v4 sdk android overview",
+    "content": "OpenIM Android SDK brings OpenIMSDK capabilities to native Android applications. Choose a domain below to open its documentation. Documentation navigation | Domain | Content | | | | | Getting started /sdk/android/getting started/environment specific implementation | Integrate the SDK, configure the Android project, authenticate, manage the connection lifecycle, and send the first message. | | Users and relationships /sdk/android/user/overview user | User profiles, online status, friends, friend applications, and blacklist. | | Conversations /sdk/android/conversation/overview conversation | Conversation queries, drafts, unread counts, receive options, burn after reading settings, hiding, and deletion. | | Groups /sdk/android/group/overview group | Group profiles, members, applications, permissions, mute settings, and group events. | | Messages /sdk/android/message/overview message | Message creation, sending, receiving, history, search, deletion, revocation, and read receipts. | | File uploads /sdk/android/file uploads/upload file | Standalone file uploads and upload progress. | | Audio and video calls /sdk/android/calling/overview calling | Invitations, acceptance, rejection, cancellation, hangup, room credentials, and custom signaling. | | Events /sdk/android/events/overview events | Manager listeners, connection state, and data events. | | Logging /sdk/android/logger | SDK logging configuration and troubleshooting. |"
   },
   {
-    "path": "/sdk/android/channel/overview-channel",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/getting-started/before-you-start",
+    "title": "Before you start",
+    "description": "Prepare OpenIMServer, user credentials, and the Android project before initializing, authenticating, or sending messages.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel overview-channel",
-    "content": ""
+    "keywords": "sdk android v4 sdk android getting-started before-you-start",
+    "content": "Before integrating OpenIMClientSDK into a native Android application, prepare an accessible OpenIMServer deployment, a trusted user authentication flow, and an Android project that satisfies the SDK build requirements. These prerequisites apply to both Authenticate and manage a session /sdk/android/getting started/authenticate and manage session and Send your first message /sdk/android/getting started/send first message . Prepare OpenIMServer If OpenIMServer is not yet available, follow the Docker deployment guide /docs/guides/quick deployment/docker . Confirm that both physical devices and emulators can reach these endpoints: | Field | Description | | | | | apiAddr | OpenIMServer HTTP API endpoint used for login, synchronization, and resource requests. | | wsAddr | OpenIMServer WebSocket endpoint used for the persistent connection and real time events. | Do not validate the endpoints only from the development computer. localhost inside an Android emulator refers to the emulator itself, so it cannot directly access services running locally on the development computer. When OpenIMServer runs on the development computer, map the API and WebSocket ports to the emulator first: adb reverse tcp:10002 tcp:10002 adb reverse tcp:10001 tcp:10001 After mapping, the emulator can use http://127.0.0.1:10002 as apiAddr and ws://127.0.0.1:10001 as wsAddr . Replace the port numbers with the ports that the development computer actually listens on, and confirm that adb is connected to the target emulator before running the commands. Production applications should use HTTPS and WSS, with DNS, TLS certificates, firewalls, reverse proxies, and WebSocket upgrades verified from a physical device. Prepare the user and token userID identifies an OpenIMSDK user, while the token authenticates that user. A trusted backend must create or associate users, issue tokens, and enforce application permissions. The Android application must never store an administrator token, secret, or other server side credential. For the backend flow, see Prepare to use the Platform API /platform api/prepare to use api and Issue a session token /platform api/user/managing session tokens/issue a session token . After authenticating the application account, the backend should return only the following data needed for SDK login: | Data | Description | | | | | userID | The current user's OpenIM user ID. | | token | The login token associated with that user. | | apiAddr | The OpenIMServer HTTP API endpoint. | | wsAddr | The OpenIMServer WebSocket endpoint. | The userID must correspond to the token. The client must not accept an arbitrary user ID and then issue, assemble, or exchange an administrator token. Prepare the Android project Before integration, verify that the Android project meets the following requirements: The application uses minSdk 21 or later, Java 8 compiler options, and compileSdk 36 or later. The application manifest declares android.permission.INTERNET and permits the SDK to inspect network state. An application private persistent data directory is available, such as a dedicated directory under Application.getFilesDir . Do not store the SDK database in a temporary cache or shared storage. Physical devices can reach apiAddr , wsAddr , and message media domains. The release package covers the target device ABI; verify the native ABIs included in the actual delivery package. Product behavior is defined for network recovery, foreground and background transitions, token failure, forced logout, and multi device login. For dependencies and manifest entries, see Integrate for Android /sdk/android/getting started/environment specific implementation . For SDK initialization and authentication, see Authenticate and manage a session /sdk/android/getting started/authenticate and manage session . Continue the integration Complete Authenticate and manage a session /sdk/android/getting started/authenticate and manage session first. After the login callback succeeds and OnConnListener.onConnectSuccess arrives, verify the messaging path with Send your first message /sdk/android/getting started/send first message ."
+  },
+  {
+    "path": "/sdk/android/getting-started/environment-specific-implementation",
+    "title": "Integrate for Android",
+    "description": "Add OpenIM Android SDK dependencies and network permissions to an Android project.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android getting-started environment-specific-implementation",
+    "content": "This page covers Android project dependencies and permissions only. For SDK initialization, connection listeners, and sign in, see Authenticate and manage a session /sdk/android/getting started/authenticate and manage session . Add SDK dependencies Add the dependencies to the application module's build.gradle : dependencies implementation 'io.openim:android sdk:latest@aar' implementation 'io.openim:core sdk:latest@aar' implementation 'com.google.code.gson:gson:2.9.0' Configure the manifest The application needs network access: Next steps Authenticate and manage a session /sdk/android/getting started/authenticate and manage session Send your first message /sdk/android/getting started/send first message"
+  },
+  {
+    "path": "/sdk/android/getting-started/authenticate-and-manage-session",
+    "title": "Authenticate and manage a session",
+    "description": "Initialize OpenIM Android SDK, log in, inspect login state, handle connection callbacks, and sign out the current account.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android getting-started authenticate-and-manage-session",
+    "content": "OpenIM Android SDK uses initSDK to initialize the local runtime and login to establish the current user's session. Complete the service, user, and token preparation in Before you start /sdk/android/getting started/before you start , then add dependencies and permissions as described in Integrate for Android /sdk/android/getting started/environment specific implementation . The complete flow is: 1. Create a stable OnConnListener in an application level session component. 2. Call initSDK and confirm that it returns true . 3. Register message, user, relationship, conversation, group, and call signaling listeners before login. 4. Obtain the matching userID and token from a trusted backend, then call login . 5. Wait separately for login success and onConnectSuccess before enabling operations that require the persistent connection. 6. On sign out or account switching, call logout and then clear application state owned by the current account. The apiAddr , wsAddr , userID , and token used below are all provided by a trusted backend. Initialize and handle the connection lifecycle During the Application lifecycle, create the data directory, initialize the SDK, and provide the connection listener. Store connection state without recording tokens or complete service credentials in callback logs. import android.app.Application; import java.io.File; import io.openim.android.sdk.OpenIMClient; import io.openim.android.sdk.enums.LogLevel; import io.openim.android.sdk.listener.OnConnListener; import io.openim.android.sdk.models.InitConfig; File dataDirectory = new File application.getFilesDir , \"openim\" ; if dataDirectory.exists && dataDirectory.mkdirs throw new IllegalStateException \"Cannot create the OpenIM data directory.\" ; InitConfig config = new InitConfig apiAddr, wsAddr, dataDirectory.getAbsolutePath ; config.logLevel = LogLevel.Info; config.isLogStandardOutput = false; OnConnListener connectionListener = new OnConnListener @Override public void onConnecting sessionState.setConnectionState \"connecting\" ; @Override public void onConnectSuccess sessionState.setConnectionState \"connected\" ; sessionState.enableConnectedOperations ; @Override public void onConnectFailed long code, String error sessionState.setConnectionState \"failed\" ; recordConnectionFailure code, error ; @Override public void onKickedOffline sessionState.clearCurrentAccount ; showSignedInElsewhereScreen ; @Override public void onUserTokenExpired requestNewTokenAndRelogin ; @Override public void onUserTokenInvalid String reason sessionState.clearCurrentAccount ; showSignInScreen reason ; ; boolean initialized = OpenIMClient.getInstance .initSDK application, config, connectionListener ; if initialized throw new IllegalStateException \"OpenIMClientSDK initialization failed.\" ; A true return value means that the local SDK runtime initialized successfully. OnConnListener starts reporting persistent connection state after login is called. | Field | Type | Description | | | | | | application | Application | Application level context that owns the SDK lifecycle. | | apiAddr | String | OpenIMServer HTTP API endpoint. | | wsAddr | String | OpenIMServer WebSocket endpoint. | | dataDirectory | File | Application private persistent directory for the SDK database and logs. | | config.logLevel | int | A LogLevel constant; reduce the logging level explicitly in production. | | isLogStandardOutput | boolean | Whether OpenIM Core logs are emitted to the standard log stream. | Initialize the SDK only once in Application or an application level session component. The Java wrapper exposes networkChanged to ask Core to re evaluate network connectivity; call it only when the application already has one centralized system network observer, not from multiple screens. Register business listeners before login Listener registration uses set semantics, so a later call replaces the previous listener. Create stable listener instances in an application level event dispatcher and forward events to screen state. See Send your first message /sdk/android/getting started/send first message for the complete message listener registration and incremental merge example. User, relationship, conversation, group, and call signaling listeners follow the same ownership rule. The SDK does not expose remove or unset methods. During sign out or account switching, the application event dispatcher must stop delivering callbacks to state owned by the previous account and replace the complete listener set before the next login. Log in the current user OpenIMClient.getInstance .login new OnBase @Override public void onError int code, String error sessionState.setLoginState \"failed\" ; recordLoginFailure code, error ; @Override public void onSuccess String data sessionState.setLoginState \"logged\" ; sessionState.setCurrentUserID userID ; , userID, token ; The successful login callback means that the current login call completed. OnConnListener.onConnectSuccess means that the persistent connection is available. Handle these as separate stages. Do not call login concurrently or infer both states from only one callback. Inspect login state int loginStatus = OpenIMClient.getInstance .getLoginStatus ; if loginStatus == LoginStatus.Logged String currentUserID = OpenIMClient.getInstance .getLoginUserID ; restoreSessionFor currentUserID ; | State | Description | | | | | LoginStatus.Logout | The SDK is not logged in. | | LoginStatus.Logging | Login is in progress; do not start another login concurrently. | | LoginStatus.Logged | The SDK is logged in. Persistent connection state still comes from OnConnListener . | getLoginStatus and getLoginUserID return local SDK snapshots and do not trigger connection callbacks. Sign out the previous account before logging in with a different account. Handle token failure and forced logout After onUserTokenExpired or onUserTokenInvalid , obtain new credentials for the current user from a trusted backend, then reauthenticate or return to the sign in flow according to product policy. After onKickedOffline , clear conversations, message views, unread counts, and other state owned by the current account. Do not treat forced logout as an explicit user sign out. These callbacks do not have a business entity merge key. Isolate them by the current OpenIMClient singleton and logged in user. Stop asynchronous work and screen subscriptions owned by the previous account before starting a new login. Sign out and release the SDK OpenIMClient.getInstance .logout new OnBase @Override public void onError int code, String error recordLogoutFailure code, error ; @Override public void onSuccess String data sessionState.clearCurrentAccount ; ; Successful completion means that the current SDK login session has signed out. Clear application state after the success callback. For account switching, wait for the previous logout before calling login for the next account. When the application will no longer use the SDK, release the runtime with: OpenIMClient.getInstance .unInit ; unInit is not a replacement for logout and must not run when an ordinary screen is destroyed. Next steps Before you start /sdk/android/getting started/before you start Integrate for Android /sdk/android/getting started/environment specific implementation Send your first message /sdk/android/getting started/send first message"
   },
   {
     "path": "/sdk/android/getting-started/send-first-message",
     "title": "Send your first message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send your first message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "description": "Send and verify the first one-to-one text message in an Android application.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android getting-started send-first-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/adding-extra-data-to-a-message/add-extra-data-to-a-message",
-    "title": "Add extra data to a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add extra data to a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message adding-extra-data-to-a-message add-extra-data-to-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/generate-thumbnails-of-a-file-message",
-    "title": "Generate thumbnails of a file message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Generate thumbnails of a file message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message generate-thumbnails-of-a-file-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/react-to-a-message-in-a-group-channel",
-    "title": "React to a message in a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for React to a message in a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message react-to-a-message-in-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/send-typing-indicators-to-other-members",
-    "title": "Send typing indicators to other members",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send typing indicators to other members. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message send-typing-indicators-to-other-members",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-pinned-messages-in-group-channels/pin-a-message",
-    "title": "Pin a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Pin a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-pinned-messages-in-group-channels pin-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/create-a-poll",
-    "title": "Create a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls create-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/create-a-scheduled-message",
-    "title": "Create a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel create-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/marking-messages-as-delivered-in-a-group-channel/mark-messages-as-delivered",
-    "title": "Mark messages as delivered",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as delivered. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message marking-messages-as-delivered-in-a-group-channel mark-messages-as-delivered",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/mentioning-other-users-in-a-message/mention-other-users-in-a-message",
-    "title": "Mention other users in a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mention other users in a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message mentioning-other-users-in-a-message mention-other-users-in-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/overview-message",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message overview-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-messages/retrieve-a-message",
-    "title": "Retrieve a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-messages retrieve-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/searching-messages-in-a-group-channel/search-messages-by-a-keyword",
-    "title": "Search messages by a keyword",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Search messages by a keyword. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message searching-messages-in-a-group-channel search-messages-by-a-keyword",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/share-an-encrypted-file",
-    "title": "Share an encrypted file",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Share an encrypted file. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message share-an-encrypted-file",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/smart-throttling",
-    "title": "Smart throttling",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Smart throttling. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message smart-throttling",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/translating-messages/auto-translate-messages",
-    "title": "Auto-translate messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Auto-translate messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message translating-messages auto-translate-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/translating-messages/translate-messages-on-demand",
-    "title": "Translate messages on-demand",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Translate messages on-demand. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message translating-messages translate-messages-on-demand",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/using-message-threading/create-a-message-thread",
-    "title": "Create a message thread",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a message thread. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message using-message-threading create-a-message-thread",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/overview",
-    "title": "OpenIM SDK for Android",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for OpenIM SDK for Android. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android overview",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/configure-push-notification-preferences",
-    "title": "Configure push notification preferences",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Configure push notification preferences. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications configure-push-notification-preferences",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/push-notification-translation",
-    "title": "Push notification translation",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Push notification translation. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications push-notification-translation",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/overview-push-notifications",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications overview-push-notifications",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/report/overview-report",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android report overview-report",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/block-and-unblock-other-members",
-    "title": "Block and unblock other members",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Block and unblock other members. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user block-and-unblock-other-members",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/mute-and-unmute-a-user",
-    "title": "Mute and unmute a user",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mute and unmute a user. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user mute-and-unmute-a-user",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user",
-    "title": "Retrieve the online status of a user",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve the online status of a user. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-and-updating-user-information retrieve-the-online-status-of-a-user",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/retrieving-users/retrieve-members-who-have-read-a-message",
-    "title": "Retrieve members who have read a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve members who have read a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-members-who-have-read-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/application/authenticating-a-user/authentication",
-    "title": "Authentication",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Authentication. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android application authenticating-a-user authentication",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/application/overview-application",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android application overview-application",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/application/understanding-rate-limits/rate-limits",
-    "title": "Rate limits",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Rate limits. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android application understanding-rate-limits rate-limits",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/categorizing-channels/categorize-channels-by-custom-type",
-    "title": "Categorize channels by custom type",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Categorize channels by custom type. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel categorizing-channels categorize-channels-by-custom-type",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/creating-a-channel/create-a-channel",
-    "title": "Create a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel creating-a-channel create-a-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/inviting-users-to-a-group-channel/accept-or-decline-an-invitation",
-    "title": "Accept or decline an invitation",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Accept or decline an invitation. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel inviting-users-to-a-group-channel accept-or-decline-an-invitation",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/inviting-users-to-a-group-channel/invite-users-as-members",
-    "title": "Invite users as members",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Invite users as members. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel inviting-users-to-a-group-channel invite-users-as-members",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/joining-and-leaving-a-channel/enter-and-exit-an-open-channel",
-    "title": "Enter and exit an open channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Enter and exit an open channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel joining-and-leaving-a-channel enter-and-exit-an-open-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/joining-and-leaving-a-channel/join-and-leave-a-group-channel",
-    "title": "Join and leave a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Join and leave a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel joining-and-leaving-a-channel join-and-leave-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channel-metacounters/manage-channel-metacounters",
-    "title": "Manage channel metacounters",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Manage channel metacounters. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channel-metacounters manage-channel-metacounters",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channel-metadata/manage-channel-metadata",
-    "title": "Manage channel metadata",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Manage channel metadata. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channel-metadata manage-channel-metadata",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channels/delete-a-channel",
-    "title": "Delete a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channels delete-a-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channels/hide-or-archive-a-group-channel",
-    "title": "Hide or archive a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Hide or archive a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channels hide-or-archive-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channels/refresh-all-data-related-to-a-group-channel",
-    "title": "Refresh all data related to a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Refresh all data related to a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channels refresh-all-data-related-to-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-operators/register-and-remove-operators",
-    "title": "Register and remove operators",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Register and remove operators. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-operators register-and-remove-operators",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/retrieving-channels/retrieve-a-channel-by-url",
-    "title": "Retrieve a channel by URL",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a channel by URL. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel retrieving-channels retrieve-a-channel-by-url",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/retrieving-channels/retrieve-a-list-of-channels",
-    "title": "Retrieve a list of channels",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of channels. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel retrieving-channels retrieve-a-list-of-channels",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/searching-channels/filter-group-channels-by-user-ids",
-    "title": "Filter group channels by user IDs",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Filter group channels by user IDs. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel searching-channels filter-group-channels-by-user-ids",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/searching-channels/search-group-channels-by-name-url-or-other-filters",
-    "title": "Search group channels by name, URL, or other filters",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Search group channels by name, URL, or other filters. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel searching-channels search-group-channels-by-name-url-or-other-filters",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/searching-channels/search-open-channels-by-name-url-or-custom-types",
-    "title": "Search open channels by name, URL, or custom type",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Search open channels by name, URL, or custom type. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel searching-channels search-open-channels-by-name-url-or-custom-types",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/deprecated",
-    "title": "Deprecated",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Deprecated. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android deprecated",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/managing-channel-event-handlers/add-or-remove-a-channel-event-handler",
-    "title": "Add or remove a channel event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add or remove a channel event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler managing-channel-event-handlers add-or-remove-a-channel-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/managing-connection-event-handlers/add-or-remove-a-connection-event-handler",
-    "title": "Add or remove a connection event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add or remove a connection event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler managing-connection-event-handlers add-or-remove-a-connection-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/managing-user-event-handlers/add-or-remove-a-user-event-handler",
-    "title": "Add or remove a user event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add or remove a user event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler managing-user-event-handlers add-or-remove-a-user-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/overview-event-handler",
-    "title": "Event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler overview-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/getting-started/collection-migration-guide",
-    "title": "Collection migration guide",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Collection migration guide. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android getting-started collection-migration-guide",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/getting-started/kotlin-extension",
-    "title": "Kotlin extension (KTX)",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Kotlin extension (KTX). Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android getting-started kotlin-extension",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/getting-started/migration-guide",
-    "title": "Migration guide",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Migration guide. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android getting-started migration-guide",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/local-caching/overview-local-caching",
-    "title": "Local caching",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Local caching. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android local-caching overview-local-caching",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/local-caching/using-group-channel-collection/group-channel-collection",
-    "title": "Group channel collection",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Group channel collection. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android local-caching using-group-channel-collection group-channel-collection",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/local-caching/using-message-collection/message-collection",
-    "title": "Message collection",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Message collection. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android local-caching using-message-collection message-collection",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/logger",
-    "title": "Logger",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Logger. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android logger",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/categorizing-messages/categorize-messages-by-custom-type",
-    "title": "Categorize messages by custom type",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Categorize messages by custom type. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message categorizing-messages categorize-messages-by-custom-type",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/listing-changelogs/list-changelogs-of-messages",
-    "title": "List changelogs of messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List changelogs of messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message listing-changelogs list-changelogs-of-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/clear-the-chat-history-in-a-group-channel",
-    "title": "Clear the chat history in a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Clear the chat history in a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message clear-the-chat-history-in-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/copy-a-message",
-    "title": "Copy a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Copy a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message copy-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/delete-a-message",
-    "title": "Delete a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message delete-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/display-open-graph-tags-in-a-message",
-    "title": "Display Open Graph tags in a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Display Open Graph tags in a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message display-open-graph-tags-in-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/update-a-message",
-    "title": "Update a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message update-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-pinned-messages-in-group-channels/list-pinned-messages",
-    "title": "List pinned messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List pinned messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-pinned-messages-in-group-channels list-pinned-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-pinned-messages-in-group-channels/unpin-a-message",
-    "title": "Unpin a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Unpin a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-pinned-messages-in-group-channels unpin-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/add-a-poll-option",
-    "title": "Add a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls add-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/cast-or-cancel-a-vote",
-    "title": "Cast or cancel a vote",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Cast or cancel a vote. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls cast-or-cancel-a-vote",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/close-a-poll",
-    "title": "Close a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Close a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls close-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/delete-a-poll",
-    "title": "Delete a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls delete-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/delete-a-poll-option",
-    "title": "Delete a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls delete-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/list-changelogs-of-polls",
-    "title": "List changelogs of polls",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List changelogs of polls. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls list-changelogs-of-polls",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-list-of-polls",
-    "title": "Retrieve a list of polls",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of polls. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-list-of-polls",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-list-of-voters",
-    "title": "Retrieve a list of voters",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of voters. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-list-of-voters",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-poll",
-    "title": "Retrieve a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-poll-option",
-    "title": "Retrieve a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/update-a-poll",
-    "title": "Update a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls update-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/update-a-poll-option",
-    "title": "Update a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls update-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-read-status-in-a-group-channel/get-read-status",
-    "title": "Get read status of a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Get read status of a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-read-status-in-a-group-channel get-read-status",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-read-status-in-a-group-channel/mark-messages-as-read",
-    "title": "Mark messages as read",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as read. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-read-status-in-a-group-channel mark-messages-as-read",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-read-status-in-a-group-channel/mark-messages-as-unread",
-    "title": "Mark messages as unread",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as unread. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-read-status-in-a-group-channel mark-messages-as-unread",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/cancel-a-scheduled-message",
-    "title": "Cancel a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Cancel a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel cancel-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/list-all-scheduled-messages",
-    "title": "List all scheduled messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List all scheduled messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel list-all-scheduled-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/retrieve-a-scheduled-message",
-    "title": "Retrieve a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel retrieve-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/retrieve-the-total-number-of-scheduled-messages",
-    "title": "Retrieve the total number of scheduled messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve the total number of scheduled messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel retrieve-the-total-number-of-scheduled-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/send-a-scheduled-message-immediately",
-    "title": "Send scheduled message immediately",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send scheduled message immediately. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel send-a-scheduled-message-immediately",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/update-a-scheduled-message",
-    "title": "Update a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel update-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/receiving-messages-through-event-handler/receive-messages-in-a-group-channel",
-    "title": "Receive messages in a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Receive messages in a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message receiving-messages-through-event-handler receive-messages-in-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/receiving-messages-through-event-handler/receive-messages-in-an-open-channel",
-    "title": "Receive messages in an open channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Receive messages in an open channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message receiving-messages-through-event-handler receive-messages-in-an-open-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-messages/retrieve-a-list-of-messages",
-    "title": "Retrieve a list of messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-messages retrieve-a-list-of-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/members-who-havent-read-a-message",
-    "title": "Retrieve number of members who haven't read a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of members who haven't read a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel members-who-havent-read-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/members-who-havent-received-a-message",
-    "title": "Retrieve number of members who haven't received a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of members who haven't received a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel members-who-havent-received-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-channels",
-    "title": "Retrieve number of channels with unread messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of channels with unread messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-channels",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-items",
-    "title": "Retrieve number of unread items",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of unread items. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-items",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-messages-in-a-channel",
-    "title": "Retrieve number of unread messages in a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of unread messages in a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-messages-in-a-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-messages-in-all-channels",
-    "title": "Retrieve number of unread messages in all channels",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of unread messages in all channels. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-messages-in-all-channels",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/cancel-an-in-progress-file-upload",
-    "title": "Cancel an in-progress file upload",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Cancel an in-progress file upload. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message cancel-an-in-progress-file-upload",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/send-a-critical-alert-message-to-ios-device-users",
-    "title": "Send a critical alert message to iOS device users",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send a critical alert message to iOS device users. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message send-a-critical-alert-message-to-ios-device-users",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/send-a-message",
-    "title": "Send a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message send-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/send-an-admin-message",
-    "title": "Send an admin message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send an admin message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message send-an-admin-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/spam-flood-protection",
-    "title": "Spam flood protection",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Spam flood protection. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message spam-flood-protection",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/track-file-upload-progress-using-a-handler",
-    "title": "Track file upload progress using a handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Track file upload progress using a handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message track-file-upload-progress-using-a-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/translating-messages/translation-engine",
-    "title": "Translation engine",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Translation engine. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message translating-messages translation-engine",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/using-message-threading/list-replies-in-a-message-thread",
-    "title": "List replies in a message thread",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List replies in a message thread. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message using-message-threading list-replies-in-a-message-thread",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/migrating-to-openim",
-    "title": "Migrating to OpenIM",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Migrating to OpenIM. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android migrating-to-openim",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/push-notification-content-templates",
-    "title": "Push notification content templates",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Push notification content templates. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications push-notification-content-templates",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/push-notification-tester",
-    "title": "Push notification tester",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Push notification tester. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications push-notification-tester",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/set-up-push-notifications-for-fcm",
-    "title": "Set up push notifications for FCM",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for FCM. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications set-up-push-notifications-for-fcm",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/set-up-push-notifications-for-hms",
-    "title": "Set up push notifications for HMS",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for HMS. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications set-up-push-notifications-for-hms",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/marking-push-notifications-as-delivered/mark-push-notifications-as-delivered",
-    "title": "Mark push notifications as delivered",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark push notifications as delivered. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications marking-push-notifications-as-delivered mark-push-notifications-as-delivered",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/multi-device-support/set-up-push-notifications-for-fcm",
-    "title": "Set up push notifications for FCM",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for FCM. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications multi-device-support set-up-push-notifications-for-fcm",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/multi-device-support/set-up-push-notifications-for-hms",
-    "title": "Set up push notifications for HMS",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for HMS. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications multi-device-support set-up-push-notifications-for-hms",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/report/creating-a-report/report-a-message-user-or-channel",
-    "title": "Report a message, user, or channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Report a message, user, or channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android report creating-a-report report-a-message-user-or-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/managing-user-metadata/manage-user-metadata",
-    "title": "Manage user metadata",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Manage user metadata. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user managing-user-metadata manage-user-metadata",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/retrieve-a-list-of-blocked-users",
-    "title": "Retrieve a list of blocked users",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of blocked users. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user retrieve-a-list-of-blocked-users",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/retrieve-a-list-of-muted-users",
-    "title": "Retrieve a list of muted users",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of muted users. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user retrieve-a-list-of-muted-users",
-    "content": ""
+    "content": "Use one to one text messaging to confirm that OpenIM is integrated correctly. Before starting, complete SDK initialization and sign in in Authenticate and manage a session /sdk/android/getting started/authenticate and manage session . Before you start Prepare a test account for the sender and another for the receiver. Initialize the SDK for both accounts as described in Authenticate and manage a session /sdk/android/getting started/authenticate and manage session . Register the following listener on the receiver before it signs in. Replace user b in the example with the receiver's actual userID . Step 1: Listen for incoming messages on the receiver Register the message listener on the receiver before sign in. When a message arrives, add it to the chat list or refresh the UI. OpenIMClient.getInstance .messageManager .setAdvancedMsgListener new OnAdvanceMsgListener @Override public void onRecvNewMessage Message message // Display message in the chat UI. ; Step 2: Confirm that sending is available After both accounts sign in, the sender can send only after its login callback succeeds and OnConnListener.onConnectSuccess arrives. Keep the receiver connected so it can receive the new message. If a connection is not ready, wait for it to recover instead of calling login again. Step 3: Send a text message Send a one to one text message Create the message, then send it. Put the receiver's userID in the user destination and leave the group destination empty. Message message = OpenIMClient.getInstance .messageManager .createTextMessage \"Hello, OpenIMSDK\" ; OnMsgSendCallback sendCallback = new OnMsgSendCallback @Override public void onProgress long progress // Text messages usually do not need progress handling. @Override public void onError int code, String error // Tell the user that sending failed and allow a retry. @Override public void onSuccess Message sentMessage // Update the sender's chat UI with sentMessage. ; OpenIMClient.getInstance .messageManager.sendMessage sendCallback, message, \"user b\", \"\", new OfflinePushInfo ; OfflinePushInfo configures offline push content. For this first test, pass an empty object and add a title, summary, or extra data later if needed. onSuccess means the sender has sent the message successfully. onRecvNewMessage on the receiver means the other side received it. Both callbacks should arrive before considering this one to one test complete. Send a group text message To send a group message, leave the receiver userID empty and provide the group's groupID : Message groupMessage = OpenIMClient.getInstance .messageManager .createTextMessage \"Hello, OpenIMSDK\" ; OpenIMClient.getInstance .messageManager.sendMessage sendCallback, groupMessage, \"\", \"group 123\", new OfflinePushInfo ; Set either userID or groupID in a single call, never both. Verify success The sender enters onSuccess . The receiver enters onRecvNewMessage and sees the text message. A one to one message sets only the receiver's userID ; a group message sets only groupID . Next steps Authenticate and manage a session /sdk/android/getting started/authenticate and manage session OpenIM Android SDK overview /sdk/android/overview"
   },
   {
     "path": "/sdk/android/user/overview-user",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "title": "User overview",
+    "description": "Learn about user profiles, friendships, friend requests, blacklists, and online status in the Android SDK.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android user overview-user",
-    "content": ""
+    "content": "OpenIM Android SDK identifies each user by userID . When implementing profile cards, friend requests, contacts, or a blocklist, distinguish an application's public user profile from the current user's friend relationship and blocklist state. Group member lists, in group nicknames, group roles, and member administration belong to the Groups domain. User APIs cover profiles, friendships, friend requests, blacklists, and online status. User objects Android SDK returns different user objects for different scenarios: | Type | Use case | Main APIs | | | | | | LocalUser | The current user's local profile, settings page, avatar, nickname, and account level receive setting | getSelfLocalUserInfo , setSelfInfo | | PublicUserInfo | Application user lookup, friend candidates, and profiles for users who are not friends | getUsersInfo | | UserInfo | Combined Android wrapper object that can carry public, friend, or blacklist information | getFriendListPage , getFriendsInfo , getBlacklist | | FriendInfo | The current user's friend list, friend remarks, and relationship extension data | searchFriends , getFriendListPage | | FriendApplicationInfo | The parties, handling state, and message for a friend request | Friend request queries and callbacks | | BlacklistInfo | Users blocked by the current user and their blocklist relationship fields | getBlacklist , addBlacklist , removeBlacklist | | UsersOnlineStatus | User online status and connected platforms | subscribeUsersOnlineStatus , getSubscribeOnlineUsersStatus | The same userID can appear in public profile, friend, blocklist, and group member data. Prefer UserInfo.getFriendInfo when displaying a contact, PublicUserInfo when only a public account profile is needed, and UserInfo.getBlackInfo on a blocklist screen. Conversation list and chat page titles belong to conversation data and should use the conversation display name. Use userID as the stable key for user lists and events. A friend request contains both parties, so use fromUserID:toUserID to identify one request. Feature entry points | Requirement | Recommended page | | | | | Retrieve public profiles by userID for friend candidates or profile cards | Get specified user profiles /sdk/android/user/user profile/get users info | | Page through, search, or retrieve friend relationships by ID | Get the friend list by page /sdk/android/user/friends/get friend list page | | Send, retrieve, accept, or reject friend requests | Get received friend requests /sdk/android/user/friend applications/get recv friend application list | | Update friend data | Update friend profiles /sdk/android/user/friends/update friends | | Delete a friend relationship | Delete a friend /sdk/android/user/friends/delete friend | | View and maintain the current user's blocklist | Get the blacklist /sdk/android/user/blacklist/get blacklist | | Read or update the current user's nickname, avatar, and extension data | Update the current user profile /sdk/android/user/user profile/set self info | | Configure account level message reception and notification behavior | Set global message reception /sdk/android/user/user profile/set global message reception | | Subscribe to and retrieve online status | Subscribe to user online status /sdk/android/user/online status/subscribe users online status | State updates Each user related capability page owns the listener and merge behavior for its events: Current user profile changes: Update the current user profile /sdk/android/user/user profile/set self info . Friend request changes: Get received friend requests /sdk/android/user/friend applications/get recv friend application list . Friend relationship and profile changes: Get the friend list by page /sdk/android/user/friends/get friend list page . Blocklist changes: Block a user /sdk/android/user/blacklist/add blacklist . Online status changes: Subscribe to user online status /sdk/android/user/online status/subscribe users online status . UserInfoManager and FriendshipManager each retain one listener. setOnUserListener and setOnFriendshipListener replace the current listener. Combine the required callbacks in a shared state layer and set each listener once; multiple pages must not overwrite one another's listeners."
   },
   {
-    "path": "/sdk/android/user/retrieving-and-updating-user-information/retrieve-the-latest-information-on-participants",
-    "title": "Retrieve the latest information on participants",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve the latest information on participants. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/get-users-info",
+    "title": "Get specified user profiles",
+    "description": "Use getUsersInfo() to query public profiles by userID.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-and-updating-user-information retrieve-the-latest-information-on-participants",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile get-users-info",
+    "content": "getUsersInfo returns public profiles for a list of user IDs. It is suitable for friend candidates and profiles of users outside the current friend list. It does not return relationship fields such as the current user's friend remark. List userIDs = Arrays.asList \"user a\", \"user b\" ; OpenIMClient.getInstance .userInfoManager.getUsersInfo new OnBase @Override public void onSuccess List users for PublicUserInfo user : users publicUserStore.put user.getUserID , user ; @Override public void onError int code, String error recordUserQueryFailure code, error ; , userIDs ; Remove empty and duplicate IDs before calling the API, and keep each request within the application's batch limit. The callback returns List with fields such as userID , nickname , faceURL , ex , and createTime . This query does not trigger OnUserListener ; query again and merge by userID when the profile snapshot must be refreshed. Returned fields | Field | Description | | | | | userID | OpenIM user ID and the stable local cache key. | | nickname | Account level public nickname. | | faceURL | Account level public avatar URL. | | ex | Account level public extension string defined by the application. | | createTime | User profile creation time. | Do not use PublicUserInfo to overwrite friend remarks, pinned state, or in group nicknames. Use FriendInfo for friends and the group member model for group members. Searching by nickname, phone number, or email is an application backend capability. A trusted backend should perform the search and permission checks, then return candidate user IDs for this API. Refreshing profiles Replace or merge the public profile snapshot after a successful query. Re query when opening a profile card, when the user explicitly refreshes, after reconnecting, or after a trusted backend reports a profile change. OnUserListener.onSelfInfoUpdated only describes the signed in user's profile and is not a change event for other users."
   },
   {
-    "path": "/sdk/android/user/retrieving-and-updating-user-information/update-user-profile",
-    "title": "Update user profile",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update user profile. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/get-self-local-user-info",
+    "title": "Get the current user profile",
+    "description": "Use getSelfLocalUserInfo() to retrieve the local profile for the current user.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-and-updating-user-information update-user-profile",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile get-self-local-user-info",
+    "content": "OpenIMClient.getInstance .userInfoManager.getSelfLocalUserInfo new OnBase @Override public void onSuccess LocalUser user currentUserStore.set user ; @Override public void onError int code, String error recordSelfProfileFailure code, error ; ; After initialization and login, call this method to retrieve the current account's local profile. Success returns LocalUser with fields such as userID , nickname , faceURL , ex , attachedInfo , globalRecvMsgOpt , and addFriendPermission . Returned fields | Field | Description | | | | | userID | Signed in user ID. | | nickname | Current account nickname. | | faceURL | Current account avatar URL. | | ex | Current account extension string. | | attachedInfo | SDK attached data; parse only an application defined format. | | globalRecvMsgOpt | Global message reception: 0 receive, 1 do not receive, 2 receive without notification. | | addFriendPermission | Add friend permission value defined by the server contract. | The query does not trigger a profile callback. Clear the previous account snapshot when logging out or switching accounts so that the previous user's data is not rendered for the new account. getSelfUserInfo is deprecated and is not the recommended API."
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-members-and-operators-in-a-specific-order",
-    "title": "Retrieve a list of members and operators in a specific order",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of members and operators in a specific order. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/set-self-info",
+    "title": "Update the current user profile",
+    "description": "Use setSelfInfo() to update the nickname, avatar, or extension data of the current user.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-members-and-operators-in-a-specific-order",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile set-self-info",
+    "content": "Set only the fields that must change on UserInfoReq . The SDK omits null fields when serializing the request. UserInfoReq request = new UserInfoReq ; request.setNickname displayName.trim ; request.setFaceURL avatarURL ; request.setEx mergedExtra ; OpenIMClient.getInstance .userInfoManager.setSelfInfo new OnBase @Override public void onSuccess String data markProfileUpdateSubmitted ; @Override public void onError int code, String error recordProfileUpdateFailure code, error ; , request ; UserInfoReq supports fields such as nickname , faceURL , ex , and addFriendPermission . ex is a complete string; read, parse, and merge the application's namespace before updating it rather than overwriting the value with a partial JSON object. A successful callback means the update request completed. Merge the final profile increment from onSelfInfoUpdated UserInfo info , or query getSelfLocalUserInfo again. Updatable fields | Field | Description | | | | | nickname | New nickname. | | faceURL | New avatar URL. | | ex | Complete extension string. | | addFriendPermission | Add friend permission value. | Send only fields that should change. Although the global message reception setting is also written with setSelfInfo , use the dedicated Set global message reception /sdk/android/user/user profile/set global message reception entry point. This page owns onSelfInfoUpdated . Combine it into the application's single OnUserListener : @Override public void onSelfInfoUpdated UserInfo info currentUserStore.merge info.getUserID , info ;"
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-operators",
-    "title": "Retrieve a list of operators",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of operators. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/set-global-message-reception",
+    "title": "Set global message reception",
+    "description": "Use setSelfInfo() to set the account-wide message reception and notification policy.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-operators",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile set-global-message-reception",
+    "content": "Use a separate UserInfoReq for globalRecvMsgOpt so profile updates do not accidentally overwrite the account wide message policy. UserInfoReq request = new UserInfoReq ; request.setGlobalRecvMsgOpt 2 ; OpenIMClient.getInstance .userInfoManager.setSelfInfo new OnBase @Override public void onSuccess String data markGlobalReceiveOptionSubmitted ; @Override public void onError int code, String error recordGlobalReceiveOptionFailure code, error ; , request ; | Value | Meaning | | | | | 0 | Receive messages and allow notifications. | | 1 | Do not receive messages. | | 2 | Receive messages without notifications. | If the product exposes only a global do not disturb switch, it usually toggles between 0 and 2 ; 1 stops message reception and should be presented as a separate option. Per conversation reception is managed by conversation APIs and is not replaced by this setting. A successful callback means the request completed. Reconcile the final account snapshot through onSelfInfoUpdated or getSelfLocalUserInfo . Event handling is documented in Update the current user profile /sdk/android/user/user profile/set self info ."
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-users-in-a-channel",
-    "title": "Retrieve a list of users in a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of users in a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/online-status/subscribe-users-online-status",
+    "title": "Subscribe to user online status",
+    "description": "Use subscribeUsersOnlineStatus() to subscribe to online status for specified users.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-users-in-a-channel",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user online-status subscribe-users-online-status",
+    "content": "List userIDs = Arrays.asList \"user a\", \"user b\" ; OpenIMClient.getInstance .userInfoManager.subscribeUsersOnlineStatus new OnBase @Override public void onSuccess List states mergeOnlineStates states ; @Override public void onError int code, String error recordStatusSubscriptionFailure code, error ; , userIDs ; Remove empty and duplicate IDs, and subscribe only to users whose status is needed. The callback returns the initial List snapshot. Each item contains userID , status , and platformIDs . Deduplicate repeated subscriptions in the application state layer. Status fields | Field | Description | | | | | userID | Target user ID. | | status | Online status value defined by the server contract. | | platformIDs | Platforms on which the user is online. | This page owns onUserStatusChanged . Combine it into the application's single OnUserListener and merge by userID : @Override public void onUserStatusChanged UsersOnlineStatus status onlineStatusStore.put status.getUserID , status ; Subscription only creates or updates the subscription set; do not treat its callback as friend profile data. Manage the subscription set centrally when users leave the visible range or the account changes. Android does not expose a verifiable unsubscribe entry point, so this documentation does not record one."
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-users-in-an-application",
-    "title": "Retrieve a list of users in an application",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of users in an application. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/online-status/get-subscribe-online-users-status",
+    "title": "Get subscribed user online status",
+    "description": "Use getSubscribeOnlineUsersStatus() to retrieve online status for subscribed users.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-users-in-an-application",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user online-status get-subscribe-online-users-status",
+    "content": "OpenIMClient.getInstance .userInfoManager.getSubscribeOnlineUsersStatus new OnBase @Override public void onSuccess List states mergeOnlineStates states ; @Override public void onError int code, String error recordStatusQueryFailure code, error ; ; This method does not accept user IDs or modify the subscription set. The callback returns the current subscribed user List snapshot, which can reconcile status by userID after reconnecting or reopening a screen. The query does not trigger onUserStatusChanged . Apply the snapshot only to presence state; retrieve names and avatars through the user profile APIs."
   },
   {
-    "path": "/sdk/android/message/marking-messages-as-read-in-a-group-channel/mark-messages-as-read",
-    "title": "Mark messages as read",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as read. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/friends/get-friend-list-page",
+    "title": "Get the friend list by page",
+    "description": "Use getFriendListPage() to retrieve the current user friend list by page.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message marking-messages-as-read-in-a-group-channel mark-messages-as-read",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user friends get-friend-list-page",
+    "content": "OpenIMClient.getInstance .friendshipManager.getFriendListPage new OnBase @Override public void onSuccess List friends for UserInfo friend : friends friendStore.put friend.getUserID , friend ; @Override public void onError int code, String error recordFriendListFailure code, error ; , 0, 40, true ; The arguments after the callback are offset , count , and filterBlack . offset starts at 0 , count is the page size, and filterBlack removes blocked users when true . The callback returns the current page as List ; call getFriendInfo on each item for relationship details. Increase offset by the requested item count when loading another page; a page smaller than count normally marks the end. Use the paged API instead of getFriendList . Merge snapshots and increments by userID . Friend profile fields UserInfo is the Android wrapper object. getFriendInfo returns FriendInfo for a friend list item. Common fields are: | Field | Description | | | | | userID | Friend user ID and the stable friend list key. | | nickname | Account nickname of the friend. | | faceURL | Account avatar URL of the friend. | | remark | Friend remark set by the current account. | | ex | Friendship extension string. | | addSource | Source that created the friendship. | | operatorUserID | User ID that created or updated the relationship. | | createTime | Friendship creation time. | nickname and faceURL are account data, while remark and ex belong to the friendship. UpdateFriendsReq can submit isPinned , but the current Android FriendInfo model has no corresponding read field, so pinned state needs application owned storage. Do not use a friend object to overwrite a stranger's PublicUserInfo , or write a friend remark back to the account nickname. This page owns the friend added, changed, and deleted callbacks. Combine them into the application's single OnFriendshipListener : @Override public void onFriendAdded FriendInfo friend friendStore.put friend.getUserID , friend ; @Override public void onFriendInfoChanged FriendInfo friend friendStore.put friend.getUserID , friend ; @Override public void onFriendDeleted FriendInfo friend friendStore.remove friend.getUserID ;"
+  },
+  {
+    "path": "/sdk/android/user/friends/search-friends",
+    "title": "Search friends",
+    "description": "Use searchFriends() to search the current user friend list.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends search-friends",
+    "content": "OpenIMClient.getInstance .friendshipManager.searchFriends new OnBase @Override public void onSuccess List results showFriendSearchResults results ; @Override public void onError int code, String error recordFriendSearchFailure code, error ; , Collections.singletonList keyword.trim , true, true, true ; Pass one non empty value in keywordList . The three Boolean arguments select matching by user ID, nickname, and friend remark. Enable at least one field. To search multiple fields, enable the corresponding flags; the API does not treat multiple keywords as independent search conditions. The callback returns List . Search results belong to the current search view and should not replace the full friend snapshot. This query does not trigger friendship callbacks."
+  },
+  {
+    "path": "/sdk/android/user/friends/get-friends-info",
+    "title": "Get specified friend profiles",
+    "description": "Use getFriendsInfo() to query friendship profiles for specified users.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends get-friends-info",
+    "content": "OpenIMClient.getInstance .friendshipManager.getFriendsInfo new OnBase @Override public void onSuccess List friends for UserInfo friend : friends friendStore.put friend.getUserID , friend ; @Override public void onError int code, String error recordFriendInfoFailure code, error ; , Arrays.asList \"user a\", \"user b\" , true ; The second argument is the target user ID list. filterBlack controls whether blocked users are removed. Remove empty and duplicate IDs before calling. The callback returns List ; use getFriendInfo for friend remarks and relationship fields, then merge by userID . The result can omit a target that is not a friend or is excluded by filterBlack == true . When the UI also needs account level public data, call Get specified user profiles /sdk/android/user/user profile/get users info and merge the two sources by userID . This query does not trigger friendship callbacks. Use checkFriend /sdk/android/user/friends/check friend when only the relationship state is needed."
+  },
+  {
+    "path": "/sdk/android/user/friends/check-friend",
+    "title": "Check friendship",
+    "description": "Use checkFriend() to check whether specified users are friends of the current user.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends check-friend",
+    "content": "OpenIMClient.getInstance .friendshipManager.checkFriend new OnBase @Override public void onSuccess List relations showFriendshipStates relations ; @Override public void onError int code, String error recordFriendshipCheckFailure code, error ; , Arrays.asList \"user a\", \"user b\" ; The callback returns List . Each item's userID identifies the target user. result == 1 means the user is a friend and is not in the blacklist. Interpret other result values only through the server contract; do not create additional client side states. This method only establishes a relationship snapshot and does not trigger friendship callbacks. Use getFriendsInfo /sdk/android/user/friends/get friends info when nickname, avatar, or friend remark data is required."
+  },
+  {
+    "path": "/sdk/android/user/friends/update-friends",
+    "title": "Update friend profiles",
+    "description": "Use updateFriendsReq() to update friend remarks, pinned state, or extension data.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends update-friends",
+    "content": "UpdateFriendsReq request = new UpdateFriendsReq ; request.setFriendUserIDs new String friendUserID ; request.setRemark remark.trim ; OpenIMClient.getInstance .friendshipManager.updateFriendsReq new OnBase @Override public void onSuccess String data markFriendUpdateSubmitted ; @Override public void onError int code, String error recordFriendUpdateFailure code, error ; , request ; UpdateFriendsReq supports friendUserIDs , remark , isPinned , and ex . One call applies the same field value to every target friend. Use separate calls when friends need different values. ex is a complete string. | Field | Description | | | | | friendUserIDs | Friend ID array to update. | | remark | Friend remark for the current account. | | isPinned | Whether to pin the friend. | | ex | Friendship extension string, replaced as a complete value. | A successful callback means the update request completed. Merge the friend increment through onFriendInfoChanged , as documented in Get the friend list by page /sdk/android/user/friends/get friend list page ."
+  },
+  {
+    "path": "/sdk/android/user/friends/delete-friend",
+    "title": "Delete a friend",
+    "description": "Use deleteFriend() to remove one friendship from the current user.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends delete-friend",
+    "content": "OpenIMClient.getInstance .friendshipManager.deleteFriend new OnBase @Override public void onSuccess String data markFriendDeletionSubmitted friendUserID ; @Override public void onError int code, String error recordFriendDeletionFailure code, error ; , friendUserID ; A successful callback means the delete request completed. Remove the local record by userID after onFriendDeleted arrives. Event handling is documented in Get the friend list by page /sdk/android/user/friends/get friend list page ."
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/add-friend",
+    "title": "Send a friend request",
+    "description": "Use addFriend() to send a friend request to a specified user.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications add-friend",
+    "content": "OpenIMClient.getInstance .friendshipManager.addFriend new OnBase @Override public void onSuccess String data markFriendApplicationSubmitted ; @Override public void onError int code, String error recordFriendApplicationFailure code, error ; , \"user b\", \"Hello, I am Alex\" ; The second argument is the recipient's userID , and the third argument is the request message. A successful callback means the server received the request, not that the recipient accepted it. The target ID cannot be empty. Let a trusted application backend handle lookup by nickname, phone number, or other private fields. Merge friend request changes through OnFriendshipListener , as documented in Get received friend requests /sdk/android/user/friend applications/get recv friend application list ."
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/get-recv-friend-application-list",
+    "title": "Get received friend requests",
+    "description": "Use getRecvFriendApplicationList() to query received friend requests by page.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications get-recv-friend-application-list",
+    "content": "GetFriendApplicationListAsRecipientReq request = new GetFriendApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .friendshipManager.getRecvFriendApplicationList new OnBase @Override public void onSuccess List applications replaceReceivedApplications applications ; @Override public void onError int code, String error recordReceivedApplicationFailure code, error ; , request ; offset starts at 0 , and count is the page size. To filter by handling state, use setHandleResults int with values defined by the server contract. The callback returns the current page as List . | Field | Description | | | | | fromUserID / fromNickname / fromFaceURL | Applicant ID, nickname, and avatar snapshot. | | toUserID / toNickname / toFaceURL | Recipient ID, nickname, and avatar snapshot. | | reqMsg | Friend request message. | | handleResult | Handling result: 0 pending, 1 accepted, 2 rejected. | | handlerUserID | User ID that handled the request; it can be empty while pending. | | handleMsg | Handling message. | | handleTime | Handling time; do not treat it as valid while pending. | | createTime | Request creation time. | | ex | Friend request extension string. | Use fromUserID:toUserID as the stable request key. This page owns the friend request added, accepted, rejected, and deleted callbacks. Combine them into the application's single OnFriendshipListener : @Override public void onFriendApplicationAdded FriendApplicationInfo application friendApplicationStore.merge application ; @Override public void onFriendApplicationAccepted FriendApplicationInfo application friendApplicationStore.merge application ; @Override public void onFriendApplicationRejected FriendApplicationInfo application friendApplicationStore.merge application ; @Override public void onFriendApplicationDeleted FriendApplicationInfo application friendApplicationStore.remove application.getFromUserID , application.getToUserID ; Use whether toUserID equals the signed in user ID to route a record to the received or sent list. After an application is accepted, onFriendAdded , owned by Get the friend list by page /sdk/android/user/friends/get friend list page , merges the new friendship."
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/get-send-friend-application-list",
+    "title": "Get sent friend requests",
+    "description": "Use getSendFriendApplicationList() to query sent friend requests by page.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications get-send-friend-application-list",
+    "content": "GetFriendApplicationListAsApplicantReq request = new GetFriendApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .friendshipManager.getSendFriendApplicationList new OnBase @Override public void onSuccess List applications replaceSentApplications applications ; @Override public void onError int code, String error recordSentApplicationFailure code, error ; , request ; offset starts at 0 , and count is the page size. The callback returns the current page as List . Merge items by fromUserID:toUserID . This query only establishes a snapshot and does not trigger friend request callbacks. For sent requests, the signed in user is normally fromUserID . The record fields and handling semantics are the same as Get received friend requests /sdk/android/user/friend applications/get recv friend application list : the Android server contract uses 0 for pending, 1 for accepted, and 2 for rejected."
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/accept-friend-application",
+    "title": "Accept a friend request",
+    "description": "Use acceptFriendApplication() to accept a friend request.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications accept-friend-application",
+    "content": "OpenIMClient.getInstance .friendshipManager.acceptFriendApplication new OnBase @Override public void onSuccess String data markApplicationAccepted applicantUserID ; @Override public void onError int code, String error recordApplicationAcceptFailure code, error ; , applicantUserID, \"Accepted\" ; applicantUserID identifies the applicant, and the final argument is the handling message. A successful callback means the accept request completed. The request state and new friendship can arrive through separate callbacks and should be merged independently: onFriendApplicationAccepted updates the application and onFriendAdded updates the friendship."
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/refuse-friend-application",
+    "title": "Reject a friend request",
+    "description": "Use refuseFriendApplication() to reject a friend request.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications refuse-friend-application",
+    "content": "OpenIMClient.getInstance .friendshipManager.refuseFriendApplication new OnBase @Override public void onSuccess String data markApplicationRejected applicantUserID ; @Override public void onError int code, String error recordApplicationRejectFailure code, error ; , applicantUserID, \"Not now\" ; applicantUserID identifies the applicant, and the final argument is the handling message. A successful callback means the reject request completed. Merge request state through the shared friend request listener; the final rejected state is handleResult == 2 ."
+  },
+  {
+    "path": "/sdk/android/user/blacklist/get-blacklist",
+    "title": "Get the blacklist",
+    "description": "Use getBlacklist() to retrieve the current user blacklist.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user blacklist get-blacklist",
+    "content": "The blacklist records users blocked by the current account. Use it for a blacklist settings screen, relationship state on a profile card, or to limit a chat entry point. Blacklist management and group member management are separate capabilities; use Group APIs to mute, remove, or change the role of a group member. Get the blacklist After SDK initialization and login, call getBlacklist to retrieve the full blacklist for the signed in account. An empty list means no users are blocked. OpenIMClient.getInstance .friendshipManager.getBlacklist new OnBase @Override public void onSuccess List users blacklistStore.replace users ; @Override public void onError int code, String error recordBlacklistFailure code, error ; ; The callback returns List ; call UserInfo.getBlackInfo to retrieve the blacklist relationship object. Blacklist record fields Common BlacklistInfo fields are: | Field | Description | | | | | userID | Target user ID blocked by the current user and the stable list key. | | nickname | Target user nickname snapshot. | | faceURL | Target user avatar URL. | | gender | Target user gender value. | | operatorUserID | User ID that performed the block operation. | | createTime | Blacklist relationship creation time. | | addSource | Source that added the blacklist relationship. | | ex | Blacklist relationship extension string. | When the screen also needs friend remarks or the latest public profile, separately merge FriendInfo or PublicUserInfo by userID . Do not treat blacklist fields as friend profile data. Merge blacklist state by userID . This query does not trigger blacklist added or deleted callbacks. Replace the local snapshot on initial load, after reconnecting, or after an explicit refresh; incremental changes are owned by the Block a user /sdk/android/user/blacklist/add blacklist and Unblock a user /sdk/android/user/blacklist/remove blacklist listener pages."
+  },
+  {
+    "path": "/sdk/android/user/blacklist/add-blacklist",
+    "title": "Block a user",
+    "description": "Use addBlacklist() to add a user to the current account blacklist.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user blacklist add-blacklist",
+    "content": "OpenIMClient.getInstance .friendshipManager.addBlacklist new OnBase @Override public void onSuccess String data markBlacklistRequestSubmitted targetUserID ; @Override public void onError int code, String error recordBlacklistAddFailure code, error ; , targetUserID, \" \\\"source\\\":\\\"profile menu\\\" \" ; The second argument is the target userID , and the third argument is optional extension data. Use the overload without ex when no extension data is needed. A successful callback means the block request completed, not that the event has arrived. The blacklist is one way: the blocked user cannot send messages to the current account. Whether the current account can continue to send messages is an application level rule. ex is a complete string, so merge application owned fields before updating it. This page owns onBlacklistAdded . Combine it into the application's single OnFriendshipListener : @Override public void onBlacklistAdded BlacklistInfo user blacklistStore.put user.getUserID , user ;"
+  },
+  {
+    "path": "/sdk/android/user/blacklist/remove-blacklist",
+    "title": "Unblock a user",
+    "description": "Use removeBlacklist() to remove a user from the current account blacklist.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user blacklist remove-blacklist",
+    "content": "OpenIMClient.getInstance .friendshipManager.removeBlacklist new OnBase @Override public void onSuccess String data markBlacklistRemovalSubmitted targetUserID ; @Override public void onError int code, String error recordBlacklistRemovalFailure code, error ; , targetUserID ; A successful callback means the remove request completed, not that the event has arrived. Remove the local entry after onBlacklistDeleted ; if the event is missed, reconcile through Get the blacklist /sdk/android/user/blacklist/get blacklist . This page owns onBlacklistDeleted ; remove the local entry by userID : @Override public void onBlacklistDeleted BlacklistInfo user blacklistStore.remove user.getUserID ;"
+  },
+  {
+    "path": "/sdk/android/conversation/overview-conversation",
+    "title": "Conversation overview",
+    "description": "Learn about ConversationInfo, conversationID, conversation settings, and conversation events in the Android SDK.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation overview-conversation",
+    "content": "A conversation is the chat list state maintained by the signed in account for a one to one or group chat. A ConversationInfo record contains unread count, latest message, pinning, draft, message reception, and extension data. conversationID identifies the account's conversation state; the chat target is the peer userID for a one to one chat or the groupID for a group chat. Group profile, membership, and permissions belong to Group APIs. Use groupID for group operations and conversationID for conversation settings, unread state, drafts, and message cleanup. Conversation identifiers | Identifier | Purpose | | | | | conversationID | Conversation record ID for settings, unread state, and message history. | | userID | Peer user ID in a one to one chat. | | groupID | Group ID for a group chat and Group API target. | | sourceId | Chat target passed to queries and ID resolution: userID for a one to one chat, groupID for a group chat. | Use ConversationType.SINGLE CHAT for one to one chats. For a group chat, use ConversationType.GROUP CHAT or ConversationType.SUPER GROUP CHAT according to the group type. Do not construct a conversationID in application code. ConversationInfo | Field | Description | | | | | conversationID / conversationType | Conversation ID and type. | | userID / groupID | Peer user or target group. | | showName / faceURL | Conversation list display name and avatar. | | unreadCount | Unread count for the conversation. | | latestMsg / latestMsgSendTime | Latest message JSON and send time. | | recvMsgOpt / groupAtType | Reception option and group mention state. | | draftText / draftTextTime | Draft and draft update time. | | isPinned | Whether the conversation is pinned. | | isPrivateChat / burnDuration | Burn after reading setting and duration. | | isMsgDestruct / msgDestructTime | Server message destruction configuration. | | ex | Application defined conversation extension string. | State updates Get the conversation list /sdk/android/conversation/retrieving conversations/retrieve conversation list owns onNewConversation and onConversationChanged . Track the total unread count /sdk/android/conversation/managing conversations/get total unread count owns onTotalUnreadMessageCountChanged . ConversationManager retains one OnConversationListener ; setOnConversationListener replaces it. Set a composed listener once in a shared state layer. Request completion, event arrival, and snapshot reconciliation are separate stages."
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/get-conversation-by-target",
+    "title": "Open a conversation",
+    "description": "Use getOneConversation() to retrieve one Android conversation by user or group.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations get-conversation-by-target",
+    "content": "Use getOneConversation when opening a chat from a contact, user profile, or group profile. Pass the peer user ID for a one to one chat and the group ID for a group chat; do not construct ConversationInfo locally when no messages exist yet. OpenIMClient.getInstance .conversationManager.getOneConversation new OnBase @Override public void onSuccess ConversationInfo conversation openChatPage conversation ; @Override public void onError int code, String error recordConversationOpenFailure code, error ; , targetUserID, ConversationType.SINGLE CHAT ; sourceId is the peer userID for a one to one chat and groupID for a group chat. Use ConversationType.GROUP CHAT or ConversationType.SUPER GROUP CHAT for a group according to its type. The callback returns ConversationInfo . This query does not trigger a conversation listener; Get the conversation list /sdk/android/conversation/retrieving conversations/retrieve conversation list merges later changes by conversationID ."
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/get-conversation-id",
+    "title": "Resolve a conversation ID",
+    "description": "Use getConversationIDBySessionType() to resolve an Android conversation ID from a chat target.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations get-conversation-id",
+    "content": "When only the conversation ID is needed, call getConversationIDBySessionType rather than constructing it in application code. String conversationID = OpenIMClient.getInstance .conversationManager .getConversationIDBySessionType targetUserID, ConversationType.SINGLE CHAT ; sourceId is the peer userID for a one to one chat and groupID for a group chat. Use the group conversation type that matches the target group. This Android API synchronously returns a String conversationID . It does not return ConversationInfo or trigger a conversation listener. Use Open a conversation /sdk/android/conversation/retrieving conversations/get conversation by target when profile data is required."
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/get-conversations-by-id",
+    "title": "Get conversations by ID",
+    "description": "Use getMultipleConversation() to retrieve Android conversations by conversationID.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations get-conversations-by-id",
+    "content": "Use getMultipleConversation when a set of conversationID values is already available and the latest conversation snapshot is needed. OpenIMClient.getInstance .conversationManager.getMultipleConversation new OnBase @Override public void onSuccess List conversations for ConversationInfo item : conversations conversationStore.put item.getConversationID , item ; @Override public void onError int code, String error recordConversationQueryFailure code, error ; , conversationIDs ; Remove empty and duplicate IDs before calling. The callback returns List . Treat an ID with no returned item as missing; do not assume response order exactly matches request order. This query does not trigger a conversation listener."
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list",
+    "title": "Get the conversation list",
+    "description": "Use getConversationListSplit() to retrieve the current Android account conversation list by page.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations retrieve-conversation-list",
+    "content": "The conversation list belongs to the signed in account. Each ConversationInfo contains list state such as unread count, latest message, pinning, and draft. Use the paged API instead of the non paged getAllConversationList . Retrieve a page OpenIMClient.getInstance .conversationManager.getConversationListSplit new OnBase @Override public void onSuccess List conversations mergeConversations conversations ; @Override public void onError int code, String error recordConversationListFailure code, error ; , 0, 50 ; | Parameter | Type | Description | | | | | | offset | long | Zero based paging offset; reset it to 0 on refresh. | | count | long | Requested number of conversations. | The callback returns the current List page. Advance offset by the requested item count and deduplicate by conversationID . A page smaller than count normally indicates the end; clear paging state and reload from 0 on refresh. Keep the list synchronized getConversationListSplit only creates a snapshot. Combine these callbacks in the application's single OnConversationListener : @Override public void onNewConversation List conversations mergeConversations conversations ; @Override public void onConversationChanged List conversations mergeConversations conversations ; Both callbacks carry List and must merge idempotently by conversationID . A user can join a group without an existing conversation, and a historical conversation can remain after leaving a group, so do not substitute the joined group list for the conversation list."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/pin-conversation",
+    "title": "Pin or unpin a conversation",
+    "description": "Use pinConversation() to set the pinned state of an Android conversation.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations pin-conversation",
+    "content": "OpenIMClient.getInstance .conversationManager.pinConversation new OnBase @Override public void onSuccess String data markPinRequestSubmitted conversationID, true ; @Override public void onError int code, String error recordConversationPinFailure code, error ; , conversationID, true ; Pass true to pin and false to unpin. The setting affects only the current account's conversation list. A successful callback does not mean onConversationChanged has arrived; merge the later conversation increment by conversationID ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-conversation-extension",
+    "title": "Set conversation extra data",
+    "description": "Use setConversationEx() to set an Android conversation extension string.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-conversation-extension",
+    "content": "ex is a complete string. The SDK does not merge JSON, so read the prior value and retain namespaces owned by other application modules. OpenIMClient.getInstance .conversationManager.setConversationEx new OnBase @Override public void onSuccess String data markConversationExtensionSubmitted conversationID ; @Override public void onError int code, String error recordConversationExtensionFailure code, error ; , conversationID, mergedExtensionJSON ; Reconcile the result through onConversationChanged by conversationID ; listener ownership is documented in Get the conversation list /sdk/android/conversation/retrieving conversations/retrieve conversation list ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-conversation-draft",
+    "title": "Set a conversation draft",
+    "description": "Use setConversationDraft() to save an Android conversation draft.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-conversation-draft",
+    "content": "Save the draft when a chat is left, the conversation changes, or editor content changes. Maintain editor state locally and debounce intermediate saves; submit the newest value before leaving the page. OpenIMClient.getInstance .conversationManager.setConversationDraft new OnBase @Override public void onSuccess String data markDraftSubmitted conversationID ; @Override public void onError int code, String error recordDraftSaveFailure code, error ; , conversationID, editorValue ; Pass an empty string to clear the draft. Request completion and the later onConversationChanged update are separate; merge draftText and draftTextTime by conversationID , and clear in memory editor state after logout or an account switch."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-message-receive-option",
+    "title": "Set conversation message reception",
+    "description": "Use setConversationRecvMessageOpt() to set message reception and notification behavior for one Android conversation.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-message-receive-option",
+    "content": "OpenIMClient.getInstance .conversationManager.setConversationRecvMessageOpt new OnBase @Override public void onSuccess String data markReceiveOptionSubmitted conversationID ; @Override public void onError int code, String error recordReceiveOptionFailure code, error ; , conversationID, 2 ; | Value | Meaning | | | | | 0 | Receive messages and allow notifications. | | 1 | Do not receive messages from this conversation or notify. | | 2 | Receive messages from this conversation without notification. | The account default is documented in Set global message reception /sdk/android/user/user profile/set global message reception . Merge the later onConversationChanged result by conversationID ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/clear-group-mentions",
+    "title": "Reset group mention status",
+    "description": "Use resetConversationGroupAtType() to reset an Android conversation group mention state.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations clear-group-mentions",
+    "content": "After handling group messages that mention the current user, call resetConversationGroupAtType to reset groupAtType to the normal state. OpenIMClient.getInstance .conversationManager.resetConversationGroupAtType new OnBase @Override public void onSuccess String data markGroupMentionStateReset conversationID ; @Override public void onError int code, String error recordGroupMentionResetFailure code, error ; , conversationID ; This operation only resets the state and must not be used to set atMe or atAll . Group mention state is distinct from message read state. Reconcile the conversation through onConversationChanged ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/mark-conversation-read",
+    "title": "Mark a conversation as read",
+    "description": "Use messageManager.markConversationMessageAsRead() to mark Android conversation messages as read.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations mark-conversation-read",
+    "content": "Call messageManager.markConversationMessageAsRead after the user has opened and read visible messages. Do not mark a conversation read merely because a notification was previewed or a message arrived in the background. OpenIMClient.getInstance .messageManager.markConversationMessageAsRead conversationID, new OnBase @Override public void onSuccess String data markConversationReadSubmitted conversationID ; @Override public void onError int code, String error recordMarkReadFailure code, error ; ; Request completion does not guarantee onConversationChanged has arrived. Merge the current ConversationInfo by conversationID , or re query it when immediate confirmation is required. For one to one chats, the peer can receive OnAdvanceMsgListener.onRecvC2CReadReceipt . Validate sessionType == ConversationType.SINGLE CHAT and a non empty userID , then update message read state from msgIDList . MessageManager retains one advanced message listener and should be configured once in a shared message state layer."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/get-total-unread-count",
+    "title": "Track the total unread count",
+    "description": "Use getTotalUnreadMsgCount() to retrieve the total unread count for the current Android account.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations get-total-unread-count",
+    "content": "getTotalUnreadMsgCount returns the complete unread snapshot for the signed in account. Do not sum unreadCount values from only the currently loaded conversation pages. OpenIMClient.getInstance .conversationManager.getTotalUnreadMsgCount new OnBase @Override public void onSuccess String value int totalUnread = Integer.parseInt value ; updateApplicationBadge totalUnread ; @Override public void onError int code, String error recordTotalUnreadFailure code, error ; ; The callback value is a String ; handle parse failures as an application error rather than treating it as a partial list total. This page owns OnConversationListener.onTotalUnreadMessageCountChanged int count , which updates the application badge after the initial query."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-private-chat",
+    "title": "Enable or disable burn after reading",
+    "description": "Use setOneConversationPrivateChat() to configure burn-after-reading mode for an Android conversation.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-private-chat",
+    "content": "OpenIMClient.getInstance .conversationManager.setOneConversationPrivateChat new OnBase @Override public void onSuccess String data markPrivateChatSubmitted conversationID, true ; @Override public void onError int code, String error recordPrivateChatFailure code, error ; , conversationID, true ; Pass false to disable burn after reading. Set the duration separately with burnDuration ; see Set the burn duration /sdk/android/conversation/managing conversations/set burn duration . This is distinct from scheduled server message deletion. Reconcile the final state through onConversationChanged ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-burn-duration",
+    "title": "Set the burn duration",
+    "description": "Use setConversationBurnDuration() to set the Android burn-after-reading retention duration.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-burn-duration",
+    "content": "OpenIMClient.getInstance .conversationManager.setConversationBurnDuration new OnBase @Override public void onSuccess String data markBurnDurationSubmitted conversationID, 30 ; @Override public void onError int code, String error recordBurnDurationFailure code, error ; , conversationID, 30 ; burnDuration is measured in seconds. Enable or disable burn after reading with isPrivateChat ; do not confuse this value with the scheduled server deletion period msgDestructTime . Merge the updated duration from onConversationChanged ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-message-destruct",
+    "title": "Schedule server message deletion",
+    "description": "Use setConversation() to configure scheduled server message deletion for an Android conversation.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-message-destruct",
+    "content": "isMsgDestruct and msgDestructTime together configure scheduled server message deletion and can be sent in one ConversationReq . ConversationReq request = new ConversationReq ; request.setMsgDestruct true ; request.setMsgDestructTime 3600 ; OpenIMClient.getInstance .conversationManager.setConversation new OnBase @Override public void onSuccess String data markMessageDestructSubmitted conversationID ; @Override public void onError int code, String error recordMessageDestructFailure code, error ; , conversationID, request ; msgDestructTime is measured in seconds. Set request.setMsgDestruct false to disable the policy. This capability is distinct from burn after reading. Reconcile the latest switch and period through onConversationChanged ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/hide-a-conversation",
+    "title": "Hide a conversation",
+    "description": "Use hideConversation() to hide a conversation entry from the current Android account.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations hide-a-conversation",
+    "content": "hideConversation hides only the current account's conversation entry. It does not delete a one to one relationship, leave a group, or affect another account. OpenIMClient.getInstance .conversationManager.hideConversation new OnBase @Override public void onSuccess String data conversationStore.remove conversationID ; @Override public void onError int code, String error recordConversationHideFailure code, error ; , conversationID ; A hidden conversation can appear again after a new message or resynchronization. Remove it optimistically after success, then merge later onConversationChanged events idempotently by conversationID ."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/delete-conversation-with-messages",
+    "title": "Delete a conversation and its messages",
+    "description": "Use deleteConversationAndDeleteAllMsg() to delete an Android conversation and its messages.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations delete-conversation-with-messages",
+    "content": "Use deleteConversationAndDeleteAllMsg for a product action such as “delete this chat”. OpenIMClient.getInstance .conversationManager.deleteConversationAndDeleteAllMsg new OnBase @Override public void onSuccess String data messageStore.clearConversation conversationID ; conversationStore.remove conversationID ; @Override public void onError int code, String error recordConversationDeleteFailure code, error ; , conversationID ; After success, clear the current message list and conversation row. This does not delete a friend relationship or leave or dismiss a group. A conversation can be regenerated by a new message or synchronization while the chat target still exists; reconcile through onConversationChanged or a fresh query."
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/clear-conversation-messages",
+    "title": "Clear messages in a conversation",
+    "description": "Use messageManager.clearConversationAndDeleteAllMsg() to keep an Android conversation entry while clearing its messages.",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations clear-conversation-messages",
+    "content": "Use messageManager.clearConversationAndDeleteAllMsg for a product action such as “clear chat history”. OpenIMClient.getInstance .messageManager.clearConversationAndDeleteAllMsg conversationID, new OnBase @Override public void onSuccess String data messageStore.clearConversation conversationID ; @Override public void onError int code, String error recordConversationClearFailure code, error ; ; The conversation entry remains while the current account's messages and summary state are cleared. Clear the visible message list immediately, then reconcile the latest message, summary, and unread state from onConversationChanged or a fresh query."
   },
   {
     "path": "/sdk/flutter/overview",

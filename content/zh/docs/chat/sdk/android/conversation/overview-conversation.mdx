@@ -1,0 +1,63 @@
+---
+title: '会话概览'
+description: '了解 Android SDK 中 ConversationInfo、conversationID、会话设置和会话事件的职责。'
+sourcePath: '/sdk/android/conversation/overview-conversation'
+---
+
+会话是当前登录用户围绕一次单聊或群聊维护的聊天列表状态，由一条 `ConversationInfo` 记录表示。它保存未读数、最后一条消息、置顶、草稿、消息接收方式和扩展字段。`conversationID` 用于定位当前账号的会话状态；单聊目标使用对方 `userID`，群聊目标使用 `groupID`。
+
+群资料、成员关系和群权限属于群组能力。群聊页面使用 `groupID` 调用群组 API，使用 `conversationID` 处理会话设置、未读数、草稿和消息清理。
+
+## 会话标识
+
+| 标识             | 用途                                                                          |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `conversationID` | 当前账号的会话记录 ID，用于会话设置、未读状态和消息历史。                     |
+| `userID`         | 单聊对方的用户 ID。                                                           |
+| `groupID`        | 群聊对应的群组 ID，也是群组 API 的目标标识。                                  |
+| `sourceId`       | 按会话类型查询或生成 ID 时传入的聊天目标：单聊为 `userID`，群聊为 `groupID`。 |
+
+单聊使用 `ConversationType.SINGLE_CHAT`。群聊根据群类型使用 `ConversationType.GROUP_CHAT` 或 `ConversationType.SUPER_GROUP_CHAT`；不要在应用层自行拼接 `conversationID`。
+
+## ConversationInfo
+
+| 字段                                | 说明                                 |
+| ----------------------------------- | ------------------------------------ |
+| `conversationID`                    | 会话 ID。                            |
+| `conversationType`                  | 会话类型。                           |
+| `userID` / `groupID`                | 单聊目标用户或群聊目标群组。         |
+| `showName` / `faceURL`              | 会话列表显示名称和头像。             |
+| `unreadCount`                       | 当前会话未读数。                     |
+| `latestMsg` / `latestMsgSendTime`   | 最后一条消息 JSON 字符串及发送时间。 |
+| `recvMsgOpt`                        | 当前会话消息接收方式。               |
+| `groupAtType`                       | 群聊 @ 提醒状态。                    |
+| `draftText` / `draftTextTime`       | 会话草稿及更新时间。                 |
+| `isPinned`                          | 是否置顶。                           |
+| `isPrivateChat` / `burnDuration`    | 阅后即焚开关和保留时长。             |
+| `isMsgDestruct` / `msgDestructTime` | 服务端消息定期删除设置。             |
+| `ex`                                | 业务约定的会话扩展字符串。           |
+
+## 查询和设置
+
+- [查询指定会话](/sdk/android/conversation/retrieving-conversations/get-conversation-by-target)
+- [生成会话 ID](/sdk/android/conversation/retrieving-conversations/get-conversation-id)
+- [按 ID 批量获取会话](/sdk/android/conversation/retrieving-conversations/get-conversations-by-id)
+- [获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)
+- [置顶或取消置顶会话](/sdk/android/conversation/managing-conversations/pin-conversation)
+- [设置会话扩展字段](/sdk/android/conversation/managing-conversations/set-conversation-extension)
+- [设置会话草稿](/sdk/android/conversation/managing-conversations/set-conversation-draft)
+- [设置会话消息接收方式](/sdk/android/conversation/managing-conversations/set-message-receive-option)
+- [重置群聊 @ 状态](/sdk/android/conversation/managing-conversations/clear-group-mentions)
+- [标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read)
+- [获取消息总未读数](/sdk/android/conversation/managing-conversations/get-total-unread-count)
+- [开启或关闭阅后即焚](/sdk/android/conversation/managing-conversations/set-private-chat)
+- [定期删除服务端消息](/sdk/android/conversation/managing-conversations/set-message-destruct)
+
+## 状态更新
+
+查询方法建立会话快照，事件负责合并后续增量：
+
+- 新会话和会话属性变化由[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)归属的 `onNewConversation` 与 `onConversationChanged` 处理。
+- 当前账号总未读数由[获取消息总未读数](/sdk/android/conversation/managing-conversations/get-total-unread-count)归属的 `onTotalUnreadMessageCountChanged` 处理。
+
+`ConversationManager` 只保存一个 `OnConversationListener`，`setOnConversationListener()` 会替换当前 listener。应用应在统一状态层组合所有 callback 并设置一次；请求成功、事件到达和重新查询校准是三个独立阶段。

@@ -1,0 +1,55 @@
+---
+title: 'Get specified user profiles'
+description: 'Use getUsersInfo() to query public profiles by userID.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-06'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/user/user-profile/get-users-info'
+---
+
+`getUsersInfo()` returns public profiles for a list of user IDs. It is suitable for friend candidates and profiles of users outside the current friend list. It does not return relationship fields such as the current user's friend remark.
+
+```java
+List<String> userIDs = Arrays.asList("user_a", "user_b");
+
+OpenIMClient.getInstance().userInfoManager.getUsersInfo(
+    new OnBase<List<PublicUserInfo>>() {
+        @Override
+        public void onSuccess(List<PublicUserInfo> users) {
+            for (PublicUserInfo user : users) {
+                publicUserStore.put(user.getUserID(), user);
+            }
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordUserQueryFailure(code, error);
+        }
+    },
+    userIDs
+);
+```
+
+Remove empty and duplicate IDs before calling the API, and keep each request within the application's batch limit. The callback returns `List<PublicUserInfo>` with fields such as `userID`, `nickname`, `faceURL`, `ex`, and `createTime`. This query does not trigger `OnUserListener`; query again and merge by `userID` when the profile snapshot must be refreshed.
+
+## Returned fields
+
+| Field        | Description                                                       |
+| ------------ | ----------------------------------------------------------------- |
+| `userID`     | OpenIM user ID and the stable local cache key.                    |
+| `nickname`   | Account-level public nickname.                                    |
+| `faceURL`    | Account-level public avatar URL.                                  |
+| `ex`         | Account-level public extension string defined by the application. |
+| `createTime` | User profile creation time.                                       |
+
+Do not use `PublicUserInfo` to overwrite friend remarks, pinned state, or in-group nicknames. Use `FriendInfo` for friends and the group member model for group members.
+
+Searching by nickname, phone number, or email is an application backend capability. A trusted backend should perform the search and permission checks, then return candidate user IDs for this API.
+
+## Refreshing profiles
+
+Replace or merge the public profile snapshot after a successful query. Re-query when opening a profile card, when the user explicitly refreshes, after reconnecting, or after a trusted backend reports a profile change. `OnUserListener.onSelfInfoUpdated` only describes the signed-in user's profile and is not a change event for other users.

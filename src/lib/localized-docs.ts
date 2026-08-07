@@ -2,6 +2,7 @@ import 'server-only';
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import androidSdkData from '@/src/generated/android-sdk-zh-content.json';
 import flutterSdkData from '@/src/generated/flutter-sdk-zh-content.json';
 import iosSdkData from '@/src/generated/ios-sdk-zh-content.json';
 import wasmSdkData from '@/src/generated/wasm-sdk-zh-content.json';
@@ -29,6 +30,7 @@ type LocalizedSdkData = {
 };
 
 const sdkZhByContext: Record<string, LocalizedSdkData> = {
+  'chat/sdk/android': androidSdkData as LocalizedSdkData,
   'chat/sdk/flutter': flutterSdkData as LocalizedSdkData,
   'chat/sdk/ios': iosSdkData as LocalizedSdkData,
   'chat/sdk/wasm': wasmSdkData as LocalizedSdkData,

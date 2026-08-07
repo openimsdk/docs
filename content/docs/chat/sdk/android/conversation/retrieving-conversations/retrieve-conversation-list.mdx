@@ -1,0 +1,59 @@
+---
+title: 'Get the conversation list'
+description: 'Use getConversationListSplit() to retrieve the current Android account conversation list by page.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-07'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+The conversation list belongs to the signed-in account. Each `ConversationInfo` contains list state such as unread count, latest message, pinning, and draft. Use the paged API instead of the non-paged `getAllConversationList()`.
+
+## Retrieve a page
+
+```java
+OpenIMClient.getInstance().conversationManager.getConversationListSplit(
+    new OnBase<List<ConversationInfo>>() {
+        @Override
+        public void onSuccess(List<ConversationInfo> conversations) {
+            mergeConversations(conversations);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordConversationListFailure(code, error);
+        }
+    },
+    0,
+    50
+);
+```
+
+| Parameter | Type   | Description                                           |
+| --------- | ------ | ----------------------------------------------------- |
+| `offset`  | `long` | Zero-based paging offset; reset it to `0` on refresh. |
+| `count`   | `long` | Requested number of conversations.                    |
+
+The callback returns the current `List<ConversationInfo>` page. Advance `offset` by the requested item count and deduplicate by `conversationID`. A page smaller than `count` normally indicates the end; clear paging state and reload from `0` on refresh.
+
+## Keep the list synchronized
+
+`getConversationListSplit()` only creates a snapshot. Combine these callbacks in the application's single `OnConversationListener`:
+
+```java
+@Override
+public void onNewConversation(List<ConversationInfo> conversations) {
+    mergeConversations(conversations);
+}
+
+@Override
+public void onConversationChanged(List<ConversationInfo> conversations) {
+    mergeConversations(conversations);
+}
+```
+
+Both callbacks carry `List<ConversationInfo>` and must merge idempotently by `conversationID`. A user can join a group without an existing conversation, and a historical conversation can remain after leaving a group, so do not substitute the joined-group list for the conversation list.

@@ -1,0 +1,112 @@
+---
+title: '日志'
+description: '配置 Android SDK 日志、写入应用诊断信息并上传日志。'
+sourcePath: '/sdk/android/logger'
+---
+
+OpenIM Android SDK 日志用于定位初始化、连接和业务 API 调用问题。开发和预发布环境可以输出较详细的信息；生产环境应减少日志量，并避免记录 Token、完整消息正文、原始文件 URL、通话房间凭据和用户隐私字段。
+
+## 初始化日志配置
+
+日志选项属于 `InitConfig`，必须在 `initSDK()` 前设置：
+
+```java
+File dataDirectory = new File(application.getFilesDir(), "openim");
+File logDirectory = new File(application.getFilesDir(), "openim-logs");
+
+InitConfig config = new InitConfig(
+    apiAddr,
+    wsAddr,
+    dataDirectory.getAbsolutePath()
+);
+config.logLevel = BuildConfig.DEBUG ? LogLevel.Debug : LogLevel.Warn;
+config.isLogStandardOutput = BuildConfig.DEBUG;
+config.logFilePath = logDirectory.getAbsolutePath();
+
+boolean initialized = OpenIMClient.getInstance().initSDK(
+    application,
+    config,
+    connectionListener
+);
+```
+
+| 字段 | 说明 |
+| --- | --- |
+| `logLevel` | 使用 `LogLevel` 常量控制详细程度。可选值包括 `DebugWithSQL`、`Debug`、`Info`、`Warn`、`Error`、`Panic` 和 `Fatal`。 |
+| `isLogStandardOutput` | 是否把 SDK 日志输出到 Android 标准日志；开发诊断时开启。 |
+| `logFilePath` | 可选日志目录，应位于应用可写范围并纳入容量与保留期管理。 |
+
+开发诊断可以使用 `Debug`；只有排查数据库问题时才临时启用 `DebugWithSQL`。生产环境通常使用 `Warn` 或 `Error`，并关闭不必要的标准输出。
+
+## 写入应用诊断日志
+
+需要把业务上下文写入 SDK 日志时，使用未废弃的 `logs()` 重载：
+
+```java
+OpenIMClient.getInstance().logs(
+    LogLevel.Error,
+    ChatRepository.class.getSimpleName(),
+    184,
+    "send_message_failed",
+    errorMessage,
+    "conversationID", conversationID,
+    "clientMsgID", clientMsgID
+);
+```
+
+`currentClassName` 和 `currentLineNum` 用于定位调用位置，`msgStr` 是简短动作描述，`errStr` 是错误信息。`Warn`、`Error`、`Panic` 和 `Fatal` 级别必须提供非空错误信息。末尾的 `extra` 按“键、值”成对传入；只记录排查所需的非敏感标识。
+
+旧的带 `OnBase<String>`、`Map` 参数的 `logs()` 重载已经废弃，不应在新代码中使用。
+
+## 上传诊断日志
+
+只在用户明确同意提交诊断信息后调用 `uploadLogs()`。Android API 保留了 `params` 参数；没有额外参数时传空列表。`line` 表示本次上传读取的日志行数配置。
+
+```java
+String uploadID = UUID.randomUUID().toString();
+
+OpenIMClient.getInstance().uploadLogs(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            showLogUploadCompleted();
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showLogUploadError(code, error);
+        }
+    },
+    Collections.emptyList(),
+    2000,
+    uploadID,
+    "support-ticket-42",
+    new UploadLogProgress() {
+        @Override
+        public void onProgress(long current, long total) {
+            updateLogUploadProgress(current, total);
+        }
+    }
+);
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `line` | 本次上传读取的日志行数配置。 |
+| `cancelID` | 本次上传的稳定标识，可使用业务生成的 UUID。 |
+| `ex` | 附加到上传任务的诊断说明，例如工单 ID；不能包含凭据或隐私数据。 |
+| `UploadLogProgress` | 提供当前进度和总量，用于更新上传界面。 |
+
+成功 callback 表示本次日志上传请求完成，不会修改用户、会话或消息状态，也不会触发业务领域事件。上传失败时记录错误码、当前用户和业务诊断 ID，不要再次输出完整日志内容。
+
+## operationID 与业务追踪
+
+Android Java wrapper 的公共业务方法不接收 `operationID`。每次调用时，wrapper 会通过 `ParamsUtil.buildOperationID()` 自动生成并传给 Core，因此应用通常不需要创建或传递该值。
+
+应用日志应另外维护自己的 trace ID，并记录业务动作、错误码以及必要的 `conversationID`、`clientMsgID`、`groupID` 或 `roomID`。应用 trace ID 用于串联多步骤业务流程；SDK 的 `operationID` 用于单次 SDK 调用链路，两者都不是身份凭据或业务幂等键。
+
+## 相关页面
+
+- [按 Android 环境接入](/sdk/android/getting-started/environment-specific-implementation)
+- [认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)
+- [发送消息](/sdk/android/message/sending-messages/send-message)

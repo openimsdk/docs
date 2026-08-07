@@ -1,0 +1,46 @@
+---
+title: '音视频通话概览'
+description: '了解 Android SDK 的音视频通话信令、房间信息和事件边界。'
+sourcePath: '/sdk/android/calling/overview-calling'
+---
+
+Android SDK 的 `SignalingManager` 提供发起邀请、接受、拒绝、取消、挂断、查询房间和同步通话状态所需的信令 API。它负责协调通话参与者、房间信息和通话生命周期，不负责采集摄像头画面、播放远端媒体流或渲染通话界面。
+
+应用需要把 SDK 返回的 `roomID`、`token` 和 `liveURL` 交给所选的实时音视频媒体引擎，并自行处理 Android 权限、音视频设备、媒体轨道、弱网策略和界面状态。信令 API 不是一套完整的实时音视频媒体 SDK。
+
+## 通话流程
+
+1. 调用 `signalingInvite()` 发起单聊通话，或调用 `signalingInviteInGroup()` 发起群聊通话。
+2. 被邀请方从 `onReceiveNewInvitation` 获取 `SignalingInfo`，选择接受或拒绝。
+3. 接受方调用 `signalingAccept()`，双方使用返回的房间凭据接入媒体引擎。
+4. 通话过程中根据参与者、媒体流和自定义信令回调更新本地状态。
+5. 发起方可以取消尚未接通的邀请；任一通话参与者都可以挂断已经建立的通话。
+
+## 核心数据
+
+| 数据 | 说明 |
+| --- | --- |
+| `SignalingInvitationInfo` | 邀请人、被邀请人、群组、房间、媒体类型、超时时间、会话类型和业务扩展数据。 |
+| `SignalingInfo` | 当前操作用户、原始邀请、参与者资料和可选的离线推送信息。 |
+| `SignalingCertificate` | OpenIMServer 返回的 `roomID`、`token`、`liveURL` 和忙线用户列表。 |
+| `RoomCallingInfo` | 按群组查询到的房间、邀请、参与者、群组和入会凭据快照。 |
+
+`customData` 和自定义信令只适合传递业务协商信息。长期凭据、管理员密钥和其他敏感数据不应写入这些字段。
+
+## 状态更新与事件归属
+
+发起、接受、拒绝、取消和挂断等写操作需要分别处理 API 回调与通话 listener。API 成功回调表示当前信令请求已经完成；listener 反映邀请方、被邀请方、其他设备或房间参与者看到的增量状态，两者不是同一个完成信号。
+
+邀请生命周期、参与者进出房间、挂断和媒体流变化的完整 listener 统一见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)；自定义信令见[发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal)。房间、凭据和待处理邀请查询只返回调用时的状态快照。
+
+概览页不设置 listener。通话状态以 `roomID` 为主键；参与者状态还需要结合用户 ID。需要恢复或校准当前房间状态时，再调用对应查询 API。
+
+## 按任务查找页面
+
+| 任务 | 页面 |
+| --- | --- |
+| 发起单聊或群聊通话 | [发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)、[发起群聊通话](/sdk/android/calling/managing-calls/start-group-call) |
+| 接受或拒绝邀请 | [接受通话](/sdk/android/calling/managing-calls/accept-call)、[拒绝通话](/sdk/android/calling/managing-calls/reject-call) |
+| 取消邀请或挂断通话 | [取消通话邀请](/sdk/android/calling/managing-calls/cancel-call)、[挂断通话](/sdk/android/calling/managing-calls/hang-up-call) |
+| 恢复房间或待处理邀请 | [查询群组通话房间](/sdk/android/calling/retrieving-call-information/get-room-by-group-id)、[获取通话房间 Token](/sdk/android/calling/retrieving-call-information/get-token-by-room-id)、[恢复启动前收到的通话邀请](/sdk/android/calling/retrieving-call-information/restore-pending-invitation) |
+| 处理通话事件和业务协商 | [处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)、[发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |

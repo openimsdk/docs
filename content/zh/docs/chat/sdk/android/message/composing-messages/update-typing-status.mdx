@@ -1,0 +1,33 @@
+---
+title: '更新输入状态'
+description: '使用 typingStatusUpdate 提示单聊对方当前正在输入。'
+sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
+---
+
+输入框变化时传入对方用户 ID 和业务约定的提示字符串。调用侧应防抖，避免每次按键都发送请求。
+
+```java
+messageManager.typingStatusUpdate(callback, peerUserID, "typing");
+```
+
+成功 callback 表示输入状态上报请求完成，不表示对端已经处理。对端通过应用级 `OnConversationListener.onConversationUserInputStatusChanged` 接收字符串载荷；Android wrapper 不会自动把它转换为模型，应在校验 JSON 后再解析：
+
+```java
+@Override
+public void onConversationUserInputStatusChanged(String payload) {
+    InputStatesChangedData state = JsonUtil.toObj(
+        payload,
+        InputStatesChangedData.class
+    );
+    if (state == null || state.getConversationID() == null) {
+        return;
+    }
+    updateTypingState(
+        state.getConversationID(),
+        state.getUserID(),
+        state.getPlatformIDs()
+    );
+}
+```
+
+输入状态按 `conversationID:userID` 合并，并设置业务侧超时自动清除。`ConversationManager` 只保存一个会话 listener，本回调必须与会话列表、总未读数和同步事件组合后统一设置，不能在输入框页面单独覆盖。

@@ -1,0 +1,48 @@
+---
+title: '获取指定用户资料'
+description: '使用 getUsersInfo() 按 userID 批量查询用户公开资料。'
+sourcePath: '/sdk/android/user/user-profile/get-users-info'
+---
+
+`getUsersInfo()` 根据 `userID` 列表返回用户的公开资料，适合展示好友候选人或陌生人资料卡。该方法只读取公开资料，不返回当前账号为好友设置的备注等关系字段。
+
+```java
+List<String> userIDs = Arrays.asList("user_a", "user_b");
+
+OpenIMClient.getInstance().userInfoManager.getUsersInfo(
+    new OnBase<List<PublicUserInfo>>() {
+        @Override
+        public void onSuccess(List<PublicUserInfo> users) {
+            for (PublicUserInfo user : users) {
+                publicUserStore.put(user.getUserID(), user);
+            }
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordUserQueryFailure(code, error);
+        }
+    },
+    userIDs
+);
+```
+
+调用前应去除空值和重复 ID，并控制单次请求的数量。成功 callback 返回 `List<PublicUserInfo>`，主要字段包括 `userID`、`nickname`、`faceURL`、`ex` 和 `createTime`。查询不会触发 `OnUserListener`，需要刷新资料时应重新调用并按 `userID` 合并结果。
+
+## 返回结果
+
+| 字段         | 说明                                     |
+| ------------ | ---------------------------------------- |
+| `userID`     | OpenIM 用户 ID，也是本地缓存的稳定 key。 |
+| `nickname`   | 账号级公开昵称。                         |
+| `faceURL`    | 账号级公开头像地址。                     |
+| `ex`         | 账号级公开扩展字符串，格式由业务约定。   |
+| `createTime` | 用户资料创建时间。                       |
+
+`PublicUserInfo` 中的资料不能用于覆盖好友备注、置顶状态或群内昵称。展示好友时应使用 `FriendInfo`，展示群成员时应使用群成员模型。
+
+按昵称、手机号或邮箱搜索用户属于业务服务能力，应由可信后端完成搜索和权限校验，再把候选 `userID` 交给客户端查询公开资料。
+
+## 资料刷新
+
+查询成功后，以返回结果更新公开资料快照。打开资料卡、用户主动刷新、断线重连或业务后端通知资料变化时，可以重新调用该方法校准数据。`OnUserListener.onSelfInfoUpdated` 只表示当前登录用户资料变化，不能作为其他用户资料变化事件。

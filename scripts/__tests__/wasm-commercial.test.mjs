@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const ownership = JSON.parse(readFileSync('data/structure/wasm-api-ownership.json', 'utf8'));
+const androidAudit = JSON.parse(readFileSync('data/structure/android-content-audit.json', 'utf8'));
 const flutterAudit = JSON.parse(readFileSync('data/structure/flutter-content-audit.json', 'utf8'));
 const iosAudit = JSON.parse(readFileSync('data/structure/ios-content-audit.json', 'utf8'));
 
@@ -82,6 +83,7 @@ const nonCommercialEvents = [
 ];
 
 const platformSymbolAliases = {
+  android: {},
   flutter: {
     getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
     onHangup: 'OnHangUp',
@@ -143,6 +145,9 @@ const fullCommercialConceptPages = new Set([
   '/sdk/ios/conversation/managing-conversations/set-message-destruct',
   '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
   '/sdk/ios/message/composing-messages/save-local-transcript',
+  '/sdk/android/conversation/managing-conversations/set-private-chat',
+  '/sdk/android/conversation/managing-conversations/set-burn-duration',
+  '/sdk/android/conversation/managing-conversations/set-message-destruct',
 ]);
 
 function applyCommercialConceptOverride(pagePath, info) {
@@ -202,7 +207,7 @@ function getPageCommercialInfo(pagePath) {
     };
   }
 
-  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios)(\/.*)$/);
   if (!match) return { kind: 'none', methods: [], openSourceMethods: [], events: [] };
 
   const platform = match[1];
@@ -211,7 +216,8 @@ function getPageCommercialInfo(pagePath) {
     return applyCommercialConceptOverride(pagePath, getWasmPageCommercialInfo(wasmPath));
   }
 
-  const audit = platform === 'flutter' ? flutterAudit : iosAudit;
+  const audit =
+    platform === 'android' ? androidAudit : platform === 'flutter' ? flutterAudit : iosAudit;
   const page = audit.pages.find(
     (entry) => entry.currentPath === pagePath && entry.disposition !== 'omit',
   );

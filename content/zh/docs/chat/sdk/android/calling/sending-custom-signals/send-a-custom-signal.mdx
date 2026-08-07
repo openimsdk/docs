@@ -1,0 +1,64 @@
+---
+title: '发送自定义信令'
+description: '使用 Android SDK 在通话房间中发送和接收自定义信令。'
+sourcePath: '/sdk/android/calling/sending-custom-signals/send-a-custom-signal'
+---
+
+`signalingSendCustomSignal()` 用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。
+
+## 发送信令
+
+`roomID` 与 `customInfo` 都是必填字符串。需要传递结构化数据时，应定义稳定的数据格式并序列化为 JSON。
+
+```java
+JSONObject signal = new JSONObject();
+signal.put("version", 1);
+signal.put("eventID", eventID);
+signal.put("type", "hand-raised");
+signal.put("userID", currentUserID);
+signal.put("sentAt", System.currentTimeMillis());
+
+OpenIMClient.getInstance().signalingManager.signalingSendCustomSignal(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String result) {
+            markSignalSent(eventID);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showSignalError(code, error);
+        }
+    },
+    roomID,
+    signal.toString()
+);
+```
+
+成功回调表示本次自定义信令发送请求已经完成，不等于其他参与者已经处理。自定义信令应保持精简，并包含协议版本和业务幂等 ID。大文件、聊天记录、长期状态和敏感凭据不应放入 `customInfo`。
+
+## 接收信令
+
+`OnSignalingListener.onReceiveCustomSignal` 返回 `CustomSignalingInfo`。应用应先校验房间和自有业务协议，再更新界面：
+
+```java
+@Override
+public void onReceiveCustomSignal(CustomSignalingInfo info) {
+    if (info == null || !activeRoomID.equals(info.getRoomID())) {
+        return;
+    }
+
+    CallSignal signal = parseAndValidateCallSignal(info.getCustomInfo());
+    String mergeID = info.getRoomID() + ":" + signal.getEventID();
+    if (hasAppliedSignal(mergeID)) {
+        return;
+    }
+    applyCallSignal(signal);
+}
+```
+
+本页是 `onReceiveCustomSignal` 的完整处理归属页。`parseAndValidateCallSignal()` 应检查 JSON 结构、协议版本、`eventID`、`type` 和业务字段。按 `roomID:eventID` 幂等处理，不要依赖事件顺序。
+
+`SignalingManager` 只设置一个 listener。接收自定义信令的回调应合并到[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)所示的应用级 listener 中，不能为本页单独设置一个新 listener，否则会覆盖其他通话回调。
+
+客户端自定义信令不能用于授予主持人、付费或隐私权限。需要权威校验的状态应由可信后端保存和判断；连接恢复后，通过房间查询或业务后端校准长期状态。

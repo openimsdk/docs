@@ -1,0 +1,50 @@
+---
+title: '获取黑名单列表'
+description: '使用 getBlacklist() 获取当前用户的黑名单。'
+sourcePath: '/sdk/android/user/blacklist/get-blacklist'
+---
+
+黑名单记录当前用户主动拉黑的用户，可用于黑名单设置页、资料卡中的关系状态和聊天入口限制。黑名单与群成员管理是独立能力；禁言、移除群成员或调整群角色时，应使用群组 API。
+
+## 获取黑名单
+
+完成 SDK 初始化并登录后，调用 `getBlacklist()` 获取当前账号的完整黑名单。返回空列表表示当前没有黑名单用户。
+
+```java
+OpenIMClient.getInstance().friendshipManager.getBlacklist(
+    new OnBase<List<UserInfo>>() {
+        @Override
+        public void onSuccess(List<UserInfo> users) {
+            blacklistStore.replace(users);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordBlacklistFailure(code, error);
+        }
+    }
+);
+```
+
+成功 callback 返回 `List<UserInfo>`；通过 `UserInfo.getBlackInfo()` 读取黑名单关系对象。
+
+## 黑名单记录字段
+
+`BlacklistInfo` 的常用字段如下：
+
+| 字段             | 说明                                              |
+| ---------------- | ------------------------------------------------- |
+| `userID`         | 被当前用户拉黑的目标用户 ID，也是列表的稳定 key。 |
+| `nickname`       | 目标用户昵称快照。                                |
+| `faceURL`        | 目标用户头像地址。                                |
+| `gender`         | 目标用户性别值。                                  |
+| `operatorUserID` | 执行拉黑操作的用户 ID。                           |
+| `createTime`     | 黑名单关系创建时间。                              |
+| `addSource`      | 黑名单关系的添加来源。                            |
+| `ex`             | 黑名单关系扩展字符串。                            |
+
+如果页面还要展示好友备注或最新公开资料，应按 `userID` 额外合并 `FriendInfo` 或 `PublicUserInfo`，不能把黑名单字段当作好友资料。
+
+黑名单状态统一按 `userID` 合并。查询本身不会触发黑名单新增或删除事件。
+
+首次进入页面、重连或用户主动刷新时，使用返回的完整列表替换本地快照；增量变化由[拉黑用户](/sdk/android/user/blacklist/add-blacklist)和[取消拉黑用户](/sdk/android/user/blacklist/remove-blacklist)页面归属的 listener 处理。

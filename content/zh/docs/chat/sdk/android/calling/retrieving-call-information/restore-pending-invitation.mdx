@@ -1,0 +1,30 @@
+---
+title: '恢复启动前收到的通话邀请'
+description: '使用 Android SDK 恢复应用启动时尚未处理的通话邀请。'
+sourcePath: '/sdk/android/calling/retrieving-call-information/restore-pending-invitation'
+---
+
+`getSignalingInvitationInfoStartApp()` 不接收业务参数，返回应用启动或恢复时需要处理的邀请快照：
+
+```java
+OpenIMClient.getInstance().signalingManager.getSignalingInvitationInfoStartApp(
+    new OnBase<SignalingInfo>() {
+        @Override
+        public void onSuccess(SignalingInfo info) {
+            if (info != null
+                && info.getInvitation() != null
+                && info.getInvitation().getRoomID() != null
+                && !info.getInvitation().getRoomID().isEmpty()) {
+                restoreIncomingCall(info);
+            }
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            clearExpiredIncomingCall();
+        }
+    }
+);
+```
+
+成功回调只表示取得当前快照，不会替代通话 listener。仅在 `invitation` 和 `roomID` 有效时恢复来电界面；随后仍需处理取消、超时、接受和挂断，完整处理见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)。

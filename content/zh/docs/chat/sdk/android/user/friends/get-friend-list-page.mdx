@@ -1,0 +1,66 @@
+---
+title: '分页获取好友列表'
+description: '使用 getFriendListPage() 分页获取当前用户的好友列表。'
+sourcePath: '/sdk/android/user/friends/get-friend-list-page'
+---
+
+```java
+OpenIMClient.getInstance().friendshipManager.getFriendListPage(
+    new OnBase<List<UserInfo>>() {
+        @Override
+        public void onSuccess(List<UserInfo> friends) {
+            for (UserInfo friend : friends) {
+                friendStore.put(friend.getUserID(), friend);
+            }
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordFriendListFailure(code, error);
+        }
+    },
+    0,
+    40,
+    true
+);
+```
+
+参数依次为 `offset`、`count` 和 `filterBlack`。`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 为 `true` 时过滤黑名单用户。成功 callback 返回当前页 `List<UserInfo>`，好友关系详情可通过 `getFriendInfo()` 读取。继续加载下一页时按实际请求数量增加 `offset`；返回数量小于 `count` 时通常表示到达末页。
+
+只使用分页 API，不使用非分页的 `getFriendList()`。快照和增量都应按 `userID` 合并。
+
+## 好友资料字段
+
+`UserInfo` 是 Android wrapper 的组合对象。好友列表中的 `getFriendInfo()` 返回 `FriendInfo`，常用字段如下：
+
+| 字段             | 说明                                  |
+| ---------------- | ------------------------------------- |
+| `userID`         | 好友用户 ID，也是好友列表的稳定标识。 |
+| `nickname`       | 好友账号昵称。                        |
+| `faceURL`        | 好友账号头像地址。                    |
+| `remark`         | 当前账号设置的好友备注。              |
+| `ex`             | 好友关系扩展字符串。                  |
+| `addSource`      | 好友关系添加来源。                    |
+| `operatorUserID` | 建立或更新关系的操作用户 ID。         |
+| `createTime`     | 好友关系创建时间。                    |
+
+`nickname` 和 `faceURL` 是账号资料，`remark` 和 `ex` 属于好友关系。`UpdateFriendsReq` 支持提交 `isPinned`，但当前 Android `FriendInfo` 模型不提供对应读取字段，置顶状态应由业务层单独维护。不要用好友对象覆盖陌生人的 `PublicUserInfo`，也不要把好友备注写回账号昵称。
+
+本页归属好友新增、资料变化和删除事件。以下 callback 应组合进应用唯一的 `OnFriendshipListener`：
+
+```java
+@Override
+public void onFriendAdded(FriendInfo friend) {
+    friendStore.put(friend.getUserID(), friend);
+}
+
+@Override
+public void onFriendInfoChanged(FriendInfo friend) {
+    friendStore.put(friend.getUserID(), friend);
+}
+
+@Override
+public void onFriendDeleted(FriendInfo friend) {
+    friendStore.remove(friend.getUserID());
+}
+```

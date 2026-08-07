@@ -24,7 +24,7 @@ type ResourceLink = {
   title: string;
 };
 
-export type SdkOverviewPlatform = 'flutter' | 'ios' | 'wasm';
+export type SdkOverviewPlatform = 'android' | 'flutter' | 'ios' | 'wasm';
 
 type OverviewCopy = {
   eyebrow: string;
@@ -211,6 +211,54 @@ const copy = {
 } satisfies Record<Locale, OverviewCopy>;
 
 const mobileCopy = {
+  android: {
+    eyebrow: 'Version 4',
+    intro:
+      'OpenIM Android SDK 为原生 Android 应用提供用户、会话、群组、消息、实时事件和本地存储能力。先完成 Android 工程配置与登录，再通过各 manager 的 API 和 listener 把业务数据接入应用状态。',
+    mostPopular: '热门主题',
+    recommended: '推荐功能',
+    resources: '资源',
+    popular: createMobilePopularCards('android'),
+    features: [
+      {
+        title: '用户认证',
+        description: '使用后端签发的 Token 登录，并处理连接、过期和被踢下线事件。',
+        href: '/sdk/android/getting-started/authenticate-and-manage-session',
+      },
+      {
+        title: '群组',
+        description: '管理群资料、群成员、入群申请、权限和群组事件。',
+        href: '/sdk/android/group/overview-group',
+      },
+      {
+        title: '事件',
+        description: '注册各 manager 的 listener，并按稳定标识合并增量数据。',
+        href: '/sdk/android/events/overview-events',
+      },
+    ],
+    links: [
+      {
+        title: '发送第一条消息',
+        description: '完成接入、初始化、登录、选择目标并发送消息。',
+        href: '/sdk/android/getting-started/send-first-message',
+      },
+      {
+        title: 'Android 环境接入',
+        description: '配置 Android 工程、SDK 初始化、网络权限和应用数据目录。',
+        href: '/sdk/android/getting-started/environment-specific-implementation',
+      },
+      {
+        title: '日志与诊断',
+        description: '配置 SDK 日志，并保留错误码和错误信息用于诊断。',
+        href: '/sdk/android/logger',
+      },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
+      },
+    ],
+  },
   flutter: {
     eyebrow: 'Version 4',
     intro:

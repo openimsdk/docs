@@ -1,0 +1,57 @@
+---
+title: '开始之前'
+description: '准备 OpenIMServer、用户登录信息和 Android 工程环境，再开始初始化、认证或发送消息。'
+sourcePath: '/sdk/android/getting-started/before-you-start'
+---
+
+在原生 Android 应用中接入 OpenIMClientSDK 前，需要准备可访问的 OpenIMServer、可信的用户认证流程，以及满足 SDK 构建要求的 Android 工程。这些条件同时适用于[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)和[发送第一条消息](/sdk/android/getting-started/send-first-message)。
+
+## 准备 OpenIMServer
+
+如果还没有可用的 OpenIMServer，先按 [Docker 部署指南](/docs/guides/quick-deployment/docker)完成部署，并确认 Android 真机和模拟器均可访问以下地址：
+
+| 字段      | 说明                                                   |
+| --------- | ------------------------------------------------------ |
+| `apiAddr` | OpenIMServer HTTP API 地址，用于登录、同步和资源请求。 |
+| `wsAddr`  | OpenIMServer WebSocket 地址，用于长连接和实时事件。    |
+
+不要只在开发电脑上验证地址。Android 模拟器中的 `localhost` 指向模拟器自身，不能直接访问开发电脑上的本地服务。如果 OpenIMServer 运行在开发电脑上，先将 API 和 WebSocket 端口映射到模拟器：
+
+```bash
+adb reverse tcp:10002 tcp:10002
+adb reverse tcp:10001 tcp:10001
+```
+
+映射后，模拟器中的应用可以使用 `http://127.0.0.1:10002` 作为 `apiAddr`，使用 `ws://127.0.0.1:10001` 作为 `wsAddr`。端口号应替换为开发电脑上实际监听的端口；执行命令前确认 `adb` 已连接到目标模拟器。生产环境应使用 HTTPS 与 WSS，并从真机检查 DNS、TLS 证书、防火墙、反向代理和 WebSocket 升级。
+
+## 准备用户和 Token
+
+`userID` 标识 OpenIMSDK 用户，Token 用于认证该用户。创建或绑定用户、签发 Token 和校验业务权限都应由可信后端完成。Android 应用不能保存管理员 Token、secret 或其他服务端凭据。
+
+后端接入 OpenIMServer REST API 前，可阅读[准备使用 Platform API](/platform-api/prepare-to-use-api)和[签发会话 Token](/platform-api/user/managing-session-tokens/issue-a-session-token)。业务后端完成自身账号认证后，只向客户端返回 SDK 登录所需的以下数据：
+
+| 数据 | 说明 |
+| --- | --- |
+| `userID` | 当前登录用户的 OpenIM 用户 ID。 |
+| `token` | 与该用户对应的登录 Token。 |
+| `apiAddr` | OpenIMServer HTTP API 地址。 |
+| `wsAddr` | OpenIMServer WebSocket 地址。 |
+
+`userID` 必须与 Token 对应。客户端不得接受任意用户 ID 后自行签发、拼装或交换管理员 Token。
+
+## 准备 Android 工程
+
+接入前，确认 Android 工程具备以下条件：
+
+- 应用的 `minSdk` 不低于 `21`，使用 Java 8 编译选项，并将 `compileSdk` 设置为 `36` 或更高。
+- 应用 Manifest 声明 `android.permission.INTERNET`，并允许 SDK 读取网络状态。
+- 已准备应用私有且可持久化的数据目录，例如 `Application.getFilesDir()` 下的独立子目录；不要把 SDK 数据库放在临时缓存或共享存储中。
+- 真机能够访问 `apiAddr`、`wsAddr` 以及消息媒体资源域名。
+- 发布包覆盖目标设备 ABI；接入交付包时应核对实际包含的 native ABI。
+- 产品已经定义断网恢复、前后台切换、Token 失效、账号被踢下线和多端登录的处理方式。
+
+具体依赖和 Manifest 配置见[按 Android 环境接入](/sdk/android/getting-started/environment-specific-implementation)；SDK 初始化和认证流程见[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)。
+
+## 继续接入
+
+准备完成后，先完成[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)。确认登录 callback 成功且 `OnConnListener.onConnectSuccess()` 已到达，再按照[发送第一条消息](/sdk/android/getting-started/send-first-message)验证消息链路。

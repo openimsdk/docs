@@ -1,0 +1,35 @@
+---
+title: 'Mark a conversation as read'
+description: 'Use messageManager.markConversationMessageAsRead() to mark Android conversation messages as read.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-07'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/conversation/managing-conversations/mark-conversation-read'
+---
+
+Call `messageManager.markConversationMessageAsRead()` after the user has opened and read visible messages. Do not mark a conversation read merely because a notification was previewed or a message arrived in the background.
+
+```java
+OpenIMClient.getInstance().messageManager.markConversationMessageAsRead(
+    conversationID,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            markConversationReadSubmitted(conversationID);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordMarkReadFailure(code, error);
+        }
+    }
+);
+```
+
+Request completion does not guarantee `onConversationChanged` has arrived. Merge the current `ConversationInfo` by `conversationID`, or re-query it when immediate confirmation is required.
+
+For one-to-one chats, the peer can receive `OnAdvanceMsgListener.onRecvC2CReadReceipt`. Validate `sessionType == ConversationType.SINGLE_CHAT` and a non-empty `userID`, then update message read state from `msgIDList`. `MessageManager` retains one advanced message listener and should be configured once in a shared message state layer.

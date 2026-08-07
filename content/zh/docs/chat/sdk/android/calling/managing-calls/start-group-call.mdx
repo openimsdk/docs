@@ -1,0 +1,44 @@
+---
+title: '发起群聊通话'
+description: '使用 Android SDK 发起群聊音视频通话。'
+sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
+---
+
+`signalingInviteInGroup()` 发起群聊通话，只邀请 `inviteeUserIDList` 明确列出的群成员，不会因为填写 `groupID` 自动邀请全群。
+
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(selectedGroupMemberIDs);
+invitation.setGroupID(groupID);
+invitation.setRoomID(groupID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.GROUP_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"group-call\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setUserID(currentUserID);
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            startGroupCall(credentials);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showCallError(code, error);
+        }
+    },
+    info
+);
+```
+
+`groupID` 不能为空，`inviteeUserIDList` 应排除当前用户、空值和重复成员。示例沿用群组 ID 作为房间 ID；若业务自行生成 `roomID`，所有参与端必须使用同一个值。
+
+成功回调返回 `SignalingCertificate`，字段含义见[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请流程；成功也不表示其他成员已经接听。

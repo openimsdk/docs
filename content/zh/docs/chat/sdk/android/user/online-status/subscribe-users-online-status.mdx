@@ -1,0 +1,45 @@
+---
+title: '订阅用户在线状态'
+description: '使用 subscribeUsersOnlineStatus() 订阅指定用户的在线状态。'
+sourcePath: '/sdk/android/user/online-status/subscribe-users-online-status'
+---
+
+```java
+List<String> userIDs = Arrays.asList("user_a", "user_b");
+
+OpenIMClient.getInstance().userInfoManager.subscribeUsersOnlineStatus(
+    new OnBase<List<UsersOnlineStatus>>() {
+        @Override
+        public void onSuccess(List<UsersOnlineStatus> states) {
+            mergeOnlineStates(states);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordStatusSubscriptionFailure(code, error);
+        }
+    },
+    userIDs
+);
+```
+
+调用前应去除空值和重复 ID，并只订阅当前业务需要展示的用户。成功 callback 返回初始 `List<UsersOnlineStatus>` 快照，每项包含 `userID`、`status` 和 `platformIDs`。重复订阅同一个用户时，应由应用层去重并保留一份状态。
+
+## 状态字段
+
+| 字段          | 说明                                       |
+| ------------- | ------------------------------------------ |
+| `userID`      | 目标用户 ID。                              |
+| `status`      | 在线状态值，具体枚举含义以服务端契约为准。 |
+| `platformIDs` | 当前在线的平台 ID 列表。                   |
+
+`onUserStatusChanged` 由本页归属，应组合进应用唯一的 `OnUserListener`，并按 `userID` 合并：
+
+```java
+@Override
+public void onUserStatusChanged(UsersOnlineStatus status) {
+    onlineStatusStore.put(status.getUserID(), status);
+}
+```
+
+订阅操作只建立或更新订阅集合，不应把 callback 返回值当作好友资料。用户离开可见范围或切换账号时，由应用统一管理订阅集合；Android API 未提供可验证的取消订阅入口，因此不在文档中记录取消订阅调用。

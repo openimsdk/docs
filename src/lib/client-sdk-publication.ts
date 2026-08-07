@@ -1,3 +1,5 @@
+import androidAuditData from '../../data/structure/android-content-audit.json' with { type: 'json' };
+import androidSidebarData from '../../data/structure/android-sidebar.json' with { type: 'json' };
 import flutterAuditData from '../../data/structure/flutter-content-audit.json' with { type: 'json' };
 import flutterSidebarData from '../../data/structure/flutter-sidebar.json' with { type: 'json' };
 import iosAuditData from '../../data/structure/ios-content-audit.json' with { type: 'json' };
@@ -6,7 +8,7 @@ import wasmAuditData from '../../data/structure/wasm-content-audit.json' with { 
 import wasmSidebarData from '../../data/structure/wasm-sidebar.json' with { type: 'json' };
 
 export type ReviewLocale = 'en' | 'zh';
-export type ClientSdkPlatform = 'flutter' | 'ios' | 'wasm';
+export type ClientSdkPlatform = 'android' | 'flutter' | 'ios' | 'wasm';
 
 type ReviewStatus =
   | 'deferred'
@@ -69,6 +71,10 @@ export function createClientSdkPublicationLookup(
 }
 
 const publicationLookup = createClientSdkPublicationLookup({
+  android: {
+    pages: androidAuditData.pages as ClientSdkAuditPage[],
+    activePaths: flattenSidebarPaths(androidSidebarData.nodes),
+  },
   flutter: {
     pages: flutterAuditData.pages as ClientSdkAuditPage[],
     activePaths: flattenSidebarPaths(flutterSidebarData.nodes),
@@ -84,6 +90,7 @@ const publicationLookup = createClientSdkPublicationLookup({
 });
 
 const platformNames: Record<ClientSdkPlatform, string> = {
+  android: 'Android',
   flutter: 'Flutter',
   ios: 'iOS',
   wasm: 'WASM',

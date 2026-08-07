@@ -1,0 +1,52 @@
+---
+title: '获取会话列表'
+description: '使用 getConversationListSplit() 分页获取当前 Android 账号的会话列表。'
+sourcePath: '/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+会话列表属于当前登录用户。每条 `ConversationInfo` 包含会话标识、未读数、最后一条消息、置顶和草稿等状态。使用分页接口读取会话，不使用一次加载完整列表的 `getAllConversationList()`。
+
+## 分页获取会话
+
+```java
+OpenIMClient.getInstance().conversationManager.getConversationListSplit(
+    new OnBase<List<ConversationInfo>>() {
+        @Override
+        public void onSuccess(List<ConversationInfo> conversations) {
+            mergeConversations(conversations);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordConversationListFailure(code, error);
+        }
+    },
+    0,
+    50
+);
+```
+
+| 参数     | 类型   | 说明                                        |
+| -------- | ------ | ------------------------------------------- |
+| `offset` | `long` | 从 `0` 开始的分页偏移量；刷新时重置为 `0`。 |
+| `count`  | `long` | 本页期望返回的会话数量。                    |
+
+成功 callback 返回当前页 `List<ConversationInfo>`。继续加载时按已经请求的条目数量推进 `offset`，并按 `conversationID` 去重；返回数量小于 `count` 时通常表示到达末页。主动刷新时清空分页状态后从 `0` 重载。
+
+## 保持列表同步
+
+`getConversationListSplit()` 只建立快照，不触发会话 callback。以下 callback 应组合进应用唯一的 `OnConversationListener`：
+
+```java
+@Override
+public void onNewConversation(List<ConversationInfo> conversations) {
+    mergeConversations(conversations);
+}
+
+@Override
+public void onConversationChanged(List<ConversationInfo> conversations) {
+    mergeConversations(conversations);
+}
+```
+
+两个事件都携带 `List<ConversationInfo>`，按 `conversationID` 幂等合并。`setOnConversationListener()` 采用替换语义，应由应用级状态层设置一次。用户加入群组但尚未产生消息时不一定有会话；退出群组后也可能保留历史会话记录，不能用已加入群组列表替代会话列表。

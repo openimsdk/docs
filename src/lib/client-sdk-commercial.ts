@@ -1,5 +1,6 @@
 import flutterAudit from '@/data/structure/flutter-content-audit.json';
 import iosAudit from '@/data/structure/ios-content-audit.json';
+import androidAudit from '@/data/structure/android-content-audit.json';
 import ownership from '@/data/structure/wasm-api-ownership.json';
 
 type OwnershipEntry = {
@@ -9,7 +10,7 @@ type OwnershipEntry = {
   commercial?: boolean;
 };
 
-type NativePlatform = 'flutter' | 'ios';
+type NativePlatform = 'android' | 'flutter' | 'ios';
 
 type ClientSdkAuditPage = {
   currentPath: string;
@@ -36,11 +37,16 @@ const commercialEventNames = new Set(
   events.filter((entry) => entry.commercial).map((entry) => entry.name),
 );
 const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
+  android: androidAudit.pages as ClientSdkAuditPage[],
   flutter: flutterAudit.pages as ClientSdkAuditPage[],
   ios: iosAudit.pages as ClientSdkAuditPage[],
 };
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
+  android: {
+    onHangup: 'OnHangUp',
+    onRecvGroupMessageReadReceipt: 'OnRecvGroupReadReceipt',
+  },
   flutter: {
     getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
     onHangup: 'OnHangUp',
@@ -104,6 +110,9 @@ const fullCommercialConceptPages = new Set([
   '/sdk/ios/conversation/managing-conversations/set-message-destruct',
   '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
   '/sdk/ios/message/composing-messages/save-local-transcript',
+  '/sdk/android/conversation/managing-conversations/set-private-chat',
+  '/sdk/android/conversation/managing-conversations/set-burn-duration',
+  '/sdk/android/conversation/managing-conversations/set-message-destruct',
 ]);
 
 function applyCommercialConceptOverride(
@@ -150,7 +159,7 @@ function parseClientSdkPath(
   | { platform: 'wasm'; wasmPath: string }
   | { platform: NativePlatform; wasmPath: string }
   | undefined {
-  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios)(\/.*)$/);
   if (!match) return undefined;
 
   const platform = match[1] as 'wasm' | NativePlatform;

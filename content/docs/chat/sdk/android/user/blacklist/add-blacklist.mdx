@@ -1,0 +1,43 @@
+---
+title: 'Block a user'
+description: 'Use addBlacklist() to add a user to the current account blacklist.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-06'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/user/blacklist/add-blacklist'
+---
+
+```java
+OpenIMClient.getInstance().friendshipManager.addBlacklist(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            markBlacklistRequestSubmitted(targetUserID);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordBlacklistAddFailure(code, error);
+        }
+    },
+    targetUserID,
+    "{\"source\":\"profile-menu\"}"
+);
+```
+
+The second argument is the target `userID`, and the third argument is optional extension data. Use the overload without `ex` when no extension data is needed. A successful callback means the block request completed, not that the event has arrived.
+
+The blacklist is one-way: the blocked user cannot send messages to the current account. Whether the current account can continue to send messages is an application-level rule. `ex` is a complete string, so merge application-owned fields before updating it.
+
+This page owns `onBlacklistAdded`. Combine it into the application's single `OnFriendshipListener`:
+
+```java
+@Override
+public void onBlacklistAdded(BlacklistInfo user) {
+    blacklistStore.put(user.getUserID(), user);
+}
+```

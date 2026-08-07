@@ -291,6 +291,7 @@ export async function renderDocumentationPage(
 
 function getSdkOverviewPlatform(path: string): SdkOverviewPlatform | undefined {
   const overviewPaths: Record<string, SdkOverviewPlatform> = {
+    '/sdk/android/overview': 'android',
     '/sdk/flutter/overview': 'flutter',
     '/sdk/ios/overview': 'ios',
     '/sdk/wasm/overview': 'wasm',

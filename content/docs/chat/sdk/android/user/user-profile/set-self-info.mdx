@@ -1,0 +1,60 @@
+---
+title: 'Update the current user profile'
+description: 'Use setSelfInfo() to update the nickname, avatar, or extension data of the current user.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-06'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/user/user-profile/set-self-info'
+---
+
+Set only the fields that must change on `UserInfoReq`. The SDK omits `null` fields when serializing the request.
+
+```java
+UserInfoReq request = new UserInfoReq();
+request.setNickname(displayName.trim());
+request.setFaceURL(avatarURL);
+request.setEx(mergedExtra);
+
+OpenIMClient.getInstance().userInfoManager.setSelfInfo(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            markProfileUpdateSubmitted();
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordProfileUpdateFailure(code, error);
+        }
+    },
+    request
+);
+```
+
+`UserInfoReq` supports fields such as `nickname`, `faceURL`, `ex`, and `addFriendPermission`. `ex` is a complete string; read, parse, and merge the application's namespace before updating it rather than overwriting the value with a partial JSON object.
+
+A successful callback means the update request completed. Merge the final profile increment from `onSelfInfoUpdated(UserInfo info)`, or query `getSelfLocalUserInfo()` again.
+
+## Updatable fields
+
+| Field                 | Description                  |
+| --------------------- | ---------------------------- |
+| `nickname`            | New nickname.                |
+| `faceURL`             | New avatar URL.              |
+| `ex`                  | Complete extension string.   |
+| `addFriendPermission` | Add-friend permission value. |
+
+Send only fields that should change. Although the global message reception setting is also written with `setSelfInfo()`, use the dedicated [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception) entry point.
+
+This page owns `onSelfInfoUpdated`. Combine it into the application's single `OnUserListener`:
+
+```java
+@Override
+public void onSelfInfoUpdated(UserInfo info) {
+    currentUserStore.merge(info.getUserID(), info);
+}
+```

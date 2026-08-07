@@ -1,0 +1,27 @@
+---
+title: '设置会话草稿'
+description: '使用 setConversationDraft() 保存 Android 会话草稿。'
+sourcePath: '/sdk/android/conversation/managing-conversations/set-conversation-draft'
+---
+
+用户离开聊天页、切换会话或输入框内容变化时，可以使用 `setConversationDraft()` 保存草稿。输入过程中先维护编辑器状态并对保存调用做防抖；离开页面前再提交一次最新文本。
+
+```java
+OpenIMClient.getInstance().conversationManager.setConversationDraft(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            markDraftSubmitted(conversationID);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            recordDraftSaveFailure(code, error);
+        }
+    },
+    conversationID,
+    editorValue
+);
+```
+
+清空草稿时传空字符串。成功 callback 只表示保存请求已经完成，不等同于会话变化回调已经到达；SDK 后续通过 `onConversationChanged` 同步 `draftText` 和 `draftTextTime`，需要校准时重新查询会话。退出登录或切换账号时清理编辑器内存状态。

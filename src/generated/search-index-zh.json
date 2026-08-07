@@ -1896,1028 +1896,1076 @@
     "content": "OpenIM iOS SDK 的日志用于定位初始化、连接和业务 API 调用问题。开发环境可以输出较详细的信息；生产环境应减少日志量，并避免记录 token、消息正文、文件 URL 和用户隐私字段。 初始化日志配置 日志选项属于 OIMInitConfig ，必须在 initSDKWithConfig:... 前设置： OIMInitConfig config = OIMInitConfig new ; config.platform = iPhone; config.apiAddr = apiAddress; config.wsAddr = websocketAddress; config.dataDir = dataDirectory; config.logLevel = 4; config.isLogStandardOutput = YES; config.logFilePath = logDirectory; config.systemType = @\"ios\"; 参数说明 | 字段 | 类型 | 说明 | | | | | | logLevel | NSInteger | SDK 日志级别；默认值为 6 ，实际级别约定以当前 SDK 版本为准。 | | isLogStandardOutput | BOOL | 是否输出 SDK 标准日志。 | | logFilePath | NSString | 可选的日志文件目录。 | | systemType | NSString | 日志中的系统类型标识。 | 生产环境不要长期启用最详细日志。日志目录应位于应用可写范围，并纳入容量、保留期和隐私策略。 写入应用诊断日志 需要把应用业务上下文写入 SDK 日志时，可调用： OIMManager manager logs: NSString stringWithUTF8String: FILE .lastPathComponent line: LINE msgs:@\"send message failed\" err:errorMessage keyAndValues:@ @\"conversationID\", conversationID, @\"clientMsgID\", clientMsgID logLevel:2 ; keyAndValues 应只包含排查所需的非敏感标识。不要写入访问 token、完整消息内容或原始文件地址。 使用 operationID 定位调用 Objective C 公共业务 selector 不要求应用传入 operationID 。SDK 会为调用链生成标识；需要在应用诊断中取得新的链路 ID 时，可调用： NSString operationID = OIMManager manager operationId ; operationID 只用于日志关联，不是用户身份、权限凭据、业务幂等键、 conversationID 或 clientMsgID 。每条独立调用链使用新的值；多步骤业务流程另用应用自己的 trace ID 串联。 上传日志 用户明确同意提交诊断信息后，可以上传 SDK 日志： OIMManager manager uploadLogsWithProgress:^ NSInteger saveBytes, NSInteger currentBytes, NSInteger totalBytes self updateLogUploadCurrentBytes:currentBytes totalBytes:totalBytes ; line:2000 ex:@\"support ticket 42\" onSuccess:^ NSString Nullable data self showLogUploadCompleted ; onFailure:^ NSInteger code, NSString message self showLogUploadError:code message:message ; ; 上传进度 callback 依次提供已保存、当前处理和总字节数。上传前应说明收集范围，并遵守产品的隐私、用户同意和资料保留规范。"
   },
   {
-    "path": "/sdk/android/channel/moderating-a-channel/freeze-and-unfreeze-a-channel",
-    "title": "Freeze and unfreeze a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Freeze and unfreeze a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/overview",
+    "title": "OpenIM Android SDK 概览",
+    "description": "在原生 Android 应用中使用 OpenIM Android SDK 接入用户、会话、群组、消息、通话信令和事件能力。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel moderating-a-channel freeze-and-unfreeze-a-channel",
-    "content": ""
+    "keywords": "sdk android v4 sdk android overview",
+    "content": "OpenIM Android SDK 用于在原生 Android 应用中接入 OpenIMSDK。选择下方领域进入对应章节。 文档导航 | 领域 | 内容 | | | | | 快速开始 /sdk/android/getting started/environment specific implementation | 接入 SDK、配置 Android 工程、认证、连接生命周期和发送第一条消息。 | | 用户与关系链 /sdk/android/user/overview user | 用户资料、在线状态、好友、好友申请和黑名单。 | | 会话 /sdk/android/conversation/overview conversation | 会话查询、草稿、未读数、接收选项、阅后即焚、隐藏和删除。 | | 群组 /sdk/android/group/overview group | 群资料、群成员、入群申请、权限、禁言和群组事件。 | | 消息 /sdk/android/message/overview message | 消息创建、发送、接收、历史记录、搜索、删除、撤回和已读回执。 | | 文件上传 /sdk/android/file uploads/upload file | 独立文件上传和上传进度。 | | 音视频通话 /sdk/android/calling/overview calling | 通话邀请、接受、拒绝、取消、挂断、房间凭据和自定义信令。 | | 事件 /sdk/android/events/overview events | 各 manager 的 listener、连接状态和数据事件。 | | 日志 /sdk/android/logger | SDK 日志配置和排查。 |"
   },
   {
-    "path": "/sdk/android/channel/overview-channel",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/getting-started/before-you-start",
+    "title": "开始之前",
+    "description": "准备 OpenIMServer、用户登录信息和 Android 工程环境，再开始初始化、认证或发送消息。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel overview-channel",
-    "content": ""
+    "keywords": "sdk android v4 sdk android getting-started before-you-start",
+    "content": "在原生 Android 应用中接入 OpenIMClientSDK 前，需要准备可访问的 OpenIMServer、可信的用户认证流程，以及满足 SDK 构建要求的 Android 工程。这些条件同时适用于 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 和 发送第一条消息 /sdk/android/getting started/send first message 。 准备 OpenIMServer 如果还没有可用的 OpenIMServer，先按 Docker 部署指南 /docs/guides/quick deployment/docker 完成部署，并确认 Android 真机和模拟器均可访问以下地址： | 字段 | 说明 | | | | | apiAddr | OpenIMServer HTTP API 地址，用于登录、同步和资源请求。 | | wsAddr | OpenIMServer WebSocket 地址，用于长连接和实时事件。 | 不要只在开发电脑上验证地址。Android 模拟器中的 localhost 指向模拟器自身，不能直接访问开发电脑上的本地服务。如果 OpenIMServer 运行在开发电脑上，先将 API 和 WebSocket 端口映射到模拟器： adb reverse tcp:10002 tcp:10002 adb reverse tcp:10001 tcp:10001 映射后，模拟器中的应用可以使用 http://127.0.0.1:10002 作为 apiAddr ，使用 ws://127.0.0.1:10001 作为 wsAddr 。端口号应替换为开发电脑上实际监听的端口；执行命令前确认 adb 已连接到目标模拟器。生产环境应使用 HTTPS 与 WSS，并从真机检查 DNS、TLS 证书、防火墙、反向代理和 WebSocket 升级。 准备用户和 Token userID 标识 OpenIMSDK 用户，Token 用于认证该用户。创建或绑定用户、签发 Token 和校验业务权限都应由可信后端完成。Android 应用不能保存管理员 Token、secret 或其他服务端凭据。 后端接入 OpenIMServer REST API 前，可阅读 准备使用 Platform API /platform api/prepare to use api 和 签发会话 Token /platform api/user/managing session tokens/issue a session token 。业务后端完成自身账号认证后，只向客户端返回 SDK 登录所需的以下数据： | 数据 | 说明 | | | | | userID | 当前登录用户的 OpenIM 用户 ID。 | | token | 与该用户对应的登录 Token。 | | apiAddr | OpenIMServer HTTP API 地址。 | | wsAddr | OpenIMServer WebSocket 地址。 | userID 必须与 Token 对应。客户端不得接受任意用户 ID 后自行签发、拼装或交换管理员 Token。 准备 Android 工程 接入前，确认 Android 工程具备以下条件： 应用的 minSdk 不低于 21 ，使用 Java 8 编译选项，并将 compileSdk 设置为 36 或更高。 应用 Manifest 声明 android.permission.INTERNET ，并允许 SDK 读取网络状态。 已准备应用私有且可持久化的数据目录，例如 Application.getFilesDir 下的独立子目录；不要把 SDK 数据库放在临时缓存或共享存储中。 真机能够访问 apiAddr 、 wsAddr 以及消息媒体资源域名。 发布包覆盖目标设备 ABI；接入交付包时应核对实际包含的 native ABI。 产品已经定义断网恢复、前后台切换、Token 失效、账号被踢下线和多端登录的处理方式。 具体依赖和 Manifest 配置见 按 Android 环境接入 /sdk/android/getting started/environment specific implementation ；SDK 初始化和认证流程见 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 。 继续接入 准备完成后，先完成 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 。确认登录 callback 成功且 OnConnListener.onConnectSuccess 已到达，再按照 发送第一条消息 /sdk/android/getting started/send first message 验证消息链路。"
+  },
+  {
+    "path": "/sdk/android/getting-started/environment-specific-implementation",
+    "title": "按 Android 环境接入",
+    "description": "在 Android 工程中添加 OpenIM Android SDK 依赖并配置网络权限。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android getting-started environment-specific-implementation",
+    "content": "本页只说明 Android 工程的依赖和权限配置。SDK 初始化、连接监听和登录流程见 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 。 添加 SDK 依赖 在应用 module 的 build.gradle 中添加依赖： dependencies implementation 'io.openim:android sdk:latest@aar' implementation 'io.openim:core sdk:latest@aar' implementation 'com.google.code.gson:gson:2.9.0' 配置 Manifest 应用需要网络访问权限： 下一步 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 发送第一条消息 /sdk/android/getting started/send first message"
+  },
+  {
+    "path": "/sdk/android/getting-started/authenticate-and-manage-session",
+    "title": "认证与管理登录会话",
+    "description": "使用 OpenIM Android SDK 初始化、登录、查询登录状态、处理连接 callback 并退出当前账号。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android getting-started authenticate-and-manage-session",
+    "content": "OpenIM Android SDK 使用 initSDK 初始化本机运行环境，再使用 login 建立当前用户的登录会话。开始认证前，应先完成 开始之前 /sdk/android/getting started/before you start 列出的服务、用户和 Token 准备，并按 按 Android 环境接入 /sdk/android/getting started/environment specific implementation 添加依赖和权限。 完整流程如下： 1. 在应用级会话组件中创建稳定的 OnConnListener 。 2. 调用 initSDK 并确认返回 true 。 3. 在登录前设置消息、用户、好友、会话、群组和通话信令 listener。 4. 从可信后端取得对应的 userID 与 Token，然后调用 login 。 5. 分别等待登录 callback 成功与 onConnectSuccess ，再开放依赖连接的业务操作。 6. 主动退出或切换账号时调用 logout ，完成后清理当前账号的应用状态。 下文中的 apiAddr 、 wsAddr 、 userID 和 token 均由可信后端提供。 初始化并处理连接生命周期 在 Application 生命周期内创建数据目录、初始化 SDK，并传入连接 listener。应用应保存连接状态，但不要在 callback 中记录 Token 或完整服务凭据。 import android.app.Application; import java.io.File; import io.openim.android.sdk.OpenIMClient; import io.openim.android.sdk.enums.LogLevel; import io.openim.android.sdk.listener.OnConnListener; import io.openim.android.sdk.models.InitConfig; File dataDirectory = new File application.getFilesDir , \"openim\" ; if dataDirectory.exists && dataDirectory.mkdirs throw new IllegalStateException \"Cannot create the OpenIM data directory.\" ; InitConfig config = new InitConfig apiAddr, wsAddr, dataDirectory.getAbsolutePath ; config.logLevel = LogLevel.Info; config.isLogStandardOutput = false; OnConnListener connectionListener = new OnConnListener @Override public void onConnecting sessionState.setConnectionState \"connecting\" ; @Override public void onConnectSuccess sessionState.setConnectionState \"connected\" ; sessionState.enableConnectedOperations ; @Override public void onConnectFailed long code, String error sessionState.setConnectionState \"failed\" ; recordConnectionFailure code, error ; @Override public void onKickedOffline sessionState.clearCurrentAccount ; showSignedInElsewhereScreen ; @Override public void onUserTokenExpired requestNewTokenAndRelogin ; @Override public void onUserTokenInvalid String reason sessionState.clearCurrentAccount ; showSignInScreen reason ; ; boolean initialized = OpenIMClient.getInstance .initSDK application, config, connectionListener ; if initialized throw new IllegalStateException \"OpenIMClientSDK initialization failed.\" ; initSDK 返回 true 表示 SDK 本地运行环境初始化成功。 OnConnListener 的连接 callback 在调用 login 后开始反映长连接状态。 | 字段 | 类型 | 说明 | | | | | | application | Application | 应用级 Context，用于持有 SDK 生命周期。 | | apiAddr | String | OpenIMServer HTTP API 地址。 | | wsAddr | String | OpenIMServer WebSocket 地址。 | | dataDirectory | File | SDK 数据库和日志使用的应用私有持久化目录。 | | config.logLevel | int | 使用 LogLevel 常量；正式环境应主动收敛日志级别。 | | isLogStandardOutput | boolean | 是否把 SDK Core 日志输出到标准日志流。 | SDK 只应在 Application 或应用级会话组件中初始化一次。当前 Java wrapper 公开 networkChanged ，用于通知 Core 重新检查网络；只有在应用已经统一监听系统网络变化时才调用，不能由多个页面重复注册网络 callback。 在登录前设置业务 listener SDK 的 listener 注册方法采用 set 语义，后一次设置会替换前一次设置。应由应用级事件中心创建稳定 listener，再把事件分发给页面状态层。消息 listener 的完整注册与增量合并示例见 发送第一条消息 /sdk/android/getting started/send first message ；用户、好友、会话、群组和通话信令 listener 采用相同的集中注册原则。 SDK 没有公开的 remove/unset 方法。退出或切换账号时，应用事件中心应停止向旧账号页面分发 callback，并在下次登录前用新账号对应的完整 listener 组合覆盖设置。 登录当前用户 OpenIMClient.getInstance .login new OnBase @Override public void onError int code, String error sessionState.setLoginState \"failed\" ; recordLoginFailure code, error ; @Override public void onSuccess String data sessionState.setLoginState \"logged\" ; sessionState.setCurrentUserID userID ; , userID, token ; login 的成功 callback 表示当前登录调用完成； OnConnListener.onConnectSuccess 表示长连接可用。这两个阶段必须分别处理。不要并发调用 login ，也不要仅凭某一个 callback 同时推断登录与连接状态。 查询登录状态 int loginStatus = OpenIMClient.getInstance .getLoginStatus ; if loginStatus == LoginStatus.Logged String currentUserID = OpenIMClient.getInstance .getLoginUserID ; restoreSessionFor currentUserID ; | 状态 | 说明 | | | | | LoginStatus.Logout | SDK 当前未登录。 | | LoginStatus.Logging | 登录正在进行，不应再次发起并行登录。 | | LoginStatus.Logged | SDK 已登录；网络是否连接仍以 OnConnListener 为准。 | getLoginStatus 和 getLoginUserID 返回本地 SDK 状态快照，不会触发连接 callback。切换账号时应先退出旧账号，而不是直接用新参数覆盖当前登录。 处理 Token 和强制下线 收到 onUserTokenExpired 或 onUserTokenInvalid 后，应重新向可信后端取得当前用户凭据，再按产品策略重新登录或返回登录页。收到 onKickedOffline 时，应清理当前用户的会话列表、消息视图、未读数和其他业务状态，不能把它当作用户主动退出。 这些 callback 没有业务实体合并键，应按当前 OpenIMClient 单例和登录用户隔离状态。旧账号的异步任务和页面订阅必须在新账号登录前停止。 主动退出与释放 SDK OpenIMClient.getInstance .logout new OnBase @Override public void onError int code, String error recordLogoutFailure code, error ; @Override public void onSuccess String data sessionState.clearCurrentAccount ; ; logout 成功表示当前 SDK 登录会话已退出。应用状态清理应在成功 callback 后执行；切换账号时，等待旧账号退出完成后再调用新账号的 login 。 应用最终不再使用 SDK 时可以调用： OpenIMClient.getInstance .unInit ; unInit 用于释放 SDK 运行环境，不是 logout 的替代品，也不应在普通页面销毁时调用。 下一步 开始之前 /sdk/android/getting started/before you start 按 Android 环境接入 /sdk/android/getting started/environment specific implementation 发送第一条消息 /sdk/android/getting started/send first message"
   },
   {
     "path": "/sdk/android/getting-started/send-first-message",
-    "title": "Send your first message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send your first message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "title": "发送第一条消息",
+    "description": "在 Android 应用中发送并验证第一条单聊文本消息。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android getting-started send-first-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/adding-extra-data-to-a-message/add-extra-data-to-a-message",
-    "title": "Add extra data to a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add extra data to a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message adding-extra-data-to-a-message add-extra-data-to-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/generate-thumbnails-of-a-file-message",
-    "title": "Generate thumbnails of a file message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Generate thumbnails of a file message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message generate-thumbnails-of-a-file-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/react-to-a-message-in-a-group-channel",
-    "title": "React to a message in a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for React to a message in a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message react-to-a-message-in-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/send-typing-indicators-to-other-members",
-    "title": "Send typing indicators to other members",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send typing indicators to other members. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message send-typing-indicators-to-other-members",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-pinned-messages-in-group-channels/pin-a-message",
-    "title": "Pin a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Pin a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-pinned-messages-in-group-channels pin-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/create-a-poll",
-    "title": "Create a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls create-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/create-a-scheduled-message",
-    "title": "Create a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel create-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/marking-messages-as-delivered-in-a-group-channel/mark-messages-as-delivered",
-    "title": "Mark messages as delivered",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as delivered. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message marking-messages-as-delivered-in-a-group-channel mark-messages-as-delivered",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/mentioning-other-users-in-a-message/mention-other-users-in-a-message",
-    "title": "Mention other users in a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mention other users in a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message mentioning-other-users-in-a-message mention-other-users-in-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/overview-message",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message overview-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-messages/retrieve-a-message",
-    "title": "Retrieve a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-messages retrieve-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/searching-messages-in-a-group-channel/search-messages-by-a-keyword",
-    "title": "Search messages by a keyword",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Search messages by a keyword. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message searching-messages-in-a-group-channel search-messages-by-a-keyword",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/share-an-encrypted-file",
-    "title": "Share an encrypted file",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Share an encrypted file. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message share-an-encrypted-file",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/smart-throttling",
-    "title": "Smart throttling",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Smart throttling. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message smart-throttling",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/translating-messages/auto-translate-messages",
-    "title": "Auto-translate messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Auto-translate messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message translating-messages auto-translate-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/translating-messages/translate-messages-on-demand",
-    "title": "Translate messages on-demand",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Translate messages on-demand. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message translating-messages translate-messages-on-demand",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/using-message-threading/create-a-message-thread",
-    "title": "Create a message thread",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a message thread. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message using-message-threading create-a-message-thread",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/overview",
-    "title": "OpenIM SDK for Android",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for OpenIM SDK for Android. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android overview",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/configure-push-notification-preferences",
-    "title": "Configure push notification preferences",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Configure push notification preferences. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications configure-push-notification-preferences",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/push-notification-translation",
-    "title": "Push notification translation",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Push notification translation. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications push-notification-translation",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/overview-push-notifications",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications overview-push-notifications",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/report/overview-report",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android report overview-report",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/block-and-unblock-other-members",
-    "title": "Block and unblock other members",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Block and unblock other members. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user block-and-unblock-other-members",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/mute-and-unmute-a-user",
-    "title": "Mute and unmute a user",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mute and unmute a user. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user mute-and-unmute-a-user",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/retrieving-and-updating-user-information/retrieve-the-online-status-of-a-user",
-    "title": "Retrieve the online status of a user",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve the online status of a user. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-and-updating-user-information retrieve-the-online-status-of-a-user",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/retrieving-users/retrieve-members-who-have-read-a-message",
-    "title": "Retrieve members who have read a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve members who have read a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-members-who-have-read-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/application/authenticating-a-user/authentication",
-    "title": "Authentication",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Authentication. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android application authenticating-a-user authentication",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/application/overview-application",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android application overview-application",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/application/understanding-rate-limits/rate-limits",
-    "title": "Rate limits",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Rate limits. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android application understanding-rate-limits rate-limits",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/categorizing-channels/categorize-channels-by-custom-type",
-    "title": "Categorize channels by custom type",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Categorize channels by custom type. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel categorizing-channels categorize-channels-by-custom-type",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/creating-a-channel/create-a-channel",
-    "title": "Create a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Create a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel creating-a-channel create-a-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/inviting-users-to-a-group-channel/accept-or-decline-an-invitation",
-    "title": "Accept or decline an invitation",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Accept or decline an invitation. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel inviting-users-to-a-group-channel accept-or-decline-an-invitation",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/inviting-users-to-a-group-channel/invite-users-as-members",
-    "title": "Invite users as members",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Invite users as members. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel inviting-users-to-a-group-channel invite-users-as-members",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/joining-and-leaving-a-channel/enter-and-exit-an-open-channel",
-    "title": "Enter and exit an open channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Enter and exit an open channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel joining-and-leaving-a-channel enter-and-exit-an-open-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/joining-and-leaving-a-channel/join-and-leave-a-group-channel",
-    "title": "Join and leave a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Join and leave a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel joining-and-leaving-a-channel join-and-leave-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channel-metacounters/manage-channel-metacounters",
-    "title": "Manage channel metacounters",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Manage channel metacounters. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channel-metacounters manage-channel-metacounters",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channel-metadata/manage-channel-metadata",
-    "title": "Manage channel metadata",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Manage channel metadata. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channel-metadata manage-channel-metadata",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channels/delete-a-channel",
-    "title": "Delete a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channels delete-a-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channels/hide-or-archive-a-group-channel",
-    "title": "Hide or archive a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Hide or archive a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channels hide-or-archive-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-channels/refresh-all-data-related-to-a-group-channel",
-    "title": "Refresh all data related to a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Refresh all data related to a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-channels refresh-all-data-related-to-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/managing-operators/register-and-remove-operators",
-    "title": "Register and remove operators",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Register and remove operators. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel managing-operators register-and-remove-operators",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/retrieving-channels/retrieve-a-channel-by-url",
-    "title": "Retrieve a channel by URL",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a channel by URL. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel retrieving-channels retrieve-a-channel-by-url",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/retrieving-channels/retrieve-a-list-of-channels",
-    "title": "Retrieve a list of channels",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of channels. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel retrieving-channels retrieve-a-list-of-channels",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/searching-channels/filter-group-channels-by-user-ids",
-    "title": "Filter group channels by user IDs",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Filter group channels by user IDs. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel searching-channels filter-group-channels-by-user-ids",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/searching-channels/search-group-channels-by-name-url-or-other-filters",
-    "title": "Search group channels by name, URL, or other filters",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Search group channels by name, URL, or other filters. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel searching-channels search-group-channels-by-name-url-or-other-filters",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/channel/searching-channels/search-open-channels-by-name-url-or-custom-types",
-    "title": "Search open channels by name, URL, or custom type",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Search open channels by name, URL, or custom type. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android channel searching-channels search-open-channels-by-name-url-or-custom-types",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/deprecated",
-    "title": "Deprecated",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Deprecated. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android deprecated",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/managing-channel-event-handlers/add-or-remove-a-channel-event-handler",
-    "title": "Add or remove a channel event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add or remove a channel event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler managing-channel-event-handlers add-or-remove-a-channel-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/managing-connection-event-handlers/add-or-remove-a-connection-event-handler",
-    "title": "Add or remove a connection event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add or remove a connection event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler managing-connection-event-handlers add-or-remove-a-connection-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/managing-user-event-handlers/add-or-remove-a-user-event-handler",
-    "title": "Add or remove a user event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add or remove a user event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler managing-user-event-handlers add-or-remove-a-user-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/event-handler/overview-event-handler",
-    "title": "Event handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Event handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android event-handler overview-event-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/getting-started/collection-migration-guide",
-    "title": "Collection migration guide",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Collection migration guide. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android getting-started collection-migration-guide",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/getting-started/kotlin-extension",
-    "title": "Kotlin extension (KTX)",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Kotlin extension (KTX). Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android getting-started kotlin-extension",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/getting-started/migration-guide",
-    "title": "Migration guide",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Migration guide. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android getting-started migration-guide",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/local-caching/overview-local-caching",
-    "title": "Local caching",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Local caching. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android local-caching overview-local-caching",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/local-caching/using-group-channel-collection/group-channel-collection",
-    "title": "Group channel collection",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Group channel collection. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android local-caching using-group-channel-collection group-channel-collection",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/local-caching/using-message-collection/message-collection",
-    "title": "Message collection",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Message collection. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android local-caching using-message-collection message-collection",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/logger",
-    "title": "Logger",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Logger. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android logger",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/categorizing-messages/categorize-messages-by-custom-type",
-    "title": "Categorize messages by custom type",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Categorize messages by custom type. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message categorizing-messages categorize-messages-by-custom-type",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/listing-changelogs/list-changelogs-of-messages",
-    "title": "List changelogs of messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List changelogs of messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message listing-changelogs list-changelogs-of-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/clear-the-chat-history-in-a-group-channel",
-    "title": "Clear the chat history in a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Clear the chat history in a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message clear-the-chat-history-in-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/copy-a-message",
-    "title": "Copy a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Copy a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message copy-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/delete-a-message",
-    "title": "Delete a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message delete-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/display-open-graph-tags-in-a-message",
-    "title": "Display Open Graph tags in a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Display Open Graph tags in a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message display-open-graph-tags-in-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-a-message/update-a-message",
-    "title": "Update a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-a-message update-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-pinned-messages-in-group-channels/list-pinned-messages",
-    "title": "List pinned messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List pinned messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-pinned-messages-in-group-channels list-pinned-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-pinned-messages-in-group-channels/unpin-a-message",
-    "title": "Unpin a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Unpin a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-pinned-messages-in-group-channels unpin-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/add-a-poll-option",
-    "title": "Add a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Add a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls add-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/cast-or-cancel-a-vote",
-    "title": "Cast or cancel a vote",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Cast or cancel a vote. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls cast-or-cancel-a-vote",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/close-a-poll",
-    "title": "Close a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Close a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls close-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/delete-a-poll",
-    "title": "Delete a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls delete-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/delete-a-poll-option",
-    "title": "Delete a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Delete a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls delete-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/list-changelogs-of-polls",
-    "title": "List changelogs of polls",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List changelogs of polls. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls list-changelogs-of-polls",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-list-of-polls",
-    "title": "Retrieve a list of polls",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of polls. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-list-of-polls",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-list-of-voters",
-    "title": "Retrieve a list of voters",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of voters. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-list-of-voters",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-poll",
-    "title": "Retrieve a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/retrieve-a-poll-option",
-    "title": "Retrieve a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls retrieve-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/update-a-poll",
-    "title": "Update a poll",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a poll. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls update-a-poll",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-polls/update-a-poll-option",
-    "title": "Update a poll option",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a poll option. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-polls update-a-poll-option",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-read-status-in-a-group-channel/get-read-status",
-    "title": "Get read status of a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Get read status of a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-read-status-in-a-group-channel get-read-status",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-read-status-in-a-group-channel/mark-messages-as-read",
-    "title": "Mark messages as read",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as read. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-read-status-in-a-group-channel mark-messages-as-read",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-read-status-in-a-group-channel/mark-messages-as-unread",
-    "title": "Mark messages as unread",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as unread. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-read-status-in-a-group-channel mark-messages-as-unread",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/cancel-a-scheduled-message",
-    "title": "Cancel a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Cancel a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel cancel-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/list-all-scheduled-messages",
-    "title": "List all scheduled messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List all scheduled messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel list-all-scheduled-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/retrieve-a-scheduled-message",
-    "title": "Retrieve a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel retrieve-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/retrieve-the-total-number-of-scheduled-messages",
-    "title": "Retrieve the total number of scheduled messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve the total number of scheduled messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel retrieve-the-total-number-of-scheduled-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/send-a-scheduled-message-immediately",
-    "title": "Send scheduled message immediately",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send scheduled message immediately. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel send-a-scheduled-message-immediately",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/managing-scheduled-messages-in-group-channel/update-a-scheduled-message",
-    "title": "Update a scheduled message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update a scheduled message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message managing-scheduled-messages-in-group-channel update-a-scheduled-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/receiving-messages-through-event-handler/receive-messages-in-a-group-channel",
-    "title": "Receive messages in a group channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Receive messages in a group channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message receiving-messages-through-event-handler receive-messages-in-a-group-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/receiving-messages-through-event-handler/receive-messages-in-an-open-channel",
-    "title": "Receive messages in an open channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Receive messages in an open channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message receiving-messages-through-event-handler receive-messages-in-an-open-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-messages/retrieve-a-list-of-messages",
-    "title": "Retrieve a list of messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-messages retrieve-a-list-of-messages",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/members-who-havent-read-a-message",
-    "title": "Retrieve number of members who haven't read a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of members who haven't read a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel members-who-havent-read-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/members-who-havent-received-a-message",
-    "title": "Retrieve number of members who haven't received a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of members who haven't received a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel members-who-havent-received-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-channels",
-    "title": "Retrieve number of channels with unread messages",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of channels with unread messages. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-channels",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-items",
-    "title": "Retrieve number of unread items",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of unread items. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-items",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-messages-in-a-channel",
-    "title": "Retrieve number of unread messages in a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of unread messages in a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-messages-in-a-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/retrieving-unread-count-in-a-group-channel/unread-messages-in-all-channels",
-    "title": "Retrieve number of unread messages in all channels",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve number of unread messages in all channels. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message retrieving-unread-count-in-a-group-channel unread-messages-in-all-channels",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/cancel-an-in-progress-file-upload",
-    "title": "Cancel an in-progress file upload",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Cancel an in-progress file upload. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message cancel-an-in-progress-file-upload",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/send-a-critical-alert-message-to-ios-device-users",
-    "title": "Send a critical alert message to iOS device users",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send a critical alert message to iOS device users. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message send-a-critical-alert-message-to-ios-device-users",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/send-a-message",
-    "title": "Send a message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send a message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message send-a-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/send-an-admin-message",
-    "title": "Send an admin message",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Send an admin message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message send-an-admin-message",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/spam-flood-protection",
-    "title": "Spam flood protection",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Spam flood protection. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message spam-flood-protection",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/sending-a-message/track-file-upload-progress-using-a-handler",
-    "title": "Track file upload progress using a handler",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Track file upload progress using a handler. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message sending-a-message track-file-upload-progress-using-a-handler",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/translating-messages/translation-engine",
-    "title": "Translation engine",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Translation engine. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message translating-messages translation-engine",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/message/using-message-threading/list-replies-in-a-message-thread",
-    "title": "List replies in a message thread",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for List replies in a message thread. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message using-message-threading list-replies-in-a-message-thread",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/migrating-to-openim",
-    "title": "Migrating to OpenIM",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Migrating to OpenIM. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android migrating-to-openim",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/push-notification-content-templates",
-    "title": "Push notification content templates",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Push notification content templates. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications push-notification-content-templates",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/push-notification-tester",
-    "title": "Push notification tester",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Push notification tester. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications push-notification-tester",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/set-up-push-notifications-for-fcm",
-    "title": "Set up push notifications for FCM",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for FCM. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications set-up-push-notifications-for-fcm",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/managing-push-notifications/set-up-push-notifications-for-hms",
-    "title": "Set up push notifications for HMS",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for HMS. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications managing-push-notifications set-up-push-notifications-for-hms",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/marking-push-notifications-as-delivered/mark-push-notifications-as-delivered",
-    "title": "Mark push notifications as delivered",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark push notifications as delivered. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications marking-push-notifications-as-delivered mark-push-notifications-as-delivered",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/multi-device-support/set-up-push-notifications-for-fcm",
-    "title": "Set up push notifications for FCM",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for FCM. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications multi-device-support set-up-push-notifications-for-fcm",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/push-notifications/multi-device-support/set-up-push-notifications-for-hms",
-    "title": "Set up push notifications for HMS",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Set up push notifications for HMS. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android push-notifications multi-device-support set-up-push-notifications-for-hms",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/report/creating-a-report/report-a-message-user-or-channel",
-    "title": "Report a message, user, or channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Report a message, user, or channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android report creating-a-report report-a-message-user-or-channel",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/managing-user-metadata/manage-user-metadata",
-    "title": "Manage user metadata",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Manage user metadata. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user managing-user-metadata manage-user-metadata",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/retrieve-a-list-of-blocked-users",
-    "title": "Retrieve a list of blocked users",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of blocked users. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user retrieve-a-list-of-blocked-users",
-    "content": ""
-  },
-  {
-    "path": "/sdk/android/user/moderating-a-user/retrieve-a-list-of-muted-users",
-    "title": "Retrieve a list of muted users",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of muted users. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user moderating-a-user retrieve-a-list-of-muted-users",
-    "content": ""
+    "content": "本页用一条单聊文本消息验证 OpenIM 已接入成功。开始前，先按 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 完成 SDK 初始化和登录。 开始前准备 为发送方和接收方各准备一个测试账号。 两个账号都需要按 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 完成 SDK 初始化；接收方需要在登录前设置下面的消息 listener。 将示例中的 user b 替换为接收方的真实 userID 。 第 1 步：让接收方监听新消息 接收方在登录前设置消息 listener。收到消息后，将它加入页面消息列表或刷新界面即可。 OpenIMClient.getInstance .messageManager .setAdvancedMsgListener new OnAdvanceMsgListener @Override public void onRecvNewMessage Message message // 将 message 显示在聊天界面中。 ; 第 2 步：确认可以发送 两个账号登录后，发送方的登录 callback 成功且 OnConnListener.onConnectSuccess 已到达，即可发送消息。接收方也应保持连接，以便收到新消息。连接尚未成功时，先等待连接恢复，不要重复调用 login 。 第 3 步：发送文本消息 发送单聊文本消息 先创建消息，再发送它。第三个目标参数填写接收方 userID ，群组目标参数保持空字符串。 Message message = OpenIMClient.getInstance .messageManager .createTextMessage \"你好，OpenIMSDK\" ; OnMsgSendCallback sendCallback = new OnMsgSendCallback @Override public void onProgress long progress // 文本消息通常不需要处理进度。 @Override public void onError int code, String error // 提示发送失败，并允许用户重试。 @Override public void onSuccess Message sentMessage // 将 sentMessage 更新到发送方的聊天界面。 ; OpenIMClient.getInstance .messageManager.sendMessage sendCallback, message, \"user b\", \"\", new OfflinePushInfo ; OfflinePushInfo 用于配置离线推送内容。首次验证时可以传入空对象，后续再按产品需要设置标题、摘要和扩展数据。 onSuccess 表示发送方已成功发送消息；接收方的 onRecvNewMessage 表示另一端已收到消息。这两个回调都会到达，才说明这次单聊验证完成。 发送群聊文本消息 发送群消息时，将接收方 userID 改为空字符串，并填写群组的 groupID ： Message groupMessage = OpenIMClient.getInstance .messageManager .createTextMessage \"大家好，OpenIMSDK\" ; OpenIMClient.getInstance .messageManager.sendMessage sendCallback, groupMessage, \"\", \"group 123\", new OfflinePushInfo ; 一次调用只能填写 userID 或 groupID 其中之一。 验证成功 发送方进入 onSuccess 。 接收方进入 onRecvNewMessage ，并看到文本消息。 单聊只填写接收方 userID ；群聊只填写 groupID 。 下一步 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session OpenIM Android SDK 概览 /sdk/android/overview"
   },
   {
     "path": "/sdk/android/user/overview-user",
-    "title": "Overview",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Overview. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "title": "用户概览",
+    "description": "了解 Android SDK 中的用户资料、好友关系、好友申请、黑名单和在线状态 API。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android user overview-user",
-    "content": ""
+    "content": "OpenIM Android SDK 使用 userID 标识用户。实现资料卡、好友添加、联系人或黑名单功能时，需要区分应用用户的公开资料、当前用户维护的好友关系，以及黑名单状态。 群成员列表、群内昵称、群角色和成员管理属于群组能力，应使用群组相关 API；用户 API 只处理用户资料、好友关系、好友申请、黑名单和在线状态。 用户类型 Android SDK 会根据使用场景返回不同的用户对象： | 类型 | 适用场景 | 主要 API | | | | | | LocalUser | 当前登录用户的本地资料、设置页、头像、昵称和账号级接收设置 | getSelfLocalUserInfo 、 setSelfInfo | | PublicUserInfo | 查询应用用户、查找好友候选人和展示陌生人资料卡 | getUsersInfo | | UserInfo | Android wrapper 返回的组合对象，可承载公开资料、好友资料或黑名单资料 | getFriendListPage 、 getFriendsInfo 、 getBlacklist | | FriendInfo | 当前用户的好友列表、好友备注和关系扩展字段 | searchFriends 、 getFriendListPage | | FriendApplicationInfo | 好友申请双方、处理状态和附言 | 好友申请查询与 listener | | BlacklistInfo | 当前用户拉黑的用户及黑名单关系字段 | getBlacklist 、 addBlacklist 、 removeBlacklist | | UsersOnlineStatus | 用户在线状态和在线平台列表 | subscribeUsersOnlineStatus 、 getSubscribeOnlineUsersStatus | 同一个 userID 可能同时出现在公开资料、好友资料、黑名单和群成员资料中。展示联系人信息时优先使用 UserInfo.getFriendInfo ；只需要账号公开资料时使用 PublicUserInfo ；黑名单页面使用 UserInfo.getBlackInfo 。会话列表和聊天页标题属于会话数据，应使用会话对象中的展示名称。 所有列表和事件都应使用 userID 作为稳定标识。好友申请同时包含申请方和接收方，应使用 fromUserID:toUserID 标识一条申请。 功能入口 下表列出了用户相关的常见需求和对应页面： | 需求 | 推荐页面 | | | | | 按 userID 查询公开资料，用于查找好友候选人或展示资料卡 | 获取指定用户资料 /sdk/android/user/user profile/get users info | | 分页、搜索或按 ID 查询好友关系 | 分页获取好友列表 /sdk/android/user/friends/get friend list page | | 发送、查询、接受或拒绝好友申请 | 获取收到的好友申请 /sdk/android/user/friend applications/get recv friend application list | | 修改好友资料 | 更新好友资料 /sdk/android/user/friends/update friends | | 删除好友关系 | 删除好友 /sdk/android/user/friends/delete friend | | 查看和维护当前用户黑名单 | 获取黑名单列表 /sdk/android/user/blacklist/get blacklist | | 读取或更新当前用户的昵称、头像和扩展资料 | 更新当前用户资料 /sdk/android/user/user profile/set self info | | 设置账号级消息接收和通知策略 | 设置全局消息接收方式 /sdk/android/user/user profile/set global message reception | | 订阅和读取在线状态 | 订阅用户在线状态 /sdk/android/user/online status/subscribe users online status | 状态更新 用户相关事件由对应能力页负责监听和合并： 当前用户资料变化：见 更新当前用户资料 /sdk/android/user/user profile/set self info 。 好友申请变化：见 获取收到的好友申请 /sdk/android/user/friend applications/get recv friend application list 。 好友关系和好友资料变化：见 分页获取好友列表 /sdk/android/user/friends/get friend list page 。 黑名单变化：见 拉黑用户 /sdk/android/user/blacklist/add blacklist 。 在线状态变化：见 订阅用户在线状态 /sdk/android/user/online status/subscribe users online status 。 Android SDK 的 UserInfoManager 和 FriendshipManager 各保存一个 listener， setOnUserListener 和 setOnFriendshipListener 都采用替换语义。应用应在统一状态层组合各页面所需 callback，并分别设置一次，不能让多个页面重复设置而覆盖其他 callback。"
   },
   {
-    "path": "/sdk/android/user/retrieving-and-updating-user-information/retrieve-the-latest-information-on-participants",
-    "title": "Retrieve the latest information on participants",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve the latest information on participants. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/get-users-info",
+    "title": "获取指定用户资料",
+    "description": "使用 getUsersInfo() 按 userID 批量查询用户公开资料。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-and-updating-user-information retrieve-the-latest-information-on-participants",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile get-users-info",
+    "content": "getUsersInfo 根据 userID 列表返回用户的公开资料，适合展示好友候选人或陌生人资料卡。该方法只读取公开资料，不返回当前账号为好友设置的备注等关系字段。 List userIDs = Arrays.asList \"user a\", \"user b\" ; OpenIMClient.getInstance .userInfoManager.getUsersInfo new OnBase @Override public void onSuccess List users for PublicUserInfo user : users publicUserStore.put user.getUserID , user ; @Override public void onError int code, String error recordUserQueryFailure code, error ; , userIDs ; 调用前应去除空值和重复 ID，并控制单次请求的数量。成功 callback 返回 List ，主要字段包括 userID 、 nickname 、 faceURL 、 ex 和 createTime 。查询不会触发 OnUserListener ，需要刷新资料时应重新调用并按 userID 合并结果。 返回结果 | 字段 | 说明 | | | | | userID | OpenIM 用户 ID，也是本地缓存的稳定 key。 | | nickname | 账号级公开昵称。 | | faceURL | 账号级公开头像地址。 | | ex | 账号级公开扩展字符串，格式由业务约定。 | | createTime | 用户资料创建时间。 | PublicUserInfo 中的资料不能用于覆盖好友备注、置顶状态或群内昵称。展示好友时应使用 FriendInfo ，展示群成员时应使用群成员模型。 按昵称、手机号或邮箱搜索用户属于业务服务能力，应由可信后端完成搜索和权限校验，再把候选 userID 交给客户端查询公开资料。 资料刷新 查询成功后，以返回结果更新公开资料快照。打开资料卡、用户主动刷新、断线重连或业务后端通知资料变化时，可以重新调用该方法校准数据。 OnUserListener.onSelfInfoUpdated 只表示当前登录用户资料变化，不能作为其他用户资料变化事件。"
   },
   {
-    "path": "/sdk/android/user/retrieving-and-updating-user-information/update-user-profile",
-    "title": "Update user profile",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Update user profile. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/get-self-local-user-info",
+    "title": "获取当前用户资料",
+    "description": "使用 getSelfLocalUserInfo() 获取当前登录用户的本地资料。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-and-updating-user-information update-user-profile",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile get-self-local-user-info",
+    "content": "OpenIMClient.getInstance .userInfoManager.getSelfLocalUserInfo new OnBase @Override public void onSuccess LocalUser user currentUserStore.set user ; @Override public void onError int code, String error recordSelfProfileFailure code, error ; ; 完成初始化并登录后调用该方法获取当前账号的本地资料。成功 callback 返回 LocalUser ，包含 userID 、 nickname 、 faceURL 、 ex 、 attachedInfo 、 globalRecvMsgOpt 和 addFriendPermission 等字段。 返回结果 | 字段 | 说明 | | | | | userID | 当前登录用户 ID。 | | nickname | 当前账号昵称。 | | faceURL | 当前账号头像地址。 | | ex | 当前账号扩展字符串。 | | attachedInfo | SDK 附加信息，只按业务约定解析。 | | globalRecvMsgOpt | 全局消息接收方式： 0 正常接收， 1 不接收， 2 接收但不提示。 | | addFriendPermission | 添加好友权限值，具体含义由服务端契约定义。 | 查询不会触发资料变更 callback。退出或切换账号时应清理旧账号快照，避免把上一个账号的资料显示在当前页面。 getSelfUserInfo 已废弃，不作为推荐用法。"
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-members-and-operators-in-a-specific-order",
-    "title": "Retrieve a list of members and operators in a specific order",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of members and operators in a specific order. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/set-self-info",
+    "title": "更新当前用户资料",
+    "description": "使用 setSelfInfo() 更新当前用户的昵称、头像或扩展资料。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-members-and-operators-in-a-specific-order",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile set-self-info",
+    "content": "使用 UserInfoReq 只设置实际需要修改的字段。SDK 序列化请求时会忽略 null 字段。 UserInfoReq request = new UserInfoReq ; request.setNickname displayName.trim ; request.setFaceURL avatarURL ; request.setEx mergedExtra ; OpenIMClient.getInstance .userInfoManager.setSelfInfo new OnBase @Override public void onSuccess String data markProfileUpdateSubmitted ; @Override public void onError int code, String error recordProfileUpdateFailure code, error ; , request ; UserInfoReq 支持 nickname 、 faceURL 、 ex 和 addFriendPermission 等字段。 ex 是完整字符串，更新前应读取、解析并合并业务自己的命名空间；不要把部分 JSON 直接覆盖到服务端。 成功 callback 表示更新请求完成；当前账号资料的最终增量通过 onSelfInfoUpdated UserInfo info 到达，或重新调用 getSelfLocalUserInfo 校准。 更新字段 | 字段 | 说明 | | | | | nickname | 要更新的昵称。 | | faceURL | 要更新的头像地址。 | | ex | 完整扩展字符串。 | | addFriendPermission | 添加好友权限值。 | 一次请求只写入需要变更的字段。全局消息接收策略虽然也由 setSelfInfo 写入，但应使用独立入口，见 设置全局消息接收方式 /sdk/android/user/user profile/set global message reception 。 onSelfInfoUpdated 由本页归属，应组合进应用唯一的 OnUserListener ： @Override public void onSelfInfoUpdated UserInfo info currentUserStore.merge info.getUserID , info ; 账号级消息接收策略也通过 UserInfoReq 更新，但应使用独立入口，见 设置全局消息接收方式 /sdk/android/user/user profile/set global message reception 。"
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-operators",
-    "title": "Retrieve a list of operators",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of operators. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/user-profile/set-global-message-reception",
+    "title": "设置全局消息接收方式",
+    "description": "通过 setSelfInfo() 设置当前账号的全局消息接收与通知策略。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-operators",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user user-profile set-global-message-reception",
+    "content": "使用独立的 UserInfoReq 写入 globalRecvMsgOpt ，避免在更新昵称或头像时意外覆盖账号级消息策略。 UserInfoReq request = new UserInfoReq ; request.setGlobalRecvMsgOpt 2 ; OpenIMClient.getInstance .userInfoManager.setSelfInfo new OnBase @Override public void onSuccess String data markGlobalReceiveOptionSubmitted ; @Override public void onError int code, String error recordGlobalReceiveOptionFailure code, error ; , request ; | 数值 | 含义 | | | | | 0 | 正常接收消息并允许通知。 | | 1 | 屏蔽消息。 | | 2 | 接收消息但不提示。 | 如果产品只提供“全局免打扰”开关，通常在 0 和 2 之间切换； 1 会停止接收消息，应单独展示。单个会话的接收方式由会话 API 管理，不受本设置替代。 成功 callback 表示请求完成。最终账号快照通过 onSelfInfoUpdated 或 getSelfLocalUserInfo 校准，事件处理见 更新当前用户资料 /sdk/android/user/user profile/set self info 。"
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-users-in-a-channel",
-    "title": "Retrieve a list of users in a channel",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of users in a channel. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/online-status/subscribe-users-online-status",
+    "title": "订阅用户在线状态",
+    "description": "使用 subscribeUsersOnlineStatus() 订阅指定用户的在线状态。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-users-in-a-channel",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user online-status subscribe-users-online-status",
+    "content": "List userIDs = Arrays.asList \"user a\", \"user b\" ; OpenIMClient.getInstance .userInfoManager.subscribeUsersOnlineStatus new OnBase @Override public void onSuccess List states mergeOnlineStates states ; @Override public void onError int code, String error recordStatusSubscriptionFailure code, error ; , userIDs ; 调用前应去除空值和重复 ID，并只订阅当前业务需要展示的用户。成功 callback 返回初始 List 快照，每项包含 userID 、 status 和 platformIDs 。重复订阅同一个用户时，应由应用层去重并保留一份状态。 状态字段 | 字段 | 说明 | | | | | userID | 目标用户 ID。 | | status | 在线状态值，具体枚举含义以服务端契约为准。 | | platformIDs | 当前在线的平台 ID 列表。 | onUserStatusChanged 由本页归属，应组合进应用唯一的 OnUserListener ，并按 userID 合并： @Override public void onUserStatusChanged UsersOnlineStatus status onlineStatusStore.put status.getUserID , status ; 订阅操作只建立或更新订阅集合，不应把 callback 返回值当作好友资料。用户离开可见范围或切换账号时，由应用统一管理订阅集合；Android API 未提供可验证的取消订阅入口，因此不在文档中记录取消订阅调用。"
   },
   {
-    "path": "/sdk/android/user/retrieving-users/retrieve-a-list-of-users-in-an-application",
-    "title": "Retrieve a list of users in an application",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Retrieve a list of users in an application. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/online-status/get-subscribe-online-users-status",
+    "title": "查询已订阅用户状态",
+    "description": "使用 getSubscribeOnlineUsersStatus() 获取已订阅用户的在线状态快照。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android user retrieving-users retrieve-a-list-of-users-in-an-application",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user online-status get-subscribe-online-users-status",
+    "content": "OpenIMClient.getInstance .userInfoManager.getSubscribeOnlineUsersStatus new OnBase @Override public void onSuccess List states mergeOnlineStates states ; @Override public void onError int code, String error recordStatusQueryFailure code, error ; ; 该方法不接收用户 ID，也不改变订阅集合。成功 callback 返回当前已订阅用户的 List 状态快照，适合在重连或重新进入页面时按 userID 校准状态。 查询本身不会触发 onUserStatusChanged 。状态快照只应覆盖在线状态存储，不要覆盖用户昵称、头像等资料字段；需要资料时分别调用用户资料 API。"
   },
   {
-    "path": "/sdk/android/message/marking-messages-as-read-in-a-group-channel/mark-messages-as-read",
-    "title": "Mark messages as read",
-    "description": "OpenIM · SDK · Android · v4 documentation scaffold for Mark messages as read. Replace this placeholder with OpenIM-specific guidance, examples, and assets.",
+    "path": "/sdk/android/user/friends/get-friend-list-page",
+    "title": "分页获取好友列表",
+    "description": "使用 getFriendListPage() 分页获取当前用户的好友列表。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android message marking-messages-as-read-in-a-group-channel mark-messages-as-read",
-    "content": ""
+    "keywords": "sdk android v4 sdk android user friends get-friend-list-page",
+    "content": "OpenIMClient.getInstance .friendshipManager.getFriendListPage new OnBase @Override public void onSuccess List friends for UserInfo friend : friends friendStore.put friend.getUserID , friend ; @Override public void onError int code, String error recordFriendListFailure code, error ; , 0, 40, true ; 参数依次为 offset 、 count 和 filterBlack 。 offset 从 0 开始， count 是页大小， filterBlack 为 true 时过滤黑名单用户。成功 callback 返回当前页 List ，好友关系详情可通过 getFriendInfo 读取。继续加载下一页时按实际请求数量增加 offset ；返回数量小于 count 时通常表示到达末页。 只使用分页 API，不使用非分页的 getFriendList 。快照和增量都应按 userID 合并。 好友资料字段 UserInfo 是 Android wrapper 的组合对象。好友列表中的 getFriendInfo 返回 FriendInfo ，常用字段如下： | 字段 | 说明 | | | | | userID | 好友用户 ID，也是好友列表的稳定标识。 | | nickname | 好友账号昵称。 | | faceURL | 好友账号头像地址。 | | remark | 当前账号设置的好友备注。 | | ex | 好友关系扩展字符串。 | | addSource | 好友关系添加来源。 | | operatorUserID | 建立或更新关系的操作用户 ID。 | | createTime | 好友关系创建时间。 | nickname 和 faceURL 是账号资料， remark 和 ex 属于好友关系。 UpdateFriendsReq 支持提交 isPinned ，但当前 Android FriendInfo 模型不提供对应读取字段，置顶状态应由业务层单独维护。不要用好友对象覆盖陌生人的 PublicUserInfo ，也不要把好友备注写回账号昵称。 本页归属好友新增、资料变化和删除事件。以下 callback 应组合进应用唯一的 OnFriendshipListener ： @Override public void onFriendAdded FriendInfo friend friendStore.put friend.getUserID , friend ; @Override public void onFriendInfoChanged FriendInfo friend friendStore.put friend.getUserID , friend ; @Override public void onFriendDeleted FriendInfo friend friendStore.remove friend.getUserID ;"
+  },
+  {
+    "path": "/sdk/android/user/friends/search-friends",
+    "title": "搜索好友",
+    "description": "使用 searchFriends() 搜索当前用户的好友。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends search-friends",
+    "content": "OpenIMClient.getInstance .friendshipManager.searchFriends new OnBase @Override public void onSuccess List results showFriendSearchResults results ; @Override public void onError int code, String error recordFriendSearchFailure code, error ; , Collections.singletonList keyword.trim , true, true, true ; keywordList 当前只传一个非空关键词。后面的三个布尔值依次控制是否匹配用户 ID、昵称和好友备注，至少应启用一种匹配方式。需要同时搜索多个字段时，将对应开关设为 true ；不支持把多个关键词作为同一请求的独立搜索条件。 成功 callback 返回 List 。搜索结果只属于当前搜索视图，不应覆盖完整好友列表，也不会触发好友 listener。"
+  },
+  {
+    "path": "/sdk/android/user/friends/get-friends-info",
+    "title": "查询指定好友资料",
+    "description": "使用 getFriendsInfo() 查询指定用户的好友关系资料。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends get-friends-info",
+    "content": "OpenIMClient.getInstance .friendshipManager.getFriendsInfo new OnBase @Override public void onSuccess List friends for UserInfo friend : friends friendStore.put friend.getUserID , friend ; @Override public void onError int code, String error recordFriendInfoFailure code, error ; , Arrays.asList \"user a\", \"user b\" , true ; 第二个参数是目标用户 ID 列表， filterBlack 决定是否过滤黑名单用户。成功 callback 返回 List ；通过 getFriendInfo 读取好友备注和关系字段，并按 userID 合并。调用前应去除空值和重复 ID。 当目标用户不是好友，或目标用户因 filterBlack == true 被过滤时，返回结果中可能没有对应记录。需要同时展示账号公开资料时，应再调用 获取指定用户资料 /sdk/android/user/user profile/get users info ，并按 userID 合并两类数据。 该查询不会触发好友 listener。只需要判断好友关系时使用 checkFriend /sdk/android/user/friends/check friend 。"
+  },
+  {
+    "path": "/sdk/android/user/friends/check-friend",
+    "title": "检查好友关系",
+    "description": "使用 checkFriend() 检查指定用户是否为当前用户的好友。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends check-friend",
+    "content": "OpenIMClient.getInstance .friendshipManager.checkFriend new OnBase @Override public void onSuccess List relations showFriendshipStates relations ; @Override public void onError int code, String error recordFriendshipCheckFailure code, error ; , Arrays.asList \"user a\", \"user b\" ; 成功 callback 返回 List 。每项的 userID 标识目标用户， result == 1 表示目标是好友且不在黑名单中。 result 以服务端返回值为准，不应在客户端扩展未声明的状态枚举。 该方法只建立关系快照，不触发好友 listener。需要昵称、头像或好友备注时使用 getFriendsInfo /sdk/android/user/friends/get friends info 。"
+  },
+  {
+    "path": "/sdk/android/user/friends/update-friends",
+    "title": "更新好友资料",
+    "description": "使用 updateFriendsReq() 更新好友备注、置顶状态或扩展字段。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends update-friends",
+    "content": "UpdateFriendsReq request = new UpdateFriendsReq ; request.setFriendUserIDs new String friendUserID ; request.setRemark remark.trim ; OpenIMClient.getInstance .friendshipManager.updateFriendsReq new OnBase @Override public void onSuccess String data markFriendUpdateSubmitted ; @Override public void onError int code, String error recordFriendUpdateFailure code, error ; , request ; UpdateFriendsReq 可设置 friendUserIDs 、 remark 、 isPinned 和 ex 。一次调用会把同一字段值应用到全部目标好友；不同好友需要不同值时应分别调用。 ex 是完整字符串。 | 字段 | 说明 | | | | | friendUserIDs | 待更新的好友 ID 数组。 | | remark | 当前账号设置的好友备注。 | | isPinned | 是否置顶好友。 | | ex | 好友关系扩展字符串，按完整值覆盖。 | 成功 callback 表示更新请求完成。好友资料增量通过 onFriendInfoChanged 合并，事件处理见 分页获取好友列表 /sdk/android/user/friends/get friend list page 。"
+  },
+  {
+    "path": "/sdk/android/user/friends/delete-friend",
+    "title": "删除好友",
+    "description": "使用 deleteFriend() 删除当前用户的一条好友关系。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friends delete-friend",
+    "content": "OpenIMClient.getInstance .friendshipManager.deleteFriend new OnBase @Override public void onSuccess String data markFriendDeletionSubmitted friendUserID ; @Override public void onError int code, String error recordFriendDeletionFailure code, error ; , friendUserID ; 成功 callback 表示删除请求完成。 onFriendDeleted 到达后再按 userID 从好友状态中移除记录，事件处理见 分页获取好友列表 /sdk/android/user/friends/get friend list page 。"
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/add-friend",
+    "title": "发送好友申请",
+    "description": "使用 addFriend() 向指定用户发送好友申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications add-friend",
+    "content": "OpenIMClient.getInstance .friendshipManager.addFriend new OnBase @Override public void onSuccess String data markFriendApplicationSubmitted ; @Override public void onError int code, String error recordFriendApplicationFailure code, error ; , \"user b\", \"你好，我是 Alex\" ; 第二个参数是申请接收方的 userID ，第三个参数是申请附言。成功 callback 表示服务端已收到申请，不表示对方已经同意。目标用户 ID 不能为空；按昵称、手机号等字段搜索目标用户应先由业务后端完成。 好友申请状态变化通过 OnFriendshipListener 合并，见 获取收到的好友申请 /sdk/android/user/friend applications/get recv friend application list 。"
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/get-recv-friend-application-list",
+    "title": "获取收到的好友申请",
+    "description": "使用 getRecvFriendApplicationList() 分页查询当前用户收到的好友申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications get-recv-friend-application-list",
+    "content": "GetFriendApplicationListAsRecipientReq request = new GetFriendApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .friendshipManager.getRecvFriendApplicationList new OnBase @Override public void onSuccess List applications replaceReceivedApplications applications ; @Override public void onError int code, String error recordReceivedApplicationFailure code, error ; , request ; offset 从 0 开始， count 是页大小。需要筛选处理状态时可通过 setHandleResults int 设置服务端约定的状态值。成功 callback 返回当前页 List 。 | 字段 | 说明 | | | | | fromUserID / fromNickname / fromFaceURL | 申请发起人的 ID、昵称和头像快照。 | | toUserID / toNickname / toFaceURL | 申请接收人的 ID、昵称和头像快照。 | | reqMsg | 申请附言。 | | handleResult | 处理结果： 0 待处理， 1 已同意， 2 已拒绝。 | | handlerUserID | 执行处理的用户 ID，待处理时可能为空。 | | handleMsg | 处理附言。 | | handleTime | 处理时间，待处理时不应作为有效时间使用。 | | createTime | 申请记录创建时间。 | | ex | 申请记录扩展字符串。 | 好友申请使用 fromUserID:toUserID 作为稳定标识。本页归属好友申请新增、接受、拒绝和删除事件，以下 callback 应组合进应用唯一的 OnFriendshipListener ： @Override public void onFriendApplicationAdded FriendApplicationInfo application friendApplicationStore.merge application ; @Override public void onFriendApplicationAccepted FriendApplicationInfo application friendApplicationStore.merge application ; @Override public void onFriendApplicationRejected FriendApplicationInfo application friendApplicationStore.merge application ; @Override public void onFriendApplicationDeleted FriendApplicationInfo application friendApplicationStore.remove application.getFromUserID , application.getToUserID ; 按 toUserID 是否等于当前登录用户 ID，将记录分流到收到或发出的列表。申请被接受后，新好友关系由 分页获取好友列表 /sdk/android/user/friends/get friend list page 归属的 onFriendAdded 合并。"
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/get-send-friend-application-list",
+    "title": "获取发出的好友申请",
+    "description": "使用 getSendFriendApplicationList() 分页查询当前用户发出的好友申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications get-send-friend-application-list",
+    "content": "GetFriendApplicationListAsApplicantReq request = new GetFriendApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .friendshipManager.getSendFriendApplicationList new OnBase @Override public void onSuccess List applications replaceSentApplications applications ; @Override public void onError int code, String error recordSentApplicationFailure code, error ; , request ; offset 从 0 开始， count 是页大小。成功 callback 返回当前页 List ；按 fromUserID:toUserID 合并。查询只建立快照，不触发好友申请事件。 发出的申请中，当前用户通常是 fromUserID 。列表字段和处理结果含义与 获取收到的好友申请 /sdk/android/user/friend applications/get recv friend application list 相同；申请处理状态使用 Android 服务端约定的 0 （待处理）、 1 （已同意）和 2 （已拒绝）。"
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/accept-friend-application",
+    "title": "接受好友申请",
+    "description": "使用 acceptFriendApplication() 接受好友申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications accept-friend-application",
+    "content": "OpenIMClient.getInstance .friendshipManager.acceptFriendApplication new OnBase @Override public void onSuccess String data markApplicationAccepted applicantUserID ; @Override public void onError int code, String error recordApplicationAcceptFailure code, error ; , applicantUserID, \"已通过\" ; applicantUserID 是申请方用户 ID，最后一个参数是处理附言。成功 callback 表示接受请求完成；好友申请状态和新增好友关系可能通过不同 callback 到达，应分别合并。申请状态由 onFriendApplicationAccepted 更新，新好友关系由 onFriendAdded 更新。"
+  },
+  {
+    "path": "/sdk/android/user/friend-applications/refuse-friend-application",
+    "title": "拒绝好友申请",
+    "description": "使用 refuseFriendApplication() 拒绝好友申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user friend-applications refuse-friend-application",
+    "content": "OpenIMClient.getInstance .friendshipManager.refuseFriendApplication new OnBase @Override public void onSuccess String data markApplicationRejected applicantUserID ; @Override public void onError int code, String error recordApplicationRejectFailure code, error ; , applicantUserID, \"暂不添加\" ; applicantUserID 是申请方用户 ID，最后一个参数是处理附言。成功 callback 表示拒绝请求完成；申请状态通过统一好友申请 listener 合并，并最终以 handleResult == 2 表示已拒绝。"
+  },
+  {
+    "path": "/sdk/android/user/blacklist/get-blacklist",
+    "title": "获取黑名单列表",
+    "description": "使用 getBlacklist() 获取当前用户的黑名单。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user blacklist get-blacklist",
+    "content": "黑名单记录当前用户主动拉黑的用户，可用于黑名单设置页、资料卡中的关系状态和聊天入口限制。黑名单与群成员管理是独立能力；禁言、移除群成员或调整群角色时，应使用群组 API。 获取黑名单 完成 SDK 初始化并登录后，调用 getBlacklist 获取当前账号的完整黑名单。返回空列表表示当前没有黑名单用户。 OpenIMClient.getInstance .friendshipManager.getBlacklist new OnBase @Override public void onSuccess List users blacklistStore.replace users ; @Override public void onError int code, String error recordBlacklistFailure code, error ; ; 成功 callback 返回 List ；通过 UserInfo.getBlackInfo 读取黑名单关系对象。 黑名单记录字段 BlacklistInfo 的常用字段如下： | 字段 | 说明 | | | | | userID | 被当前用户拉黑的目标用户 ID，也是列表的稳定 key。 | | nickname | 目标用户昵称快照。 | | faceURL | 目标用户头像地址。 | | gender | 目标用户性别值。 | | operatorUserID | 执行拉黑操作的用户 ID。 | | createTime | 黑名单关系创建时间。 | | addSource | 黑名单关系的添加来源。 | | ex | 黑名单关系扩展字符串。 | 如果页面还要展示好友备注或最新公开资料，应按 userID 额外合并 FriendInfo 或 PublicUserInfo ，不能把黑名单字段当作好友资料。 黑名单状态统一按 userID 合并。查询本身不会触发黑名单新增或删除事件。 首次进入页面、重连或用户主动刷新时，使用返回的完整列表替换本地快照；增量变化由 拉黑用户 /sdk/android/user/blacklist/add blacklist 和 取消拉黑用户 /sdk/android/user/blacklist/remove blacklist 页面归属的 listener 处理。"
+  },
+  {
+    "path": "/sdk/android/user/blacklist/add-blacklist",
+    "title": "拉黑用户",
+    "description": "使用 addBlacklist() 将用户加入当前账号黑名单。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user blacklist add-blacklist",
+    "content": "OpenIMClient.getInstance .friendshipManager.addBlacklist new OnBase @Override public void onSuccess String data markBlacklistRequestSubmitted targetUserID ; @Override public void onError int code, String error recordBlacklistAddFailure code, error ; , targetUserID, \" \\\"source\\\":\\\"profile menu\\\" \" ; 第二个参数是目标 userID ，第三个参数是可选扩展字符串。无需扩展信息时可使用不带 ex 的重载。成功 callback 表示拉黑请求完成，不表示事件已经到达。 黑名单是单向关系：被拉黑用户不能向当前用户发送消息，但当前用户是否允许继续向对方发送消息由业务层决定。 ex 是完整字符串，更新前应合并业务自己的扩展字段。 onBlacklistAdded 由本页归属，应组合进应用唯一的 OnFriendshipListener ： @Override public void onBlacklistAdded BlacklistInfo user blacklistStore.put user.getUserID , user ;"
+  },
+  {
+    "path": "/sdk/android/user/blacklist/remove-blacklist",
+    "title": "取消拉黑用户",
+    "description": "使用 removeBlacklist() 将用户移出当前账号黑名单。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android user blacklist remove-blacklist",
+    "content": "OpenIMClient.getInstance .friendshipManager.removeBlacklist new OnBase @Override public void onSuccess String data markBlacklistRemovalSubmitted targetUserID ; @Override public void onError int code, String error recordBlacklistRemovalFailure code, error ; , targetUserID ; 成功 callback 表示移除请求完成，不表示事件已经到达。黑名单快照应在 onBlacklistDeleted 到达后按 userID 删除；如果事件丢失，可重新调用 获取黑名单列表 /sdk/android/user/blacklist/get blacklist 校准。 onBlacklistDeleted 由本页归属，应按 userID 删除本地记录： @Override public void onBlacklistDeleted BlacklistInfo user blacklistStore.remove user.getUserID ;"
+  },
+  {
+    "path": "/sdk/android/conversation/overview-conversation",
+    "title": "会话概览",
+    "description": "了解 Android SDK 中 ConversationInfo、conversationID、会话设置和会话事件的职责。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation overview-conversation",
+    "content": "会话是当前登录用户围绕一次单聊或群聊维护的聊天列表状态，由一条 ConversationInfo 记录表示。它保存未读数、最后一条消息、置顶、草稿、消息接收方式和扩展字段。 conversationID 用于定位当前账号的会话状态；单聊目标使用对方 userID ，群聊目标使用 groupID 。 群资料、成员关系和群权限属于群组能力。群聊页面使用 groupID 调用群组 API，使用 conversationID 处理会话设置、未读数、草稿和消息清理。 会话标识 | 标识 | 用途 | | | | | conversationID | 当前账号的会话记录 ID，用于会话设置、未读状态和消息历史。 | | userID | 单聊对方的用户 ID。 | | groupID | 群聊对应的群组 ID，也是群组 API 的目标标识。 | | sourceId | 按会话类型查询或生成 ID 时传入的聊天目标：单聊为 userID ，群聊为 groupID 。 | 单聊使用 ConversationType.SINGLE CHAT 。群聊根据群类型使用 ConversationType.GROUP CHAT 或 ConversationType.SUPER GROUP CHAT ；不要在应用层自行拼接 conversationID 。 ConversationInfo | 字段 | 说明 | | | | | conversationID | 会话 ID。 | | conversationType | 会话类型。 | | userID / groupID | 单聊目标用户或群聊目标群组。 | | showName / faceURL | 会话列表显示名称和头像。 | | unreadCount | 当前会话未读数。 | | latestMsg / latestMsgSendTime | 最后一条消息 JSON 字符串及发送时间。 | | recvMsgOpt | 当前会话消息接收方式。 | | groupAtType | 群聊 @ 提醒状态。 | | draftText / draftTextTime | 会话草稿及更新时间。 | | isPinned | 是否置顶。 | | isPrivateChat / burnDuration | 阅后即焚开关和保留时长。 | | isMsgDestruct / msgDestructTime | 服务端消息定期删除设置。 | | ex | 业务约定的会话扩展字符串。 | 查询和设置 查询指定会话 /sdk/android/conversation/retrieving conversations/get conversation by target 生成会话 ID /sdk/android/conversation/retrieving conversations/get conversation id 按 ID 批量获取会话 /sdk/android/conversation/retrieving conversations/get conversations by id 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 置顶或取消置顶会话 /sdk/android/conversation/managing conversations/pin conversation 设置会话扩展字段 /sdk/android/conversation/managing conversations/set conversation extension 设置会话草稿 /sdk/android/conversation/managing conversations/set conversation draft 设置会话消息接收方式 /sdk/android/conversation/managing conversations/set message receive option 重置群聊 @ 状态 /sdk/android/conversation/managing conversations/clear group mentions 标记会话已读 /sdk/android/conversation/managing conversations/mark conversation read 获取消息总未读数 /sdk/android/conversation/managing conversations/get total unread count 开启或关闭阅后即焚 /sdk/android/conversation/managing conversations/set private chat 定期删除服务端消息 /sdk/android/conversation/managing conversations/set message destruct 状态更新 查询方法建立会话快照，事件负责合并后续增量： 新会话和会话属性变化由 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 归属的 onNewConversation 与 onConversationChanged 处理。 当前账号总未读数由 获取消息总未读数 /sdk/android/conversation/managing conversations/get total unread count 归属的 onTotalUnreadMessageCountChanged 处理。 ConversationManager 只保存一个 OnConversationListener ， setOnConversationListener 会替换当前 listener。应用应在统一状态层组合所有 callback 并设置一次；请求成功、事件到达和重新查询校准是三个独立阶段。"
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/get-conversation-by-target",
+    "title": "查询指定会话",
+    "description": "使用 getOneConversation() 按用户或群组获取一个 Android 会话。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations get-conversation-by-target",
+    "content": "从通讯录、用户资料或群资料进入聊天页时，使用 getOneConversation 。单聊传对方用户 ID，群聊传群组 ID；即使还没有消息，也不要自行构造 ConversationInfo 。 OpenIMClient.getInstance .conversationManager.getOneConversation new OnBase @Override public void onSuccess ConversationInfo conversation openChatPage conversation ; @Override public void onError int code, String error recordConversationOpenFailure code, error ; , targetUserID, ConversationType.SINGLE CHAT ; 参数 sourceId 在单聊中是对方 userID ，在群聊中是 groupID 。群聊根据群类型使用 ConversationType.GROUP CHAT 或 ConversationType.SUPER GROUP CHAT 。 成功 callback 返回 ConversationInfo 。查询本身不触发会话 listener；后续变化由 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 统一按 conversationID 合并。"
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/get-conversation-id",
+    "title": "生成会话 ID",
+    "description": "使用 getConversationIDBySessionType() 按聊天目标计算 Android 会话 ID。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations get-conversation-id",
+    "content": "只需要会话 ID 时，调用 getConversationIDBySessionType ，不要在应用层自行拼接。 String conversationID = OpenIMClient.getInstance .conversationManager .getConversationIDBySessionType targetUserID, ConversationType.SINGLE CHAT ; sourceId 在单聊中是对方 userID ，在群聊中是 groupID 。群聊根据群类型使用 ConversationType.GROUP CHAT 或 ConversationType.SUPER GROUP CHAT 。 该方法同步返回 String 类型的 conversationID ，不返回完整 ConversationInfo ，也不触发会话 listener。需要会话资料时调用 查询指定会话 /sdk/android/conversation/retrieving conversations/get conversation by target 。"
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/get-conversations-by-id",
+    "title": "按 ID 批量获取会话",
+    "description": "使用 getMultipleConversation() 按 conversationID 批量获取 Android 会话。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations get-conversations-by-id",
+    "content": "已经持有一组 conversationID 时，使用 getMultipleConversation 读取最新会话快照。 OpenIMClient.getInstance .conversationManager.getMultipleConversation new OnBase @Override public void onSuccess List conversations for ConversationInfo item : conversations conversationStore.put item.getConversationID , item ; @Override public void onError int code, String error recordConversationQueryFailure code, error ; , conversationIDs ; 调用前去除空值和重复 ID。成功 callback 返回 List ；某个 ID 没有结果时按缺失记录处理，不要依赖响应与请求列表的位置完全一一对应。 查询本身不触发会话 listener。会话列表的持续同步见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list",
+    "title": "获取会话列表",
+    "description": "使用 getConversationListSplit() 分页获取当前 Android 账号的会话列表。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation retrieving-conversations retrieve-conversation-list",
+    "content": "会话列表属于当前登录用户。每条 ConversationInfo 包含会话标识、未读数、最后一条消息、置顶和草稿等状态。使用分页接口读取会话，不使用一次加载完整列表的 getAllConversationList 。 分页获取会话 OpenIMClient.getInstance .conversationManager.getConversationListSplit new OnBase @Override public void onSuccess List conversations mergeConversations conversations ; @Override public void onError int code, String error recordConversationListFailure code, error ; , 0, 50 ; | 参数 | 类型 | 说明 | | | | | | offset | long | 从 0 开始的分页偏移量；刷新时重置为 0 。 | | count | long | 本页期望返回的会话数量。 | 成功 callback 返回当前页 List 。继续加载时按已经请求的条目数量推进 offset ，并按 conversationID 去重；返回数量小于 count 时通常表示到达末页。主动刷新时清空分页状态后从 0 重载。 保持列表同步 getConversationListSplit 只建立快照，不触发会话 callback。以下 callback 应组合进应用唯一的 OnConversationListener ： @Override public void onNewConversation List conversations mergeConversations conversations ; @Override public void onConversationChanged List conversations mergeConversations conversations ; 两个事件都携带 List ，按 conversationID 幂等合并。 setOnConversationListener 采用替换语义，应由应用级状态层设置一次。用户加入群组但尚未产生消息时不一定有会话；退出群组后也可能保留历史会话记录，不能用已加入群组列表替代会话列表。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/pin-conversation",
+    "title": "置顶或取消置顶会话",
+    "description": "使用 pinConversation() 设置 Android 指定会话的置顶状态。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations pin-conversation",
+    "content": "OpenIMClient.getInstance .conversationManager.pinConversation new OnBase @Override public void onSuccess String data markPinRequestSubmitted conversationID, true ; @Override public void onError int code, String error recordConversationPinFailure code, error ; , conversationID, true ; 最后一个参数为 true 时置顶，传 false 时取消置顶。该状态只影响当前账号的会话列表。 成功 callback 不等于 onConversationChanged 已经到达。后续按 conversationID 合并最新会话，完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-conversation-extension",
+    "title": "设置会话扩展字段",
+    "description": "使用 setConversationEx() 设置 Android 指定会话的业务扩展字符串。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-conversation-extension",
+    "content": "ex 是完整字符串，SDK 不会自动合并 JSON。更新前应读取旧值并保留其他业务模块的命名空间。 OpenIMClient.getInstance .conversationManager.setConversationEx new OnBase @Override public void onSuccess String data markConversationExtensionSubmitted conversationID ; @Override public void onError int code, String error recordConversationExtensionFailure code, error ; , conversationID, mergedExtensionJSON ; 成功 callback 表示设置请求完成。通过 onConversationChanged 按 conversationID 合并最新会话；完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-conversation-draft",
+    "title": "设置会话草稿",
+    "description": "使用 setConversationDraft() 保存 Android 会话草稿。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-conversation-draft",
+    "content": "用户离开聊天页、切换会话或输入框内容变化时，可以使用 setConversationDraft 保存草稿。输入过程中先维护编辑器状态并对保存调用做防抖；离开页面前再提交一次最新文本。 OpenIMClient.getInstance .conversationManager.setConversationDraft new OnBase @Override public void onSuccess String data markDraftSubmitted conversationID ; @Override public void onError int code, String error recordDraftSaveFailure code, error ; , conversationID, editorValue ; 清空草稿时传空字符串。成功 callback 只表示保存请求已经完成，不等同于会话变化回调已经到达；SDK 后续通过 onConversationChanged 同步 draftText 和 draftTextTime ，需要校准时重新查询会话。退出登录或切换账号时清理编辑器内存状态。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-message-receive-option",
+    "title": "设置会话消息接收方式",
+    "description": "使用 setConversationRecvMessageOpt() 设置 Android 单个会话的消息接收与通知方式。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-message-receive-option",
+    "content": "OpenIMClient.getInstance .conversationManager.setConversationRecvMessageOpt new OnBase @Override public void onSuccess String data markReceiveOptionSubmitted conversationID ; @Override public void onError int code, String error recordReceiveOptionFailure code, error ; , conversationID, 2 ; | 数值 | 含义 | | | | | 0 | 正常接收消息并允许通知。 | | 1 | 不接收该会话消息，也不通知。 | | 2 | 接收该会话消息，但不通知。 | 账号级默认策略见 设置全局消息接收方式 /sdk/android/user/user profile/set global message reception 。成功 callback 后通过 onConversationChanged 按 conversationID 合并最新会话。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/clear-group-mentions",
+    "title": "重置群聊 @ 状态",
+    "description": "使用 resetConversationGroupAtType() 将 Android 指定会话的群聊 @ 状态重置为普通状态。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations clear-group-mentions",
+    "content": "用户处理完群聊中的 @ 消息后，调用 resetConversationGroupAtType 将 groupAtType 重置为普通状态。 OpenIMClient.getInstance .conversationManager.resetConversationGroupAtType new OnBase @Override public void onSuccess String data markGroupMentionStateReset conversationID ; @Override public void onError int code, String error recordGroupMentionResetFailure code, error ; , conversationID ; 本操作只负责重置为普通状态，不应用于主动写入 atMe 、 atAll 等状态。群聊 @ 状态与消息已读状态不同。 成功 callback 后通过 onConversationChanged 按 conversationID 合并该会话；完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/mark-conversation-read",
+    "title": "标记会话已读",
+    "description": "使用 messageManager.markConversationMessageAsRead() 将 Android 指定会话的消息标记为已读。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations mark-conversation-read",
+    "content": "用户打开会话并阅读完当前可见消息后，调用 messageManager.markConversationMessageAsRead 。不要在仅预览通知或后台收到消息时提前标记。 OpenIMClient.getInstance .messageManager.markConversationMessageAsRead conversationID, new OnBase @Override public void onSuccess String data markConversationReadSubmitted conversationID ; @Override public void onError int code, String error recordMarkReadFailure code, error ; ; 成功 callback 表示请求完成，不等于 onConversationChanged 已到达。随后按 conversationID 合并最新 ConversationInfo ；需要立即确认时重新查询该会话。 对于单聊，当前用户标记会话已读后，对端可通过 OnAdvanceMsgListener.onRecvC2CReadReceipt 收到已读回执。对每个 C2CReadReceiptInfo 先验证 sessionType == ConversationType.SINGLE CHAT 和非空 userID ，再按 msgIDList 更新对应消息的已读状态。 MessageManager 同样只保存一个高级消息 listener，应在应用级消息状态层统一设置。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/get-total-unread-count",
+    "title": "获取消息总未读数",
+    "description": "使用 getTotalUnreadMsgCount() 获取 Android 当前账号的总未读数。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations get-total-unread-count",
+    "content": "getTotalUnreadMsgCount 返回当前账号所有会话的总未读快照，不要把当前已加载分页中的 unreadCount 简单相加。 OpenIMClient.getInstance .conversationManager.getTotalUnreadMsgCount new OnBase @Override public void onSuccess String value int totalUnread = Integer.parseInt value ; updateApplicationBadge totalUnread ; @Override public void onError int code, String error recordTotalUnreadFailure code, error ; ; 回调值是 String ，解析失败时应按业务错误处理，不能将其默认为会话列表分页的局部总数。查询本身不触发 callback。 本页归属 OnConversationListener.onTotalUnreadMessageCountChanged int count 。在应用唯一的 OnConversationListener 中按该值更新应用角标；会话 listener 的集中设置方式见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-private-chat",
+    "title": "开启或关闭阅后即焚",
+    "description": "使用 setOneConversationPrivateChat() 设置 Android 会话的阅后即焚模式。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-private-chat",
+    "content": "OpenIMClient.getInstance .conversationManager.setOneConversationPrivateChat new OnBase @Override public void onSuccess String data markPrivateChatSubmitted conversationID, true ; @Override public void onError int code, String error recordPrivateChatFailure code, error ; , conversationID, true ; 传入 false 关闭阅后即焚。具体保留时长由 burnDuration 单独设置，见 设置阅后即焚时长 /sdk/android/conversation/managing conversations/set burn duration 。该能力与定期删除服务端消息不同。 成功 callback 只表示设置请求完成；最新状态通过 onConversationChanged 按 conversationID 合并，完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-burn-duration",
+    "title": "设置阅后即焚时长",
+    "description": "使用 setConversationBurnDuration() 设置 Android 阅后即焚模式的消息保留时长。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-burn-duration",
+    "content": "OpenIMClient.getInstance .conversationManager.setConversationBurnDuration new OnBase @Override public void onSuccess String data markBurnDurationSubmitted conversationID, 30 ; @Override public void onError int code, String error recordBurnDurationFailure code, error ; , conversationID, 30 ; burnDuration 的单位为秒。启用或关闭阅后即焚需要设置 isPrivateChat ，见 开启或关闭阅后即焚 /sdk/android/conversation/managing conversations/set private chat 。不要把它与服务端消息定期删除周期 msgDestructTime 混用。 成功 callback 后，通过 onConversationChanged 合并最新 burnDuration ；完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/set-message-destruct",
+    "title": "定期删除服务端消息",
+    "description": "使用 setConversation() 启用、关闭并配置 Android 会话的服务端消息定期删除策略。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations set-message-destruct",
+    "content": "isMsgDestruct 与 msgDestructTime 共同构成服务端消息定期删除设置，可以在一次 ConversationReq 中提交。 ConversationReq request = new ConversationReq ; request.setMsgDestruct true ; request.setMsgDestructTime 3600 ; OpenIMClient.getInstance .conversationManager.setConversation new OnBase @Override public void onSuccess String data markMessageDestructSubmitted conversationID ; @Override public void onError int code, String error recordMessageDestructFailure code, error ; , conversationID, request ; msgDestructTime 的单位为秒。关闭时只传 request.setMsgDestruct false ；该能力用于定期删除服务端消息，不是阅后即焚。 成功 callback 表示设置请求完成。最新开关和周期通过 onConversationChanged 按 conversationID 合并，完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/hide-a-conversation",
+    "title": "隐藏会话",
+    "description": "使用 hideConversation() 从 Android 当前账号的会话列表隐藏入口。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations hide-a-conversation",
+    "content": "hideConversation 只隐藏当前登录用户的会话入口，不会删除单聊关系、退出群组或影响其他用户。 OpenIMClient.getInstance .conversationManager.hideConversation new OnBase @Override public void onSuccess String data conversationStore.remove conversationID ; @Override public void onError int code, String error recordConversationHideFailure code, error ; , conversationID ; 该方法适合临时从聊天列表移除入口。收到新消息或重新同步后，隐藏的会话可能再次出现。 成功 callback 表示隐藏请求已完成，调用端可以从当前列表移除该 conversationID 。后续收到 onConversationChanged 时仍应按 conversationID 幂等合并；完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/delete-conversation-with-messages",
+    "title": "删除会话及消息",
+    "description": "使用 deleteConversationAndDeleteAllMsg() 删除 Android 指定会话及其全部消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations delete-conversation-with-messages",
+    "content": "产品语义为“删除此聊天”时，调用 deleteConversationAndDeleteAllMsg 。 OpenIMClient.getInstance .conversationManager.deleteConversationAndDeleteAllMsg new OnBase @Override public void onSuccess String data messageStore.clearConversation conversationID ; conversationStore.remove conversationID ; @Override public void onError int code, String error recordConversationDeleteFailure code, error ; , conversationID ; 成功 callback 后清理当前消息列表和会话行。该操作不删除好友关系，也不退出或解散群组；聊天目标仍存在时，会话可能由新消息或同步重新生成。 后续通过 onConversationChanged 或重新查询校准会话列表，完整 listener 见 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list 。"
+  },
+  {
+    "path": "/sdk/android/conversation/managing-conversations/clear-conversation-messages",
+    "title": "清空会话消息",
+    "description": "使用 messageManager.clearConversationAndDeleteAllMsg() 保留 Android 会话入口并清空其消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android conversation managing-conversations clear-conversation-messages",
+    "content": "产品语义为“清空聊天记录”时，调用 messageManager.clearConversationAndDeleteAllMsg 。 OpenIMClient.getInstance .messageManager.clearConversationAndDeleteAllMsg conversationID, new OnBase @Override public void onSuccess String data messageStore.clearConversation conversationID ; @Override public void onError int code, String error recordConversationClearFailure code, error ; ; 成功 callback 后保留会话入口，但清除当前账号下的消息和摘要状态。立即清理当前消息列表，再通过 onConversationChanged 或重新查询校准最后一条消息、摘要和未读状态。"
+  },
+  {
+    "path": "/sdk/android/group/overview-group",
+    "title": "群组概览",
+    "description": "了解 Android SDK 中群资料、成员、申请和群组事件的职责。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group overview-group",
+    "content": "群组由 GroupInfo 表示， groupID 是群资料、成员、申请和权限设置的唯一目标标识。 GroupMembersInfo 表示成员在某个群内的昵称、角色、禁言结束时间和扩展字段；单聊关系和会话未读数不属于群组 API。 GroupManager 将群资料变化、成员增删改、入群申请处理和加入群组变化统一发送到一个 OnGroupListener 。在共享状态层设置一次 listener，并按 groupID 或 userID 合并事件。 OpenIMClient.getInstance .groupManager.setOnGroupListener new OnGroupListener @Override public void onGroupInfoChanged GroupInfo group groupStore.put group.getGroupID , group ; @Override public void onGroupMemberInfoChanged GroupMembersInfo member memberStore.put member.getGroupID + member.getUserID , member ; ; 群资料或成员操作的成功 callback 只表示该请求完成；状态以对应群组事件或重新查询结果为准。 主要能力 群资料与设置 /sdk/android/group/create group 群权限 /sdk/android/group/set group join verification 加入与退出群组 /sdk/android/group/join group 查询群组 /sdk/android/group/retrieving groups/get specified groups info 群申请 /sdk/android/group/group applications/overview group applications 查询群成员 /sdk/android/group/retrieving group members/overview retrieving group members 管理群成员 /sdk/android/group/managing group members/invite user to group"
+  },
+  {
+    "path": "/sdk/android/group/create-group",
+    "title": "创建群组",
+    "description": "使用 createGroup 创建群资料并指定初始成员、管理员和群主。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group create-group",
+    "content": "使用 createGroup 创建群组。 GroupInfo 填写群资料；初始普通成员、管理员和群主分别通过独立参数传入。成功回调返回创建后的完整 GroupInfo ，应保存服务端确定的 groupID 。 GroupInfo info = new GroupInfo ; info.setGroupName \"项目讨论\" ; info.setIntroduction \"仅限项目成员\" ; OpenIMClient.getInstance .groupManager.createGroup memberUserIDs, adminUserIDs, info, ownerUserID, new OnBase @Override public void onSuccess GroupInfo group openGroup group.getGroupID ; @Override public void onError int code, String error showCreateError error ; ; 群主和管理员必须由业务侧按权限选择。不要在客户端根据本地用户列表推导群主身份。"
+  },
+  {
+    "path": "/sdk/android/group/update-group-profile",
+    "title": "更新群资料",
+    "description": "使用 setGroupInfo 更新群名称、头像、简介和其他群资料字段。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group update-group-profile",
+    "content": "使用 setGroupInfo 更新群资料。请求对象至少应包含 groupID 和需要修改的字段；不要用不完整的本地缓存覆盖未参与本次编辑的字段。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setGroupName \"移动端项目组\" ; update.setIntroduction \"Android 与 iOS 协作群\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markGroupUpdateSubmitted groupID ; @Override public void onError int code, String error showGroupUpdateError error ; ; 最新群资料通过 onGroupInfoChanged 合并。群公告和扩展字段使用相同接口，分别见相关页面。"
+  },
+  {
+    "path": "/sdk/android/group/set-group-announcement",
+    "title": "发布群公告",
+    "description": "通过 GroupInfo.notification 发布或更新群公告。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group set-group-announcement",
+    "content": "Android SDK 没有独立的公告方法。构造包含 groupID 与 notification 的 GroupInfo ，再调用 setGroupInfo 。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setNotification \"今晚 20:00 进行版本发布确认。\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data refreshAnnouncement groupID ; @Override public void onError int code, String error showAnnouncementError error ; ; 公告的更新时间和更新人由返回的 GroupInfo 中 notificationUpdateTime 、 notificationUserID 表示。权限由服务端校验。"
+  },
+  {
+    "path": "/sdk/android/group/set-group-extension",
+    "title": "设置群扩展字段",
+    "description": "通过 GroupInfo.ex 保存应用定义的群组扩展数据。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group set-group-extension",
+    "content": "GroupInfo.ex 是完整字符串，SDK 不会合并 JSON。多个业务模块共用该字段时，应由应用读取旧值、合并自己的命名空间后再提交。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setEx \" \\\"projectCode\\\":\\\"mobile\\\",\\\"archived\\\":false \" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markExtensionSubmitted groupID ; @Override public void onError int code, String error showExtensionError error ; ; 不要将访问令牌、密钥或仅适合本机的 UI 状态写入群扩展字段。"
+  },
+  {
+    "path": "/sdk/android/group/set-group-join-verification",
+    "title": "设置入群验证方式",
+    "description": "通过 GroupInfo.needVerification 配置申请和邀请的入群验证规则。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group set-group-join-verification",
+    "content": "入群验证写入 GroupInfo.needVerification ，再调用 setGroupInfo 。可使用 GroupVerification 常量： APPLY NEED VERIFICATION INVITE DIRECTLY 、 ALL NEED VERIFICATION 和 DIRECTLY 。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setNeedVerification GroupVerification.ALL NEED VERIFICATION ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markVerificationSubmitted groupID ; @Override public void onError int code, String error showVerificationError error ; ; 该设置影响后续入群请求，不替代对已存在申请的同意或拒绝处理。"
+  },
+  {
+    "path": "/sdk/android/group/set-group-member-profile-access",
+    "title": "设置成员资料查看权限",
+    "description": "通过 GroupInfo.lookMemberInfo 设置是否允许通过群组查看成员资料。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group set-group-member-profile-access",
+    "content": "lookMemberInfo 使用整数开关： 0 关闭， 1 打开。更新时只提交该权限字段和 groupID 。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setLookMemberInfo 1 ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markMemberInfoAccessSubmitted groupID ; @Override public void onError int code, String error showPermissionError error ; ; 此开关约束通过群组入口获取成员资料的权限，不改变成员已经拥有的用户资料。"
+  },
+  {
+    "path": "/sdk/android/group/set-group-member-friend-permission",
+    "title": "设置成员好友申请权限",
+    "description": "通过 GroupInfo.applyMemberFriend 设置是否允许从群成员发起好友申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group set-group-member-friend-permission",
+    "content": "applyMemberFriend 使用整数开关： 0 关闭， 1 打开。该规则只影响从该群成员关系入口发起的好友申请。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setApplyMemberFriend 0 ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markFriendPermissionSubmitted groupID ; @Override public void onError int code, String error showPermissionError error ; ; 更新后以 onGroupInfoChanged 或重新读取的 GroupInfo 为准。"
+  },
+  {
+    "path": "/sdk/android/group/change-group-mute",
+    "title": "设置全员禁言",
+    "description": "使用 changeGroupMute 开启或关闭群组全员禁言。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group change-group-mute",
+    "content": "使用 changeGroupMute 切换全员禁言。 true 开启， false 关闭；成员级禁言见“禁言或解除禁言群成员”。 OpenIMClient.getInstance .groupManager.changeGroupMute new OnBase @Override public void onSuccess String data markGroupMuteSubmitted groupID, true ; @Override public void onError int code, String error showGroupMuteError error ; , groupID, true ; 群主和管理员的实际发言权限以及服务端权限校验以部署策略为准。"
+  },
+  {
+    "path": "/sdk/android/group/join-group",
+    "title": "申请加入群组",
+    "description": "使用 joinGroup 提交入群申请或加入请求。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group join-group",
+    "content": "使用 joinGroup 提交入群请求。 joinSource 使用群组来源值，例如邀请、搜索或二维码；带扩展数据时使用五参数重载。 OpenIMClient.getInstance .groupManager.joinGroup new OnBase @Override public void onSuccess String data markJoinSubmitted groupID ; @Override public void onError int code, String error showJoinError error ; , groupID, \"希望加入项目讨论\", 3, \" \\\"from\\\":\\\"search\\\" \" ; 验证方式决定请求是否立即加入。后续通过 onJoinedGroupAdded 或群申请事件更新本地状态。"
+  },
+  {
+    "path": "/sdk/android/group/quit-group",
+    "title": "退出群组",
+    "description": "使用 quitGroup 让当前登录用户退出指定群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group quit-group",
+    "content": "quitGroup 仅作用于当前登录用户，不会解散群组或移除其他成员。 OpenIMClient.getInstance .groupManager.quitGroup new OnBase @Override public void onSuccess String data removeJoinedGroup groupID ; @Override public void onError int code, String error showQuitError error ; , groupID ; 请求成功后仍应处理 onJoinedGroupDeleted ，并清理该群的成员列表、群会话入口等应用缓存。"
+  },
+  {
+    "path": "/sdk/android/group/dismiss-group",
+    "title": "解散群组",
+    "description": "使用 dismissGroup 解散当前用户有权限管理的群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group dismiss-group",
+    "content": "dismissGroup 解散指定群组，通常仅群主可执行。调用前应在产品层提供明确确认，避免将“退出群组”误实现为解散。 OpenIMClient.getInstance .groupManager.dismissGroup new OnBase @Override public void onSuccess String data markDismissSubmitted groupID ; @Override public void onError int code, String error showDismissError error ; , groupID ; 最终状态通过 onGroupDismissed 合并；收到事件后移除群资料、成员和群会话相关缓存。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-groups/get-specified-groups-info",
+    "title": "获取群资料",
+    "description": "使用 getGroupsInfo 批量查询指定群组的最新资料。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-groups get-specified-groups-info",
+    "content": "已持有一组 groupID 时，使用 getGroupsInfo 查询群资料。结果是 GroupInfo 列表，不能依赖响应顺序与请求列表完全一致。 OpenIMClient.getInstance .groupManager.getGroupsInfo new OnBase @Override public void onSuccess List groups mergeGroups groups ; @Override public void onError int code, String error showGroupQueryError error ; , groupIDs ; 先移除空值和重复 ID；权限不足或群组不存在的 ID 应按缺失结果处理。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-groups/get-joined-group-list-page",
+    "title": "分页获取已加入群组",
+    "description": "使用 getJoinedGroupListPage 分页读取当前账号已加入的群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-groups get-joined-group-list-page",
+    "content": "Android SDK 仅提供分页版本。 offset 从 0 开始，后续页按已经成功合并的条目数推进；返回为空时停止加载。 OpenIMClient.getInstance .groupManager.getJoinedGroupListPage new OnBase @Override public void onSuccess List groups appendJoinedGroups groups ; @Override public void onError int code, String error showPageError error ; , offset, 20 ; 使用 onJoinedGroupAdded 与 onJoinedGroupDeleted 合并增量，不要仅依赖已加载分页作为完整群列表。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-groups/is-join-group",
+    "title": "检查是否加入群组",
+    "description": "使用 isJoinGroup 查询当前登录用户是否已经加入指定群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-groups is-join-group",
+    "content": "isJoinGroup 仅检查当前登录用户与目标 groupID 的成员关系。 OpenIMClient.getInstance .groupManager.isJoinGroup groupID, new OnBase @Override public void onSuccess Boolean joined updateJoinAction Boolean.TRUE.equals joined ; @Override public void onError int code, String error showMembershipError error ; ; 该结果不替代群资料查询，也不能用于判断其他用户是否在群内。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-groups/search-groups",
+    "title": "搜索群组",
+    "description": "使用 searchGroups 按群 ID 或群名称搜索本地可查询的群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-groups search-groups",
+    "content": "searchGroups 接收关键词列表，并分别指定是否搜索群 ID、群名称。两个开关都关闭时没有有效搜索范围。 OpenIMClient.getInstance .groupManager.searchGroups new OnBase @Override public void onSuccess List groups showSearchResults groups ; @Override public void onError int code, String error showSearchError error ; , Collections.singletonList keyword , true, true ; 搜索结果不是成员资格证明。进入群组前可使用“检查是否加入群组”确认当前状态。"
+  },
+  {
+    "path": "/sdk/android/group/group-applications/overview-group-applications",
+    "title": "群申请概览",
+    "description": "说明 Android SDK 中收到和发出的群申请、处理结果及状态事件。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group group-applications overview-group-applications",
+    "content": "群申请记录使用 GroupApplicationInfo 表示。收到的申请面向群管理者，发出的申请面向当前用户； handleResult 、 reqMsg 、 handledMsg 和处理时间用于展示申请状态。 Android SDK 提供收到与发出申请的分页查询，以及同意、拒绝操作；不提供 Flutter 菜单中的“待处理申请数量”接口。申请新增、同意、拒绝和删除事件由 群组概览 /sdk/android/group/overview group 的统一 listener 负责合并。"
+  },
+  {
+    "path": "/sdk/android/group/group-applications/get-group-application-list-as-recipient",
+    "title": "获取收到的群申请",
+    "description": "使用 getRecvGroupApplicationList 分页读取当前用户可处理的入群申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group group-applications get-group-application-list-as-recipient",
+    "content": "使用非废弃重载并传入 GetGroupApplicationListAsRecipientReq 。可设置 offset 、 count 、 groupIDs 和 handleResults 筛选条件。 GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .groupManager.getRecvGroupApplicationList new OnBase @Override public void onSuccess List items mergeReceivedApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; 收到事件后按申请中的 groupID 和 userID 合并，不要把列表下标作为申请标识。"
+  },
+  {
+    "path": "/sdk/android/group/group-applications/get-group-application-list-as-applicant",
+    "title": "获取发出的群申请",
+    "description": "使用 getSendGroupApplicationList 分页读取当前用户发出的入群申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group group-applications get-group-application-list-as-applicant",
+    "content": "使用 GetGroupApplicationListAsApplicantReq 设置分页和筛选条件，再调用 getSendGroupApplicationList 。 GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .groupManager.getSendGroupApplicationList new OnBase @Override public void onSuccess List items mergeSentApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; 申请被同意后，群列表变化以 onJoinedGroupAdded 为准。"
+  },
+  {
+    "path": "/sdk/android/group/group-applications/accept-group-application",
+    "title": "同意群申请",
+    "description": "使用 acceptGroupApplication 同意指定用户的入群申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group group-applications accept-group-application",
+    "content": "调用时同时传入申请的 groupID 、申请人 userID 和处理说明。服务端负责校验当前用户是否有审批权限。 OpenIMClient.getInstance .groupManager.acceptGroupApplication new OnBase @Override public void onSuccess String data markApplicationHandled groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"欢迎加入\" ; 同意后通过群申请事件与 onGroupMemberAdded 更新申请列表和成员列表。"
+  },
+  {
+    "path": "/sdk/android/group/group-applications/refuse-group-application",
+    "title": "拒绝群申请",
+    "description": "使用 refuseGroupApplication 拒绝指定用户的入群申请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group group-applications refuse-group-application",
+    "content": "拒绝操作同样使用申请所属 groupID 、申请人 userID 和处理说明。 OpenIMClient.getInstance .groupManager.refuseGroupApplication new OnBase @Override public void onSuccess String data markApplicationRejected groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"当前群组人数已满\" ; 成功 callback 后不要直接删除本地申请记录；以 onGroupApplicationRejected 或重新查询结果更新。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-group-members/overview-retrieving-group-members",
+    "title": "群成员查询概览",
+    "description": "说明 Android SDK 中群成员列表、指定成员资料和成员状态查询。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-group-members overview-retrieving-group-members",
+    "content": "成员查询使用 groupID 限定范围，结果为 GroupMembersInfo 或用户 ID 列表。成员列表提供角色过滤和 offset 分页；指定成员资料、在群检查、群主管理员和关键词搜索各有独立接口。 成员增删和资料变化由 群组概览 /sdk/android/group/overview group 归属的 OnGroupListener 统一合并。查询只建立快照，不能替代事件处理。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-group-members/get-group-member-list",
+    "title": "获取群成员列表",
+    "description": "使用 getGroupMemberList 按角色和分页条件读取群成员。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-group-members get-group-member-list",
+    "content": "filter 传 0 查询全部成员， 1 普通成员， 2 群主， 3 管理员。 offset 与 count 控制分页。 OpenIMClient.getInstance .groupManager.getGroupMemberList new OnBase @Override public void onSuccess List members appendMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, 0, offset, 50 ; 分页期间仍应接受成员事件，合并键使用 groupID 与 userID 。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-group-members/get-specified-group-members-info",
+    "title": "获取群成员资料",
+    "description": "使用 getGroupMembersInfo 批量读取指定成员在群内的资料。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-group-members get-specified-group-members-info",
+    "content": "getGroupMembersInfo 接收一个 groupID 和目标用户 ID 列表，返回这些用户在群内的 GroupMembersInfo 。 OpenIMClient.getInstance .groupManager.getGroupMembersInfo new OnBase @Override public void onSuccess List members mergeMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, userIDs ; 返回空列表可能表示目标未在群内或无读取权限，应按业务需求处理。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-group-members/get-users-in-group",
+    "title": "检查用户是否在群内",
+    "description": "使用 getUsersInGroup 从候选用户中筛出当前在群内的用户 ID。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-group-members get-users-in-group",
+    "content": "getUsersInGroup 返回传入用户中已在指定群内的 ID 列表，不返回成员资料。 OpenIMClient.getInstance .groupManager.getUsersInGroup new OnBase @Override public void onSuccess List joinedUserIDs updateMembership joinedUserIDs ; @Override public void onError int code, String error showMembershipError error ; , groupID, candidateUserIDs ; 需要昵称、角色或禁言状态时，再调用“获取群成员资料”。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin",
+    "title": "获取群主和管理员",
+    "description": "使用 getGroupMemberOwnerAndAdmin 查询群主和管理员成员资料。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-group-members get-group-member-owner-and-admin",
+    "content": "使用 getGroupMemberOwnerAndAdmin 获取需要展示或校验管理身份的成员记录。 OpenIMClient.getInstance .groupManager.getGroupMemberOwnerAndAdmin new OnBase @Override public void onSuccess List members showModerators members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID ; roleLevel 的群主、管理员和普通成员常量见 GroupRole ；实际操作权限仍由服务端决定。"
+  },
+  {
+    "path": "/sdk/android/group/retrieving-group-members/search-group-members",
+    "title": "搜索群成员",
+    "description": "使用 searchGroupMembers 按用户 ID 或群昵称搜索群成员。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group retrieving-group-members search-group-members",
+    "content": "指定关键词列表、用户 ID 与群昵称两个搜索开关，以及分页条件。 OpenIMClient.getInstance .groupManager.searchGroupMembers new OnBase @Override public void onSuccess List members showMemberSearch members ; @Override public void onError int code, String error showSearchError error ; , groupID, Collections.singletonList keyword , true, true, 0, 20 ; 搜索仅限目标群组；空关键词或两个搜索开关均关闭时不应发起请求。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/invite-user-to-group",
+    "title": "邀请用户入群",
+    "description": "使用 inviteUserToGroup 邀请一组用户加入指定群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members invite-user-to-group",
+    "content": "传入群 ID、待邀请用户 ID 列表和邀请说明。服务端根据群设置和当前用户权限决定是否立即加入。 OpenIMClient.getInstance .groupManager.inviteUserToGroup new OnBase @Override public void onSuccess String data markInviteSubmitted groupID ; @Override public void onError int code, String error showInviteError error ; , groupID, inviteeUserIDs, \"邀请加入项目讨论\" ; 成员实际加入后以 onGroupMemberAdded 合并，不能仅以提交成功显示为已加入。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/kick-group-member",
+    "title": "移除群成员",
+    "description": "使用 kickGroupMember 将指定成员移出群组。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members kick-group-member",
+    "content": "kickGroupMember 接收成员 ID 列表和移除说明。产品层应先防止当前用户误移除自身，并遵守群主、管理员权限边界。 OpenIMClient.getInstance .groupManager.kickGroupMember new OnBase @Override public void onSuccess String data markRemovalSubmitted groupID ; @Override public void onError int code, String error showRemovalError error ; , groupID, memberUserIDs, \"已不再参与该项目\" ; 收到 onGroupMemberDeleted 后再从成员缓存中移除目标成员。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/set-group-member-nickname",
+    "title": "更新群昵称",
+    "description": "使用 SetGroupMemberInfo.nickname 更新成员在指定群中的显示昵称。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-nickname",
+    "content": "成员资料修改统一使用 setGroupMemberInfo 。请求中填写 groupID 、 userID 和 nickname 。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setNickname \"小林\" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markNicknameSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 以 onGroupMemberInfoChanged 返回的 GroupMembersInfo.nickname 更新显示。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/set-group-member-role-level",
+    "title": "管理群管理员",
+    "description": "使用 SetGroupMemberInfo.roleLevel 设置成员的群内角色。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-role-level",
+    "content": "roleLevel 使用 GroupRole 常量： OWNER 、 ADMIN 和 MEMBER 。群主转让使用独立接口，不应通过本接口推测转让流程。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setRoleLevel GroupRole.ADMIN ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markRoleSubmitted groupID, userID ; @Override public void onError int code, String error showRoleError error ; ; 实际角色变更和权限由服务端校验，以成员资料变化事件为准。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/set-group-member-avatar",
+    "title": "更新群成员头像",
+    "description": "使用 SetGroupMemberInfo.faceURL 更新成员在群内展示的头像。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-avatar",
+    "content": "群成员头像是群内资料字段，不修改用户全局头像。传入已可访问的头像 URL。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setFaceURL avatarURL ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markAvatarSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 事件到达前保留原头像或使用本地乐观状态，并按最新成员资料校准。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/set-group-member-extension",
+    "title": "设置群成员扩展字段",
+    "description": "使用 SetGroupMemberInfo.ex 保存应用定义的群成员扩展数据。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-extension",
+    "content": "SetGroupMemberInfo.ex 是完整字符串，不会自动合并 JSON。多个业务模块共享时应先读取、合并并保留其他命名空间。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setEx \" \\\"duty\\\":\\\"reviewer\\\" \" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markMemberExtensionSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 不要将凭据、令牌或仅限本机的显示状态写入该字段。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/transfer-group-owner",
+    "title": "转让群主",
+    "description": "使用 transferGroupOwner 将群主身份转让给指定群成员。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members transfer-group-owner",
+    "content": "目标用户必须是该群成员。转让前应在产品层要求明确确认，并在完成后重新查询群主和管理员资料。 OpenIMClient.getInstance .groupManager.transferGroupOwner new OnBase @Override public void onSuccess String data markOwnershipTransferSubmitted groupID ; @Override public void onError int code, String error showTransferError error ; , groupID, newOwnerUserID ; onGroupMemberInfoChanged 和群资料变化可能异步到达；不要在成功 callback 中假定本地角色已完成更新。"
+  },
+  {
+    "path": "/sdk/android/group/managing-group-members/change-group-member-mute",
+    "title": "禁言或解除禁言群成员",
+    "description": "使用 changeGroupMemberMute 设置指定成员的禁言时长。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android group managing-group-members change-group-member-mute",
+    "content": "seconds 为禁言时长，单位为秒；传 0 解除成员禁言。该操作与全员禁言相互独立。 OpenIMClient.getInstance .groupManager.changeGroupMemberMute new OnBase @Override public void onSuccess String data markMemberMuteSubmitted groupID, userID ; @Override public void onError int code, String error showMemberMuteError error ; , groupID, userID, 3600L ; 在 onGroupMemberInfoChanged 中读取 muteEndTime 更新成员状态；不要用本机时间和请求时长长期推算最终禁言状态。"
+  },
+  {
+    "path": "/sdk/android/message/overview-message",
+    "title": "消息概览",
+    "description": "了解 Android SDK 的 Message 模型、消息生命周期和消息监听。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message overview-message",
+    "content": "Android 消息以 Message 表示，使用 clientMsgID 去重，使用 sessionType 、 recvID 和 groupID 区分单聊与群聊。消息内容由对应的 element 字段承载，发送、接收、撤回和删除是不同的状态变化。 OpenIMClient.getInstance .messageManager.setAdvancedMsgListener new OnAdvanceMsgListener @Override public void onRecvNewMessage Message message messageStore.merge message ; ; 查询建立快照， OnAdvanceMsgListener 合并增量； MessageManager 的 listener 设置会替换当前 listener。"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-text-message",
+    "title": "创建文本消息",
+    "description": "使用 createTextMessage 创建文本 Message。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-text-message",
+    "content": "createTextMessage 只创建本地消息对象，不发送消息。 Message message = OpenIMClient.getInstance .messageManager.createTextMessage text ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-text-at-message",
+    "title": "创建 @ 消息",
+    "description": "使用 createTextAtMessage 创建带成员提醒的文本消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-text-at-message",
+    "content": "传入文本、被提醒用户 ID、 AtUserInfo 列表和可选引用消息。 Message message = OpenIMClient.getInstance .messageManager.createTextAtMessage text, userIDs, atUserInfos, quoteMessage ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-custom-message",
+    "title": "创建自定义消息",
+    "description": "使用 createCustomMessage 承载业务定义的 JSON 消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-custom-message",
+    "content": "data 、 extension 和 description 由业务定义，接收端应按自己的协议解析。 Message message = OpenIMClient.getInstance .messageManager.createCustomMessage dataJson, extensionJson, description ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-image-message-by-file",
+    "title": "从文件创建图片消息",
+    "description": "使用相对路径或绝对路径创建图片消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-image-message-by-file",
+    "content": "缓存目录内使用 createImageMessage ，绝对路径使用 createImageMessageFromFullPath 。 Message message = OpenIMClient.getInstance .messageManager.createImageMessageFromFullPath filePath ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-image-message-by-url",
+    "title": "从 URL 创建图片消息",
+    "description": "使用 createImageMessageByURL 创建已上传资源的图片消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-image-message-by-url",
+    "content": "准备 PictureInfo 的原图、大图和缩略图信息后创建消息。 Message message = OpenIMClient.getInstance .messageManager.createImageMessageByURL sourceURL, sourcePicture, bigPicture, snapshotPicture ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-sound-message-by-file",
+    "title": "从文件创建音频消息",
+    "description": "使用相对路径或绝对路径创建音频消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-sound-message-by-file",
+    "content": "音频时长单位为秒；根据文件位置选择相对路径或绝对路径方法。 Message message = OpenIMClient.getInstance .messageManager .createSoundMessageFromFullPath soundPath, durationSeconds ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-sound-message-by-url",
+    "title": "从 URL 创建音频消息",
+    "description": "使用 SoundElem 创建已上传资源的音频消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-sound-message-by-url",
+    "content": "createSoundMessageByURL 接收已经包含 URL、时长和大小的 SoundElem 。 Message message = OpenIMClient.getInstance .messageManager.createSoundMessageByURL soundElem ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-video-message-by-file",
+    "title": "从文件创建视频消息",
+    "description": "使用相对路径或绝对路径创建视频消息及缩略图。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-video-message-by-file",
+    "content": "视频方法需要 MIME 类型、时长和缩略图路径。 Message message = OpenIMClient.getInstance .messageManager.createVideoMessageFromFullPath videoPath, mimeType, durationSeconds, snapshotPath ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-video-message-by-url",
+    "title": "从 URL 创建视频消息",
+    "description": "使用 VideoElem 创建已上传资源的视频消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-video-message-by-url",
+    "content": "将远端视频及缩略图信息填入 VideoElem 后创建消息。 Message message = OpenIMClient.getInstance .messageManager.createVideoMessageByURL videoElem ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-file-message-by-file",
+    "title": "从文件创建文件消息",
+    "description": "使用相对路径或绝对路径创建文件消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-file-message-by-file",
+    "content": "文件名与路径分别传入；相对路径相对于 SDK 初始化时配置的缓存目录。 Message message = OpenIMClient.getInstance .messageManager .createFileMessageFromFullPath filePath, fileName ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-file-message-by-url",
+    "title": "从 URL 创建文件消息",
+    "description": "使用 FileElem 创建已上传资源的文件消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-file-message-by-url",
+    "content": "FileElem 应包含远端 URL、文件名和文件大小。 Message message = OpenIMClient.getInstance .messageManager.createFileMessageByURL fileElem ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-card-message",
+    "title": "创建名片消息",
+    "description": "使用 createCardMessage 创建联系人名片消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-card-message",
+    "content": "CardElem 保存名片用户的展示资料。 Message message = OpenIMClient.getInstance .messageManager.createCardMessage cardElem ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-location-message",
+    "title": "创建位置消息",
+    "description": "使用 createLocationMessage 创建经纬度和描述位置消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-location-message",
+    "content": "经纬度使用十进制度数，描述用于地图或列表展示。 Message message = OpenIMClient.getInstance .messageManager .createLocationMessage latitude, longitude, description ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-face-message",
+    "title": "创建表情消息",
+    "description": "使用 createFaceMessage 创建自定义表情消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-face-message",
+    "content": "index 表示表情位置， data 保存表情 URL 等 JSON 数据。 Message message = OpenIMClient.getInstance .messageManager.createFaceMessage index, dataJson ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-quote-message",
+    "title": "创建引用消息",
+    "description": "使用 createQuoteMessage 创建引用已有消息的回复。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-quote-message",
+    "content": "引用消息保存被引用的完整 Message ，发送前应确保引用对象包含稳定的 clientMsgID 。 Message message = OpenIMClient.getInstance .messageManager .createQuoteMessage replyText, quotedMessage ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-forward-message",
+    "title": "创建转发消息",
+    "description": "使用 createForwardMessage 创建转发消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-forward-message",
+    "content": "传入待转发的 Message ，创建结果仍需通过发送方法投递到目标会话。 Message message = OpenIMClient.getInstance .messageManager.createForwardMessage sourceMessage ;"
+  },
+  {
+    "path": "/sdk/android/message/creating-messages/create-merger-message",
+    "title": "创建合并消息",
+    "description": "使用 createMergerMessage 将多条消息合并为一条摘要消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message creating-messages create-merger-message",
+    "content": "传入消息列表、标题和摘要列表；摘要顺序应与展示协议保持一致。 Message message = OpenIMClient.getInstance .messageManager.createMergerMessage messages, title, summaries ;"
+  },
+  {
+    "path": "/sdk/android/message/sending-messages/send-message",
+    "title": "发送消息",
+    "description": "使用 sendMessage 将 Message 发送到单聊或群聊。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message sending-messages send-message",
+    "content": "单聊填写 recvUid ，群聊填写 recvGid ，另一个目标参数传 null 。 OnMsgSendCallback 同时承载成功、失败和媒体进度。 messageManager.sendMessage new OnMsgSendCallback @Override public void onSuccess String id mergeSentMessage message ; @Override public void onError int code, String error showSendError error ; , message, peerUserID, null, offlinePushInfo ;"
+  },
+  {
+    "path": "/sdk/android/message/sending-messages/send-message-not-oss",
+    "title": "发送非 OSS 消息",
+    "description": "使用 sendMessageNotOss 发送已经由业务上传资源的媒体消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message sending-messages send-message-not-oss",
+    "content": "消息中的媒体 URL 已准备好时使用该方法，避免 SDK 再次进入内置上传流程。 messageManager.sendMessageNotOss callback, message, peerUserID, null, offlinePushInfo ;"
+  },
+  {
+    "path": "/sdk/android/message/sending-messages/set-msg-send-progress-listener",
+    "title": "跟踪消息发送进度",
+    "description": "通过 OnMsgSendCallback 的进度回调更新媒体发送进度。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message sending-messages set-msg-send-progress-listener",
+    "content": "Android 没有独立的全局发送进度 listener；进度随每次 sendMessage 或 sendMessageNotOss 传入的 OnMsgSendCallback 返回。 messageManager.sendMessage new OnMsgSendCallback @Override public void onProgress long progress updateProgress progress ; @Override public void onSuccess String id finishProgress ; @Override public void onError int code, String error failProgress error ; , message, peerUserID, null, offlinePushInfo ;"
+  },
+  {
+    "path": "/sdk/android/message/receiving-messages/receive-messages",
+    "title": "接收消息",
+    "description": "使用 OnAdvanceMsgListener 接收新消息、离线消息和在线消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message receiving-messages receive-messages",
+    "content": "设置 setAdvancedMsgListener 后， onRecvNewMessage 接收实时消息， onRecvOfflineNewMessage 接收离线批次， onRecvOnlineOnlyMessage 接收在线消息字符串。所有消息都按 clientMsgID 幂等合并。 messageManager.setAdvancedMsgListener new OnAdvanceMsgListener @Override public void onRecvNewMessage Message message messageStore.merge message ; @Override public void onRecvOfflineNewMessage List messages messageStore.mergeAll messages ; ;"
+  },
+  {
+    "path": "/sdk/android/message/receiving-messages/receive-custom-business-messages",
+    "title": "接收自定义业务消息",
+    "description": "使用 setCustomBusinessListener 接收独立于普通聊天消息的业务回调。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message receiving-messages receive-custom-business-messages",
+    "content": "自定义业务回调携带字符串，业务侧应按协议校验来源和 JSON 结构，不要将其直接当作 Message 渲染。 messageManager.setCustomBusinessListener new OnCustomBusinessListener @Override public void onRecvCustomBusinessMessage String payload handleBusiness payload ; ; 本页是 onRecvCustomBusinessMessage 的完整处理归属页。载荷应包含业务协议版本和稳定幂等 ID，并按该 ID 去重；不要依赖回调顺序，也不要使用自定义业务消息授予客户端权限。 MessageManager 只保存一个自定义业务 listener，后一次设置会替换前一次。应在应用级事件中心设置一次，并在退出或切换账号时停止向旧账号状态分发。"
+  },
+  {
+    "path": "/sdk/android/message/retrieving-messages/load-older-messages",
+    "title": "加载更早消息",
+    "description": "使用 getAdvancedHistoryMessageList 分页加载会话历史消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message retrieving-messages load-older-messages",
+    "content": "首次查询传 startMsg 为 null ，后续将上一页边界消息作为起点。按返回的 clientMsgID 去重。 messageManager.getAdvancedHistoryMessageList callback, conversationID, startMessage, 20, ViewType.NORMAL ;"
+  },
+  {
+    "path": "/sdk/android/message/retrieving-messages/load-newer-messages",
+    "title": "加载更新消息",
+    "description": "使用 getAdvancedHistoryMessageListReverse 加载起点之后的消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message retrieving-messages load-newer-messages",
+    "content": "该方法用于从消息定位点向后读取，适合搜索定位或上下文分页。 messageManager.getAdvancedHistoryMessageListReverse callback, conversationID, startMessage, 20, ViewType.NORMAL ;"
+  },
+  {
+    "path": "/sdk/android/message/retrieving-messages/find-messages-by-id",
+    "title": "按 ID 查询消息",
+    "description": "使用 findMessageList 按 SearchParams 查询消息记录。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message retrieving-messages find-messages-by-id",
+    "content": "构造 SearchParams 列表查询消息。返回结果应按消息 ID 合并，不要用列表位置作为稳定标识。 messageManager.findMessageList new OnBase @Override public void onSuccess SearchResult result showFoundMessages result ; @Override public void onError int code, String error showQueryError error ; , searchParams ;"
+  },
+  {
+    "path": "/sdk/android/message/searching-messages/search-messages",
+    "title": "搜索消息",
+    "description": "使用 searchLocalMessages 搜索当前账号已同步到本地的消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message searching-messages search-messages",
+    "content": "可按会话、关键词、发送者、消息类型、时间范围和分页参数搜索。 conversationID 传 null 表示全局搜索。 messageManager.searchLocalMessages callback, conversationID, keywords, 1, senderIDs, messageTypes, 0, 0, 0, 20 ;"
+  },
+  {
+    "path": "/sdk/android/message/composing-messages/update-typing-status",
+    "title": "更新输入状态",
+    "description": "使用 typingStatusUpdate 提示单聊对方当前正在输入。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message composing-messages update-typing-status",
+    "content": "输入框变化时传入对方用户 ID 和业务约定的提示字符串。调用侧应防抖，避免每次按键都发送请求。 messageManager.typingStatusUpdate callback, peerUserID, \"typing\" ; 成功 callback 表示输入状态上报请求完成，不表示对端已经处理。对端通过应用级 OnConversationListener.onConversationUserInputStatusChanged 接收字符串载荷；Android wrapper 不会自动把它转换为模型，应在校验 JSON 后再解析： @Override public void onConversationUserInputStatusChanged String payload InputStatesChangedData state = JsonUtil.toObj payload, InputStatesChangedData.class ; if state == null || state.getConversationID == null return; updateTypingState state.getConversationID , state.getUserID , state.getPlatformIDs ; 输入状态按 conversationID:userID 合并，并设置业务侧超时自动清除。 ConversationManager 只保存一个会话 listener，本回调必须与会话列表、总未读数和同步事件组合后统一设置，不能在输入框页面单独覆盖。"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/delete-local-message",
+    "title": "删除本地消息",
+    "description": "使用 deleteMessageFromLocalStorage 仅删除当前设备的消息副本。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages delete-local-message",
+    "content": "该操作不影响其他设备和其他用户的消息记录。 messageManager.deleteMessageFromLocalStorage conversationID, clientMsgID, callback ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/delete-saved-messages",
+    "title": "删除已保存消息",
+    "description": "使用 deleteMessageFromLocalAndSvr 删除本地和服务端的一条消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages delete-saved-messages",
+    "content": "删除结果通过消息事件同步，调用成功不代表所有端已经刷新。 messageManager.deleteMessageFromLocalAndSvr conversationID, clientMsgID, callback ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/revoke-a-message",
+    "title": "撤回消息",
+    "description": "使用 revokeMessageV2 撤回已发送消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages revoke-a-message",
+    "content": "Android 的撤回方法为 revokeMessageV2 ，撤回详情通过 onRecvMessageRevokedV2 返回。 messageManager.revokeMessageV2 callback, conversationID, clientMsgID ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/modify-a-message",
+    "title": "修改消息",
+    "description": "使用 ModifyMessageReq 修改支持修改的消息内容。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages modify-a-message",
+    "content": "请求对象中填写会话 ID、客户端消息 ID 和新的消息内容，修改结果通过 onMessageModified 同步。 messageManager.modifyMessage callback, modifyRequest ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/get-pinned-messages",
+    "title": "查看置顶消息",
+    "description": "使用 getConversationPinnedMsgs 查询会话中的置顶消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages get-pinned-messages",
+    "content": "查询结果是指定会话当前的置顶消息快照。 messageManager.getConversationPinnedMsgs new OnBase @Override public void onSuccess List messages showPinned messages ; @Override public void onError int code, String error showPinnedError error ; , conversationID ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/set-message-pinned",
+    "title": "置顶或取消置顶消息",
+    "description": "使用 setConversationPinnedMsg 设置会话消息的置顶状态。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages set-message-pinned",
+    "content": "最后一个参数为 true 置顶， false 取消置顶；变化通过 onChangedPinnedMsg 同步。 messageManager.setConversationPinnedMsg callback, conversationID, clientMsgID, true ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/insert-local-single-message",
+    "title": "插入本地单聊消息",
+    "description": "使用 insertSingleMessageToLocalStorage 插入仅当前设备可见的单聊消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages insert-local-single-message",
+    "content": "该方法不向服务器发送消息， receiver 和 sender 用于建立本地消息归属。 messageManager.insertSingleMessageToLocalStorage callback, message, receiverUserID, senderUserID ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/insert-local-group-message",
+    "title": "插入本地群聊消息",
+    "description": "使用 insertGroupMessageToLocalStorage 插入仅当前设备可见的群聊消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages insert-local-group-message",
+    "content": "传入群 ID 与发送者 ID，消息不会同步到其他设备。 messageManager.insertGroupMessageToLocalStorage callback, message, groupID, senderUserID ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/clear-all-local-messages",
+    "title": "清空全部本地消息",
+    "description": "使用 deleteAllMsgFromLocal 清理当前设备的全部消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages clear-all-local-messages",
+    "content": "该操作只清理当前设备本地缓存，不删除服务端记录。 messageManager.deleteAllMsgFromLocal callback ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/clear-all-messages",
+    "title": "清空全部已保存消息",
+    "description": "使用 deleteAllMsgFromLocalAndSvr 清理本地和服务端消息。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages clear-all-messages",
+    "content": "这是高影响操作，产品层应二次确认，并在完成后清理本地会话展示。 messageManager.deleteAllMsgFromLocalAndSvr callback ;"
+  },
+  {
+    "path": "/sdk/android/message/managing-messages/set-message-local-ex",
+    "title": "设置消息本地扩展字段",
+    "description": "使用 setMessageLocalEx 保存仅当前设备使用的消息扩展数据。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android message managing-messages set-message-local-ex",
+    "content": "localEx 适合保存下载路径、播放状态等本地信息，不会同步给其他用户。 messageManager.setMessageLocalEx callback, conversationID, clientMsgID, localExJson ;"
+  },
+  {
+    "path": "/sdk/android/file-uploads/track-file-upload-progress",
+    "title": "跟踪文件上传进度",
+    "description": "使用 Android SDK 的 OnPutFileListener 跟踪单次文件上传任务。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android file-uploads track-file-upload-progress",
+    "content": "Android SDK 不设置全局文件上传 listener。每次调用 uploadFile 时传入一个 OnPutFileListener ，由该 listener 接收当前上传任务的进度、分片状态和完成信息。 OnPutFileListener uploadListener = new OnPutFileListener @Override public void open long size initializeUploadProgress uploadTaskID, size ; @Override public void uploadID String id bindSdkUploadID uploadTaskID, id ; @Override public void uploadComplete long fileSize, long uploadedSize, long storageSize updateUploadProgress uploadTaskID, uploadedSize, fileSize ; @Override public void uploadPartComplete long partNumber, long partSize, String partHash markPartComplete uploadTaskID, partNumber, partSize, partHash ; @Override public void complete long size, String url, long type completeUpload uploadTaskID, size, url, type ; ; OpenIMClient.getInstance .uploadFile resultCallback, uploadListener, putArgs ; open 可用于初始化总大小， uploadID 返回 SDK 上传任务标识， uploadComplete 提供上传过程数据， uploadPartComplete 表示一个分片已经完成， complete 返回最终大小、远端 URL 和资源类型。只有业务需要展示分片细节时才处理分片回调；普通进度条通常只需要过程回调和最终完成回调。 业务层仍应生成自己的稳定 uploadTaskID ，并在 listener 闭包中关联界面状态。SDK 上传 ID、文件名和数组位置都不应代替业务任务主键。每个上传任务使用独立 listener；页面或账号状态销毁后应停止向旧状态分发回调。 完整的参数构造和错误处理见 上传文件 /sdk/android/file uploads/upload file 。"
+  },
+  {
+    "path": "/sdk/android/file-uploads/upload-file",
+    "title": "上传文件",
+    "description": "使用 Android SDK 独立上传文件并获取远端资源地址。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android file-uploads upload-file",
+    "content": "uploadFile 是独立文件上传能力，可用于头像、群头像、资料附件或其他业务文件。上传过程不从属于消息，也不会自动创建消息或更新用户资料。 参数说明 | 参数 | 类型 | 是否必填 | 说明 | | | | | | | base | OnBase | 是 | 接收上传请求的最终成功或失败结果。 | | listener | OnPutFileListener | 是 | 接收当前任务的上传进度、分片状态和完成信息。 | | putArgs.filepath | String | 是 | Android 应用可读取的本地文件路径。 | | putArgs.name | String | 是 | 上传使用的文件名； PutArgs 默认使用传入路径，可按业务需要改为原始文件名。 | | putArgs.cuase | String | 否 | 业务约定的上传原因。字段名以 Android SDK 的 PutArgs 声明为准。 | File file = new File localPath ; PutArgs args = new PutArgs file.getAbsolutePath ; args.name = file.getName ; args.cuase = \"user avatar\"; OpenIMClient.getInstance .uploadFile new OnBase @Override public void onSuccess String result finishUploadRequest result ; @Override public void onError int code, String error showUploadError code, error ; , new OnPutFileListener @Override public void uploadComplete long fileSize, long uploadedSize, long storageSize updateUploadProgress uploadTaskID, uploadedSize, fileSize ; @Override public void complete long size, String url, long type completeUpload uploadTaskID, size, url, type ; , args ; 每次调用都传入独立的 OnPutFileListener ，因此无需设置全局上传 listener。并行上传时应由业务层为任务生成稳定 ID，并在回调闭包中关联对应任务，不要使用文件名或列表位置作为唯一标识。各回调的职责见 跟踪文件上传进度 /sdk/android/file uploads/track file upload progress 。 complete 返回的 URL 可用于后续更新头像、保存附件地址或创建 URL 类型的媒体消息。上传成功只表示文件资源已经写入远端；资料更新、消息创建和消息发送仍需分别调用对应 API。"
+  },
+  {
+    "path": "/sdk/android/calling/overview-calling",
+    "title": "音视频通话概览",
+    "description": "了解 Android SDK 的音视频通话信令、房间信息和事件边界。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling overview-calling",
+    "content": "Android SDK 的 SignalingManager 提供发起邀请、接受、拒绝、取消、挂断、查询房间和同步通话状态所需的信令 API。它负责协调通话参与者、房间信息和通话生命周期，不负责采集摄像头画面、播放远端媒体流或渲染通话界面。 应用需要把 SDK 返回的 roomID 、 token 和 liveURL 交给所选的实时音视频媒体引擎，并自行处理 Android 权限、音视频设备、媒体轨道、弱网策略和界面状态。信令 API 不是一套完整的实时音视频媒体 SDK。 通话流程 1. 调用 signalingInvite 发起单聊通话，或调用 signalingInviteInGroup 发起群聊通话。 2. 被邀请方从 onReceiveNewInvitation 获取 SignalingInfo ，选择接受或拒绝。 3. 接受方调用 signalingAccept ，双方使用返回的房间凭据接入媒体引擎。 4. 通话过程中根据参与者、媒体流和自定义信令回调更新本地状态。 5. 发起方可以取消尚未接通的邀请；任一通话参与者都可以挂断已经建立的通话。 核心数据 | 数据 | 说明 | | | | | SignalingInvitationInfo | 邀请人、被邀请人、群组、房间、媒体类型、超时时间、会话类型和业务扩展数据。 | | SignalingInfo | 当前操作用户、原始邀请、参与者资料和可选的离线推送信息。 | | SignalingCertificate | OpenIMServer 返回的 roomID 、 token 、 liveURL 和忙线用户列表。 | | RoomCallingInfo | 按群组查询到的房间、邀请、参与者、群组和入会凭据快照。 | customData 和自定义信令只适合传递业务协商信息。长期凭据、管理员密钥和其他敏感数据不应写入这些字段。 状态更新与事件归属 发起、接受、拒绝、取消和挂断等写操作需要分别处理 API 回调与通话 listener。API 成功回调表示当前信令请求已经完成；listener 反映邀请方、被邀请方、其他设备或房间参与者看到的增量状态，两者不是同一个完成信号。 邀请生命周期、参与者进出房间、挂断和媒体流变化的完整 listener 统一见 处理通话事件 /sdk/android/calling/managing calls/handle call events ；自定义信令见 发送自定义信令 /sdk/android/calling/sending custom signals/send a custom signal 。房间、凭据和待处理邀请查询只返回调用时的状态快照。 概览页不设置 listener。通话状态以 roomID 为主键；参与者状态还需要结合用户 ID。需要恢复或校准当前房间状态时，再调用对应查询 API。 按任务查找页面 | 任务 | 页面 | | | | | 发起单聊或群聊通话 | 发起单聊通话 /sdk/android/calling/managing calls/start single call 、 发起群聊通话 /sdk/android/calling/managing calls/start group call | | 接受或拒绝邀请 | 接受通话 /sdk/android/calling/managing calls/accept call 、 拒绝通话 /sdk/android/calling/managing calls/reject call | | 取消邀请或挂断通话 | 取消通话邀请 /sdk/android/calling/managing calls/cancel call 、 挂断通话 /sdk/android/calling/managing calls/hang up call | | 恢复房间或待处理邀请 | 查询群组通话房间 /sdk/android/calling/retrieving call information/get room by group id 、 获取通话房间 Token /sdk/android/calling/retrieving call information/get token by room id 、 恢复启动前收到的通话邀请 /sdk/android/calling/retrieving call information/restore pending invitation | | 处理通话事件和业务协商 | 处理通话事件 /sdk/android/calling/managing calls/handle call events 、 发送自定义信令 /sdk/android/calling/sending custom signals/send a custom signal |"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/start-single-call",
+    "title": "发起单聊通话",
+    "description": "使用 Android SDK 发起单聊音视频通话。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls start-single-call",
+    "content": "signalingInvite 发起单聊通话。Android SDK 负责通话信令，应用仍需使用返回的房间凭据接入实时音视频媒体引擎。 参数说明 | 字段 | 类型 | 是否必填 | 说明 | | | | | | | userID | String | 是 | 执行邀请操作的当前登录用户 ID。 | | inviterUserID | String | 是 | 邀请方用户 ID，通常与当前登录用户一致。 | | inviteeUserIDList | List | 是 | 被邀请用户列表；单聊只填写对方一个用户。 | | groupID | String | 是 | 单聊固定传空字符串。 | | roomID | String | 是 | 本次通话的唯一房间标识，后续状态按它合并。 | | timeout | long | 是 | 邀请等待时长，单位为秒。 | | mediaType | String | 是 | 媒体类型，业务通常约定为 audio 或 video 。 | | sessionType | int | 是 | 单聊使用 ConversationType.SINGLE CHAT 。 | | platformID | int | 是 | Android 手机端使用 Platform.ANDROID 。 | | customData | String | 否 | 随邀请携带的业务扩展字符串。 | | offlinePushInfo | OfflinePushInfo | 否 | 被邀请人离线时使用的推送内容。 | SignalingInvitationInfo invitation = new SignalingInvitationInfo ; invitation.setInviterUserID currentUserID ; invitation.setInviteeUserIDList Collections.singletonList peerUserID ; invitation.setGroupID \"\" ; invitation.setRoomID roomID ; invitation.setTimeout 30 ; invitation.setMediaType \"video\" ; invitation.setSessionType ConversationType.SINGLE CHAT ; invitation.setPlatformID Platform.ANDROID ; invitation.setCustomData \" \\\"source\\\":\\\"contact card\\\" \" ; SignalingInfo info = new SignalingInfo ; info.setUserID currentUserID ; info.setInvitation invitation ; info.setOfflinePushInfo offlinePushInfo ; OpenIMClient.getInstance .signalingManager.signalingInvite new OnBase @Override public void onSuccess SignalingCertificate credentials joinMediaRoom credentials.getRoomID , credentials.getToken , credentials.getLiveURL ; @Override public void onError int code, String error showCallError code, error ; , info ; 成功回调返回 SignalingCertificate 。其中 roomID 是媒体房间 ID， token 是加入房间使用的短期凭据， liveURL 是媒体服务提供的连接地址， busyLineUserIDList 是忙线用户列表。 只有取得有效的 token 和 roomID 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态由 处理通话事件 /sdk/android/calling/managing calls/handle call events 合并。"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/start-group-call",
+    "title": "发起群聊通话",
+    "description": "使用 Android SDK 发起群聊音视频通话。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls start-group-call",
+    "content": "signalingInviteInGroup 发起群聊通话，只邀请 inviteeUserIDList 明确列出的群成员，不会因为填写 groupID 自动邀请全群。 SignalingInvitationInfo invitation = new SignalingInvitationInfo ; invitation.setInviterUserID currentUserID ; invitation.setInviteeUserIDList selectedGroupMemberIDs ; invitation.setGroupID groupID ; invitation.setRoomID groupID ; invitation.setTimeout 30 ; invitation.setMediaType \"video\" ; invitation.setSessionType ConversationType.GROUP CHAT ; invitation.setPlatformID Platform.ANDROID ; invitation.setCustomData \" \\\"source\\\":\\\"group call\\\" \" ; SignalingInfo info = new SignalingInfo ; info.setUserID currentUserID ; info.setInvitation invitation ; info.setOfflinePushInfo offlinePushInfo ; OpenIMClient.getInstance .signalingManager.signalingInviteInGroup new OnBase @Override public void onSuccess SignalingCertificate credentials startGroupCall credentials ; @Override public void onError int code, String error showCallError code, error ; , info ; groupID 不能为空， inviteeUserIDList 应排除当前用户、空值和重复成员。示例沿用群组 ID 作为房间 ID；若业务自行生成 roomID ，所有参与端必须使用同一个值。 成功回调返回 SignalingCertificate ，字段含义见 发起单聊通话 /sdk/android/calling/managing calls/start single call 。 busyLineUserIDList 只表示部分成员忙线，不应中止其他成员的邀请流程；成功也不表示其他成员已经接听。"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/accept-call",
+    "title": "接受通话",
+    "description": "使用 Android SDK 接受通话邀请并获取房间凭据。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls accept-call",
+    "content": "从 onReceiveNewInvitation 取得原始 SignalingInfo 后，使用 signalingAccept 接受邀请： OpenIMClient.getInstance .signalingManager.signalingAccept new OnBase @Override public void onSuccess SignalingCertificate credentials joinMediaRoom credentials.getRoomID , credentials.getToken , credentials.getLiveURL ; @Override public void onError int code, String error showAcceptError code, error ; , receivedInfo ; receivedInfo 必须保留收到的原始 roomID 、邀请人、被邀请人和会话类型，不能重新构造为只包含 roomID 的对象。 成功回调返回 SignalingCertificate 。取得有效的 token 和 roomID 后再连接媒体房间；远端状态由 处理通话事件 /sdk/android/calling/managing calls/handle call events 继续合并。"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/reject-call",
+    "title": "拒绝通话",
+    "description": "使用 Android SDK 拒绝通话邀请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls reject-call",
+    "content": "用户拒绝来电时，将收到的原始 SignalingInfo 交给 signalingReject ： OpenIMClient.getInstance .signalingManager.signalingReject new OnBase @Override public void onSuccess String result closeIncomingCallUI ; @Override public void onError int code, String error showRejectError code, error ; , receivedInfo ; 成功回调只表示拒绝信令请求完成。发起端随后通过 onInviteeRejected 更新界面；完整处理见 处理通话事件 /sdk/android/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/cancel-call",
+    "title": "取消通话邀请",
+    "description": "使用 Android SDK 取消尚未接通的通话邀请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls cancel-call",
+    "content": "邀请尚未接通时，发起方调用 signalingCancel ： OpenIMClient.getInstance .signalingManager.signalingCancel new OnBase @Override public void onSuccess String result stopWaitingForAnswer activeInfo.getInvitation .getRoomID ; @Override public void onError int code, String error showCancelError code, error ; , activeInfo ; 必须传入发起时保存的完整 SignalingInfo ，不能只构造一个 roomID 。成功回调表示取消信令请求完成；应用还应结束本地等待接听状态，并释放尚未使用的媒体资源。远端通过 onInvitationCancelled 更新。"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/hang-up-call",
+    "title": "挂断通话",
+    "description": "使用 Android SDK 挂断已经建立的通话。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls hang-up-call",
+    "content": "通话已经建立后，参与者调用 signalingHungUp 。传入的 SignalingInfo 应保留本次通话的完整邀请信息，其中 roomID 必须与当前媒体房间一致。 OpenIMClient.getInstance .signalingManager.signalingHungUp new OnBase @Override public void onSuccess String result releaseCallResources activeInfo.getInvitation .getRoomID ; @Override public void onError int code, String error showHangUpError code, error ; , activeInfo ; 成功回调只表示挂断信令请求完成。应用还需要停止本地采集、断开媒体房间，并释放摄像头和麦克风。取消、拒绝、超时和挂断应进入同一套按 roomID 幂等执行的清理流程。"
+  },
+  {
+    "path": "/sdk/android/calling/managing-calls/handle-call-events",
+    "title": "处理通话事件",
+    "description": "集中设置 Android SDK 的通话邀请、参与者和媒体流 listener。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling managing-calls handle-call-events",
+    "content": "通话状态层应集中设置一次 OnSignalingListener ，并按 roomID 合并邀请生命周期、参与者连接状态和媒体流变化。 OpenIMClient.getInstance .signalingManager.setSignalingListener new OnSignalingListener @Override public void onReceiveNewInvitation SignalingInfo info upsertCall info, \"ringing\" ; @Override public void onInviteeAccepted SignalingInfo info mergeCallEvent \"accepted\", info ; @Override public void onInviteeRejected SignalingInfo info mergeCallEvent \"rejected\", info ; @Override public void onInvitationCancelled SignalingInfo info mergeCallEvent \"cancelled\", info ; @Override public void onInvitationTimeout SignalingInfo info mergeCallEvent \"timeout\", info ; @Override public void onInviteeAcceptedByOtherDevice SignalingInfo info mergeCallEvent \"accepted by other device\", info ; @Override public void onInviteeRejectedByOtherDevice SignalingInfo info mergeCallEvent \"rejected by other device\", info ; @Override public void onHangup SignalingInfo info finishCall info.getInvitation .getRoomID ; @Override public void onRoomParticipantConnected RoomCallingInfo room mergeConnectedParticipants room.getRoomID , room.getParticipant ; @Override public void onRoomParticipantDisconnected RoomCallingInfo room mergeDisconnectedParticipants room.getRoomID , room.getParticipant ; @Override public void onStreamChange String streamInfo mergeStreamChange streamInfo ; ; 本页是除 onReceiveCustomSignal 外 11 个已接入 Android 适配层的通话回调的完整归属页。自定义信令的处理边界见 发送自定义信令 /sdk/android/calling/sending custom signals/send a custom signal 。 邀请事件使用 SignalingInfo.invitation.roomID 合并。参与者状态使用 RoomCallingInfo.roomID ，并结合参与者的用户 ID 更新；不要按事件顺序、展示名称或数组位置合并。 onStreamChange 当前提供字符串载荷，应由接入层按服务端实际协议解析并校验。 SignalingManager 只设置一个 listener，后一次设置会替换先前实例，并且没有公开移除方法。自定义信令回调必须与本页的其他回调组合在同一个应用级 listener 中。退出登录或切换账号时，应停止向旧账号状态写入，并用新账号的完整 listener 覆盖。"
+  },
+  {
+    "path": "/sdk/android/calling/retrieving-call-information/restore-pending-invitation",
+    "title": "恢复启动前收到的通话邀请",
+    "description": "使用 Android SDK 恢复应用启动时尚未处理的通话邀请。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling retrieving-call-information restore-pending-invitation",
+    "content": "getSignalingInvitationInfoStartApp 不接收业务参数，返回应用启动或恢复时需要处理的邀请快照： OpenIMClient.getInstance .signalingManager.getSignalingInvitationInfoStartApp new OnBase @Override public void onSuccess SignalingInfo info if info = null && info.getInvitation = null && info.getInvitation .getRoomID = null && info.getInvitation .getRoomID .isEmpty restoreIncomingCall info ; @Override public void onError int code, String error clearExpiredIncomingCall ; ; 成功回调只表示取得当前快照，不会替代通话 listener。仅在 invitation 和 roomID 有效时恢复来电界面；随后仍需处理取消、超时、接受和挂断，完整处理见 处理通话事件 /sdk/android/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/android/calling/retrieving-call-information/get-room-by-group-id",
+    "title": "查询群组通话房间",
+    "description": "使用 Android SDK 按群组 ID 查询进行中的通话房间。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling retrieving-call-information get-room-by-group-id",
+    "content": "signalingGetRoomByGroupID 的参数是群组 ID，不是自定义 roomID ： OpenIMClient.getInstance .signalingManager.signalingGetRoomByGroupID new OnBase @Override public void onSuccess RoomCallingInfo room if room.getRoomID = null && room.getRoomID .isEmpty renderParticipants room.getParticipant ; @Override public void onError int code, String error showNoActiveGroupCall ; , groupID ; 成功回调返回 RoomCallingInfo 快照，其中包含房间 ID、原始邀请、参与者、群组 ID、Token 和连接地址。参与者资料中的账号资料、群内资料和群资料属于不同数据源，不应相互覆盖。 没有进行中的群通话时，应把错误或空房间视为“当前没有可恢复的通话”，不要继续使用旧凭据。即使业务为群通话使用自定义房间 ID，本方法仍然传入 groupID 。"
+  },
+  {
+    "path": "/sdk/android/calling/retrieving-call-information/get-token-by-room-id",
+    "title": "获取通话房间 Token",
+    "description": "使用 Android SDK 按房间 ID 重新获取入会凭据。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling retrieving-call-information get-token-by-room-id",
+    "content": "已经知道 roomID 、但需要重新获取入会凭据时，调用 signalingGetTokenByRoomID ： OpenIMClient.getInstance .signalingManager.signalingGetTokenByRoomID new OnBase @Override public void onSuccess SignalingCertificate credentials if credentials.getToken = null && credentials.getRoomID = null joinMediaRoom credentials.getRoomID , credentials.getToken , credentials.getLiveURL ; @Override public void onError int code, String error showCredentialError code, error ; , roomID ; 成功回调返回 SignalingCertificate ，字段含义见 发起单聊通话 /sdk/android/calling/managing calls/start single call 。只有取得有效的 token 和 roomID 后才能连接媒体引擎。 房间 Token 是短期敏感凭据，只在内存中使用，不要写入日志、URL、分析事件或持久化存储。"
+  },
+  {
+    "path": "/sdk/android/calling/sending-custom-signals/send-a-custom-signal",
+    "title": "发送自定义信令",
+    "description": "使用 Android SDK 在通话房间中发送和接收自定义信令。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android calling sending-custom-signals send-a-custom-signal",
+    "content": "signalingSendCustomSignal 用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。 发送信令 roomID 与 customInfo 都是必填字符串。需要传递结构化数据时，应定义稳定的数据格式并序列化为 JSON。 JSONObject signal = new JSONObject ; signal.put \"version\", 1 ; signal.put \"eventID\", eventID ; signal.put \"type\", \"hand raised\" ; signal.put \"userID\", currentUserID ; signal.put \"sentAt\", System.currentTimeMillis ; OpenIMClient.getInstance .signalingManager.signalingSendCustomSignal new OnBase @Override public void onSuccess String result markSignalSent eventID ; @Override public void onError int code, String error showSignalError code, error ; , roomID, signal.toString ; 成功回调表示本次自定义信令发送请求已经完成，不等于其他参与者已经处理。自定义信令应保持精简，并包含协议版本和业务幂等 ID。大文件、聊天记录、长期状态和敏感凭据不应放入 customInfo 。 接收信令 OnSignalingListener.onReceiveCustomSignal 返回 CustomSignalingInfo 。应用应先校验房间和自有业务协议，再更新界面： @Override public void onReceiveCustomSignal CustomSignalingInfo info if info == null || activeRoomID.equals info.getRoomID return; CallSignal signal = parseAndValidateCallSignal info.getCustomInfo ; String mergeID = info.getRoomID + \":\" + signal.getEventID ; if hasAppliedSignal mergeID return; applyCallSignal signal ; 本页是 onReceiveCustomSignal 的完整处理归属页。 parseAndValidateCallSignal 应检查 JSON 结构、协议版本、 eventID 、 type 和业务字段。按 roomID:eventID 幂等处理，不要依赖事件顺序。 SignalingManager 只设置一个 listener。接收自定义信令的回调应合并到 处理通话事件 /sdk/android/calling/managing calls/handle call events 所示的应用级 listener 中，不能为本页单独设置一个新 listener，否则会覆盖其他通话回调。 客户端自定义信令不能用于授予主持人、付费或隐私权限。需要权威校验的状态应由可信后端保存和判断；连接恢复后，通过房间查询或业务后端校准长期状态。"
+  },
+  {
+    "path": "/sdk/android/events/overview-events",
+    "title": "事件概览",
+    "description": "集中设置 Android SDK listener，并按业务领域分发连接、同步和数据事件。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android events overview-events",
+    "content": "OpenIM Android SDK 通过 listener 推送连接、同步、用户、好友、会话、群组、消息和通话变化。各 manager 的 listener 设置方法采用替换语义，后一次设置会覆盖此前实例。因此应在应用级事件中心组合所有回调，并在登录前集中设置一次，不要在 Activity、Fragment、Compose 页面或功能组件中重复设置。 连接 listener 是例外： OnConnListener 在 initSDK 时传入，其完整处理见 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 。 集中设置 listener 下面的注册入口使用应用级稳定 listener。每个 listener 内应包含对应领域的全部回调；具体状态合并逻辑保留在事件归属页面。 public final class OpenIMEventCenter private final OpenIMClient client = OpenIMClient.getInstance ; private final OnUserListener userListener = buildUserListener ; private final OnFriendshipListener friendshipListener = buildFriendshipListener ; private final OnConversationListener conversationListener = buildConversationListener ; private final OnGroupListener groupListener = buildGroupListener ; private final OnAdvanceMsgListener messageListener = buildMessageListener ; private final OnCustomBusinessListener businessListener = buildBusinessListener ; private final OnSignalingListener signalingListener = buildSignalingListener ; public void registerBeforeLogin client.userInfoManager.setOnUserListener userListener ; client.friendshipManager.setOnFriendshipListener friendshipListener ; client.conversationManager.setOnConversationListener conversationListener ; client.groupManager.setOnGroupListener groupListener ; client.messageManager.setAdvancedMsgListener messageListener ; client.messageManager.setCustomBusinessListener businessListener ; client.signalingManager.setSignalingListener signalingListener ; Android SDK 没有公开的 remove 或 unset 方法。退出登录、切换账号或销毁应用状态层时，应停止向旧账号状态和已销毁页面分发回调；重新登录前，用新账号对应的完整 listener 组合覆盖设置。 事件归属 | 事件范围 | 合并标识 | 完整处理页面 | | | | | | 连接、Token 和强制下线 | 当前 SDK 实例与登录用户 | 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session | | 当前用户资料 | userID | 更新当前用户资料 /sdk/android/user/user profile/set self info | | 在线状态 | userID | 订阅用户在线状态 /sdk/android/user/online status/subscribe users online status | | 好友关系与资料 | userID | 分页获取好友列表 /sdk/android/user/friends/get friend list page | | 好友申请 | fromUserID:toUserID | 获取收到的好友申请 /sdk/android/user/friend applications/get recv friend application list | | 黑名单 | userID | 拉黑用户 /sdk/android/user/blacklist/add blacklist 、 移出黑名单 /sdk/android/user/blacklist/remove blacklist | | 会话列表 | conversationID | 获取会话列表 /sdk/android/conversation/retrieving conversations/retrieve conversation list | | 总未读数 | 当前登录用户 | 获取消息总未读数 /sdk/android/conversation/managing conversations/get total unread count | | 输入状态 | conversationID:userID | 更新输入状态 /sdk/android/message/composing messages/update typing status | | 群资料、成员和群申请 | groupID 或 groupID:userID | 群组概览 /sdk/android/group/overview group | | 新消息、离线消息和在线消息 | clientMsgID ，必要时结合 conversationID | 接收消息 /sdk/android/message/receiving messages/receive messages | | 消息撤回、删除、修改和置顶 | clientMsgID ，必要时结合 conversationID | 消息概览 /sdk/android/message/overview message | | 单聊已读回执 | conversationID:clientMsgID | 标记会话已读 /sdk/android/conversation/managing conversations/mark conversation read | | 自定义业务消息 | 业务协议中的幂等 ID | 接收自定义业务消息 /sdk/android/message/receiving messages/receive custom business messages | | 通话 | roomID ，参与者结合用户 ID | 处理通话事件 /sdk/android/calling/managing calls/handle call events | | 通话自定义信令 | roomID:eventID | 发送自定义信令 /sdk/android/calling/sending custom signals/send a custom signal | | SDK 数据同步 | 当前 SDK 实例与登录用户 | 本页“监听初始化同步” | 查询 API 建立状态快照，listener 合并后续增量，必要时再重新查询校准。API 成功 callback、事件到达和重新查询结果是三个独立阶段，不能相互替代。 监听初始化同步 同步生命周期属于应用级 OnConversationListener 。该 listener 还应包含会话列表、未读数和输入状态回调；下面只展示本页负责的同步处理逻辑： private OnConversationListener buildConversationListener return new OnConversationListener @Override public void onNewConversation List conversations mergeNewConversations conversations ; @Override public void onConversationChanged List conversations mergeChangedConversations conversations ; @Override public void onTotalUnreadMessageCountChanged int total updateTotalUnreadCount total ; @Override public void onConversationUserInputStatusChanged String payload handleInputStatus payload ; @Override public void onSyncServerStart boolean reinstall setSyncState \"syncing\", 0, reinstall ; @Override public void onSyncServerProgress long progress setSyncProgress progress ; @Override public void onSyncServerFinish boolean reinstall setSyncState \"ready\", 100, reinstall ; reloadVisibleSnapshots ; @Override public void onSyncServerFailed boolean reinstall setSyncState \"failed\", 0, reinstall ; ; reinstall 为 true 表示本地数据需要按重建场景处理，通常应展示更完整的同步状态，并避免在同步完成前使用旧缓存。 onSyncServerProgress 提供当前进度；完成后重新查询当前界面所需快照，失败时记录错误并等待重试或连接恢复。 本页是 onSyncServerStart 、 onSyncServerProgress 、 onSyncServerFinish 和 onSyncServerFailed 的完整处理归属页。同步状态没有业务实体合并键，应按当前 OpenIMClient 单例和登录用户隔离。"
+  },
+  {
+    "path": "/sdk/android/logger",
+    "title": "日志",
+    "description": "配置 Android SDK 日志、写入应用诊断信息并上传日志。",
+    "context": "SDKs · Android · v4",
+    "keywords": "sdk android v4 sdk android logger",
+    "content": "OpenIM Android SDK 日志用于定位初始化、连接和业务 API 调用问题。开发和预发布环境可以输出较详细的信息；生产环境应减少日志量，并避免记录 Token、完整消息正文、原始文件 URL、通话房间凭据和用户隐私字段。 初始化日志配置 日志选项属于 InitConfig ，必须在 initSDK 前设置： File dataDirectory = new File application.getFilesDir , \"openim\" ; File logDirectory = new File application.getFilesDir , \"openim logs\" ; InitConfig config = new InitConfig apiAddr, wsAddr, dataDirectory.getAbsolutePath ; config.logLevel = BuildConfig.DEBUG ? LogLevel.Debug : LogLevel.Warn; config.isLogStandardOutput = BuildConfig.DEBUG; config.logFilePath = logDirectory.getAbsolutePath ; boolean initialized = OpenIMClient.getInstance .initSDK application, config, connectionListener ; | 字段 | 说明 | | | | | logLevel | 使用 LogLevel 常量控制详细程度。可选值包括 DebugWithSQL 、 Debug 、 Info 、 Warn 、 Error 、 Panic 和 Fatal 。 | | isLogStandardOutput | 是否把 SDK 日志输出到 Android 标准日志；开发诊断时开启。 | | logFilePath | 可选日志目录，应位于应用可写范围并纳入容量与保留期管理。 | 开发诊断可以使用 Debug ；只有排查数据库问题时才临时启用 DebugWithSQL 。生产环境通常使用 Warn 或 Error ，并关闭不必要的标准输出。 写入应用诊断日志 需要把业务上下文写入 SDK 日志时，使用未废弃的 logs 重载： OpenIMClient.getInstance .logs LogLevel.Error, ChatRepository.class.getSimpleName , 184, \"send message failed\", errorMessage, \"conversationID\", conversationID, \"clientMsgID\", clientMsgID ; currentClassName 和 currentLineNum 用于定位调用位置， msgStr 是简短动作描述， errStr 是错误信息。 Warn 、 Error 、 Panic 和 Fatal 级别必须提供非空错误信息。末尾的 extra 按“键、值”成对传入；只记录排查所需的非敏感标识。 旧的带 OnBase 、 Map 参数的 logs 重载已经废弃，不应在新代码中使用。 上传诊断日志 只在用户明确同意提交诊断信息后调用 uploadLogs 。Android API 保留了 params 参数；没有额外参数时传空列表。 line 表示本次上传读取的日志行数配置。 String uploadID = UUID.randomUUID .toString ; OpenIMClient.getInstance .uploadLogs new OnBase @Override public void onSuccess String data showLogUploadCompleted ; @Override public void onError int code, String error showLogUploadError code, error ; , Collections.emptyList , 2000, uploadID, \"support ticket 42\", new UploadLogProgress @Override public void onProgress long current, long total updateLogUploadProgress current, total ; ; | 参数 | 说明 | | | | | line | 本次上传读取的日志行数配置。 | | cancelID | 本次上传的稳定标识，可使用业务生成的 UUID。 | | ex | 附加到上传任务的诊断说明，例如工单 ID；不能包含凭据或隐私数据。 | | UploadLogProgress | 提供当前进度和总量，用于更新上传界面。 | 成功 callback 表示本次日志上传请求完成，不会修改用户、会话或消息状态，也不会触发业务领域事件。上传失败时记录错误码、当前用户和业务诊断 ID，不要再次输出完整日志内容。 operationID 与业务追踪 Android Java wrapper 的公共业务方法不接收 operationID 。每次调用时，wrapper 会通过 ParamsUtil.buildOperationID 自动生成并传给 Core，因此应用通常不需要创建或传递该值。 应用日志应另外维护自己的 trace ID，并记录业务动作、错误码以及必要的 conversationID 、 clientMsgID 、 groupID 或 roomID 。应用 trace ID 用于串联多步骤业务流程；SDK 的 operationID 用于单次 SDK 调用链路，两者都不是身份凭据或业务幂等键。 相关页面 按 Android 环境接入 /sdk/android/getting started/environment specific implementation 认证与管理登录会话 /sdk/android/getting started/authenticate and manage session 发送消息 /sdk/android/message/sending messages/send message"
   },
   {
     "path": "/sdk/flutter/overview",

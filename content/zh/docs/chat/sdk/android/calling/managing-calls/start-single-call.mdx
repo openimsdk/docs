@@ -1,0 +1,64 @@
+---
+title: '发起单聊通话'
+description: '使用 Android SDK 发起单聊音视频通话。'
+sourcePath: '/sdk/android/calling/managing-calls/start-single-call'
+---
+
+`signalingInvite()` 发起单聊通话。Android SDK 负责通话信令，应用仍需使用返回的房间凭据接入实时音视频媒体引擎。
+
+## 参数说明
+
+| 字段 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `userID` | `String` | 是 | 执行邀请操作的当前登录用户 ID。 |
+| `inviterUserID` | `String` | 是 | 邀请方用户 ID，通常与当前登录用户一致。 |
+| `inviteeUserIDList` | `List<String>` | 是 | 被邀请用户列表；单聊只填写对方一个用户。 |
+| `groupID` | `String` | 是 | 单聊固定传空字符串。 |
+| `roomID` | `String` | 是 | 本次通话的唯一房间标识，后续状态按它合并。 |
+| `timeout` | `long` | 是 | 邀请等待时长，单位为秒。 |
+| `mediaType` | `String` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |
+| `sessionType` | `int` | 是 | 单聊使用 `ConversationType.SINGLE_CHAT`。 |
+| `platformID` | `int` | 是 | Android 手机端使用 `Platform.ANDROID`。 |
+| `customData` | `String` | 否 | 随邀请携带的业务扩展字符串。 |
+| `offlinePushInfo` | `OfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |
+
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(Collections.singletonList(peerUserID));
+invitation.setGroupID("");
+invitation.setRoomID(roomID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.SINGLE_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"contact-card\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setUserID(currentUserID);
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInvite(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            joinMediaRoom(
+                credentials.getRoomID(),
+                credentials.getToken(),
+                credentials.getLiveURL()
+            );
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showCallError(code, error);
+        }
+    },
+    info
+);
+```
+
+成功回调返回 `SignalingCertificate`。其中 `roomID` 是媒体房间 ID，`token` 是加入房间使用的短期凭据，`liveURL` 是媒体服务提供的连接地址，`busyLineUserIDList` 是忙线用户列表。
+
+只有取得有效的 `token` 和 `roomID` 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态由[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)合并。

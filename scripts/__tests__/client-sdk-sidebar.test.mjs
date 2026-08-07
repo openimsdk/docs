@@ -12,7 +12,20 @@ import {
 const wasmSidebar = readJson('data/structure/wasm-sidebar.json');
 
 test('registers the supported client SDK platforms and their structure paths', () => {
-  assert.deepEqual(clientSdkPlatformIds, ['ios', 'flutter', 'wasm']);
+  assert.deepEqual(clientSdkPlatformIds, ['android', 'ios', 'flutter', 'wasm']);
+  assert.deepEqual(getClientSdkPlatform('android'), {
+    id: 'android',
+    contextKey: 'chat/sdk/android',
+    routePrefix: '/sdk/android',
+    manualRoot: 'content/zh/docs/chat/sdk/android',
+    auditPath: 'data/structure/android-content-audit.json',
+    labelsPath: 'data/structure/android-navigation-labels.json',
+    sidebarPath: 'data/structure/android-sidebar.json',
+    localizedOutputPath: 'src/generated/android-sdk-zh-content.json',
+    sdkSourceKey: 'androidSdk',
+    sdkTag: 'v3.8.4.0',
+    sdkCommit: 'f82b142c7d3b4b66ce20586adabc69de9cd61673',
+  });
   assert.deepEqual(getClientSdkPlatform('ios'), {
     id: 'ios',
     contextKey: 'chat/sdk/ios',
@@ -28,7 +41,7 @@ test('registers the supported client SDK platforms and their structure paths', (
   });
   assert.equal(getClientSdkPlatform('flutter').contextKey, 'chat/sdk/flutter');
   assert.equal(getClientSdkPlatform('wasm').contextKey, 'chat/sdk/wasm');
-  assert.throws(() => getClientSdkPlatform('android'), /Unknown client SDK platform: android/);
+  assert.throws(() => getClientSdkPlatform('unknown'), /Unknown client SDK platform: unknown/);
 });
 
 test('native sidebars keep unique platform routes and may extend the WASM structure', () => {
@@ -53,7 +66,7 @@ test('native sidebars keep unique platform routes and may extend the WASM struct
 test('keeps relationships beside users and account settings beside user profiles', () => {
   const navigation = readJson('src/generated/navigation.json');
 
-  for (const platform of ['wasm', 'ios', 'flutter']) {
+  for (const platform of ['wasm', 'ios', 'flutter', 'android']) {
     const sidebar = readJson(`data/structure/${platform}-sidebar.json`);
     const user = sidebar.nodes.find((node) => node.id === 'user');
     const relationships = sidebar.nodes.find((node) => node.id === 'relationships');
@@ -66,7 +79,9 @@ test('keeps relationships beside users and account settings beside user profiles
     const globalReceptionPath =
       platform === 'wasm'
         ? '/sdk/wasm/user/profile/set-global-message-reception'
-        : `/sdk/${platform}/user/retrieving-and-updating-user-information/set-global-message-reception`;
+        : platform === 'android'
+          ? '/sdk/android/user/user-profile/set-global-message-reception'
+          : `/sdk/${platform}/user/retrieving-and-updating-user-information/set-global-message-reception`;
     const onlineStatusPaths =
       platform === 'wasm'
         ? [
@@ -74,11 +89,16 @@ test('keeps relationships beside users and account settings beside user profiles
             '/sdk/wasm/user/online-status/get-subscribe-users-status',
             '/sdk/wasm/user/online-status/unsubscribe-users-status',
           ]
-        : [
-            `/sdk/${platform}/user/retrieving-and-updating-user-information/subscribe-user-status`,
-            `/sdk/${platform}/user/retrieving-and-updating-user-information/get-subscribed-user-status`,
-            `/sdk/${platform}/user/retrieving-and-updating-user-information/unsubscribe-user-status`,
-          ];
+        : platform === 'android'
+          ? [
+              '/sdk/android/user/online-status/subscribe-users-online-status',
+              '/sdk/android/user/online-status/get-subscribe-online-users-status',
+            ]
+          : [
+              `/sdk/${platform}/user/retrieving-and-updating-user-information/subscribe-user-status`,
+              `/sdk/${platform}/user/retrieving-and-updating-user-information/get-subscribed-user-status`,
+              `/sdk/${platform}/user/retrieving-and-updating-user-information/unsubscribe-user-status`,
+            ];
 
     assert.ok(profile, platform);
     assert.ok(onlineStatus, platform);
