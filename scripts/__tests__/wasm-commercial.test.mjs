@@ -83,7 +83,9 @@ const nonCommercialEvents = [
 ];
 
 const platformSymbolAliases = {
-  android: {},
+  android: {
+    getConversationPinnedMsgs: 'getConversationPinnedMsg',
+  },
   flutter: {
     getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
     onHangup: 'OnHangUp',
@@ -125,6 +127,11 @@ const partialCommercialConceptSources = {
     '/sdk/ios/calling/managing-calls/start-single-call',
     '/sdk/ios/calling/managing-calls/handle-call-events',
     '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/android/calling/overview-calling': [
+    '/sdk/android/calling/managing-calls/start-single-call',
+    '/sdk/android/calling/managing-calls/handle-call-events',
+    '/sdk/android/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
 
@@ -422,6 +429,12 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   assert.ok(flutterPinned.methods.includes('setConversationPinnedMsg'));
   assert.ok(flutterPinned.events.includes('onChangedPinnedMsg'));
 
+  const androidPinned = getPageCommercialInfo(
+    '/sdk/android/message/managing-messages/get-pinned-messages',
+  );
+  assert.equal(androidPinned.kind, 'full');
+  assert.ok(androidPinned.methods.includes('getConversationPinnedMsgs'));
+
   const flutterTranscription = getPageCommercialInfo(
     '/sdk/flutter/message/composing-messages/transcribe-audio',
   );
@@ -446,6 +459,11 @@ test('marks calling overviews as mixed while preserving verified platform symbol
   assert.ok(
     iosOverview.methods.includes('getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:'),
   );
+
+  const androidOverview = getPageCommercialInfo('/sdk/android/calling/overview-calling');
+  assert.equal(androidOverview.kind, 'partial');
+  assert.ok(androidOverview.methods.includes('signalingInvite'));
+  assert.ok(androidOverview.methods.includes('getSignalingInvitationInfoStartApp'));
 });
 
 test('does not infer commercial presentation for absent or open-source native capabilities', () => {
@@ -499,6 +517,24 @@ test('classifies mixed commercial pages', () => {
   assert.equal(
     getPageCommercialInfo('/sdk/wasm/group/group-applications/delete-group-requests').kind,
     'full',
+  );
+
+  for (const pagePath of [
+    '/sdk/android/message/managing-messages/delete-saved-messages',
+    '/sdk/android/message/retrieving-messages/load-message-context',
+    '/sdk/android/message/managing-read-status/send-group-read-receipts',
+    '/sdk/android/message/managing-read-status/get-group-message-readers',
+  ]) {
+    assert.equal(getPageCommercialInfo(pagePath).kind, 'full');
+  }
+
+  assert.equal(
+    getPageCommercialInfo('/sdk/android/message/managing-messages/delete-user-messages').kind,
+    'none',
+  );
+  assert.equal(
+    getPageCommercialInfo('/sdk/android/message/composing-messages/update-typing-status').kind,
+    'none',
   );
 });
 

@@ -1,16 +1,38 @@
 ---
-title: '更新输入状态'
-description: '使用 typingStatusUpdate 提示单聊对方当前正在输入。'
+title: '上报输入状态'
+description: '使用 Android SDK 上报当前会话的输入状态。'
 sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
 ---
 
-输入框变化时传入对方用户 ID 和业务约定的提示字符串。调用侧应防抖，避免每次按键都发送请求。
+进入输入状态时，将 `focus` 设为 `true`；输入结束、输入框失去焦点或退出会话时，将其设为 `false`。
 
 ```java
-messageManager.typingStatusUpdate(callback, peerUserID, "typing");
+conversationManager.changeInputState(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 输入状态已上报
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理失败
+        }
+    },
+    conversationID,
+    true
+);
 ```
 
-成功 callback 表示输入状态上报请求完成，不表示对端已经处理。对端通过应用级 `OnConversationListener.onConversationUserInputStatusChanged` 接收字符串载荷；Android wrapper 不会自动把它转换为模型，应在校验 JSON 后再解析：
+输入结束时及时清除状态：
+
+```java
+conversationManager.changeInputState(callback, conversationID, false);
+```
+
+调用侧应合并连续的焦点变化，并在页面退出或连接中断前尝试上报 `false`。成功回调只表示上报请求完成，不表示其他客户端已经更新界面。
+
+其他客户端通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化。Android SDK 以字符串形式返回事件载荷，应在校验 JSON 后再解析：
 
 ```java
 @Override
@@ -30,4 +52,6 @@ public void onConversationUserInputStatusChanged(String payload) {
 }
 ```
 
-输入状态按 `conversationID:userID` 合并，并设置业务侧超时自动清除。`ConversationManager` 只保存一个会话 listener，本回调必须与会话列表、总未读数和同步事件组合后统一设置，不能在输入框页面单独覆盖。
+输入状态按 `conversationID:userID` 合并，并设置业务侧超时自动清除。`ConversationManager` 只保存一个会话 listener，本回调应与会话列表、总未读数和同步事件组合后统一设置。
+
+进入会话或连接恢复时，可通过[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)获取当前快照。

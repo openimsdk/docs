@@ -1,17 +1,51 @@
 ---
 title: 'Start a group call'
-description: 'OpenIM Android SDK guide for Start a group call.'
+description: 'Start a group audio or video call with the Android SDK.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`signalingInviteInGroup()` starts a group call. It invites only the members explicitly listed in `inviteeUserIDList`; setting `groupID` does not automatically invite every group member.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(selectedGroupMemberIDs);
+invitation.setGroupID(groupID);
+invitation.setRoomID(groupID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.GROUP_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"group-call\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setUserID(currentUserID);
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            startGroupCall(credentials);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showCallError(code, error);
+        }
+    },
+    info
+);
+```
+
+`groupID` must not be empty. Remove the current user, empty IDs, and duplicates from `inviteeUserIDList`. The example reuses the group ID as the room ID. If your application generates another `roomID`, every participant must use the same value.
+
+The success callback returns `SignalingCertificate`; see [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call) for its fields. `busyLineUserIDList` only identifies some unavailable members and should not stop invitations to the others. Success does not mean that any member has accepted.

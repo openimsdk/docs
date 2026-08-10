@@ -1,17 +1,71 @@
 ---
 title: 'Send a custom signal'
-description: 'OpenIM Android SDK guide for Send a custom signal.'
+description: 'Send and receive custom signaling data in an Android SDK call room.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/sending-custom-signals/send-a-custom-signal'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`signalingSendCustomSignal()` sends lightweight application negotiation data to a call room, such as a raised-hand action, layout hint, or application state update. It is not a chat message API and does not replace the media engine's data channel.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Send a signal
+
+Both `roomID` and `customInfo` are required strings. Define a stable schema and serialize structured data as JSON.
+
+```java
+JSONObject signal = new JSONObject();
+signal.put("version", 1);
+signal.put("eventID", eventID);
+signal.put("type", "hand-raised");
+signal.put("userID", currentUserID);
+signal.put("sentAt", System.currentTimeMillis());
+
+OpenIMClient.getInstance().signalingManager.signalingSendCustomSignal(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String result) {
+            markSignalSent(eventID);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showSignalError(code, error);
+        }
+    },
+    roomID,
+    signal.toString()
+);
+```
+
+The success callback means that the send request completed, not that other participants processed it. Keep custom signals small and include a protocol version and application idempotency ID. Do not place large files, chat history, long-lived state, or sensitive credentials in `customInfo`.
+
+## Receive a signal
+
+`OnSignalingListener.onReceiveCustomSignal` returns `CustomSignalingInfo`. Validate the room and your application protocol before updating the interface.
+
+```java
+@Override
+public void onReceiveCustomSignal(CustomSignalingInfo info) {
+    if (info == null || !activeRoomID.equals(info.getRoomID())) {
+        return;
+    }
+
+    CallSignal signal = parseAndValidateCallSignal(info.getCustomInfo());
+    String mergeID = info.getRoomID() + ":" + signal.getEventID();
+    if (hasAppliedSignal(mergeID)) {
+        return;
+    }
+    applyCallSignal(signal);
+}
+```
+
+This page owns the complete handling contract for `onReceiveCustomSignal`. `parseAndValidateCallSignal()` should check the JSON structure, protocol version, `eventID`, `type`, and application fields. Process signals idempotently by `roomID:eventID` and do not depend on event order.
+
+`SignalingManager` retains only one listener. Add the custom signal callback to the application-level listener shown in [Handle call events](/sdk/android/calling/managing-calls/handle-call-events). Registering another listener from this feature would replace all other call callbacks.
+
+Custom client signaling must not grant host, payment, or privacy permissions. Store and validate authoritative state on a trusted backend. After reconnecting, reconcile long-lived state through a room query or the application backend.

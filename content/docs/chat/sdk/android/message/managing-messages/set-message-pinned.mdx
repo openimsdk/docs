@@ -1,17 +1,36 @@
 ---
 title: 'Pin or unpin a message'
-description: 'OpenIM Android SDK guide for Pin or unpin a message.'
+description: 'Change a conversation message’s pinned state and handle pinned-message change events.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/set-message-pinned'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Pass `true` as the final argument to pin the message or `false` to unpin it:
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+messageManager.setConversationPinnedMsg(
+    callback,
+    conversationID,
+    clientMsgID,
+    true
+);
+```
+
+The success callback means that the request completed; it does not mean that the pinned-message event has arrived.
+
+This page owns `OnAdvanceMsgListener.onChangedPinnedMsg`. `ChangedPinnedMsg` contains the `conversationID` and current pinned-message collection. Replace the collection for that conversation, then deduplicate its messages by `clientMsgID`:
+
+```java
+@Override
+public void onChangedPinnedMsg(ChangedPinnedMsg event) {
+    replacePinnedMessages(event.getConversationID(), event.getMsgs());
+}
+```
+
+Add this callback to the application's single `OnAdvanceMsgListener`; see [Events](/sdk/android/events/overview-events) for centralized setup. Callback completion, event delivery, and the snapshot from [View pinned messages](/sdk/android/message/managing-messages/get-pinned-messages) are three independent stages.

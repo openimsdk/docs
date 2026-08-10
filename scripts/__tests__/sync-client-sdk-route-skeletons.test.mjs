@@ -95,6 +95,53 @@ test('uses each native SDK method name while preserving the shared WASM route su
   );
 });
 
+test('uses Flutter-aligned titles for Android media message routes', () => {
+  const expectedTitles = {
+    'message/creating-messages/create-image-message': 'Create an image message',
+    'message/creating-messages/create-image-message-by-file':
+      'Create an image message from a local path',
+    'message/creating-messages/create-image-message-by-url':
+      'Create an image message from URLs',
+    'message/creating-messages/create-sound-message': 'Create an audio message',
+    'message/creating-messages/create-sound-message-by-file':
+      'Create an audio message from a local path',
+    'message/creating-messages/create-sound-message-by-url':
+      'Create an audio message from a URL',
+    'message/creating-messages/create-video-message': 'Create a video message',
+    'message/creating-messages/create-video-message-by-file':
+      'Create a video message from local paths',
+    'message/creating-messages/create-video-message-by-url':
+      'Create a video message from URLs',
+    'message/creating-messages/create-file-message': 'Create a file message',
+    'message/creating-messages/create-file-message-by-file':
+      'Create a file message from a local path',
+    'message/creating-messages/create-file-message-by-url':
+      'Create a file message from a URL',
+  };
+
+  for (const [suffix, expectedTitle] of Object.entries(expectedTitles)) {
+    assert.equal(
+      resolveClientSdkRouteTitle({
+        platformId: 'android',
+        suffix,
+        baselineTitle: 'Create a message from a file',
+      }),
+      expectedTitle,
+    );
+  }
+});
+
+test('uses the batch-message deletion title for Android', () => {
+  assert.equal(
+    resolveClientSdkRouteTitle({
+      platformId: 'android',
+      suffix: 'message/managing-messages/delete-saved-messages',
+      baselineTitle: 'Delete messages in a batch',
+    }),
+    'Delete messages in a batch',
+  );
+});
+
 test('supports reviewed Android extension routes outside the WASM tree', () => {
   const routes = readJson('src/generated/routes.json');
   const sidebar = readJson('data/structure/android-sidebar.json');

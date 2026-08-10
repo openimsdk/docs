@@ -1,17 +1,37 @@
 ---
-title: 'Restore a pending call invitation'
-description: 'OpenIM Android SDK guide for Restore a pending call invitation.'
+title: 'Restore a pending invitation'
+description: 'Restore a call invitation that was received before the Android application started or resumed.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/retrieving-call-information/restore-pending-invitation'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`getSignalingInvitationInfoStartApp()` takes no application parameters. It returns the invitation snapshot that should be handled when the application starts or resumes.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+OpenIMClient.getInstance().signalingManager.getSignalingInvitationInfoStartApp(
+    new OnBase<SignalingInfo>() {
+        @Override
+        public void onSuccess(SignalingInfo info) {
+            if (info != null
+                && info.getInvitation() != null
+                && info.getInvitation().getRoomID() != null
+                && !info.getInvitation().getRoomID().isEmpty()) {
+                restoreIncomingCall(info);
+            }
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            clearExpiredIncomingCall();
+        }
+    }
+);
+```
+
+Success only means that the current snapshot was retrieved; it does not replace the call listener. Restore the incoming-call interface only when both `invitation` and `roomID` are valid. Continue handling cancellation, timeout, acceptance, and hang-up through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

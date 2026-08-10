@@ -212,7 +212,9 @@ export async function renderDocumentationPage(
 
   const candidateSdkOverviewPlatform = getSdkOverviewPlatform(effectiveRoute.path);
   const sdkOverviewPlatform =
-    locale === 'zh' || candidateSdkOverviewPlatform === 'wasm'
+    locale === 'zh' ||
+    candidateSdkOverviewPlatform === 'wasm' ||
+    candidateSdkOverviewPlatform === 'android'
       ? candidateSdkOverviewPlatform
       : undefined;
 

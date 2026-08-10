@@ -1,17 +1,61 @@
 ---
 title: 'Upload a file'
-description: 'OpenIM Android SDK guide for Upload a file.'
+description: 'Upload a standalone file with the Android SDK and retrieve its remote resource URL.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/file-uploads/upload-file'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`uploadFile()` uploads a standalone file for uses such as a user avatar, group avatar, profile attachment, or other application resource. The upload does not belong to a message and does not automatically create a message or update a profile.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter          | Type                | Required | Description                                                                                                                |
+| ------------------ | ------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `base`             | `OnBase<String>`    | Yes      | Receives the final success or failure result for the upload request.                                                       |
+| `listener`         | `OnPutFileListener` | Yes      | Receives progress, part completion, and final file information for this task.                                              |
+| `putArgs.filepath` | `String`            | Yes      | A local file path readable by the Android application.                                                                     |
+| `putArgs.name`     | `String`            | Yes      | The upload file name. `PutArgs` initially uses the supplied path; replace it with the original file name when appropriate. |
+| `putArgs.cuase`    | `String`            | No       | An application-defined upload reason. The spelling follows the Android SDK `PutArgs` declaration.                          |
+
+```java
+File file = new File(localPath);
+PutArgs args = new PutArgs(file.getAbsolutePath());
+args.name = file.getName();
+args.cuase = "user-avatar";
+
+OpenIMClient.getInstance().uploadFile(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String result) {
+            finishUploadRequest(result);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showUploadError(code, error);
+        }
+    },
+    new OnPutFileListener() {
+        @Override
+        public void uploadComplete(long fileSize, long uploadedSize, long storageSize) {
+            updateUploadProgress(uploadTaskID, uploadedSize, fileSize);
+        }
+
+        @Override
+        public void complete(long size, String url, long type) {
+            completeUpload(uploadTaskID, size, url, type);
+        }
+    },
+    args
+);
+```
+
+Each call receives its own `OnPutFileListener`, so no global upload listener is required. For parallel uploads, generate a stable task ID and capture it in the callbacks. Do not use a file name or list position as the unique identifier. See [Track file upload progress](/sdk/android/file-uploads/track-file-upload-progress) for callback responsibilities.
+
+The URL returned by `complete()` can be used later to update an avatar, store an attachment address, or create a URL-based media message. Upload success only means that the resource was written remotely; profile updates, message creation, and message sending remain separate API calls.

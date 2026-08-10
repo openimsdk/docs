@@ -44,6 +44,7 @@ const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
   android: {
+    getConversationPinnedMsgs: 'getConversationPinnedMsg',
     onHangup: 'OnHangUp',
     onRecvGroupMessageReadReceipt: 'OnRecvGroupReadReceipt',
   },
@@ -88,6 +89,11 @@ const partialCommercialConceptSources: Record<string, string[]> = {
     '/sdk/ios/calling/managing-calls/start-single-call',
     '/sdk/ios/calling/managing-calls/handle-call-events',
     '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/android/calling/overview-calling': [
+    '/sdk/android/calling/managing-calls/start-single-call',
+    '/sdk/android/calling/managing-calls/handle-call-events',
+    '/sdk/android/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
 

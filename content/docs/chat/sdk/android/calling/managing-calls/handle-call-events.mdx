@@ -1,17 +1,81 @@
 ---
 title: 'Handle call events'
-description: 'OpenIM Android SDK guide for Handle call events.'
+description: 'Register Android SDK invitation, participant, and media-stream callbacks in one call listener.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/handle-call-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Register `OnSignalingListener` once in the call state layer. Merge invitation lifecycle, participant connection, and media stream changes by `roomID`.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+OpenIMClient.getInstance().signalingManager.setSignalingListener(
+    new OnSignalingListener() {
+        @Override
+        public void onReceiveNewInvitation(SignalingInfo info) {
+            upsertCall(info, "ringing");
+        }
+
+        @Override
+        public void onInviteeAccepted(SignalingInfo info) {
+            mergeCallEvent("accepted", info);
+        }
+
+        @Override
+        public void onInviteeRejected(SignalingInfo info) {
+            mergeCallEvent("rejected", info);
+        }
+
+        @Override
+        public void onInvitationCancelled(SignalingInfo info) {
+            mergeCallEvent("cancelled", info);
+        }
+
+        @Override
+        public void onInvitationTimeout(SignalingInfo info) {
+            mergeCallEvent("timeout", info);
+        }
+
+        @Override
+        public void onInviteeAcceptedByOtherDevice(SignalingInfo info) {
+            mergeCallEvent("accepted-by-other-device", info);
+        }
+
+        @Override
+        public void onInviteeRejectedByOtherDevice(SignalingInfo info) {
+            mergeCallEvent("rejected-by-other-device", info);
+        }
+
+        @Override
+        public void onHangup(SignalingInfo info) {
+            finishCall(info.getInvitation().getRoomID());
+        }
+
+        @Override
+        public void onRoomParticipantConnected(RoomCallingInfo room) {
+            mergeConnectedParticipants(room.getRoomID(), room.getParticipant());
+        }
+
+        @Override
+        public void onRoomParticipantDisconnected(RoomCallingInfo room) {
+            mergeDisconnectedParticipants(room.getRoomID(), room.getParticipant());
+        }
+
+        @Override
+        public void onStreamChange(String streamInfo) {
+            mergeStreamChange(streamInfo);
+        }
+    }
+);
+```
+
+This page owns the complete handling contract for the 11 call callbacks exposed by the Android adapter other than `onReceiveCustomSignal`. Custom signaling belongs to [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal).
+
+Merge invitation events with `SignalingInfo.invitation.roomID`. Merge participant state with `RoomCallingInfo.roomID` plus the participant user ID. Do not merge by event order, display name, or array position. `onStreamChange` currently carries a string payload; parse and validate it according to the actual server protocol used by your deployment.
+
+`SignalingManager` retains one listener. Setting another replaces the previous instance, and there is no public remove method. Combine custom signaling with these callbacks in the same application-level listener. When signing out or switching accounts, stop writing into old account state and replace the listener with the complete listener for the new account.

@@ -1,17 +1,42 @@
 ---
-title: 'Get a call room token'
-description: 'OpenIM Android SDK guide for Get a call room token.'
+title: 'Get room credentials'
+description: 'Use the Android SDK to retrieve fresh join credentials for a known room ID.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/retrieving-call-information/get-token-by-room-id'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When you know the `roomID` but need new join credentials, call `signalingGetTokenByRoomID()`.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+OpenIMClient.getInstance().signalingManager.signalingGetTokenByRoomID(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            if (credentials.getToken() != null
+                && credentials.getRoomID() != null) {
+                joinMediaRoom(
+                    credentials.getRoomID(),
+                    credentials.getToken(),
+                    credentials.getLiveURL()
+                );
+            }
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showCredentialError(code, error);
+        }
+    },
+    roomID
+);
+```
+
+The success callback returns `SignalingCertificate`; see [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call) for its fields. Connect the media engine only after receiving a valid `token` and `roomID`.
+
+A room token is a short-lived sensitive credential. Keep it in memory and do not write it to logs, URLs, analytics events, or persistent storage.

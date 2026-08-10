@@ -29,10 +29,35 @@ const androidRouteTitles = {
   'user/blacklist/remove-blacklist': 'Unblock a user',
   'user/online-status/subscribe-users-online-status': 'Subscribe to user online status',
   'user/online-status/get-subscribe-online-users-status': 'Get subscribed user online status',
+  'user/online-status/unsubscribe-users-online-status': 'Unsubscribe from user status',
   'group/group-applications/overview-group-applications': 'Group applications overview',
   'group/retrieving-group-members/overview-retrieving-group-members':
     'Group member queries overview',
   'message/sending-messages/set-msg-send-progress-listener': 'Track message sending progress',
+  'message/managing-messages/delete-saved-messages': 'Delete messages in a batch',
+  'message/creating-messages/create-image-message': 'Create an image message',
+  'message/creating-messages/create-image-message-by-file':
+    'Create an image message from a local path',
+  'message/creating-messages/create-image-message-by-url':
+    'Create an image message from URLs',
+  'message/creating-messages/create-sound-message': 'Create an audio message',
+  'message/creating-messages/create-sound-message-by-file':
+    'Create an audio message from a local path',
+  'message/creating-messages/create-sound-message-by-url':
+    'Create an audio message from a URL',
+  'message/creating-messages/create-video-message': 'Create a video message',
+  'message/creating-messages/create-video-message-by-file':
+    'Create a video message from local paths',
+  'message/creating-messages/create-video-message-by-url':
+    'Create a video message from URLs',
+  'message/creating-messages/create-file-message': 'Create a file message',
+  'message/creating-messages/create-file-message-by-file':
+    'Create a file message from a local path',
+  'message/creating-messages/create-file-message-by-url':
+    'Create a file message from a URL',
+  'message/creating-messages/create-advanced-text-message': 'Create a rich-text message',
+  'message/creating-messages/create-advanced-quote-message': 'Create a rich-text reply',
+  'message/composing-messages/get-typing-status': 'Retrieve typing status',
   'file-uploads/track-file-upload-progress': 'Track file upload progress',
 };
 

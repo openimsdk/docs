@@ -1,17 +1,53 @@
 ---
 title: 'Audio and video calling overview'
-description: 'OpenIM Android SDK guide for Audio and video calling overview.'
+description: 'Learn about Android SDK call signaling, room information, and event boundaries.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/overview-calling'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The Android SDK `SignalingManager` provides the signaling APIs needed to invite, accept, reject, cancel, hang up, query rooms, and synchronize call state. It coordinates participants, room information, and the call lifecycle. It does not capture camera video, play remote media, or render a call interface.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+Pass the returned `roomID`, `token`, and `liveURL` to your chosen real-time audio/video engine. Your application remains responsible for Android permissions, devices, media tracks, poor-network behavior, and UI state. The signaling APIs are not a complete real-time media SDK.
+
+## Call flow
+
+1. Call `signalingInvite()` for a one-to-one call or `signalingInviteInGroup()` for a group call.
+2. The invitee receives `SignalingInfo` through `onReceiveNewInvitation` and chooses to accept or reject.
+3. The invitee calls `signalingAccept()`, and both parties connect their media engine with the returned room credentials.
+4. During the call, update local state from participant, media stream, and custom signaling callbacks.
+5. The inviter can cancel a pending invitation; any participant can hang up an established call.
+
+## Core data
+
+| Data                      | Description                                                                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `SignalingInvitationInfo` | Inviter, invitees, group, room, media type, timeout, session type, and application extra data.            |
+| `SignalingInfo`           | Current operation user, original invitation, participant profiles, and optional offline push information. |
+| `SignalingCertificate`    | The `roomID`, `token`, `liveURL`, and busy user list returned by OpenIMServer.                            |
+| `RoomCallingInfo`         | A snapshot of a group's room, invitation, participants, group, and join credentials.                      |
+
+Use `customData` and custom signaling only for application negotiation data. Do not place long-lived credentials, administrator secrets, or other sensitive data in these fields.
+
+## State updates and event ownership
+
+For invite, accept, reject, cancel, and hang-up operations, handle both the API callback and the call listener. The API success callback means that the current signaling request completed. The listener represents incremental state observed by inviters, invitees, other devices, or room participants. They are not the same completion signal.
+
+The complete invitation lifecycle, participant, hang-up, and stream listener belongs to [Handle call events](/sdk/android/calling/managing-calls/handle-call-events). Custom signaling belongs to [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal). Room, credential, and pending-invitation queries only return snapshots.
+
+This overview does not register a listener. Use `roomID` as the call-state key and combine it with user ID for participant state. Query again when the current room needs to be restored or reconciled.
+
+## Find a page by task
+
+| Task                                 | Page                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start a one-to-one or group call     | [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call), [Start a group call](/sdk/android/calling/managing-calls/start-group-call)                                                                                                                                               |
+| Accept or reject an invitation       | [Accept a call](/sdk/android/calling/managing-calls/accept-call), [Reject a call](/sdk/android/calling/managing-calls/reject-call)                                                                                                                                                                         |
+| Cancel an invitation or hang up      | [Cancel a call invitation](/sdk/android/calling/managing-calls/cancel-call), [Hang up a call](/sdk/android/calling/managing-calls/hang-up-call)                                                                                                                                                            |
+| Restore a room or pending invitation | [Get a group call room](/sdk/android/calling/retrieving-call-information/get-room-by-group-id), [Get room credentials](/sdk/android/calling/retrieving-call-information/get-token-by-room-id), [Restore a pending invitation](/sdk/android/calling/retrieving-call-information/restore-pending-invitation) |
+| Handle call events and negotiation   | [Handle call events](/sdk/android/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal)                                                                                                                                     |

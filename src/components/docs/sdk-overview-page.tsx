@@ -357,6 +357,102 @@ const mobileCopy = {
   },
 } satisfies Record<Exclude<SdkOverviewPlatform, 'wasm'>, OverviewCopy>;
 
+const androidEnglishCopy = {
+  eyebrow: 'Version 4',
+  intro:
+    'OpenIM Android SDK provides users, conversations, groups, messages, realtime events, and local storage for native Android applications. Configure the Android project and sign in first, then connect business data to application state through manager APIs and listeners.',
+  mostPopular: 'Most popular',
+  recommended: 'Recommended features',
+  resources: 'Resources',
+  popular: [
+    {
+      title: 'Manage conversations',
+      description:
+        'Configure conversation state, drafts, unread counts, hiding, and deletion.',
+      href: '/sdk/android/conversation/overview-conversation',
+      visual: 'migration',
+    },
+    {
+      title: 'Unread message count',
+      description:
+        'Read conversation unread counts and synchronize chat lists, badges, and global unread state.',
+      href: '/sdk/android/conversation/managing-conversations/mark-conversation-read',
+      visual: 'unread',
+    },
+    {
+      title: 'Conversation read status',
+      description:
+        'Clear conversation unread counts and handle one-to-one message read receipts.',
+      href: '/sdk/android/conversation/managing-conversations/mark-conversation-read',
+      visual: 'receipt',
+    },
+    {
+      title: 'Send messages',
+      description: 'Create text, file, or custom messages and send them to users or groups.',
+      href: '/sdk/android/message/sending-messages/send-message',
+      visual: 'message',
+    },
+    {
+      title: 'Receive messages',
+      description:
+        'Subscribe to new-message events and merge incremental messages into application state.',
+      href: '/sdk/android/message/receiving-messages/receive-messages',
+      visual: 'events',
+    },
+    {
+      title: 'Message history',
+      description:
+        'Retrieve local and synchronized message history with conversation identifiers and message cursors.',
+      href: '/sdk/android/message/retrieving-messages/load-older-messages',
+      visual: 'history',
+    },
+  ],
+  features: [
+    {
+      title: 'Authentication',
+      description:
+        'Sign in with a backend-issued token and handle connection, expiration, and forced-logout events.',
+      href: '/sdk/android/getting-started/authenticate-and-manage-session',
+    },
+    {
+      title: 'Groups',
+      description:
+        'Manage group profiles, members, applications, permissions, and group events.',
+      href: '/sdk/android/group/overview-group',
+    },
+    {
+      title: 'Events',
+      description:
+        'Register listeners on each manager and merge incremental data by stable identifiers.',
+      href: '/sdk/android/events/overview-events',
+    },
+  ],
+  links: [
+    {
+      title: 'Send your first message',
+      description: 'Complete integration, initialization, sign-in, target selection, and sending.',
+      href: '/sdk/android/getting-started/send-first-message',
+    },
+    {
+      title: 'Android integration',
+      description:
+        'Configure the Android project, SDK initialization, network permissions, and application data directory.',
+      href: '/sdk/android/getting-started/environment-specific-implementation',
+    },
+    {
+      title: 'Logging and diagnostics',
+      description:
+        'Configure SDK logging and retain error codes and messages for diagnosis.',
+      href: '/sdk/android/logger',
+    },
+    {
+      title: 'Client SDK error codes',
+      description: 'Look up common client errors and choose a handling path by error source.',
+      href: '/sdk/error-codes',
+    },
+  ],
+} satisfies OverviewCopy;
+
 function createMobilePopularCards(
   platform: Exclude<SdkOverviewPlatform, 'wasm'>,
 ): OverviewCard[] {
@@ -421,7 +517,12 @@ export function SdkOverviewPage({
   route: RouteRecord;
   showVersion: boolean;
 }) {
-  const text = platform === 'wasm' ? copy[locale] : mobileCopy[platform];
+  const text =
+    platform === 'wasm'
+      ? copy[locale]
+      : platform === 'android' && locale === 'en'
+        ? androidEnglishCopy
+        : mobileCopy[platform];
 
   return (
     <div className="sdk-overview-page">

@@ -93,6 +93,7 @@ test('keeps relationships beside users and account settings beside user profiles
           ? [
               '/sdk/android/user/online-status/subscribe-users-online-status',
               '/sdk/android/user/online-status/get-subscribe-online-users-status',
+              '/sdk/android/user/online-status/unsubscribe-users-online-status',
             ]
           : [
               `/sdk/${platform}/user/retrieving-and-updating-user-information/subscribe-user-status`,

@@ -1,17 +1,64 @@
 ---
-title: 'Report typing status'
-description: 'OpenIM Android SDK guide for Report typing status.'
+title: 'Update typing status'
+description: 'Report the current conversation typing state with the Android SDK.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Set `focus` to `true` when typing starts. Set it to `false` when typing ends, the input field loses focus, or the conversation screen closes.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+conversationManager.changeInputState(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // The typing state has been reported
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle the failure
+        }
+    },
+    conversationID,
+    true
+);
+```
+
+Clear the state promptly when typing ends:
+
+```java
+conversationManager.changeInputState(callback, conversationID, false);
+```
+
+Coalesce consecutive focus changes and attempt to report `false` before the screen closes or the connection is interrupted. A successful callback means only that the report request completed; it does not mean that other clients have updated their interfaces.
+
+Other clients receive typing-state changes through `OnConversationListener.onConversationUserInputStatusChanged`. The Android SDK returns the event payload as a string, so validate the JSON before parsing it:
+
+```java
+@Override
+public void onConversationUserInputStatusChanged(String payload) {
+    InputStatesChangedData state = JsonUtil.toObj(
+        payload,
+        InputStatesChangedData.class
+    );
+    if (state == null || state.getConversationID() == null) {
+        return;
+    }
+    updateTypingState(
+        state.getConversationID(),
+        state.getUserID(),
+        state.getPlatformIDs()
+    );
+}
+```
+
+Merge typing states by `conversationID:userID` and clear them after an application-defined timeout. `ConversationManager` retains only one conversation listener, so combine this callback with conversation-list, total-unread, and synchronization events in one listener.
+
+When opening a conversation or restoring a connection, use [Get typing status](/sdk/android/message/composing-messages/get-typing-status) to retrieve the current snapshot.

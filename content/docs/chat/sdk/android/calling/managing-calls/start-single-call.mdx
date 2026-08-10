@@ -1,17 +1,71 @@
 ---
 title: 'Start a one-to-one call'
-description: 'OpenIM Android SDK guide for Start a one-to-one call.'
+description: 'Start a one-to-one audio or video call with the Android SDK.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/start-single-call'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+`signalingInvite()` starts a one-to-one call. The Android SDK handles call signaling; your application must connect a real-time audio/video engine with the returned room credentials.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Field               | Type              | Required | Description                                                                 |
+| ------------------- | ----------------- | -------- | --------------------------------------------------------------------------- |
+| `userID`            | `String`          | Yes      | The current signed-in user performing the invite operation.                 |
+| `inviterUserID`     | `String`          | Yes      | The inviter, normally the current signed-in user.                           |
+| `inviteeUserIDList` | `List<String>`    | Yes      | The invitees; for a one-to-one call, include only the other user.           |
+| `groupID`           | `String`          | Yes      | Use an empty string for a one-to-one call.                                  |
+| `roomID`            | `String`          | Yes      | The call's unique room identifier and the primary key for subsequent state. |
+| `timeout`           | `long`            | Yes      | Invitation timeout in seconds.                                              |
+| `mediaType`         | `String`          | Yes      | The application-defined media type, typically `audio` or `video`.           |
+| `sessionType`       | `int`             | Yes      | Use `ConversationType.SINGLE_CHAT`.                                         |
+| `platformID`        | `int`             | Yes      | Use `Platform.ANDROID` for an Android phone client.                         |
+| `customData`        | `String`          | No       | Application extra data carried with the invitation.                         |
+| `offlinePushInfo`   | `OfflinePushInfo` | No       | Push content used when the invitee is offline.                              |
+
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(Collections.singletonList(peerUserID));
+invitation.setGroupID("");
+invitation.setRoomID(roomID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.SINGLE_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"contact-card\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setUserID(currentUserID);
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInvite(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            joinMediaRoom(
+                credentials.getRoomID(),
+                credentials.getToken(),
+                credentials.getLiveURL()
+            );
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            showCallError(code, error);
+        }
+    },
+    info
+);
+```
+
+The success callback returns `SignalingCertificate`. `roomID` identifies the media room, `token` is a short-lived join credential, `liveURL` is the media service address, and `busyLineUserIDList` contains busy users.
+
+Connect the media engine only after receiving a valid `token` and `roomID`. API success does not mean the invitee accepted; merge subsequent state through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

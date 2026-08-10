@@ -1,0 +1,50 @@
+---
+title: 'Load message context'
+description: 'Retrieve messages before and after a specified message with the Android SDK.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-10'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/message/retrieving-messages/load-message-context'
+---
+
+When navigating from a search result or referenced message into its chat context, use the `Message` already retrieved as the anchor.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | ID of the conversation containing the anchor message. |
+| `startMsg` | `Message` | Yes | Previously retrieved anchor message. |
+| `type` | `ViewType` | Yes | Context type. Use `ViewType.History` for a referenced message and `ViewType.Search` for a search result. |
+| `before` | `int` | Yes | Maximum number of messages to retrieve before the anchor. |
+| `after` | `int` | Yes | Maximum number of messages to retrieve after the anchor. |
+
+```java
+messageManager.fetchSurroundingMessages(
+    new OnBase<Messages>() {
+        @Override
+        public void onSuccess(Messages messages) {
+            List<Message> surrounding = messages.getData();
+            renderMessages(surrounding);
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle the failure
+        }
+    },
+    conversationID,
+    targetMessage,
+    ViewType.Search,
+    20,
+    20
+);
+```
+
+In the success callback, `messages.getData()` is the list retrieved before and after the anchor. For message fields, see [Message overview](/sdk/android/message/overview-message).
+
+`before` and `after` independently limit the number of messages on either side. The result can contain fewer messages than requested when the anchor is near a history boundary or some messages have been deleted. Merge by `conversationID:clientMsgID`; do not rely on fixed array positions. If the message must first be located, see [Find messages by ID](/sdk/android/message/retrieving-messages/find-messages-by-id).

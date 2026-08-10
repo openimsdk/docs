@@ -1,17 +1,38 @@
 ---
 title: 'Revoke a message'
-description: 'OpenIM Android SDK guide for Revoke a message.'
+description: 'Revoke a sent message and handle revocation notifications received by other clients.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/revoke-a-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Revoking a message causes other clients to display the original message in a revoked state. Before calling the API, confirm that the message was sent successfully and enforce the revocation time window in the application interface. The server makes the final authorization decision.
 
-The English version of this OpenIM Android SDK guide is deferred until the reviewed Chinese documentation is complete.
+```java
+messageManager.revokeMessageV2(callback, conversationID, clientMsgID);
+```
+
+The success callback means that the server completed the revocation request; it does not mean that every client has received the event. Receiving clients merge the change through `OnAdvanceMsgListener.onRecvMessageRevokedV2`.
+
+This page is the complete owner of `onRecvMessageRevokedV2`. `RevokedInfo` contains the `clientMsgID`, revoker, and revocation time, but not the `conversationID`. Resolve the owning conversation from the current account's message index, then update by `conversationID:clientMsgID`:
+
+```java
+@Override
+public void onRecvMessageRevokedV2(RevokedInfo info) {
+    String clientMsgID = info.getClientMsgID();
+    String conversationID = findConversationIDByClientMsgID(clientMsgID);
+    if (conversationID == null) {
+        return;
+    }
+    markMessageRevoked(conversationID, clientMsgID, info);
+}
+```
+
+Update the matching message to a revoked state instead of deleting it from the list. Add this callback to the application's single `OnAdvanceMsgListener`; see [Events](/sdk/android/events/overview-events) for centralized setup.
+
+Callback completion, event delivery, and a new history query are three independent stages. Re-query the corresponding conversation history when reconciliation is required.

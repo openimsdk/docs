@@ -1,11 +1,31 @@
 ---
 title: '撤回消息'
-description: '使用 revokeMessageV2 撤回已发送消息。'
+description: '撤回已发送消息，并处理其他客户端收到的撤回通知。'
 sourcePath: '/sdk/android/message/managing-messages/revoke-a-message'
 ---
 
-Android 的撤回方法为 `revokeMessageV2()`，撤回详情通过 `onRecvMessageRevokedV2` 返回。
+撤回会使其他客户端把原消息显示为撤回状态。调用前应确认消息已经发送成功，并由业务界面限制可撤回时间；最终权限由服务端校验。
 
 ```java
 messageManager.revokeMessageV2(callback, conversationID, clientMsgID);
 ```
+
+成功回调表示服务端完成撤回请求，不代表所有客户端都已经收到事件。接收端通过 `OnAdvanceMsgListener.onRecvMessageRevokedV2` 合并撤回变化。
+
+本页是 `onRecvMessageRevokedV2` 的完整事件归属页。`RevokedInfo` 包含 `clientMsgID`、撤回者和撤回时间，但不包含 `conversationID`，应先从当前账号的消息索引解析所属会话，再按 `conversationID:clientMsgID` 更新消息：
+
+```java
+@Override
+public void onRecvMessageRevokedV2(RevokedInfo info) {
+    String clientMsgID = info.getClientMsgID();
+    String conversationID = findConversationIDByClientMsgID(clientMsgID);
+    if (conversationID == null) {
+        return;
+    }
+    markMessageRevoked(conversationID, clientMsgID, info);
+}
+```
+
+接收端应把对应消息更新为撤回状态，而不是直接从列表删除。该回调应纳入应用唯一的 `OnAdvanceMsgListener`，集中设置入口见[事件概览](/sdk/android/events/overview-events)。
+
+成功回调、撤回事件到达和重新查询历史是三个独立阶段。需要校准时重新读取对应会话的历史消息。
