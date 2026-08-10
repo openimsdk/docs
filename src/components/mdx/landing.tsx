@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { HeroProductImage } from '@/src/components/mdx/hero-product-image';
 import { CodeIcon, LayoutIcon, ServerIcon } from '@/src/components/ui/icons';
 import type { Locale } from '@/src/lib/i18n';
 import { toLocalizedPath } from '@/src/lib/i18n';
@@ -838,7 +839,6 @@ export function ChatHero({
           secondaryHref,
         }
       : { eyebrow, title, description, primaryLabel, primaryHref, secondaryLabel, secondaryHref };
-
   return (
     <section className="chat-hero">
       <div aria-hidden="true" className="chat-hero-backdrop">
@@ -861,27 +861,7 @@ export function ChatHero({
         </div>
       </div>
       <div aria-hidden="true" className="chat-hero-visual">
-        <div className="visual-window">
-          <div className="visual-window-bar">
-            <i />
-            <i />
-            <i />
-          </div>
-          <div className="visual-layout">
-            <div className="visual-sidebar">
-              <span />
-              <span />
-              <span />
-              <span />
-            </div>
-            <div className="visual-thread">
-              <div className="visual-message is-accent" />
-              <div className="visual-message" />
-              <div className="visual-message is-short" />
-              <div className="visual-composer" />
-            </div>
-          </div>
-        </div>
+        <HeroProductImage />
       </div>
     </section>
   );
