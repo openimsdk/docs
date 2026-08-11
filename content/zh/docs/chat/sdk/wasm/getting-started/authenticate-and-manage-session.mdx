@@ -20,7 +20,7 @@ WASM SDK 使用 `login()` 建立当前用户的登录会话。开始认证前，
 先发布浏览器 SDK 所需的 WASM 资源，再创建 SDK 实例。`coreWasmPath` 和 `sqlWasmPath` 必须指向浏览器可访问的资源路径。
 
 ```ts
-import { CbEvents, getSDK } from '@openim/wasm-client-sdk';
+import { getSDK, SdkEvent } from '@openim/wasm-client-sdk';
 
 const openimsdk = getSDK({
   coreWasmPath: '/openIM.wasm',
@@ -72,14 +72,14 @@ const handleConnectFailed = ({ errCode, errMsg }) => {
   console.error('OpenIMClientSDK 连接失败', { errCode, errMsg });
 };
 
-openimsdk.on(CbEvents.OnConnecting, handleConnecting);
-openimsdk.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
-openimsdk.on(CbEvents.OnConnectFailed, handleConnectFailed);
+openimsdk.on(SdkEvent.OnConnecting, handleConnecting);
+openimsdk.on(SdkEvent.OnConnectSuccess, handleConnectSuccess);
+openimsdk.on(SdkEvent.OnConnectFailed, handleConnectFailed);
 ```
 
 ## 登录当前用户
 
-调用 `login()` 时传入 `InitAndLoginConfig`。下面示例使用 `Platform.Web`，避免在业务代码中直接填写平台数字：
+调用 `login()` 时传入 `LoginParams`。下面示例使用 `Platform.Web`，避免在业务代码中直接填写平台数字：
 
 ```ts
 import { LogLevel, Platform } from '@openim/wasm-client-sdk';
@@ -111,6 +111,8 @@ try {
 | `wsAddr` | `string` | 是 | OpenIMServer 的 WebSocket 地址，必须能从当前浏览器建立连接；HTTPS 页面通常使用 WSS 地址。 |
 | `logLevel` | `LogLevel` | 否 | SDK 日志级别。开发环境可使用 `Debug`，生产环境通常使用 `Warn` 或 `Error`。 |
 | `isLogStandardOutput` | `boolean` | 否 | 是否把 SDK 核心日志输出到浏览器控制台。关闭该字段不等于关闭 `getSDK({ debug })` 控制的 JavaScript 包装层日志。 |
+| `isExternalExtensions` | `boolean` | 否 | 是否启用消息外部扩展能力；仅在服务端和业务已启用并实现对应扩展协议时设置为 `true`。 |
+| `tryParse` | `boolean` | 否 | 是否尝试把 SDK 返回的 JSON 字符串解析为对象，默认值为 `true`。关闭后，业务层需要自行解析响应数据。 |
 
 `login()` 的 Promise 成功表示登录请求已经完成；`OnConnectSuccess` 表示 SDK 连接已经可用。两者是不同阶段，不能只因 Promise 成功就立即调用依赖连接的消息、会话、群组或用户 API。
 
@@ -142,7 +144,7 @@ import { LoginStatus } from '@openim/wasm-client-sdk';
 
 const { data: loginStatus } = await openimsdk.getLoginStatus();
 
-if (loginStatus === LoginStatus.Logged) {
+if (loginStatus === LoginStatus.LoggedIn) {
   const { data: currentUserID } = await openimsdk.getLoginUserID();
   restoreSessionFor(currentUserID);
 }
@@ -152,9 +154,9 @@ if (loginStatus === LoginStatus.Logged) {
 
 | 状态 | 说明 |
 | --- | --- |
-| `LoginStatus.Logout` | 当前 SDK 实例未登录。 |
-| `LoginStatus.Logging` | 登录流程正在进行，不要再次发起并行登录。 |
-| `LoginStatus.Logged` | SDK 已登录；仍应结合连接事件判断当前网络连接是否可用。 |
+| `LoginStatus.LoggedOut` | 当前 SDK 实例未登录。 |
+| `LoginStatus.LoggingIn` | 登录流程正在进行，不要再次发起并行登录。 |
+| `LoginStatus.LoggedIn` | SDK 已登录；仍应结合连接事件判断当前网络连接是否可用。 |
 
 `getLoginUserID()` 返回 SDK 当前登录的用户 ID，适合校验应用账号与 SDK 账号是否一致；它不能替代业务侧身份认证。这两个查询的 Promise 成功后，都可以直接使用各自的 `data` 建立当前登录快照。查询本身不会触发连接事件。
 
@@ -194,16 +196,16 @@ const handleUserTokenExpired = async () => {
   await refreshSessionAndRelogin();
 };
 
-const handleUserTokenInvalid = () => {
-  console.warn('OpenIMSDK Token 无效');
+const handleUserTokenInvalid = ({ data: reason }) => {
+  console.warn('OpenIMSDK Token 无效', { reason });
   redirectToSignIn();
 };
 
-openimsdk.on(CbEvents.OnUserTokenExpired, handleUserTokenExpired);
-openimsdk.on(CbEvents.OnUserTokenInvalid, handleUserTokenInvalid);
+openimsdk.on(SdkEvent.OnUserTokenExpired, handleUserTokenExpired);
+openimsdk.on(SdkEvent.OnUserTokenInvalid, handleUserTokenInvalid);
 ```
 
-刷新 Token 时，应重新向可信后端请求新的 `userID`、Token 和服务地址，然后按产品策略重新调用 `login()` 或引导用户重新登录。
+`OnUserTokenInvalid` 的 `data` 是 SDK 返回的原因字符串，仅用于诊断和界面提示，不应据此绕过重新认证。刷新 Token 时，应重新向可信后端请求新的 `userID`、Token 和服务地址，然后按产品策略重新调用 `login()` 或引导用户重新登录。
 
 ### 会话 Token 差异
 
@@ -221,7 +223,7 @@ const handleKickedOffline = () => {
   showSignedInElsewhereDialog();
 };
 
-openimsdk.on(CbEvents.OnKickedOffline, handleKickedOffline);
+openimsdk.on(SdkEvent.OnKickedOffline, handleKickedOffline);
 ```
 
 收到 `OnKickedOffline` 时，WASM SDK 已经自动退出当前登录会话，不要再调用 `logout()`。事件处理器只需清理应用自身保存的当前用户、会话列表、消息视图和页面状态，再根据产品策略提示重新登录或跳转到登录页。
@@ -250,12 +252,12 @@ OpenIM WASM SDK 不提供「仅断开 WebSocket、但保留登录会话」的独
 
 ```ts
 function removeSessionListeners() {
-  openimsdk.off(CbEvents.OnConnecting, handleConnecting);
-  openimsdk.off(CbEvents.OnConnectSuccess, handleConnectSuccess);
-  openimsdk.off(CbEvents.OnConnectFailed, handleConnectFailed);
-  openimsdk.off(CbEvents.OnUserTokenExpired, handleUserTokenExpired);
-  openimsdk.off(CbEvents.OnUserTokenInvalid, handleUserTokenInvalid);
-  openimsdk.off(CbEvents.OnKickedOffline, handleKickedOffline);
+  openimsdk.off(SdkEvent.OnConnecting, handleConnecting);
+  openimsdk.off(SdkEvent.OnConnectSuccess, handleConnectSuccess);
+  openimsdk.off(SdkEvent.OnConnectFailed, handleConnectFailed);
+  openimsdk.off(SdkEvent.OnUserTokenExpired, handleUserTokenExpired);
+  openimsdk.off(SdkEvent.OnUserTokenInvalid, handleUserTokenInvalid);
+  openimsdk.off(SdkEvent.OnKickedOffline, handleKickedOffline);
 }
 ```
 

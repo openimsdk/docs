@@ -47,18 +47,21 @@ Promise 成功后，`data` 是当前页的 `ConversationItem[]`。
 | `latestMsg` | `string` | 最后一条消息的序列化内容；为空时表示没有可展示的末条消息。 |
 | `latestMsgSendTime` | `number` | 最后一条消息的发送时间，用于列表排序。 |
 | `unreadCount` | `number` | 当前账号在该会话中的未读消息数。 |
-| `recvMsgOpt` | `MessageReceiveOptType` | 该会话的消息接收与提醒方式。 |
-| `groupAtType` | `GroupAtType` | 群聊中的 @ 提醒状态；单聊不使用。 |
+| `recvMsgOpt` | `MessageReceiveOption` | 该会话的消息接收与提醒方式。 |
+| `groupAtType` | `GroupMentionType` | 群聊中的 @ 提醒状态；单聊不使用。 |
 | `draftText` | `string` | 当前设备保存的会话草稿。 |
 | `draftTextTime` | `number` | 草稿更新时间。 |
 | `isPinned` | `boolean` | 会话是否置顶。 |
-| `isMarked` | `boolean` | 会话是否已标记，可与会话分组中的“标记”分组配合使用。 |
+| `isMarked` <span className="enterprise-field-badge">商业版</span> | `boolean`（可选） | 会话是否已标记，可与会话分组中的“标记”分组配合使用。 |
 | `isPrivateChat` | `boolean` | 是否启用私聊阅后即焚。 |
 | `burnDuration` | `number` | 私聊阅后即焚时长。 |
 | `isMsgDestruct` | `boolean` | 是否启用定期删除服务端消息。 |
 | `msgDestructTime` | `number` | 服务端消息的定期删除周期。 |
 | `isNotInGroup` | `boolean` | 当前账号是否已经不在该群组中。 |
-| `remark` | `string`（可选） | 会话备注。 |
+| `updateUnreadCountTime` | `number`（可选） | 会话未读数最后一次更新的时间。 |
+| `maxSeq` | `number`（可选） | 当前会话已同步消息的最大序列号。 |
+| `minSeq` | `number`（可选） | 当前会话已同步消息的最小序列号。 |
+| `remark` <span className="enterprise-field-badge">商业版</span> | `string`（可选） | 会话备注。 |
 | `attachedInfo` | `string` | SDK 附加信息；只按已确认的业务约定解析。 |
 | `ex` | `string`（可选） | 会话扩展字符串。 |
 
@@ -70,10 +73,10 @@ Promise 成功后，`data` 是当前页的 `ConversationItem[]`。
 
 ## 保持列表同步
 
-`getConversationListSplit()` 成功后，以返回的 `ConversationItem[]` 合并当前分页快照；查询本身不应描述为触发会话事件。列表打开期间监听 `CbEvents.OnNewConversation` 和 `CbEvents.OnConversationChanged`，两个事件的 `data` 都是 `ConversationItem[]`，应按 `conversationID` 合并新增和变化的会话：
+`getConversationListSplit()` 成功后，以返回的 `ConversationItem[]` 合并当前分页快照；查询本身不应描述为触发会话事件。列表打开期间监听 `SdkEvent.OnNewConversation` 和 `SdkEvent.OnConversationChanged`，两个事件的 `data` 都是 `ConversationItem[]`，应按 `conversationID` 合并新增和变化的会话：
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handleNewConversation = ({ data }) => {
   mergeConversations(data);
@@ -83,12 +86,12 @@ const handleConversationChanged = ({ data }) => {
   mergeConversations(data);
 };
 
-openimsdk.on(CbEvents.OnNewConversation, handleNewConversation);
-openimsdk.on(CbEvents.OnConversationChanged, handleConversationChanged);
+openimsdk.on(SdkEvent.OnNewConversation, handleNewConversation);
+openimsdk.on(SdkEvent.OnConversationChanged, handleConversationChanged);
 
 function removeConversationListListeners() {
-  openimsdk.off(CbEvents.OnNewConversation, handleNewConversation);
-  openimsdk.off(CbEvents.OnConversationChanged, handleConversationChanged);
+  openimsdk.off(SdkEvent.OnNewConversation, handleNewConversation);
+  openimsdk.off(SdkEvent.OnConversationChanged, handleConversationChanged);
 }
 ```
 

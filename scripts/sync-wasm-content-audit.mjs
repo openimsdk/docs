@@ -14,11 +14,11 @@ const defaultSources = {
   },
   wasmSdk: {
     package: '@openim/wasm-client-sdk',
-    version: '3.8.5-hotfix.0',
+    version: '3.8.3-patch.15.1',
     integrity:
-      'sha512-JvUwGeTgUVgicS/88hJtJRkENWBzoPi/8TtQ8/JnqLWFIoLcpdHbs3fXsJ1ZE927v1tfTuwEaXausmsan70Quw==',
-    repository: 'https://github.com/OpenIMSDK/Open-IM-SDK-Web-Wasm',
-    commit: 'd99f708a17808e0aab50b034dce51cfbb1e1e9d8',
+      'sha512-X34t69RxIALLppmdg4/HJaWQCFdA9JhbedOMW7zoAV81g87+8ZP3RgWsqbyBxBGfQIkf/rjfhpeApbeWf4Oa/g==',
+    repository: 'https://github.com/openimsdk/openim-sdk-js-wasm',
+    commit: '615d327c78c5ecf9a01a053f6889d01cb9094639',
   },
 };
 

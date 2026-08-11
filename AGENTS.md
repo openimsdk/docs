@@ -21,7 +21,7 @@
 
 ## WASM SDK 基线
 
-- WASM API 基线为 `@openim/wasm-client-sdk@3.8.5-hotfix.0`。
+- WASM API 基线为 `@openim/wasm-client-sdk@3.8.3-patch.15.1`。
 - WASM 包只作为核对 API、参数、响应和事件的证据，不得添加为站点运行时或构建依赖。
 - 除 `wasm/logger` 日志页外，正文和示例中不说明或传递 `operationID`。日志页可以集中说明其调用链路追踪用途、自动生成规则和最小示例，其他 API 页面不得重复展开。
 - 已废弃方法不写入公开正文；其能力必须在替代 API 页面中说明。

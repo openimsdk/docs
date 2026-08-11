@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-03'
+lastUpdated: '2026-08-11'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/getting-started/authenticate-and-manage-session'
@@ -27,7 +27,7 @@ Follow this sequence for a complete sign-in flow:
 Publish the WASM assets required by the browser SDK before creating the SDK instance. `coreWasmPath` and `sqlWasmPath` must point to assets the browser can access.
 
 ```ts
-import { CbEvents, getSDK } from '@openim/wasm-client-sdk';
+import { getSDK, SdkEvent } from '@openim/wasm-client-sdk';
 
 const openimsdk = getSDK({
   coreWasmPath: '/openIM.wasm',
@@ -79,14 +79,14 @@ const handleConnectFailed = ({ errCode, errMsg }) => {
   console.error('OpenIMClientSDK connection failed', { errCode, errMsg });
 };
 
-openimsdk.on(CbEvents.OnConnecting, handleConnecting);
-openimsdk.on(CbEvents.OnConnectSuccess, handleConnectSuccess);
-openimsdk.on(CbEvents.OnConnectFailed, handleConnectFailed);
+openimsdk.on(SdkEvent.OnConnecting, handleConnecting);
+openimsdk.on(SdkEvent.OnConnectSuccess, handleConnectSuccess);
+openimsdk.on(SdkEvent.OnConnectFailed, handleConnectFailed);
 ```
 
 ## Sign in the current user
 
-Pass an `InitAndLoginConfig` object to `login()`. The following example uses `Platform.Web` instead of placing a numeric platform value in application code:
+Pass a `LoginParams` object to `login()`. The following example uses `Platform.Web` instead of placing a numeric platform value in application code:
 
 ```ts
 import { LogLevel, Platform } from '@openim/wasm-client-sdk';
@@ -118,6 +118,8 @@ try {
 | `wsAddr` | `string` | Yes | The OpenIMServer WebSocket address, which must accept connections from the current browser. An HTTPS page normally uses WSS. |
 | `logLevel` | `LogLevel` | No | The SDK log level. Use `Debug` during development and normally `Warn` or `Error` in production. |
 | `isLogStandardOutput` | `boolean` | No | Whether to send core SDK logs to the browser console. Disabling this option does not disable JavaScript wrapper logs controlled by `getSDK({ debug })`. |
+| `isExternalExtensions` | `boolean` | No | Whether to enable external message extensions. Set it to `true` only when the server and application implement the corresponding extension contract. |
+| `tryParse` | `boolean` | No | Whether the SDK should try to parse JSON response strings into objects. It defaults to `true`; when disabled, the application must parse response data itself. |
 
 A successful `login()` Promise means that the sign-in request has completed. `OnConnectSuccess` means that the SDK connection is ready. These are separate stages: do not call message, conversation, group, or user APIs that depend on the connection solely because the Promise succeeded.
 
@@ -149,7 +151,7 @@ import { LoginStatus } from '@openim/wasm-client-sdk';
 
 const { data: loginStatus } = await openimsdk.getLoginStatus();
 
-if (loginStatus === LoginStatus.Logged) {
+if (loginStatus === LoginStatus.LoggedIn) {
   const { data: currentUserID } = await openimsdk.getLoginUserID();
   restoreSessionFor(currentUserID);
 }
@@ -159,9 +161,9 @@ if (loginStatus === LoginStatus.Logged) {
 
 | Value | Description |
 | --- | --- |
-| `LoginStatus.Logout` | The current SDK instance is signed out. |
-| `LoginStatus.Logging` | Sign-in is in progress. Do not start another sign-in concurrently. |
-| `LoginStatus.Logged` | The SDK is signed in. Continue to use connection events to determine whether the network connection is currently available. |
+| `LoginStatus.LoggedOut` | The current SDK instance is signed out. |
+| `LoginStatus.LoggingIn` | Sign-in is in progress. Do not start another sign-in concurrently. |
+| `LoginStatus.LoggedIn` | The SDK is signed in. Continue to use connection events to determine whether the network connection is currently available. |
 
 `getLoginUserID()` returns the user ID currently signed in to the SDK. Use it to verify that the application account and SDK account match; it does not replace application authentication. When either query Promise succeeds, use its `data` value to establish the current sign-in snapshot. The queries themselves do not trigger connection events.
 
@@ -201,16 +203,16 @@ const handleUserTokenExpired = async () => {
   await refreshSessionAndRelogin();
 };
 
-const handleUserTokenInvalid = () => {
-  console.warn('OpenIMSDK token is invalid');
+const handleUserTokenInvalid = ({ data: reason }) => {
+  console.warn('OpenIMSDK token is invalid', { reason });
   redirectToSignIn();
 };
 
-openimsdk.on(CbEvents.OnUserTokenExpired, handleUserTokenExpired);
-openimsdk.on(CbEvents.OnUserTokenInvalid, handleUserTokenInvalid);
+openimsdk.on(SdkEvent.OnUserTokenExpired, handleUserTokenExpired);
+openimsdk.on(SdkEvent.OnUserTokenInvalid, handleUserTokenInvalid);
 ```
 
-To refresh a token, request a new `userID`, token, and service addresses from the trusted backend, then call `login()` again or direct the user to sign in according to your product policy.
+The `data` value of `OnUserTokenInvalid` is a reason string returned by the SDK. Use it only for diagnostics and user-facing guidance; never use it to bypass reauthentication. To refresh a token, request a new `userID`, token, and service addresses from the trusted backend, then call `login()` again or direct the user to sign in according to your product policy.
 
 ### Access tokens and session tokens
 
@@ -228,7 +230,7 @@ const handleKickedOffline = () => {
   showSignedInElsewhereDialog();
 };
 
-openimsdk.on(CbEvents.OnKickedOffline, handleKickedOffline);
+openimsdk.on(SdkEvent.OnKickedOffline, handleKickedOffline);
 ```
 
 When `OnKickedOffline` arrives, the WASM SDK has already signed out the current session automatically. Do not call `logout()` again. The event handler only needs to clear the application's current user, conversation list, message view, and page state, then prompt the user to sign in again or navigate to the sign-in page according to product policy.
@@ -257,12 +259,12 @@ This page owns the complete listener examples for connection, token, and account
 
 ```ts
 function removeSessionListeners() {
-  openimsdk.off(CbEvents.OnConnecting, handleConnecting);
-  openimsdk.off(CbEvents.OnConnectSuccess, handleConnectSuccess);
-  openimsdk.off(CbEvents.OnConnectFailed, handleConnectFailed);
-  openimsdk.off(CbEvents.OnUserTokenExpired, handleUserTokenExpired);
-  openimsdk.off(CbEvents.OnUserTokenInvalid, handleUserTokenInvalid);
-  openimsdk.off(CbEvents.OnKickedOffline, handleKickedOffline);
+  openimsdk.off(SdkEvent.OnConnecting, handleConnecting);
+  openimsdk.off(SdkEvent.OnConnectSuccess, handleConnectSuccess);
+  openimsdk.off(SdkEvent.OnConnectFailed, handleConnectFailed);
+  openimsdk.off(SdkEvent.OnUserTokenExpired, handleUserTokenExpired);
+  openimsdk.off(SdkEvent.OnUserTokenInvalid, handleUserTokenInvalid);
+  openimsdk.off(SdkEvent.OnKickedOffline, handleKickedOffline);
 }
 ```
 

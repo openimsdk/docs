@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
+lastUpdated: '2026-08-11'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-recipient'
@@ -17,7 +17,7 @@ Group owners and administrators can call `getGroupApplicationListAsRecipient()` 
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `groupID` | `string[]` | Yes | IDs of the groups to query. |
+| `groupIDs` | `string[]` | Yes | IDs of the groups to query. |
 | `handleResults` | `number[]` | Yes | Application processing results to include. |
 | `offset` | `number` | Yes | Starting offset. Pass `0` for the first page. |
 | `count` | `number` | Yes | Maximum number of applications to retrieve. |
@@ -25,15 +25,15 @@ Group owners and administrators can call `getGroupApplicationListAsRecipient()` 
 | Enum value | Numeric value | Meaning |
 | --- | --- | --- |
 | `ApplicationHandleResult.Unprocessed` | `0` | Pending. |
-| `ApplicationHandleResult.Agree` | `1` | Accepted. |
-| `ApplicationHandleResult.Reject` | `-1` | Rejected. |
+| `ApplicationHandleResult.Accepted` | `1` | Accepted. |
+| `ApplicationHandleResult.Rejected` | `-1` | Rejected. |
 
 ```ts
 import { ApplicationHandleResult } from '@openim/wasm-client-sdk';
 
 const { data: applications } =
   await openimsdk.getGroupApplicationListAsRecipient({
-    groupID: [groupID],
+    groupIDs: [groupID],
     handleResults: [ApplicationHandleResult.Unprocessed],
     offset: 0,
     count: 20,
@@ -55,6 +55,7 @@ When the Promise resolves, `data` is a `GroupApplicationItem[]` containing appli
 | `reqMsg` | `string` | Message included with the application. |
 | `reqTime` | `number` | Time when the application was submitted. |
 | `joinSource` | `GroupJoinSource` | Source of the application, such as search or a QR code. |
+| `inviterUserID` | `string` (optional) | User ID of the inviter for invitation-based joins. It may be empty for a self-submitted application. |
 | `handleResult` | `ApplicationHandleResult` | Current result: pending, accepted, or rejected. |
 | `handleUserID` | `string` | User ID of the owner or administrator who processed the application. It may be empty while the application is pending. |
 | `handledMsg` | `string` | Message provided when the application was processed. |
@@ -70,6 +71,7 @@ When the Promise resolves, `data` is a `GroupApplicationItem[]` containing appli
 | `status` | `GroupStatus` | Snapshot of the target group's status. |
 | `createTime` | `number` | Time when the application record was created. |
 | `ex` | `string` | Extension string stored with the application record. |
+| `attachedInfo` | `string` (optional) | SDK attachment data. Parse it only according to a confirmed application contract. |
 
 The applicant and group profiles are snapshots stored with the application. If you need to display current information, query the user profile and group profile separately. Do not write the nickname, avatar, or member count from an application back to the corresponding entity cache.
 
@@ -78,7 +80,7 @@ The applicant and group profiles are snapshots stored with the application. If y
 This page is the canonical reference for group application event listeners. Use `groupID:userID` as the merge key for an application record:
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handlers = {
   added: ({ data }) => mergeGroupApplication(data),
@@ -88,22 +90,22 @@ const handlers = {
   badgeChanged: ({ data }) => updateGroupApplicationBadge(data),
 };
 
-openimsdk.on(CbEvents.OnGroupApplicationAdded, handlers.added);
-openimsdk.on(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
-openimsdk.on(CbEvents.OnGroupApplicationRejected, handlers.rejected);
-openimsdk.on(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+openimsdk.on(SdkEvent.OnGroupApplicationAdded, handlers.added);
+openimsdk.on(SdkEvent.OnGroupApplicationAccepted, handlers.accepted);
+openimsdk.on(SdkEvent.OnGroupApplicationRejected, handlers.rejected);
+openimsdk.on(SdkEvent.OnGroupApplicationDeleted, handlers.deleted);
 openimsdk.on(
-  CbEvents.OnGroupApplicationBadgeCountChanged,
+  SdkEvent.OnGroupApplicationBadgeCountChanged,
   handlers.badgeChanged,
 );
 
 function removeGroupApplicationListeners() {
-  openimsdk.off(CbEvents.OnGroupApplicationAdded, handlers.added);
-  openimsdk.off(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
-  openimsdk.off(CbEvents.OnGroupApplicationRejected, handlers.rejected);
-  openimsdk.off(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+  openimsdk.off(SdkEvent.OnGroupApplicationAdded, handlers.added);
+  openimsdk.off(SdkEvent.OnGroupApplicationAccepted, handlers.accepted);
+  openimsdk.off(SdkEvent.OnGroupApplicationRejected, handlers.rejected);
+  openimsdk.off(SdkEvent.OnGroupApplicationDeleted, handlers.deleted);
   openimsdk.off(
-    CbEvents.OnGroupApplicationBadgeCountChanged,
+    SdkEvent.OnGroupApplicationBadgeCountChanged,
     handlers.badgeChanged,
   );
 }

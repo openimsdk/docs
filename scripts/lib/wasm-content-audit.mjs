@@ -115,7 +115,7 @@ function validateSources(sources, errors) {
     errors.push('sources.wasmSdk.integrity must be sha512');
   }
   if (
-    !/^https:\/\/github\.com\/openimsdk\/open-im-sdk-web-wasm\/?$/i.test(
+    !/^https:\/\/github\.com\/openimsdk\/openim-sdk-js-wasm\/?$/i.test(
       sources.wasmSdk?.repository ?? '',
     )
   ) {
@@ -123,6 +123,63 @@ function validateSources(sources, errors) {
   }
   if (!/^[a-f0-9]{40}$/i.test(sources.wasmSdk?.commit ?? '')) {
     errors.push('sources.wasmSdk.commit must be a 40-character git commit');
+  }
+  if (sources.wasmLegacyImplementation !== undefined) {
+    if (
+      !/^https:\/\/github\.com\/openimsdk\/open-im-sdk-web-wasm\/?$/i.test(
+        sources.wasmLegacyImplementation?.repository ?? '',
+      )
+    ) {
+      errors.push(
+        'sources.wasmLegacyImplementation.repository must identify the legacy OpenIM WASM implementation repository',
+      );
+    }
+    if (!/^[a-f0-9]{40}$/i.test(sources.wasmLegacyImplementation?.commit ?? '')) {
+      errors.push('sources.wasmLegacyImplementation.commit must be a 40-character git commit');
+    }
+  }
+  validateTypeSource(
+    sources.wasmSdkTypes,
+    {
+      key: 'wasmSdkTypes',
+      repository: 'openimsdk/openim-sdk-js-wasm',
+      packageName: '@openim/wasm-client-sdk',
+      requireIntegrity: true,
+    },
+    errors,
+  );
+  validateTypeSource(
+    sources.wasmEnterpriseTypes,
+    {
+      key: 'wasmEnterpriseTypes',
+      repository: 'openimsdk/open-im-sdk-core-enterprise',
+      packageName: '@openim/client-sdk-types',
+      requireIntegrity: false,
+    },
+    errors,
+  );
+}
+
+function validateTypeSource(source, expected, errors) {
+  if (source === undefined) return;
+  if (source.package !== expected.packageName) {
+    errors.push(`sources.${expected.key}.package must be ${expected.packageName}`);
+  }
+  if (!/^\d+\.\d+\.\d+(?:[-.][0-9A-Za-z.-]+)?$/.test(source.version ?? '')) {
+    errors.push(`sources.${expected.key}.version must be pinned`);
+  }
+  if (expected.requireIntegrity && !/^sha512-[A-Za-z0-9+/]+=*$/.test(source.integrity ?? '')) {
+    errors.push(`sources.${expected.key}.integrity must be sha512`);
+  }
+  if (
+    !new RegExp(`^https://github\\.com/${expected.repository}/?$`, 'i').test(
+      source.repository ?? '',
+    )
+  ) {
+    errors.push(`sources.${expected.key}.repository must identify ${expected.repository}`);
+  }
+  if (!/^[a-f0-9]{40}$/i.test(source.commit ?? '')) {
+    errors.push(`sources.${expected.key}.commit must be a 40-character git commit`);
   }
 }
 
@@ -264,17 +321,24 @@ function isImmutableOpenImSource(value) {
 }
 
 function isPinnedOpenImSource(source, sources) {
-  const pinnedRepositories = [sources?.openimDocs, sources?.sdkCore, sources?.wasmSdk].filter(
-    Boolean,
-  );
+  const pinnedRepositories = [
+    sources?.openimDocs,
+    sources?.sdkCore,
+    sources?.wasmSdk,
+    sources?.wasmLegacyImplementation,
+    sources?.wasmSdkTypes,
+    sources?.wasmEnterpriseTypes,
+  ].filter(Boolean);
   return pinnedRepositories.some(({ repository, commit }) => {
     const repositoryPath = repository
       ?.replace(/^https:\/\/github\.com\//i, '')
       .replace(/\/$/, '');
     if (!repositoryPath || !commit) return false;
+    const normalizedSource = source.toLowerCase();
+    const normalizedRepositoryPath = repositoryPath.toLowerCase();
     return (
-      source.includes(`github.com/${repositoryPath}/blob/${commit}/`) ||
-      source.includes(`raw.githubusercontent.com/${repositoryPath}/${commit}/`)
+      normalizedSource.includes(`github.com/${normalizedRepositoryPath}/blob/${commit}/`) ||
+      normalizedSource.includes(`raw.githubusercontent.com/${normalizedRepositoryPath}/${commit}/`)
     );
   });
 }

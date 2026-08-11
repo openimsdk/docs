@@ -9,7 +9,7 @@ sourcePath: '/sdk/wasm/message/creating-messages/create-text-at-message'
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
 | `text` | `string` | 是 | 消息正文；建议使用稳定的 `@userID` 标记。 |
-| `atUserIDList` | `string[]` | 是 | 被提及用户 ID；@ 全体时使用 SDK 的 `AtAllTag`。 |
+| `atUserIDList` | `string[]` | 是 | 被提及用户 ID；@ 全体时先调用 `getAtAllTag()` 获取专用标记。 |
 | `atUsersInfo` | `AtUserInfo[]` | 否 | 用户 ID 与群内展示名信息。 |
 | `message` | `MessageItem` | 否 | 被引用的原消息。 |
 
@@ -22,3 +22,17 @@ const { data: message } = await openimsdk.createTextAtMessage({
 ```
 
 Promise 成功只返回待发送对象。该消息只能发送到群聊；创建本身不会改变会话的 @ 状态，也不会触发新消息事件。
+
+## 提及全体成员
+
+不要在业务代码中写死全体成员标记。先从 SDK 取得当前标记，再将它同时放入正文和 `atUserIDList`：
+
+```ts
+const { data: atAllTag } = await openimsdk.getAtAllTag();
+const { data: message } = await openimsdk.createTextAtMessage({
+  text: `${atAllTag} 请查看群公告`,
+  atUserIDList: [atAllTag],
+});
+```
+
+`getAtAllTag()` 成功返回字符串标记；它只读取 SDK 约定，不创建消息，也不触发事件。

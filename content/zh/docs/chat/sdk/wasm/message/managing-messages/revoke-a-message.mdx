@@ -19,11 +19,11 @@ const { data } = await openimsdk.revokeMessage({
 markMessageRevoked(data?.clientMsgID ?? clientMsgID);
 ```
 
-Promise 成功后，调用端可先把当前列表中的同 `clientMsgID` 消息更新为撤回态。在线客户端随后通过 `CbEvents.OnNewRecvMessageRevoked` 收到撤回信息，接收端应根据事件里的 `clientMsgID` 更新对应气泡，而不是直接从列表中删除。
+Promise 成功后，调用端可先把当前列表中的同 `clientMsgID` 消息更新为撤回态。在线客户端随后通过 `SdkEvent.OnNewRecvMessageRevoked` 收到撤回信息，接收端应根据事件里的 `clientMsgID` 更新对应气泡，而不是直接从列表中删除。
 
 允许撤回的发送者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留撤回展示。
 
-SDK 同时保留 `CbEvents.OnRecvMessageRevoked`。它是旧的单条撤回事件名；新代码优先监听 `OnNewRecvMessageRevoked`。维护既有项目时，应先确认当前部署实际触发的事件；如果只能收到旧事件，则用旧事件名替换下方注册项并复用同一个处理器，不要同时监听两个名称后重复合并同一次撤回。
+SDK 同时保留 `SdkEvent.OnRecvMessageRevoked`。它是旧的单条撤回事件名；新代码优先监听 `OnNewRecvMessageRevoked`。维护既有项目时，应先确认当前部署实际触发的事件；如果只能收到旧事件，则用旧事件名替换下方注册项并复用同一个处理器，不要同时监听两个名称后重复合并同一次撤回。
 
 ## 返回结果
 
@@ -34,20 +34,20 @@ Promise 成功代表当前撤回请求已完成，不代表所有端界面已经
 本页是 `OnNewRecvMessageRevoked` 的完整监听示例归属页。同步删除见[批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)，按用户批量删除见[删除群聊中指定用户的全部消息](/sdk/wasm/message/managing-messages/delete-user-messages)。
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handleMessageRevoked = ({ data }) => {
   markMessageRevoked(data.clientMsgID);
 };
 
-openimsdk.on(CbEvents.OnNewRecvMessageRevoked, handleMessageRevoked);
+openimsdk.on(SdkEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 
 function removeRevokeListener() {
-  openimsdk.off(CbEvents.OnNewRecvMessageRevoked, handleMessageRevoked);
+  openimsdk.off(SdkEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 }
 ```
 
-`OnNewRecvMessageRevoked` 的 `data` 是 `RevokedInfo`。消息使用 `clientMsgID` 合并。组件卸载、退出登录或切换账号时调用 `removeRevokeListener()`；重新登录后的撤回变化由消息事件同步。
+`OnNewRecvMessageRevoked` 的 `data` 是 `RevokedInfo`。消息使用 `clientMsgID` 合并；`isAdminRevoke` 表示本次撤回是否由管理员执行，可用于选择合适的系统提示文案。组件卸载、退出登录或切换账号时调用 `removeRevokeListener()`；重新登录后的撤回变化由消息事件同步。
 
 ## 相关页面
 

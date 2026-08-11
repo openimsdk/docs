@@ -5,7 +5,7 @@ import { extractSdkApi } from '../sync-wasm-sdk-api.mjs';
 
 test('extracts SDK property methods, signatures, deprecations, and callback events', () => {
   const sdkDeclaration = `
-declare class SDK {
+declare class WasmSdk {
     _invoker<T>(functionName: string): Promise<T>;
     sendMessage: (params: SendMsgParams, operationID?: string) => Promise<WsResponse<MessageItem>>;
     /**
@@ -19,7 +19,7 @@ declare class SDK {
 }
 `;
   const eventDeclaration = `
-export declare enum CbEvents {
+export declare enum SdkEvent {
     OnConnectSuccess = "OnConnectSuccess",
     OnRecvOfflineNewMessage = "onRecvOfflineNewMessage"
 }

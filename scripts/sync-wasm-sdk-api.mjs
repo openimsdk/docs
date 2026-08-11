@@ -30,7 +30,13 @@ export function extractSdkApi(sdkDeclaration, eventDeclaration) {
   const events = [];
 
   walk(sdkSource, (node) => {
-    if (!ts.isClassDeclaration(node) || node.name?.text !== 'SDK') return;
+    if (
+      !ts.isClassDeclaration(node) ||
+      !node.name ||
+      !['WasmSdk', 'SDK'].includes(node.name.text)
+    ) {
+      return;
+    }
     for (const member of node.members) {
       if ((!ts.isPropertyDeclaration(member) && !ts.isMethodDeclaration(member)) || !member.type) {
         continue;
@@ -49,7 +55,7 @@ export function extractSdkApi(sdkDeclaration, eventDeclaration) {
   });
 
   walk(eventSource, (node) => {
-    if (!ts.isEnumDeclaration(node) || node.name.text !== 'CbEvents') return;
+    if (!ts.isEnumDeclaration(node) || node.name.text !== 'SdkEvent') return;
     for (const member of node.members) {
       const name = propertyName(member.name);
       if (!name || !member.initializer || !ts.isStringLiteral(member.initializer)) continue;

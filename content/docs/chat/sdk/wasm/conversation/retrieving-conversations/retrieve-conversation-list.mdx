@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-03'
+lastUpdated: '2026-08-11'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list'
@@ -54,18 +54,21 @@ After the Promise succeeds, `data` contains the current page of `ConversationIte
 | `latestMsg` | `string` | Serialized content of the latest message. An empty value means that no latest message is available for display. |
 | `latestMsgSendTime` | `number` | Send time of the latest message, used for list ordering. |
 | `unreadCount` | `number` | Number of messages unread by the current account in this conversation. |
-| `recvMsgOpt` | `MessageReceiveOptType` | Message reception and notification behavior for this conversation. |
-| `groupAtType` | `GroupAtType` | Mention reminder state in a group chat; not used for one-to-one chats. |
+| `recvMsgOpt` | `MessageReceiveOption` | Message reception and notification behavior for this conversation. |
+| `groupAtType` | `GroupMentionType` | Mention reminder state in a group chat; not used for one-to-one chats. |
 | `draftText` | `string` | Conversation draft stored on the current device. |
 | `draftTextTime` | `number` | Time when the draft was updated. |
 | `isPinned` | `boolean` | Whether the conversation is pinned. |
-| `isMarked` | `boolean` | Whether the conversation is marked. This works with the “Marked” conversation group. |
+| `isMarked` <span className="enterprise-field-badge">Enterprise</span> | `boolean` (optional) | Whether the conversation is marked. This works with the “Marked” conversation group. |
 | `isPrivateChat` | `boolean` | Whether burn after reading is enabled for the private chat. |
 | `burnDuration` | `number` | Burn-after-reading duration for the private chat. |
 | `isMsgDestruct` | `boolean` | Whether scheduled server-message deletion is enabled. |
 | `msgDestructTime` | `number` | Scheduled deletion interval for server messages. |
 | `isNotInGroup` | `boolean` | Whether the current account is no longer in the group. |
-| `remark` | `string` (optional) | Conversation remark. |
+| `updateUnreadCountTime` | `number` (optional) | Time when the conversation unread count was last updated. |
+| `maxSeq` | `number` (optional) | Highest message sequence currently synchronized for the conversation. |
+| `minSeq` | `number` (optional) | Lowest message sequence currently synchronized for the conversation. |
+| `remark` <span className="enterprise-field-badge">Enterprise</span> | `string` (optional) | Conversation remark. |
 | `attachedInfo` | `string` | SDK attachment data. Parse it only according to a confirmed application contract. |
 | `ex` | `string` (optional) | Conversation extension string. |
 
@@ -77,10 +80,10 @@ When fewer than `count` items are returned, the list has reached its end. On a m
 
 ## Keep the list synchronized
 
-After `getConversationListSplit()` succeeds, merge the returned `ConversationItem[]` into the current paginated snapshot. The query itself does not trigger conversation events. While the list is open, listen for `CbEvents.OnNewConversation` and `CbEvents.OnConversationChanged`. Both events carry `ConversationItem[]` in `data`; merge new and changed conversations by `conversationID`.
+After `getConversationListSplit()` succeeds, merge the returned `ConversationItem[]` into the current paginated snapshot. The query itself does not trigger conversation events. While the list is open, listen for `SdkEvent.OnNewConversation` and `SdkEvent.OnConversationChanged`. Both events carry `ConversationItem[]` in `data`; merge new and changed conversations by `conversationID`.
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handleNewConversation = ({ data }) => {
   mergeConversations(data);
@@ -90,12 +93,12 @@ const handleConversationChanged = ({ data }) => {
   mergeConversations(data);
 };
 
-openimsdk.on(CbEvents.OnNewConversation, handleNewConversation);
-openimsdk.on(CbEvents.OnConversationChanged, handleConversationChanged);
+openimsdk.on(SdkEvent.OnNewConversation, handleNewConversation);
+openimsdk.on(SdkEvent.OnConversationChanged, handleConversationChanged);
 
 function removeConversationListListeners() {
-  openimsdk.off(CbEvents.OnNewConversation, handleNewConversation);
-  openimsdk.off(CbEvents.OnConversationChanged, handleConversationChanged);
+  openimsdk.off(SdkEvent.OnNewConversation, handleNewConversation);
+  openimsdk.off(SdkEvent.OnConversationChanged, handleConversationChanged);
 }
 ```
 

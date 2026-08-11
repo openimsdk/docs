@@ -92,7 +92,9 @@ const fullCommercialConceptPages = new Set([
   '/sdk/wasm/conversation/managing-conversations/set-burn-duration',
   '/sdk/wasm/conversation/managing-conversations/set-message-destruct',
   '/sdk/wasm/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/wasm/conversation/managing-conversations/mark-conversation',
   '/sdk/wasm/message/composing-messages/save-local-transcript',
+  '/sdk/wasm/user/profile/set-friend-add-permission',
   '/sdk/flutter/conversation/managing-conversations/set-private-chat',
   '/sdk/flutter/conversation/managing-conversations/set-burn-duration',
   '/sdk/flutter/conversation/managing-conversations/set-message-destruct',
@@ -244,7 +246,7 @@ export function matchCommercialSymbol(
     withoutCall,
     withoutCall.replace(/^openimsdk\./, ''),
     withoutCall.replace(/^OpenIM\./, ''),
-    withoutCall.replace(/^CbEvents\./, ''),
+    withoutCall.replace(/^SdkEvent\./, ''),
     withoutCall.includes('.') ? (withoutCall.split('.').at(-1) ?? withoutCall) : withoutCall,
   ];
 

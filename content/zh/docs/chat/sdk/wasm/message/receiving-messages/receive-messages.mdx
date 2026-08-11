@@ -4,13 +4,13 @@ description: '监听在线、离线与仅在线消息事件，并按 clientMsgID
 sourcePath: '/sdk/wasm/message/receiving-messages/receive-messages'
 ---
 
-消息页通常同时处理实时推送的新消息、应用进入后台后到达的消息、只在线投递的消息，以及首次进入会话时主动读取的历史消息。消息到达通过 `CbEvents` 进入应用状态；历史列表通过 `getAdvancedHistoryMessageList()` 按 `conversationID` 分页读取。
+消息页通常同时处理实时推送的新消息、应用进入后台后到达的消息、只在线投递的消息，以及首次进入会话时主动读取的历史消息。消息到达通过 `SdkEvent` 进入应用状态；历史列表通过 `getAdvancedHistoryMessageList()` 按 `conversationID` 分页读取。
 
 在同一个 SDK 实例上注册事件处理器，并在组件卸载、退出登录或切换账号前用同一个函数引用调用 `off()`，避免同一批消息被重复合并。
 
 ## 消息类型
 
-`CbEvents.OnRecvNewMessages` 返回的是 `MessageItem[]`。每条消息可根据内容元素或消息类型选择对应的渲染方式，例如文本、自定义消息、@ 文本、图片、音频、视频和文件。
+`SdkEvent.OnRecvNewMessages` 返回的是 `MessageItem[]`。每条消息可根据内容元素或消息类型选择对应的渲染方式，例如文本、自定义消息、@ 文本、图片、音频、视频和文件。
 
 ```ts
 function renderMessage(message: MessageItem) {
@@ -52,9 +52,11 @@ WASM SDK 使用不同的消息元素表示图片、音频、视频和普通文�
 
 ## 事件处理器
 
-`CbEvents.OnRecvNewMessages` 是聊天页面最常用的新消息事件。处理器中把当前会话的消息合并到列表，并根据用户滚动位置决定是否自动滚到底部。
+`SdkEvent.OnRecvNewMessages` 是聊天页面最常用的新消息事件。处理器中把当前会话的消息合并到列表，并根据用户滚动位置决定是否自动滚到底部。
 
 ```ts
+import { SdkEvent } from '@openim/wasm-client-sdk';
+
 function handleNewMessages({ data }: { data: MessageItem[] }) {
   const messages = messagesForCurrentConversation(data);
 
@@ -66,44 +68,44 @@ function handleNewMessages({ data }: { data: MessageItem[] }) {
   scrollToLatestMessageIfNeeded();
 }
 
-openimsdk.on(CbEvents.OnRecvNewMessages, handleNewMessages);
+openimsdk.on(SdkEvent.OnRecvNewMessages, handleNewMessages);
 ```
 
-应用通过 `setAppBackgroundStatus(true)` 进入后台后，新到达的消息一般会走 `CbEvents.OnRecvOfflineNewMessages`，而不是前台常用的 `OnRecvNewMessages`。回到前台时应再调用 `setAppBackgroundStatus(false)`。处理方式与实时新消息相同：筛选当前会话、按 `clientMsgID` 去重，并保持时间顺序。前后台状态调用见[认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)。
+应用通过 `setAppBackgroundStatus(true)` 进入后台后，新到达的消息一般会走 `SdkEvent.OnRecvOfflineNewMessages`，而不是前台常用的 `OnRecvNewMessages`。回到前台时应再调用 `setAppBackgroundStatus(false)`。处理方式与实时新消息相同：筛选当前会话、按 `clientMsgID` 去重，并保持时间顺序。前后台状态调用见[认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)。
 
 ```ts
 function handleOfflineMessages({ data }: { data: MessageItem[] }) {
   mergeMessagesByClientMsgID(messagesForCurrentConversation(data));
 }
 
-openimsdk.on(CbEvents.OnRecvOfflineNewMessages, handleOfflineMessages);
+openimsdk.on(SdkEvent.OnRecvOfflineNewMessages, handleOfflineMessages);
 ```
 
-发送方在 `sendMessage()` 或 `sendMessageNotOss()` 中把 `isOnlineOnly` 设为 `true` 时，接收端通过 `CbEvents.OnRecvOnlineOnlyMessages` 收到这类只在线投递的消息。它们不会写入 SDK 本地消息存储，也不能通过历史消息接口回放，通常只适合临时提示或业务通知；是否展示在当前界面由产品规则决定。发送参数见[发送消息](/sdk/wasm/message/sending-messages/send-message)。
+发送方在 `sendMessage()` 或 `sendMessageNotOss()` 中把 `isOnlineOnly` 设为 `true` 时，接收端通过 `SdkEvent.OnRecvOnlineOnlyMessage` 收到这类只在线投递的消息。该事件每次提供一个 `MessageItem`。消息不会写入 SDK 本地消息存储，也不能通过历史消息接口回放，通常只适合临时提示或业务通知；是否展示在当前界面由产品规则决定。发送参数见[发送消息](/sdk/wasm/message/sending-messages/send-message)。
 
 ```ts
-function handleOnlineOnlyMessages({ data }: { data: MessageItem[] }) {
-  handleTransientMessages(messagesForCurrentConversation(data));
+function handleOnlineOnlyMessage({ data }: { data: MessageItem }) {
+  handleTransientMessages(messagesForCurrentConversation([data]));
 }
 
-openimsdk.on(CbEvents.OnRecvOnlineOnlyMessages, handleOnlineOnlyMessages);
+openimsdk.on(SdkEvent.OnRecvOnlineOnlyMessage, handleOnlineOnlyMessage);
 
 function removeMessageListeners() {
-  openimsdk.off(CbEvents.OnRecvNewMessages, handleNewMessages);
-  openimsdk.off(CbEvents.OnRecvOfflineNewMessages, handleOfflineMessages);
-  openimsdk.off(CbEvents.OnRecvOnlineOnlyMessages, handleOnlineOnlyMessages);
+  openimsdk.off(SdkEvent.OnRecvNewMessages, handleNewMessages);
+  openimsdk.off(SdkEvent.OnRecvOfflineNewMessages, handleOfflineMessages);
+  openimsdk.off(SdkEvent.OnRecvOnlineOnlyMessage, handleOnlineOnlyMessage);
 }
 ```
 
-SDK 同时导出单条事件 `OnRecvNewMessage`、`OnRecvOfflineNewMessage` 和 `OnRecvOnlineOnlyMessage`。新代码优先使用返回 `MessageItem[]` 的复数事件，便于统一批量合并。维护旧项目时，如果当前部署只触发单条事件，应把 `data` 包装成数组，再复用相同的去重流程；不要同时监听单数和复数事件名称，以免重复插入消息。
+SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。新代码对普通和离线消息优先使用返回 `MessageItem[]` 的复数事件，便于统一批量合并；只在线消息使用正式的单条事件 `OnRecvOnlineOnlyMessage`。维护旧项目时，如果普通或离线消息只触发单条事件，应把 `data` 包装成数组，再复用相同的去重流程；不要同时监听同类消息的单数和复数事件名称，以免重复插入消息。
 
-本页是这六个消息接收事件的归属页。上方示例使用三个复数事件；它们的 `data` 均为 `MessageItem[]`，先根据消息路由字段确定目标会话，再使用“目标会话 + `clientMsgID`”幂等合并。组件卸载、退出登录或切换账号时调用 `removeMessageListeners()`。
+本页是这些消息接收事件的归属页。普通和离线消息事件的 `data` 是 `MessageItem[]`，只在线消息事件的 `data` 是单个 `MessageItem`；都应先根据消息路由字段确定目标会话，再使用“目标会话 + `clientMsgID`”幂等合并。组件卸载、退出登录或切换账号时调用 `removeMessageListeners()`。
 
-当会话成员撤回消息时，接收端通过 `CbEvents.OnNewRecvMessageRevoked` 得到更新。建议把对应气泡更新为撤回态，而不是直接从列表中删除；事件处理器和清理方式见[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)。
+当会话成员撤回消息时，接收端通过 `SdkEvent.OnNewRecvMessageRevoked` 得到更新。建议把对应气泡更新为撤回态，而不是直接从列表中删除；事件处理器和清理方式见[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)。
 
 ## 首次进入会话时读取历史
 
-事件只负责推送新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史快照。分页参数、调用示例和 `AdvancedGetMessageResult` 结构见[加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)。
+事件只负责推送新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史快照。分页参数、调用示例和 `AdvancedMessageListResult` 结构见[加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)。
 
 历史查询不会触发新消息事件；事件和分页结果可能包含同一条消息，因此两条路径都必须使用相同的 `clientMsgID` 去重规则。
 
@@ -117,11 +119,11 @@ SDK 同时导出单条事件 `OnRecvNewMessage`、`OnRecvOfflineNewMessage` 和 
 
 ## 验证接收流程
 
-- 在另一个已登录账号中向目标 `groupID` 发送消息，确认当前浏览器通过 `CbEvents.OnRecvNewMessages` 收到消息。
+- 在另一个已登录账号中向目标 `groupID` 发送消息，确认当前浏览器通过 `SdkEvent.OnRecvNewMessages` 收到消息。
 - 确认回调使用当前群聊的 `conversationID` 过滤消息，并且列表按 `clientMsgID` 去重后只渲染一次。
-- 调用 `setAppBackgroundStatus(true)` 后，再由另一端发送消息，确认当前端通过 `CbEvents.OnRecvOfflineNewMessages` 收到；回到前台后调用 `setAppBackgroundStatus(false)`。
-- 发送方将 `isOnlineOnly` 设为 `true` 后，确认接收端通过 `CbEvents.OnRecvOnlineOnlyMessages` 收到，且该消息不会进入本地消息存储或历史列表。
-- 撤回一条群消息，确认接收端通过 `CbEvents.OnNewRecvMessageRevoked` 把对应 `clientMsgID` 更新为撤回态。
+- 调用 `setAppBackgroundStatus(true)` 后，再由另一端发送消息，确认当前端通过 `SdkEvent.OnRecvOfflineNewMessages` 收到；回到前台后调用 `setAppBackgroundStatus(false)`。
+- 发送方将 `isOnlineOnly` 设为 `true` 后，确认接收端通过 `SdkEvent.OnRecvOnlineOnlyMessage` 收到，且该消息不会进入本地消息存储或历史列表。
+- 撤回一条群消息，确认接收端通过 `SdkEvent.OnNewRecvMessageRevoked` 把对应 `clientMsgID` 更新为撤回态。
 - 进入群聊后调用 `markConversationMessageAsRead(conversationID)`，确认会话未读数和总未读角标随事件更新。
 
 ## 相关页面

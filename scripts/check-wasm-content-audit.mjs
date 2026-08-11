@@ -7,11 +7,17 @@ import { validateAuditManifest } from './lib/wasm-content-audit.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const wasmContext = 'chat/sdk/wasm';
 
-export function buildAuditReport({ routes, manualPaths, audit, api }) {
+export function buildAuditReport({ routes, manualPaths, audit, api, ownership }) {
   const routePaths = routes.map((route) => route.path);
   const activeRoutes = new Set(routePaths);
-  const sdkMethodNames = new Set((api.methods ?? []).map((method) => method.name));
-  const sdkEventNames = new Set((api.events ?? []).map((event) => event.name));
+  const sdkMethodNames = new Set([
+    ...(api.methods ?? []).map((method) => method.name),
+    ...(ownership?.methods ?? []).map((method) => method.name),
+  ]);
+  const sdkEventNames = new Set([
+    ...(api.events ?? []).map((event) => event.name),
+    ...(ownership?.events ?? []).map((event) => event.name),
+  ]);
   const errors = validateAuditManifest(audit, {
     activeRoutes,
     manualPaths,
@@ -63,12 +69,14 @@ export async function checkWasmContentAudit({
   routesPath = resolve(root, 'src/generated/routes.json'),
   auditPath = resolve(root, 'data/structure/wasm-content-audit.json'),
   apiPath = resolve(root, 'data/structure/wasm-sdk-api.json'),
+  ownershipPath = resolve(root, 'data/structure/wasm-api-ownership.json'),
   manualRoot = resolve(root, 'content/zh/docs/chat/sdk/wasm'),
 } = {}) {
-  const [allRoutes, audit, api, manualFiles] = await Promise.all([
+  const [allRoutes, audit, api, ownership, manualFiles] = await Promise.all([
     readJson(routesPath),
     readJson(auditPath),
     readJson(apiPath),
+    readJson(ownershipPath),
     walk(manualRoot),
   ]);
   const routes = allRoutes.filter((route) => route.contextKey === wasmContext);
@@ -84,7 +92,7 @@ export async function checkWasmContentAudit({
       }),
   );
 
-  return buildAuditReport({ routes, manualPaths, audit, api });
+  return buildAuditReport({ routes, manualPaths, audit, api, ownership });
 }
 
 export function formatAuditSummary(summary) {

@@ -32,11 +32,14 @@ const conversationMethods = [
   'getMultipleConversation',
   'getOneConversation',
   'getTotalUnreadMsgCount',
+  'hideAllConversations',
   'hideConversation',
+  'markAllConversationMessageAsRead',
   'markConversationMessageAsRead',
   'pinConversation',
   'removeConversationsFromGroups',
   'resetConversationGroupAtType',
+  'searchConversation',
   'setConversation',
   'setConversationBurnDuration',
   'setConversationDraft',
@@ -195,13 +198,13 @@ test('all new Conversation and Group routes have manual Chinese content', () => 
 test('domain API coverage assigns every pinned Conversation and Group method', () => {
   assert.ok(existsSync('data/structure/wasm-domain-api-coverage.json'));
   const coverage = readJson('data/structure/wasm-domain-api-coverage.json');
-  const sdk = readJson('data/structure/wasm-sdk-api.json');
-  const sdkMethods = new Set(sdk.methods.map((method) => method.name));
+  const ownership = readJson('data/structure/wasm-api-ownership.json');
+  const ownedMethods = new Set(ownership.methods.map((method) => method.name));
   const activePages = new Set([...conversationPages, ...groupPages]);
 
   for (const domain of ['conversation', 'group']) {
     for (const item of coverage.domains[domain].methods) {
-      assert.ok(sdkMethods.has(item.name), `${domain}: unknown ${item.name}`);
+      assert.ok(ownedMethods.has(item.name), `${domain}: unknown ${item.name}`);
       assert.ok(activePages.has(item.page), `${item.name}: inactive page ${item.page}`);
       assert.ok(
         [

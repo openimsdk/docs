@@ -64,8 +64,8 @@ test('friend search documents required switches and the data type', () => {
     assert.match(source, new RegExp(`${name}: true`), name);
   }
   assert.match(source, /当前只使用一个非空关键词/);
-  assert.match(source, /结果是 `SearchedFriendsInfo\[\]`/);
-  assert.doesNotMatch(source, /WsResponse<SearchedFriendsInfo\[\]>/);
+  assert.match(source, /结果是 `SearchFriendsResultItem\[\]`/);
+  assert.doesNotMatch(source, /WsResponse<SearchFriendsResultItem\[\]>/);
   assert.match(source, /不要覆盖完整好友列表/);
 });
 
@@ -130,9 +130,9 @@ test('profile updates restrict editable fields and separate refresh errors', () 
 test('global message reception omits the reserved NotReceive value', () => {
   const source = read('profile/set-global-message-reception');
 
-  assert.match(source, /MessageReceiveOptType\.Normal.*`0`/s);
-  assert.match(source, /MessageReceiveOptType\.NotNotify.*`2`/s);
-  assert.doesNotMatch(source, /MessageReceiveOptType\.NotReceive/);
+  assert.match(source, /MessageReceiveOption\.Receive.*`0`/s);
+  assert.match(source, /MessageReceiveOption\.ReceiveWithoutNotification.*`2`/s);
+  assert.doesNotMatch(source, /MessageReceiveOption\.DoNotReceive/);
   assert.match(source, /正常接收消息，并允许离线推送或通知/);
   assert.match(source, /接收消息，但不触发离线推送或通知/);
 });

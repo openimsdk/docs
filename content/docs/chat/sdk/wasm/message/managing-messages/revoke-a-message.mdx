@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
+lastUpdated: '2026-08-11'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/revoke-a-message'
@@ -26,11 +26,11 @@ const { data } = await openimsdk.revokeMessage({
 markMessageRevoked(data?.clientMsgID ?? clientMsgID);
 ```
 
-After the Promise resolves, the calling client can update the message with the same `clientMsgID` to a revoked state. Online clients subsequently receive revocation information through `CbEvents.OnNewRecvMessageRevoked`. Update the corresponding message bubble by the event's `clientMsgID` instead of removing it from the list.
+After the Promise resolves, the calling client can update the message with the same `clientMsgID` to a revoked state. Online clients subsequently receive revocation information through `SdkEvent.OnNewRecvMessageRevoked`. Update the corresponding message bubble by the event's `clientMsgID` instead of removing it from the list.
 
 OpenIMServer validates the sender, revocation time window, and message type. If the call fails, do not leave a locally fabricated revoked state in the interface.
 
-The SDK also retains `CbEvents.OnRecvMessageRevoked`, the legacy singular revocation event name. New code should prefer `OnNewRecvMessageRevoked`. When maintaining an existing deployment, first confirm which event it emits. If it emits only the legacy event, replace the registration below with the old name and reuse the same handler. Do not listen to both names and merge the same revocation twice.
+The SDK also retains `SdkEvent.OnRecvMessageRevoked`, the legacy singular revocation event name. New code should prefer `OnNewRecvMessageRevoked`. When maintaining an existing deployment, first confirm which event it emits. If it emits only the legacy event, replace the registration below with the old name and reuse the same handler. Do not listen to both names and merge the same revocation twice.
 
 ## Return result
 
@@ -41,20 +41,20 @@ Promise completion means that the current revocation request has completed; it d
 This page is the canonical reference for `OnNewRecvMessageRevoked`. For synchronized deletion, see [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages). For deleting every message sent by one group member, see [Delete all messages from a user in a group chat](/sdk/wasm/message/managing-messages/delete-user-messages).
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handleMessageRevoked = ({ data }) => {
   markMessageRevoked(data.clientMsgID);
 };
 
-openimsdk.on(CbEvents.OnNewRecvMessageRevoked, handleMessageRevoked);
+openimsdk.on(SdkEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 
 function removeRevokeListener() {
-  openimsdk.off(CbEvents.OnNewRecvMessageRevoked, handleMessageRevoked);
+  openimsdk.off(SdkEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 }
 ```
 
-`OnNewRecvMessageRevoked` provides a `RevokedInfo` in `data`. Merge the message by `clientMsgID`. Call `removeRevokeListener()` when the component unmounts, the user logs out, or the active account changes. After a new login, revocation changes are synchronized through message events.
+`OnNewRecvMessageRevoked` provides a `RevokedInfo` in `data`. Merge the message by `clientMsgID`. `isAdminRevoke` indicates whether an administrator performed the revocation and can be used to select the appropriate system notice. Call `removeRevokeListener()` when the component unmounts, the user logs out, or the active account changes. After a new login, revocation changes are synchronized through message events.
 
 ## Related pages
 

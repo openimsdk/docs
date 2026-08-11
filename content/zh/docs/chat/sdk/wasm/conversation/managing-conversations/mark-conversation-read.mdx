@@ -10,21 +10,21 @@ sourcePath: '/sdk/wasm/conversation/managing-conversations/mark-conversation-rea
 await openimsdk.markConversationMessageAsRead(conversationID);
 ```
 
-Promise 成功表示标记已读请求已经完成，不等于会话事件已经到达。随后通过 `CbEvents.OnConversationChanged` 取得新的 `ConversationItem[]`，按 `conversationID` 合并未读数；完整监听代码见[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。需要立即校准时，重新查询该会话。
+Promise 成功表示标记已读请求已经完成，不等于会话事件已经到达。随后通过 `SdkEvent.OnConversationChanged` 取得新的 `ConversationItem[]`，按 `conversationID` 合并未读数；完整监听代码见[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。需要立即校准时，重新查询该会话。
 
-对于单聊，当前用户标记会话已读后，对端可通过 `CbEvents.OnRecvC2CReadReceipt` 收到消息已读回执。本页是该事件的完整监听归属页；`data` 是 `ReceiptInfo[]`，先按对端用户定位单聊会话，再按每项 `msgIDList` 中的 `clientMsgID` 更新已读状态。
+对于单聊，当前用户标记会话已读后，对端可通过 `SdkEvent.OnRecvC2CReadReceipt` 收到消息已读回执。本页是该事件的完整监听归属页；`data` 是 `MessageReadReceipt[]`，先按对端用户定位单聊会话，再按每项 `msgIDList` 中的 `clientMsgID` 更新已读状态。
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handleC2CReadReceipt = ({ data }) => {
   mergeC2CReadReceipts(data);
 };
 
-openimsdk.on(CbEvents.OnRecvC2CReadReceipt, handleC2CReadReceipt);
+openimsdk.on(SdkEvent.OnRecvC2CReadReceipt, handleC2CReadReceipt);
 
 function removeC2CReadReceiptListener() {
-  openimsdk.off(CbEvents.OnRecvC2CReadReceipt, handleC2CReadReceipt);
+  openimsdk.off(SdkEvent.OnRecvC2CReadReceipt, handleC2CReadReceipt);
 }
 ```
 

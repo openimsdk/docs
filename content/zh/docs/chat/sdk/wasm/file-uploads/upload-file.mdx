@@ -12,18 +12,20 @@ sourcePath: '/sdk/wasm/file-uploads/upload-file'
 | --- | --- | --- | --- |
 | `name` | `string` | 是 | 文件名。 |
 | `contentType` | `string` | 是 | MIME 类型。 |
-| `uuid` | `string` | 是 | 本次上传的本地稳定标识。 |
-| `file` | `File` | 条件必填 | 浏览器环境中的文件对象；与 `filepath` 任选其一。 |
-| `filepath` | `string` | 条件必填 | 支持文件路径的运行环境中使用；与 `file` 任选其一。 |
-| `cause` | `string` | 否 | 业务约定的上传原因。 |
+| `uuid` | `string` | 是 | 业务为本次上传生成的稳定任务 ID。 |
+| `file` | `File` | 是 | 浏览器文件对象。WASM 包装层使用该对象完成上传。 |
+
+下面先展示上传调用；如果界面需要显示进度，应在调用 `uploadFile()` 前按后文注册进度与完成事件，避免较小文件在监听建立前完成上传。
 
 ```ts
+const uploadTaskID = crypto.randomUUID();
+const uploadEventID = `${uploadTaskID}/${file.name}`;
+
 const { data } = await openimsdk.uploadFile({
   name: file.name,
   contentType: file.type || 'application/octet-stream',
-  uuid: crypto.randomUUID(),
+  uuid: uploadTaskID,
   file,
-  cause: 'user-avatar',
 });
 
 await saveAvatarURL(data.url);
@@ -33,24 +35,35 @@ Promise 成功后使用 `data.url` 作为远端资源地址。它只表示上传
 
 ## 监听上传进度
 
-`CbEvents.OnProgress` 提供上传进度，`CbEvents.UploadComplete` 提供完成信息。处理函数必须保持稳定引用，并在账号或状态层销毁时用同一引用调用 `off()`：
+`SdkEvent.OnProgress` 提供上传进度，`SdkEvent.UploadComplete` 提供完成信息。处理函数必须保持稳定引用，并在账号或状态层销毁时用同一引用调用 `off()`：
 
 ```ts
+import { SdkEvent } from '@openim/wasm-client-sdk';
+
 function handleUploadProgress({ data }) {
+  if (data.clientMsgID !== uploadEventID) return;
   updateUploadProgress(data.clientMsgID, data.progress);
 }
 
 function handleUploadComplete({ data }) {
-  completeUpload(data.uuid, data.fileSize, data.streamSize);
+  if (data.uuid !== uploadEventID) return;
+  completeUpload(
+    data.uuid,
+    data.fileSize,
+    data.streamSize,
+    data.storageSize,
+  );
 }
 
-openimsdk.on(CbEvents.OnProgress, handleUploadProgress);
-openimsdk.on(CbEvents.UploadComplete, handleUploadComplete);
+openimsdk.on(SdkEvent.OnProgress, handleUploadProgress);
+openimsdk.on(SdkEvent.UploadComplete, handleUploadComplete);
 
 function removeUploadListeners() {
-  openimsdk.off(CbEvents.OnProgress, handleUploadProgress);
-  openimsdk.off(CbEvents.UploadComplete, handleUploadComplete);
+  openimsdk.off(SdkEvent.OnProgress, handleUploadProgress);
+  openimsdk.off(SdkEvent.UploadComplete, handleUploadComplete);
 }
 ```
 
-独立上传任务应使用业务生成的稳定 ID 关联状态。不要用文件名或数组位置匹配并行上传。
+`UploadComplete` 的 `data` 是 `FileUploadProgress`。WASM 包装层会把完成事件中的 `uuid` 组合为 `${上传参数中的 uuid}/${file.name}`，因此示例使用 `uploadEventID` 匹配事件；`fileSize` 是原文件大小，`streamSize` 是已经处理的流大小，`storageSize` 是远端存储对象的大小。大小字段的单位均为字节。
+
+独立上传任务应保留业务生成的 `uploadTaskID`，并使用组合后的 `uploadEventID` 关联 SDK 事件。不要只用文件名或数组位置匹配并行上传。

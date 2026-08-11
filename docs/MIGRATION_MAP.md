@@ -13,7 +13,7 @@
 | `/`、`/zh`                     | OpenIM 产品与 SDK 支持范围                          | 正式发布入口         |
 | `/sdk/ios/**`                  | OpenIM iOS SDK                                      | 已进入公开导航       |
 | `/sdk/flutter/**`              | OpenIM Flutter SDK                                  | 已进入公开导航       |
-| `/sdk/wasm/**`                 | `@openim/wasm-client-sdk@3.8.5-hotfix.0` 与固定声明 | 已进入公开导航       |
+| `/sdk/wasm/**`                 | `@openim/wasm-client-sdk@3.8.3-patch.15.1` 与固定声明 | 已进入公开导航       |
 | `/sdk/electron/**`             | OpenIM Electron SDK                                 | 已进入公开导航       |
 | `/sdk/miniprogram/**`          | JavaScript SDK 的小程序运行时实现                   | 已进入公开导航       |
 | `/platform-api/**`             | OpenIM REST API、Webhook 与固定 OpenAPI             | 已进入公开导航       |

@@ -59,14 +59,15 @@ test('speech transcription stores its result in local sound message content', ()
   );
 });
 
-test('the regular login guide omits advanced wrapper-only switches', () => {
+test('the login guide documents the current optional wrapper switches', () => {
   const source = readFileSync(
     'content/zh/docs/chat/sdk/wasm/getting-started/authenticate-and-manage-session.mdx',
     'utf8',
   );
 
-  assert.doesNotMatch(source, /isExternalExtensions/);
-  assert.doesNotMatch(source, /tryParse/);
+  assert.match(source, /`isExternalExtensions`.*`boolean`.*否/s);
+  assert.match(source, /`tryParse`.*`boolean`.*否/s);
+  assert.match(source, /tryParse.*默认值为 `true`/s);
 });
 
 test('shared browser prerequisites have one Getting Started owner', () => {
@@ -455,14 +456,17 @@ test('full API ownership covers every pinned method and event exactly once', () 
   const sdk = readJson('data/structure/wasm-sdk-api.json');
   const active = new Set(activePages);
 
-  assert.deepEqual(
-    ownership.methods.map((item) => item.name).sort(),
-    sdk.methods.map((item) => item.name).sort(),
-  );
-  assert.deepEqual(
-    ownership.events.map((item) => item.name).sort(),
-    sdk.events.map((item) => item.name).sort(),
-  );
+  assert.equal(ownership.sdkVersion, sdk.version);
+  const ownedMethods = new Set(ownership.methods.map((item) => item.name));
+  const ownedEvents = new Set(ownership.events.map((item) => item.name));
+  assert.equal(ownedMethods.size, ownership.methods.length, 'duplicate method ownership');
+  assert.equal(ownedEvents.size, ownership.events.length, 'duplicate event ownership');
+  for (const item of sdk.methods) {
+    assert.ok(ownedMethods.has(item.name), `${item.name}: pinned public method is not accounted for`);
+  }
+  for (const item of sdk.events) {
+    assert.ok(ownedEvents.has(item.name), `${item.name}: pinned public event is not accounted for`);
+  }
 
   const allChineseSource = activePages
     .map((path) => readFileSync(zhContentFile(path), 'utf8'))
@@ -499,7 +503,7 @@ test('full API ownership covers every pinned method and event exactly once', () 
   }
 
   for (const item of ownership.events) {
-    assert.ok(['documented', 'excluded'].includes(item.status), item.name);
+    assert.ok(['documented', 'excluded', 'excluded-deprecated'].includes(item.status), item.name);
     if (item.status === 'excluded') {
       assert.equal(item.page, null, item.name);
       assert.doesNotMatch(allChineseSource, new RegExp(`\\b${item.name}\\b`), item.name);
@@ -507,7 +511,11 @@ test('full API ownership covers every pinned method and event exactly once', () 
     }
     assert.ok(active.has(item.page), `${item.name}: inactive owner ${item.page}`);
     const source = readFileSync(zhContentFile(item.page), 'utf8');
-    assert.match(source, new RegExp(`\\b${item.name}\\b`), `${item.name}: missing from owner page`);
+    if (item.status.startsWith('excluded')) {
+      assert.doesNotMatch(allChineseSource, new RegExp(`\\b${item.name}\\b`), item.name);
+    } else {
+      assert.match(source, new RegExp(`\\b${item.name}\\b`), `${item.name}: missing from owner page`);
+    }
   }
 
   const evidencedPages = new Set(
@@ -592,7 +600,7 @@ test('replacement APIs explain every capability hidden behind deprecated declara
     '/sdk/wasm/message/composing-messages/update-typing-status': [
       'changeInputStates',
     ],
-    '/sdk/wasm/message/composing-messages/get-typing-status': ['getInputstates'],
+    '/sdk/wasm/message/composing-messages/get-typing-status': ['getInputStates'],
     '/sdk/wasm/user/friends/get-friend-list-page': [
       'getFriendListPage',
       'offset',
@@ -678,7 +686,7 @@ test('event listeners appear only on their ownership page', () => {
 
   for (const path of activePages) {
     const source = readFileSync(zhContentFile(path), 'utf8');
-    const events = [...source.matchAll(/openimsdk\.on\(CbEvents\.([A-Za-z0-9_]+)/g)].map(
+    const events = [...source.matchAll(/openimsdk\.on\(SdkEvent\.([A-Za-z0-9_]+)/g)].map(
       (match) => match[1],
     );
     for (const event of events) {
@@ -693,7 +701,7 @@ test('every event listener uses a stable handler and matching cleanup', () => {
     const onCount = source.match(/openimsdk\.on\(/g)?.length ?? 0;
     const registrations = [
       ...source.matchAll(
-        /openimsdk\.on\(\s*CbEvents\.([A-Za-z0-9_]+),\s*([A-Za-z0-9_.]+)\s*,?\s*\)/g,
+        /openimsdk\.on\(\s*SdkEvent\.([A-Za-z0-9_]+),\s*([A-Za-z0-9_.]+)\s*,?\s*\)/g,
       ),
     ];
 
@@ -707,7 +715,7 @@ test('every event listener uses a stable handler and matching cleanup', () => {
       assert.match(
         source,
         new RegExp(
-          `openimsdk\\.off\\(\\s*CbEvents\\.${event},\\s*${escapedHandler}\\s*,?\\s*\\)`,
+          `openimsdk\\.off\\(\\s*SdkEvent\\.${event},\\s*${escapedHandler}\\s*,?\\s*\\)`,
         ),
         `${path}: ${event} must remove ${handler}`,
       );

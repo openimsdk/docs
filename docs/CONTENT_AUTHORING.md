@@ -98,7 +98,7 @@ sourcePath: '/sdk/wasm/section/page-slug'
 
 ## 6. WASM 基线
 
-WASM 公开能力以 `@openim/wasm-client-sdk@3.8.5-hotfix.0` 为核对基线，但该包不作为站点运行时依赖。
+WASM 公开能力以 `@openim/wasm-client-sdk@3.8.3-patch.15.1` 为核对基线，但该包不作为站点运行时依赖。
 
 - 除日志页外，不在正文和示例中传递或展开 `operationID`。
 - 不记录已废弃方法，也不公开非分页的好友列表与全量会话列表接口。

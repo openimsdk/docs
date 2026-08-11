@@ -13,6 +13,7 @@ sourcePath: '/sdk/wasm/message/creating-messages/create-custom-message'
 | `data` | `string` | 是 | 业务载荷的完整字符串，通常保存序列化后的 JSON。 |
 | `extension` | `string` | 是 | 业务扩展信息的完整字符串。 |
 | `description` | `string` | 是 | 消息类型说明或不支持该类型时的降级展示文本。 |
+| `searchText` <span className="enterprise-field-badge">商业版</span> | `string` | 否 | 供本地消息搜索匹配的纯文本；不应包含无法向会话成员公开的敏感内容。 |
 
 ```ts
 const { data: message } = await openimsdk.createCustomMessage({
@@ -23,5 +24,16 @@ const { data: message } = await openimsdk.createCustomMessage({
 ```
 
 `data` 是业务载荷，`extension` 是扩展信息，`description` 用于类型说明或降级展示。三者都是完整字符串，接收端应校验版本、大小和字段，不要执行不可信内容。
+
+商业版如需让自定义消息参与本地消息搜索，可以额外传入 `searchText`。它只提供可检索文本，不替代实际业务载荷：
+
+```ts
+const { data: searchableMessage } = await openimsdk.createCustomMessage({
+  data: JSON.stringify({ type: 'task', taskID: 'task_42' }),
+  extension: JSON.stringify({ schemaVersion: 1 }),
+  description: '任务卡片',
+  searchText: '任务 task_42',
+});
+```
 
 Promise 成功只返回待发送 `MessageItem`。发送与自定义业务事件是不同链路。

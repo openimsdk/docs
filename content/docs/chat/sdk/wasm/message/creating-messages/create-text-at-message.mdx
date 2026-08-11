@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
+lastUpdated: '2026-08-11'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/creating-messages/create-text-at-message'
@@ -16,7 +16,7 @@ sourcePath: '/sdk/wasm/message/creating-messages/create-text-at-message'
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `text` | `string` | Yes | Message body. Stable markers such as `@userID` are recommended. |
-| `atUserIDList` | `string[]` | Yes | IDs of the mentioned users. Use the SDK's `AtAllTag` to mention everyone. |
+| `atUserIDList` | `string[]` | Yes | IDs of the mentioned users. To mention everyone, first obtain the dedicated marker from `getAtAllTag()`. |
 | `atUsersInfo` | `AtUserInfo[]` | No | User IDs and their display names within the group. |
 | `message` | `MessageItem` | No | Original message being referenced. |
 
@@ -29,3 +29,17 @@ const { data: message } = await openimsdk.createTextAtMessage({
 ```
 
 When the Promise resolves, it returns only a pending message object. This message can be sent only to a group chat. Creating it does not change the conversation's @ state or trigger a new-message event.
+
+## Mention everyone
+
+Do not hard-code the mention-all marker in application code. Obtain the current SDK marker, then include it in both the message body and `atUserIDList`:
+
+```ts
+const { data: atAllTag } = await openimsdk.getAtAllTag();
+const { data: message } = await openimsdk.createTextAtMessage({
+  text: `${atAllTag} please review the group announcement`,
+  atUserIDList: [atAllTag],
+});
+```
+
+When `getAtAllTag()` resolves, `data` contains the string marker. It only reads an SDK convention; it does not create a message or trigger an event.

@@ -131,7 +131,9 @@ const fullCommercialConceptPages = new Set([
   '/sdk/wasm/conversation/managing-conversations/set-burn-duration',
   '/sdk/wasm/conversation/managing-conversations/set-message-destruct',
   '/sdk/wasm/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/wasm/conversation/managing-conversations/mark-conversation',
   '/sdk/wasm/message/composing-messages/save-local-transcript',
+  '/sdk/wasm/user/profile/set-friend-add-permission',
   '/sdk/flutter/conversation/managing-conversations/set-private-chat',
   '/sdk/flutter/conversation/managing-conversations/set-burn-duration',
   '/sdk/flutter/conversation/managing-conversations/set-message-destruct',
@@ -282,6 +284,30 @@ test('marks only the commercial bypass field on group-wide mute', () => {
     /`muteBypassUserIDs` <span className="enterprise-field-badge">商业版<\/span>/,
   );
   assert.equal(getPageCommercialInfo('/sdk/wasm/group/change-group-mute').kind, 'none');
+});
+
+test('marks enterprise-only fields in shared WASM return models', () => {
+  const conversationContent = readFileSync(
+    'content/zh/docs/chat/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list.mdx',
+    'utf8',
+  );
+  const selfUserContent = readFileSync(
+    'content/zh/docs/chat/sdk/wasm/user/profile/get-self-user-info.mdx',
+    'utf8',
+  );
+
+  assert.match(
+    conversationContent,
+    /`isMarked` <span className="enterprise-field-badge">商业版<\/span>/,
+  );
+  assert.match(
+    conversationContent,
+    /`remark` <span className="enterprise-field-badge">商业版<\/span>/,
+  );
+  assert.match(
+    selfUserContent,
+    /`attachedInfo` <span className="enterprise-field-badge">商业版<\/span>/,
+  );
 });
 
 test('classifies full commercial pages', () => {
@@ -478,7 +504,7 @@ test('matches commercial symbols in inline code text', () => {
     const candidates = [
       withoutCall,
       withoutCall.replace(/^OpenIM\./, ''),
-      withoutCall.replace(/^CbEvents\./, ''),
+      withoutCall.replace(/^SdkEvent\./, ''),
       withoutCall.includes('.') ? (withoutCall.split('.').at(-1) ?? withoutCall) : withoutCall,
     ];
     for (const candidate of candidates) {
@@ -497,7 +523,7 @@ test('matches commercial symbols in inline code text', () => {
     matchCommercialSymbol('openimsdk.getAdvancedHistoryMessageListReverse', names),
     'getAdvancedHistoryMessageListReverse',
   );
-  assert.equal(matchCommercialSymbol('CbEvents.OnMsgDeleted', names), 'OnMsgDeleted');
+  assert.equal(matchCommercialSymbol('SdkEvent.OnMsgDeleted', names), 'OnMsgDeleted');
   assert.equal(matchCommercialSymbol('getAdvancedHistoryMessageList()', names), null);
 });
 

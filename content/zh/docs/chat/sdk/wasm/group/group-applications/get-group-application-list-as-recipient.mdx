@@ -10,7 +10,7 @@ sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-re
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `groupID` | `string[]` | 是 | 要查询的群组 ID 数组。 |
+| `groupIDs` | `string[]` | 是 | 要查询的群组 ID 数组。 |
 | `handleResults` | `number[]` | 是 | 要查询的申请处理结果。 |
 | `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
 | `count` | `number` | 是 | 本次读取数量。 |
@@ -18,15 +18,15 @@ sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-re
 | 枚举值 | 数值 | 含义 |
 | --- | --- | --- |
 | `ApplicationHandleResult.Unprocessed` | `0` | 待处理。 |
-| `ApplicationHandleResult.Agree` | `1` | 已同意。 |
-| `ApplicationHandleResult.Reject` | `-1` | 已拒绝。 |
+| `ApplicationHandleResult.Accepted` | `1` | 已同意。 |
+| `ApplicationHandleResult.Rejected` | `-1` | 已拒绝。 |
 
 ```ts
 import { ApplicationHandleResult } from '@openim/wasm-client-sdk';
 
 const { data: applications } =
   await openimsdk.getGroupApplicationListAsRecipient({
-    groupID: [groupID],
+    groupIDs: [groupID],
     handleResults: [ApplicationHandleResult.Unprocessed],
     offset: 0,
     count: 20,
@@ -48,6 +48,7 @@ Promise 成功后，`data` 是当前用户有权处理的 `GroupApplicationItem[
 | `reqMsg` | `string` | 入群申请附言。 |
 | `reqTime` | `number` | 申请时间。 |
 | `joinSource` | `GroupJoinSource` | 入群申请来源，例如搜索或二维码。 |
+| `inviterUserID` | `string`（可选） | 邀请入群场景中的邀请人用户 ID；自主申请时可能为空。 |
 | `handleResult` | `ApplicationHandleResult` | 当前处理结果：待处理、已同意或已拒绝。 |
 | `handleUserID` | `string` | 处理申请的群主或管理员用户 ID；未处理时可能为空。 |
 | `handledMsg` | `string` | 处理申请时填写的说明。 |
@@ -63,6 +64,7 @@ Promise 成功后，`data` 是当前用户有权处理的 `GroupApplicationItem[
 | `status` | `GroupStatus` | 目标群组状态快照。 |
 | `createTime` | `number` | 申请记录创建时间。 |
 | `ex` | `string` | 申请记录扩展字符串。 |
+| `attachedInfo` | `string`（可选） | SDK 附加信息；只按已确认的业务约定解析。 |
 
 申请人和群组资料是申请记录携带的快照。需要展示最新资料时，应分别查询用户资料或群资料，不要把申请中的昵称、头像和成员数写回对应实体缓存。
 
@@ -71,7 +73,7 @@ Promise 成功后，`data` 是当前用户有权处理的 `GroupApplicationItem[
 本页是入群申请事件的完整监听归属页。申请记录使用 `groupID:userID` 作为合并标识：
 
 ```ts
-import { CbEvents } from '@openim/wasm-client-sdk';
+import { SdkEvent } from '@openim/wasm-client-sdk';
 
 const handlers = {
   added: ({ data }) => mergeGroupApplication(data),
@@ -81,22 +83,22 @@ const handlers = {
   badgeChanged: ({ data }) => updateGroupApplicationBadge(data),
 };
 
-openimsdk.on(CbEvents.OnGroupApplicationAdded, handlers.added);
-openimsdk.on(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
-openimsdk.on(CbEvents.OnGroupApplicationRejected, handlers.rejected);
-openimsdk.on(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+openimsdk.on(SdkEvent.OnGroupApplicationAdded, handlers.added);
+openimsdk.on(SdkEvent.OnGroupApplicationAccepted, handlers.accepted);
+openimsdk.on(SdkEvent.OnGroupApplicationRejected, handlers.rejected);
+openimsdk.on(SdkEvent.OnGroupApplicationDeleted, handlers.deleted);
 openimsdk.on(
-  CbEvents.OnGroupApplicationBadgeCountChanged,
+  SdkEvent.OnGroupApplicationBadgeCountChanged,
   handlers.badgeChanged,
 );
 
 function removeGroupApplicationListeners() {
-  openimsdk.off(CbEvents.OnGroupApplicationAdded, handlers.added);
-  openimsdk.off(CbEvents.OnGroupApplicationAccepted, handlers.accepted);
-  openimsdk.off(CbEvents.OnGroupApplicationRejected, handlers.rejected);
-  openimsdk.off(CbEvents.OnGroupApplicationDeleted, handlers.deleted);
+  openimsdk.off(SdkEvent.OnGroupApplicationAdded, handlers.added);
+  openimsdk.off(SdkEvent.OnGroupApplicationAccepted, handlers.accepted);
+  openimsdk.off(SdkEvent.OnGroupApplicationRejected, handlers.rejected);
+  openimsdk.off(SdkEvent.OnGroupApplicationDeleted, handlers.deleted);
   openimsdk.off(
-    CbEvents.OnGroupApplicationBadgeCountChanged,
+    SdkEvent.OnGroupApplicationBadgeCountChanged,
     handlers.badgeChanged,
   );
 }
