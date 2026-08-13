@@ -1,0 +1,33 @@
+---
+title: '查询会话列表'
+description: '查询完整或分页会话快照，并处理新增与变化事件。'
+sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+`getAllConversationList()` 返回完整本地会话快照；列表较大时使用 `getConversationListSplit()` 分页。本页归属 `onNewConversation` 和 `onConversationChanged`。
+
+```uts
+import {
+  getConversationListSplit,
+  off,
+  onConversationChanged,
+  onNewConversation,
+} from '@/uni_modules/unix-openim-sdk'
+
+const newConversationSubscription = onNewConversation((result) => {
+  result.conversations.forEach((item) => upsertConversation(item.conversationID, item))
+})
+const changedSubscription = onConversationChanged((result) => {
+  result.conversations.forEach((item) => upsertConversation(item.conversationID, item))
+})
+
+const firstPage = await getConversationListSplit({ offset: 0, count: 100 })
+replaceConversationSnapshot(firstPage?.conversations ?? [])
+
+off(newConversationSubscription)
+off(changedSubscription)
+```
+
+分页时继续增加 `offset`，直到返回数量少于 `count`。查询与事件可能包含相同会话，必须按 `conversationID` 幂等合并。事件 payload 是列表，即使通常只变化一项也要遍历全部项目。
+
+不要根据本地数组位置更新；置顶、最新消息和未读变化都会改变排序。

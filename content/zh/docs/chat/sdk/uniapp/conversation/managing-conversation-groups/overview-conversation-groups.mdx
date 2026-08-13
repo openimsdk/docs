@@ -1,0 +1,45 @@
+---
+title: '会话分组概览'
+description: '商业版会话分组模型、raw 事件解析和生命周期。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组属于<span className="enterprise-field-badge">商业版</span>，用于把会话组织为自定义组，并维护名称、顺序、隐藏状态、未读数和成员会话 ID。
+
+`OpenIMConversationGroupItem` 的字段均可选。读取 `conversationGroupID` 后再作为主键；`conversationIDs` 可能为 `null`，完整成员应以分页查询为准。
+
+五个分组事件返回 opaque JSON 字符串，不是类型化对象：
+
+```uts
+import {
+  off,
+  onConversationGroupAdded,
+  onConversationGroupChanged,
+  onConversationGroupDeleted,
+  onConversationGroupMemberAdded,
+  onConversationGroupMemberDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+function refreshFromRawGroupEvent(payload : string) {
+  try {
+    const value = JSON.parseObject<UTSJSONObject>(payload)
+    if (value != null) refreshConversationGroups()
+  } catch (_) {
+    console.error('Invalid conversation group event payload')
+  }
+}
+
+const addedSubscription = onConversationGroupAdded(refreshFromRawGroupEvent)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onConversationGroupChanged(refreshFromRawGroupEvent),
+  onConversationGroupDeleted(refreshFromRawGroupEvent),
+  onConversationGroupMemberAdded(refreshFromRawGroupEvent),
+  onConversationGroupMemberDeleted(refreshFromRawGroupEvent),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+校验 JSON 后仍建议重新查询快照，不依赖未冻结的 raw 字段。日志不要输出完整 payload，因为扩展字段可能包含业务数据。
