@@ -4185,11 +4185,1339 @@
   },
   {
     "path": "/sdk/uniapp/overview",
-    "title": "OpenIM SDK for uni-app",
-    "description": "OpenIM uni-app SDK entry point for App, H5, and supported mini-app targets.",
-    "context": "SDKs · uni-app · v4",
+    "title": "OpenIM uni-app / uni-app x SDK 概览",
+    "description": "在 uni-app 与 uni-app x 的 Android、iOS 和商业版 HarmonyOS App 中接入 unix-openim-sdk。",
+    "context": "SDKs · uni-app / uni-app x · v4",
     "keywords": "sdk uniapp v4 sdk uniapp overview",
-    "content": "Overview Use the uni app SDK when the same OpenIM integration needs to cover App, H5, and supported mini app targets from a uni app codebase. The integration should keep authentication, user identity, message creation, conversation state, and event handling aligned with the rest of the OpenIM SDK family. Platform scope App and H5 builds should use the SDK package and runtime adapter recommended by the OpenIM release you deploy. Mini app targets need additional validation for storage, network, file upload, and websocket behavior. Tokens should still be issued by a trusted backend. Do not generate or hard code user tokens in the client bundle. Core integration path 1. Install the SDK package that matches your OpenIM Server version. 2. Initialize the client with apiAddr , wsAddr , the current userID , and a backend issued token. 3. Register connection and message events before calling login . 4. Send the first text message, then validate message receipt in another signed in client. 5. Add platform specific handling for file messages, push notifications, and background lifecycle. Related SDKs WASM SDK /sdk/wasm/overview for browser and WebAssembly oriented API examples. Flutter SDK /sdk/flutter/overview when mobile and desktop should be handled through Flutter. React Native SDK /sdk/react native/overview when the app is built with React Native."
+    "content": "OpenIM unix openim sdk 是 UTS 原生插件，为 uni app 和 uni app x 的 App 端提供用户、好友、会话、群组、消息、事件与本地数据库能力。插件在宿主进程中持有唯一的 OpenIM Core；业务代码直接从 @/uni modules/unix openim sdk 导入函数，不创建 SDK 实例。 支持范围 | 宿主 | Android | iOS | HarmonyOS | | | | | | | uni app Vue 2 / Vue 3 | 支持，API 21+ | 支持，iOS 14+ | 暂不宣称支持 | | uni app x | 支持，API 21+ | 支持，iOS 14+ | 商业版支持，API 24 | | Web / 小程序 | 不支持 | 不支持 | 不支持 | 接入和本地编译使用 HBuilderX/uni app 5.23 系列。Android、iOS 需要包含插件原生依赖的自定义基座或本地原生工程，标准基座不能加载这些原生制品。 公共版与商业版 同一套文档覆盖公共能力和商业版扩展。标有“商业版”的 API、事件或字段需要商业版 unix openim sdk 与匹配的 OpenIMServer；没有徽标的能力属于公共接口。商业版归属与平台支持是两个维度：公共 API 也可能在某个平台返回 platform unsupported ，页面会单独列出。 商业版增加信令、SDK session 快照、翻译和部分消息/会话扩展。 onSDKSessionChanged 是插件层根据初始化、登录、退出、Token 与账号变化合成的事件，不是 OpenIM Core 原生事件。 接入顺序 1. 安装 unix openim sdk ，为目标平台准备自定义基座或本地原生工程。 2. 调用 initSDK ，配置 apiAddr 、 wsAddr 、平台、日志和 systemType 。 3. 保存连接、消息和业务事件返回的订阅句柄。 4. 从可信后端取得当前用户的 userID 与 Token，再调用 login userID, token 。 5. 等待 onConnectSuccess 后查询快照数据，并用事件增量更新应用状态。 6. 用户退出时先 logout ，再通过 off subscription 清理监听；只有不再使用 SDK 时才调用 unInitSDK 。 调用模型 Promise 成功直接返回业务值，不使用 Web SDK 的 data 包装。事件注册同步返回 OpenIMSDKEventSubscription ，取消时必须传回同一句柄： import off, onRecvNewMessage, from '@/uni modules/unix openim sdk' const messageSubscription = onRecvNewMessage message = console.log message.clientMsgID // 页面或账号作用域结束时清理。 off messageSubscription 不要使用 offAll 代替正常的局部清理。它会移除当前插件实例中的全部监听，只适合应用整体销毁或可控的测试重置。 安全边界 Token 必须由可信后端签发，不要把管理员 Token、secret 或固定用户 Token 写入 App。 apiAddr 与 wsAddr 必须从设备真实可访问；真机不能把 localhost 当作开发机。 SDK 的数据库目录和文件由插件管理，不要直接修改内部数据库。 日志和错误上报应脱敏，避免记录 Token、完整消息内容与商业业务凭据。 AV Runtime 是独立 UTS 插件；它复用本插件的唯一登录态，但不属于本 SDK 的公共 IM API。 下一步 开始之前 /sdk/uniapp/getting started/before you start 安装、初始化与 SDK 信息 /sdk/uniapp/getting started/install initialize and inspect sdk 认证与管理登录会话 /sdk/uniapp/getting started/authenticate and manage session 发送第一条消息 /sdk/uniapp/getting started/send first message 事件概览 /sdk/uniapp/events/overview events"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/before-you-start",
+    "title": "开始之前",
+    "description": "准备 OpenIMServer、用户 Token、UTS 插件和目标平台原生构建环境。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started before-you-start",
+    "content": "接入前先确定目标是 uni app 还是 uni app x App，并准备与 unix openim sdk 0.2.0 rc.3 兼容的 OpenIMServer、用户与原生构建环境。Web、H5 和小程序不能使用本 UTS 原生插件。 准备服务与账号 客户端初始化需要以下信息： | 数据 | 来源 | 要求 | | | | | | apiAddr | OpenIMServer HTTP API | 设备可访问的完整地址 | | wsAddr | OpenIMServer WebSocket | 设备可建立长连接的完整地址 | | userID | 业务后端的账号映射 | 与 Token 对应且在服务端存在 | | Token | 可信业务后端 | 只授予当前用户，不在客户端生成 | 业务后端应先验证自己的登录态，再为该业务账号返回 OpenIM 用户与 Token。App 不应持有管理员 Token 或服务端 secret。公共版客户端连接公共 OpenIMServer；使用信令、session 或其他商业能力时，应连接已部署相应服务的商业版环境。 真机测试时， apiAddr 和 wsAddr 不能使用开发机的 localhost 。还要确认设备与服务端网络互通、TLS 证书有效、反向代理允许 WebSocket 升级。 准备插件与构建环境 把插件安装在项目的 uni modules/unix openim sdk 。使用 HBuilderX/uni app 5.23 系列，并按目标平台准备： Android：API 21+、JDK 与 Android SDK，构建产物需包含插件声明的 AAR/Maven 依赖和目标 ABI。 iOS：iOS 14+、匹配的 Xcode/CocoaPods，构建产物需正确链接并嵌入 XCFramework。 HarmonyOS：仅 uni app x 商业版，API 24；使用与插件合同一致的 HAR。 标准基座不包含这些原生依赖。开发阶段应打包含插件的自定义基座，或使用项目提供的本地 Android/iOS 原生构建流程。不要把公共与商业原生制品混装在同一个插件目录中。 选择平台标识 初始化使用插件导出的常量，不直接写数字：Android 使用 OpenIMPlatformAndroid ，iPhone 使用 OpenIMPlatformIOS ，HarmonyOS 使用 OpenIMPlatformHarmony 。 systemType 是当前系统说明字符串，例如 android 、 ios 或 harmony ，不可省略。 发布前检查 在真实目标设备上完成初始化、登录、普通消息收发与退出。 验证 App 前后台、网络断开恢复、Token 失效和被踢下线。 Android 检查重复 class/JNI 与 ABI；iOS 检查签名、embed、隐私清单和真机链接。 商业版额外验证信令与对应服务，不要用公共服务端结果判断商业 API。 日志、截图和自动化证据中不得包含 Token、secret 或完整私聊内容。 准备完成后，先阅读 安装、初始化与 SDK 信息 /sdk/uniapp/getting started/install initialize and inspect sdk ，再进入 认证与管理登录会话 /sdk/uniapp/getting started/authenticate and manage session 。"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/environment-specific-implementation",
+    "title": "按宿主和平台接入",
+    "description": "区分 uni-app、uni-app x、Android、iOS 与 HarmonyOS 的运行和构建边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started environment-specific-implementation",
+    "content": "unix openim sdk 的业务函数在 uni app 与 uni app x 中保持一致，差异主要发生在语言类型、页面生命周期和原生构建方式。所有平台都从同一个插件根路径扁平导入。 支持矩阵 | 宿主 | Android | iOS | HarmonyOS | | | | | | | uni app Vue 2 / Vue 3 | API 21+ | iOS 14+ | 暂不宣称支持 | | uni app x | API 21+ | iOS 14+ | 商业版 API 24 | | H5 / Web / 小程序 | 不支持 | 不支持 | 不支持 | uni app 传统 uni app 页面可在 Vue 2 或 Vue 3 生命周期中调用插件。JavaScript 不提供 UTS 的静态类型检查，但 Promise 返回值和事件句柄语义相同。建议把 SDK 生命周期放在应用级 service 中，避免页面反复初始化。 import getLoginStatus, off, onConnectSuccess, from '@/uni modules/unix openim sdk' const connectSubscription = onConnectSuccess = console.log 'OpenIM connected' const status = await getLoginStatus // 应用 service 销毁时执行。 off connectSubscription uni app x uni app x 使用 UTS 类型。对初始化参数、消息对象和事件 payload，应直接导入插件公开类型，不要自行复制一份可能漂移的接口。 import getLoginStatus, type OpenIMLoginStatus, from '@/uni modules/unix openim sdk' const status : OpenIMLoginStatus = await getLoginStatus 解析商业信令的 raw JSON 时，先校验字符串和字段存在性，再把值映射到应用自己的 UTS 类型；不要把未经校验的 UTSJSONObject 强制转换成业务 DTO。 Android 与 iOS Android 和 iOS 都支持公共与商业接口，但插件必须进入自定义基座或本地原生工程。权限、通知和后台能力由宿主 App 声明；SDK 不会自动替业务申请通知、相册、摄像头或麦克风权限。 文件消息使用本机可读的完整路径。 unifile:// 应先通过 uni API 转为可访问的本地路径；不要把临时 URL、网络 URL 或只在页面沙盒中有效的虚拟路径直接传给原生 Core。 HarmonyOS HarmonyOS 仅声明 uni app x 商业版支持。当前以下操作会稳定返回 platform unsupported ： updateFcmToken 、 updateToken 、 translateText 、 translateMessage 。十个缺失事件也只返回 unsupported subscription，不会伪造成功事件；具体清单见 事件概览 /sdk/uniapp/events/overview events 。 平台不支持不等于商业版鉴权失败。业务应按错误码区分能力缺失、登录状态、网络和服务端错误，不要对 unsupported 无限重试。 生命周期归属 SDK Core 在应用作用域内只初始化一次。页面进入和退出只管理该页面拥有的订阅，不调用 unInitSDK 。用户切换账号时先退出旧账号、清理旧订阅与状态，再登录新账号；App 确定不再使用 SDK 时才反初始化。"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/authenticate-and-manage-session",
+    "title": "认证与管理登录会话",
+    "description": "登录 OpenIM、处理连接与 Token 事件、查询登录状态并安全退出。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started authenticate-and-manage-session",
+    "content": "完成 initSDK 后，先注册连接与账号事件，再调用 login userID, token 。Promise 成功表示登录请求完成；依赖长连接的查询和发送应等待 onConnectSuccess 。 注册登录事件 每次 on... 调用都返回独立的 OpenIMSDKEventSubscription 。保存全部句柄，并在账号或应用作用域结束时逐个释放。 import off, onConnectFailed, onConnectSuccess, onConnecting, onKickedOffline, onUserTokenExpired, onUserTokenInvalid, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const connectSubscription = onConnectSuccess = console.log 'OpenIM connected' const subscriptions : Array = connectSubscription, onConnecting = console.log 'OpenIM connecting' , onConnectFailed error = console.error error.errCode, error.errMsg , onKickedOffline = clearCurrentAccount , onUserTokenExpired = requestFreshToken , onUserTokenInvalid error = console.error error.errCode, error.errMsg , function releaseSessionSubscriptions subscriptions.forEach subscription = off subscription subscriptions.length = 0 onKickedOffline 到达时，SDK 已进入下线流程。业务应清空旧账号界面与缓存引用，并引导重新认证，不要再并发调用一次 logout 。 登录 import login from '@/uni modules/unix openim sdk' await login userID, token login 的真实签名是 login userID, token ，不是对象参数。Token 必须来自可信后端，并且与 userID 对应。不要仅凭 Promise 成功就立即发送消息；应让连接事件驱动 ready 状态。 查询当前状态 import OpenIMLoginStatusLogged, getLoginStatus, getLoginUserID, from '@/uni modules/unix openim sdk' const status = await getLoginStatus if status == OpenIMLoginStatusLogged const currentUserID = await getLoginUserID restoreAccountState currentUserID getLoginStatus 返回 OpenIMLoginStatusLogout 、 OpenIMLoginStatusLogging 或 OpenIMLoginStatusLogged 。登录状态与网络连接状态不同：已登录账号在短暂断网时仍可能处于 Logged 状态。 上报前后台与网络变化 import networkStatusChanged, setAppBackgroundStatus, from '@/uni modules/unix openim sdk' await setAppBackgroundStatus true // 进入后台 await setAppBackgroundStatus false // 回到前台 await networkStatusChanged // 网络恢复或网络类型变化 把这些调用接到 App 级生命周期，避免多个页面重复上报。它们不会创建新会话，也不能替代登录或 Token 更新。 主动退出与切换账号 import logout from '@/uni modules/unix openim sdk' await logout releaseSessionSubscriptions clearCurrentAccount 切换账号时必须等待旧账号退出和状态清理完成，再注册新账号作用域的事件并登录。不要让两个账号的登录、退出或查询并发执行。 商业版可以不重新登录而更新 Token，并通过合成 session 快照校验 epoch，见 更新 Token 与观察 SDK session /sdk/uniapp/getting started/update token and observe sdk session 。"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/send-first-message",
+    "title": "发送第一条消息",
+    "description": "在 uni-app / uni-app x App 中创建文本消息并验证单聊或群聊发送链路。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started send-first-message",
+    "content": "本页把安装、初始化、登录和消息发送串成最小验证链路。正式项目应把 SDK 生命周期放在应用级 service，并按照各功能页拆分状态管理。 1. 初始化并登录 先按 安装、初始化与 SDK 信息 /sdk/uniapp/getting started/install initialize and inspect sdk 初始化，再从可信后端取得 userID 和 Token。登录前注册连接事件，连接成功后才允许发送。 import off, onConnectSuccess, from '@/uni modules/unix openim sdk' const connectSubscription = onConnectSuccess = markOpenIMReady // 应用作用域结束时释放。 off connectSubscription 完整登录和事件清理见 认证与管理登录会话 /sdk/uniapp/getting started/authenticate and manage session 。 2. 准备目标 | 场景 | recvID | groupID | | | | | | 单聊 | 已存在的接收用户 ID | 空字符串 | | 群聊 | 空字符串 | 当前用户已加入的群 ID | 目标用户或群组必须在服务端存在。是否允许发送还会受到好友、群成员、禁言和服务端策略影响。 3. 创建并发送文本消息 import createTextMessage, sendMessage, from '@/uni modules/unix openim sdk' const message = await createTextMessage '你好，OpenIMSDK' if message == null throw new Error 'Failed to create text message' const sentMessage = await sendMessage message, recvID: 'user b', groupID: '', appendOutgoingMessage sentMessage createTextMessage 只创建本地消息对象，不会发送。 sendMessage 成功后直接返回最终 OpenIMMessageItem ，不需要读取 data 。发送端按 clientMsgID 合并返回值；接收端通过新消息事件按同一标识去重。 群聊只需把 recvID 改为空字符串，并填入 groupID ： const sentGroupMessage = await sendMessage message, recvID: '', groupID: 'group 123', 4. 双端验证 用两个不同账号和两个独立客户端验证： 1. A 端发送后获得非空 clientMsgID ，消息状态进入发送成功。 2. B 端收到新消息事件，并能解析到相同业务内容。 3. A、B 重新进入会话后，都能从历史消息中读取该消息。 4. 退出 SDK 后普通事件不再写入旧账号状态。 下一步阅读 发送消息 /sdk/uniapp/message/sending messages/send message 、 接收消息 /sdk/uniapp/message/receiving messages/receive messages 和 加载历史消息 /sdk/uniapp/message/retrieving messages/load older messages 。"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk",
+    "title": "安装、初始化与 SDK 信息",
+    "description": "安装 UTS 插件，初始化唯一 OpenIM Core，并查询 SDK 版本和数据目录。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started install-initialize-and-inspect-sdk",
+    "content": "项目安装 uni modules/unix openim sdk 后，在应用级 service 中初始化一次。插件导出扁平函数，不需要也不允许创建第二个 SDK 实例。 初始化 import OpenIMLogLevelInfo, OpenIMPlatformAndroid, initSDK, type OpenIMInitConfig, from '@/uni modules/unix openim sdk' const config : OpenIMInitConfig = platformID: OpenIMPlatformAndroid, apiAddr: 'https://im api.example.com', wsAddr: 'wss://im ws.example.com', logLevel: OpenIMLogLevelInfo, isLogStandardOutput: true, systemType: 'android', const initialized = await initSDK config if initialized throw new Error 'OpenIM SDK initialization was not accepted' iOS 改用 OpenIMPlatformIOS 和 systemType: 'ios' ；HarmonyOS 改用 OpenIMPlatformHarmony 和 systemType: 'harmony' 。生产环境建议关闭标准输出或降低日志级别，并按合规要求配置 logFilePath 。 OpenIMInitConfig | 字段 | 类型 | 说明 | | | | | | platformID | OpenIMPlatform | 使用插件导出的平台常量。 | | apiAddr | string | OpenIMServer HTTP API 地址。 | | wsAddr | string | OpenIMServer WebSocket 地址。 | | dataDir | string \\| null （可选） | Core 数据目录；通常让插件使用平台默认值。 | | logFilePath | string \\| null （可选） | 日志目录或文件路径，按平台产物约定配置。 | | logLevel | OpenIMLogLevel | 使用 OpenIMLogLevelError 、 OpenIMLogLevelInfo 等常量。 | | isLogStandardOutput | boolean | 是否把 SDK 日志输出到系统控制台。 | | systemType | string | 必填的系统说明，初始化示例不得省略。 | 同一进程不要用不同服务地址并发初始化。切换环境应先退出账号、清理业务状态并反初始化，再用新配置启动。 查询版本与数据路径 getSdkVersion 和 getOpenIMDataPath 是同步本地操作： import getOpenIMDataPath, getSdkVersion, from '@/uni modules/unix openim sdk' const version = getSdkVersion const dataPath = getOpenIMDataPath 数据路径仅用于诊断、备份策略和空间排查。不要直接打开、迁移或修改其中的数据库文件，也不要把完整沙盒路径作为公开日志字段。 反初始化 import unInitSDK from '@/uni modules/unix openim sdk' unInitSDK unInitSDK 返回 void 。调用前先停止新的业务请求、退出当前账号并释放全部订阅。普通页面卸载、AV Runtime 关闭或暂时进入后台都不应反初始化 IM SDK。 初始化完成后，进入 认证与管理登录会话 /sdk/uniapp/getting started/authenticate and manage session 。"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state",
+    "title": "处理 App 生命周期、角标与推送 Token",
+    "description": "把 App 前后台、网络、角标和 FCM Token 接入 OpenIM SDK。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started handle-app-lifecycle-and-device-state",
+    "content": "生命周期上报应由应用级 service 统一负责，而不是每个聊天页面分别调用。前后台和网络变化使用认证页说明的 setAppBackgroundStatus 与 networkStatusChanged ；本页说明应用角标和 FCM Token。 设置应用未读角标 import setAppBadge from '@/uni modules/unix openim sdk' await setAppBadge totalUnreadCount setAppBadge 把当前应用总未读数同步给 SDK/平台侧。业务仍应订阅总未读事件维护自己的 UI；Promise 成功不代表桌面角标在所有系统设置下都可见。传 0 清除角标。 更新 FCM Token import updateFcmToken from '@/uni modules/unix openim sdk' await updateFcmToken fcmToken: deviceFcmToken, expireTime: tokenExpireUnixSeconds, | 字段 | 类型 | 说明 | | | | | | fcmToken | string | 推送服务为当前设备签发的 Token。 | | expireTime | number | Token 到期 Unix 时间；按服务端协议使用秒级时间。 | 只在取得或刷新有效设备 Token 后调用。不要把 FCM Token 写入公开日志，也不要用 IM Token 代替设备推送 Token。 HarmonyOS 当前不实现 updateFcmToken ，调用会返回 platform unsupported 。这属于平台能力缺失，不是商业版鉴权问题；Harmony 推送应由业务使用其平台方案接入。 推荐时序 1. App 启动并初始化 SDK。 2. 注册账号与消息事件，登录当前用户。 3. 推送服务返回设备 Token 后调用 updateFcmToken 。 4. 总未读事件到达时更新应用状态并调用 setAppBadge 。 5. App 前后台、网络变化时调用对应生命周期 API。 6. 退出账号时清空业务角标与推送关联，再清理账号作用域监听。 推送到达只表示系统通知链路工作；消息列表仍应通过 SDK 新消息事件和历史查询恢复，不能只依赖通知 payload。"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/update-token-and-observe-sdk-session",
+    "title": "更新 Token 与观察 SDK session",
+    "description": "商业版更新登录 Token，并通过合成 session 快照防止账号与异步请求串线。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started update-token-and-observe-sdk-session",
+    "content": "本页能力属于 商业版 。它用于宿主与 AV Runtime 等插件共享唯一 OpenIM Core 时，读取当前登录快照、更新 Token，并在账号或 SDK 生命周期变化时取消旧请求。 onSDKSessionChanged 是 unix openim sdk 的插件层合成事件，不是 OpenIM Core 原生 listener。Android、iOS 与 HarmonyOS 都由统一 session tracker 生成该事件。 读取 session 快照 import getSDKSessionSnapshot, type OpenIMSDKSessionSnapshot, from '@/uni modules/unix openim sdk' const snapshot : OpenIMSDKSessionSnapshot = await getSDKSessionSnapshot | 字段 | 类型 | 说明 | | | | | | loginStatus | OpenIMLoginStatus | 当前登录状态。 | | userID | string \\| null | 当前 SDK 用户；未登录时为 null 。 | | sdkSessionEpoch | number | session 世代。生命周期或账号成功变化后递增。 | | sdkVersion | string | 当前插件所连接 Core 的版本。 | 快照不包含 IM Token、API 地址或 WebSocket 地址。异步流程开始时保存 userID 与 sdkSessionEpoch ，完成前再次读取并比较；不一致时丢弃旧结果，不要写入新账号状态。 订阅 session 变化 import off, onSDKSessionChanged, from '@/uni modules/unix openim sdk' const sessionSubscription = onSDKSessionChanged snapshot = cancelRequestsFromOlderEpoch snapshot.sdkSessionEpoch replaceActiveSdkUser snapshot.userID // 应用或依赖插件销毁时执行。 off sessionSubscription 初始化、登录、退出、反初始化、被踢下线、Token 无效或过期，以及当前用户变化，都可能推动 epoch。处理器必须幂等，不能在事件中记录 Token 或反复触发并行登录。 热更新 Token import updateToken from '@/uni modules/unix openim sdk' await updateToken token: freshToken Token 由可信后端签发。 updateToken 只在 Android 和 iOS 可用；HarmonyOS 当前稳定返回 platform unsupported ，应按产品策略重新登录或等待后续平台实现。更新成功后继续以 session 事件和连接状态判断当前会话，不要把 Promise 成功等同于所有网络请求都已恢复。 与其他插件协作 AV Runtime 等依赖插件应在初始化前后各读取一次快照，确认用户与 epoch 未变化；dispose 时只取消自己的订阅和请求，不调用 IM SDK 的 logout 或 unInitSDK 。用户切换时先销毁依赖插件，再退出并登录新账号。"
+  },
+  {
+    "path": "/sdk/uniapp/user/overview-user",
+    "title": "用户概览",
+    "description": "理解 OpenIM 用户资料、在线状态、好友申请与黑名单的模型和同步边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user overview-user",
+    "content": "用户领域包含当前账号资料、其他用户公开资料、在线状态、好友关系、好友申请和黑名单。 userID 是跨端稳定标识；昵称和头像可以变化，不能用作数据主键。 核心模型 OpenIMUserInfo 的公共字段包括 userID 、 nickname 、 faceURL 、 ex 和可选 createTime 。 attachedInfo 与 globalRecvMsgOpt 是商业版扩展字段，读取前应判空，不要假定公共服务端一定返回。 好友数据使用 OpenIMFriendUserItem ，在用户资料之外包含备注、置顶、扩展字段和关系时间。黑名单使用 OpenIMBlackUserItem 。好友申请使用 OpenIMFriendApplicationItem ，申请状态由接受、拒绝和删除事件增量更新。 快照与事件 页面首次进入时先调用对应查询 API 建立快照，再订阅该领域事件并按 userID 幂等合并。不要只依赖事件恢复完整列表；断线、重新登录和 App 被系统回收后，应重新查询。 当前资料： 查询自己的资料 /sdk/uniapp/user/profile/get self user info 与 修改自己的资料 /sdk/uniapp/user/profile/set self info 在线状态： 订阅用户在线状态 /sdk/uniapp/user/online status/subscribe users status 好友： 分页查询好友 /sdk/uniapp/user/friends/get friend list page 好友申请： 查询收到的好友申请 /sdk/uniapp/user/friend applications/get friend application list as recipient 黑名单： 查询黑名单 /sdk/uniapp/user/blacklist/get black list 业务后端仍是账号身份、实名信息和权限的权威来源。SDK 用户资料适合聊天展示，不应替代业务账号认证。"
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/get-users-info",
+    "title": "批量查询用户资料",
+    "description": "按 userID 列表查询用户公开资料。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile get-users-info",
+    "content": "使用 getUsersInfo 批量取得聊天展示所需的用户资料。参数是用户 ID 数组，Promise 返回 OpenIMUserListResult | null 。 import getUsersInfo from '@/uni modules/unix openim sdk' const result = await getUsersInfo 'user a', 'user b' const users = result?.users ?? users.forEach user = cacheUser user.userID, user 返回列表不保证与输入顺序一致，也可能少于请求数量。应按 userID 建立映射，并为不存在、无权限或未返回的用户保留占位状态。 OpenIMUserInfo 字段见 用户概览 /sdk/uniapp/user/overview user 。其中 attachedInfo 与 globalRecvMsgOpt 是商业版字段；公共客户端必须把它们视为可选值。不要把用户资料响应中的 ex 或 attachedInfo 当作可信身份凭据。 大量用户应按业务可接受的批次查询并缓存，避免列表滚动时为每一行单独请求。"
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/get-self-user-info",
+    "title": "查询自己的资料",
+    "description": "读取当前已登录用户的 OpenIM 资料。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile get-self-user-info",
+    "content": "getSelfUserInfo 查询当前 SDK 登录账号的资料，返回 OpenIMUserInfo | null 。调用前应确认 SDK 已登录且连接可用。 import getSelfUserInfo from '@/uni modules/unix openim sdk' const self = await getSelfUserInfo if self = null renderProfile self.nickname, self.faceURL 以返回的 userID 校验应用账号与 SDK 账号是否一致。 nickname 、 faceURL 和 ex 属于公共字段； attachedInfo 与 globalRecvMsgOpt 商业版 为可选扩展，不应在公共环境中强制解包。 资料变化由 修改自己的资料 /sdk/uniapp/user/profile/set self info 页面归属的 onSelfInfoUpdated 事件推送。重新登录或事件可能遗漏时，重新调用本方法建立快照。"
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/set-self-info",
+    "title": "修改自己的资料",
+    "description": "更新当前用户资料并处理 onSelfInfoUpdated 事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile set-self-info",
+    "content": "setSelfInfo 按提供的可选字段更新当前账号资料。不要用空字符串替代“保持不变”；只传本次确实要修改的字段。 import off, onSelfInfoUpdated, setSelfInfo, from '@/uni modules/unix openim sdk' const selfInfoSubscription = onSelfInfoUpdated user = replaceCurrentUser user.userID, user await setSelfInfo nickname: 'OpenIM User', faceURL: 'https://cdn.example.com/avatar.png', off selfInfoSubscription OpenIMSetSelfInfoParams 支持 nickname 、 faceURL 、 ex ，以及商业版使用的 globalRecvMsgOpt 。Promise 成功表示服务端接受修改；界面最终状态以 onSelfInfoUpdated 或重新查询的资料为准。 事件返回完整 OpenIMUserInfo 。按 userID 替换缓存，不要只修改发起请求的页面局部状态。多个页面需要该事件时，各自保存订阅句柄并释放，或由应用级用户 store 统一订阅。"
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/set-global-message-reception",
+    "title": "设置全局消息接收选项",
+    "description": "通过用户资料中的 globalRecvMsgOpt 设置当前账号的全局消息接收策略。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile set-global-message-reception",
+    "content": "globalRecvMsgOpt 商业版 是 OpenIMSetSelfInfoParams 的可选字段，用于设置当前账号的全局消息接收策略。它与单个会话的 recvMsgOpt 不同：前者影响账号全局，后者只影响指定会话。 import setSelfInfo from '@/uni modules/unix openim sdk' // 具体数值含义应以服务端部署策略和导出的 OpenIMSetSelfInfoRecvMsgOpt 常量为准。 await setSelfInfo globalRecvMsgOpt: 0 只传 globalRecvMsgOpt ，避免同时覆盖昵称、头像或扩展字段。修改成功后，使用 查询自己的资料 /sdk/uniapp/user/profile/get self user info 确认最终值；当前插件没有为这一字段单独提供 setter。 公共版中该字段可能不存在。业务 UI 应根据实际能力配置显示入口，不要把缺失值解释为某个确定的接收策略。"
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/set-friend-add-permission",
+    "title": "设置加好友权限",
+    "description": "说明商业版加好友权限字段与当前 unix-openim-sdk 的写入边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile set-friend-add-permission",
+    "content": "加好友权限属于 商业版 账号策略。锁定的 unix openim sdk 0.2.0 rc.3 会在用户模型中公开相关商业字段，但当前 OpenIMSetSelfInfoParams 没有独立的 addFriendPermission 写入参数。 因此本版本不能通过本插件伪造一个 setter，也不要把该值塞进 ex 。需要修改时，应由商业版业务后端或已确认支持该字段的管理接口完成；客户端随后重新查询当前资料并刷新 UI。 页面展示该开关前应进行能力判断。公共版、旧服务端或没有返回该字段时，把状态显示为“不可配置”，不要默认成“允许任何人添加”或“需要验证”。 好友申请的客户端流程见 发起好友申请 /sdk/uniapp/user/friend applications/add friend 与 处理收到的好友申请 /sdk/uniapp/user/friend applications/get friend application list as recipient 。"
+  },
+  {
+    "path": "/sdk/uniapp/user/online-status/subscribe-users-status",
+    "title": "订阅用户在线状态",
+    "description": "订阅指定用户在线状态，并用 onUserStatusChanged 合并增量。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user online-status subscribe-users-status",
+    "content": "subscribeUsersStatus 为指定用户建立状态订阅； getUserStatus 可立即查询这些用户的当前状态。 onUserStatusChanged 是本页的完整事件归属。 import getUserStatus, off, onUserStatusChanged, subscribeUsersStatus, from '@/uni modules/unix openim sdk' const statusSubscription = onUserStatusChanged result = result.statuses.forEach status = replaceUserStatus status.userID, status const userIDs = 'user a', 'user b' await subscribeUsersStatus userIDs const snapshot = await getUserStatus userIDs snapshot?.statuses.forEach status = replaceUserStatus status.userID, status off statusSubscription 先注册事件，再订阅和查询快照，可缩小快照与事件之间的丢失窗口。状态项可能包含多平台在线明细；业务应按 userID 和平台更新，不把一次离线事件等同于用户所有设备都离线。 只订阅当前界面或业务确实需要的用户，并在不再需要时调用 取消用户在线状态订阅 /sdk/uniapp/user/online status/unsubscribe users status 。"
+  },
+  {
+    "path": "/sdk/uniapp/user/online-status/get-subscribe-users-status",
+    "title": "查询已订阅用户状态",
+    "description": "读取当前账号已经订阅的用户在线状态快照。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user online-status get-subscribe-users-status",
+    "content": "getSubscribeUsersStatus 返回当前账号已订阅用户的状态快照，不接收用户 ID 参数。 import getSubscribeUsersStatus from '@/uni modules/unix openim sdk' const result = await getSubscribeUsersStatus const statuses = result?.statuses ?? statuses.forEach status = replaceUserStatus status.userID, status 空结果可能表示尚未订阅、订阅用户当前没有可用状态，或服务端返回空列表。不要只用数组长度判断连接是否正常。 持续变化仍由 onUserStatusChanged 提供，完整订阅和清理见 订阅用户在线状态 /sdk/uniapp/user/online status/subscribe users status 。本方法适合 App 恢复前台或状态 store 重建时重新获取快照。"
+  },
+  {
+    "path": "/sdk/uniapp/user/online-status/unsubscribe-users-status",
+    "title": "取消用户在线状态订阅",
+    "description": "停止接收指定用户的在线状态变化。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user online-status unsubscribe-users-status",
+    "content": "页面或业务不再关注一组用户时，调用 unsubscribeUsersStatus 释放服务端状态订阅。 import unsubscribeUsersStatus from '@/uni modules/unix openim sdk' await unsubscribeUsersStatus 'user a', 'user b' 该调用只取消传入用户，不会清空其他订阅，也不会自动释放本地 onUserStatusChanged 事件句柄。页面应同时维护两层生命周期： 1. 用本 API取消不再需要的用户状态订阅。 2. 在事件 owner 作用域结束时，通过 off subscription 清理本地事件处理器。 重复取消应按幂等业务处理；失败时保留本地订阅记录并根据网络状态决定是否重试，不要高频循环调用。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/get-friend-list-page",
+    "title": "查询好友列表",
+    "description": "分页或一次性查询好友，并处理好友新增、删除与资料变化事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends get-friend-list-page",
+    "content": "getFriendListPage 按偏移量分页读取好友；数据量较小或需要完整快照时，可用 getFriendList 。本页同时归属好友新增、删除和资料变化事件。 import getFriendListPage, off, onFriendAdded, onFriendDeleted, onFriendInfoChanged, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const friendAddedSubscription = onFriendAdded friend = upsertFriend friend.userID, friend const subscriptions : Array = friendAddedSubscription, onFriendDeleted friend = removeFriend friend.userID , onFriendInfoChanged friend = upsertFriend friend.userID, friend , const page = await getFriendListPage offset: 0, count: 100 replaceFriendSnapshot page?.friends ?? subscriptions.forEach subscription = off subscription offset 从 0 开始， count 是本页期望数量。继续分页直到返回数量小于 count ，并按 userID 去重。 getFriendList filterBlack 的 filterBlack 控制是否过滤黑名单用户；不要把黑名单和好友关系当作同一状态。 事件与查询可能包含同一好友，应用必须幂等合并。重新登录、断线恢复或应用状态丢失后，重新查询快照。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/search-friends",
+    "title": "搜索好友",
+    "description": "按用户 ID、昵称或备注搜索当前好友。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends search-friends",
+    "content": "searchFriends 只搜索当前好友关系，不是全站用户搜索。通过布尔字段明确要匹配的属性。 import searchFriends from '@/uni modules/unix openim sdk' const result = await searchFriends keywordList: 'Alice' , isSearchUserID: true, isSearchNickname: true, isSearchRemark: true, renderFriends result?.friends ?? keywordList 可以包含多个关键词；空关键词的行为可能随 Core 变化，业务应在调用前拦截空搜索。结果使用 OpenIMFriendListResult ，按 userID 去重并结合最新好友事件更新。 搜索条件只影响本次查询，不改变好友资料或服务端索引。需要查指定好友的完整资料时使用 查询指定好友资料 /sdk/uniapp/user/friends/get specified friends info 。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/get-specified-friends-info",
+    "title": "查询指定好友资料",
+    "description": "按 userID 列表读取指定好友关系资料。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends get-specified-friends-info",
+    "content": "getSpecifiedFriendsInfo 接收用户 ID 列表，并可选择过滤黑名单用户。 import getSpecifiedFriendsInfo from '@/uni modules/unix openim sdk' const result = await getSpecifiedFriendsInfo userIDList: 'user a', 'user b' , filterBlack: false, const friends = result?.friends ?? 返回列表可能少于输入列表，且不保证顺序。按 userID 建立映射；未返回用户可能不是好友、被过滤或当前不可查询。 filterBlack: true 只影响结果过滤，不会移除黑名单关系。需要判断双方关系时使用 检查好友关系 /sdk/uniapp/user/friends/check friend ，需要公共用户资料时使用 批量查询用户资料 /sdk/uniapp/user/profile/get users info 。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/check-friend",
+    "title": "检查好友关系",
+    "description": "批量检查当前账号与指定用户的好友关系。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends check-friend",
+    "content": "checkFriend 批量检查当前账号与用户列表之间的关系，返回 OpenIMCheckFriendResult | null 。 import checkFriend from '@/uni modules/unix openim sdk' const result = await checkFriend 'user a', 'user b' const relations = result?.result ?? relations.forEach relation = cacheFriendRelation relation.userID, relation.result 关系结果应按 userID 读取，不依赖数组顺序。具体数值含义使用插件导出的好友关系常量，不在业务代码中散落裸数字。 本方法是查询，不会创建好友关系。不是好友时，使用 发起好友申请 /sdk/uniapp/user/friend applications/add friend ；已有好友的资料和变化通过 查询好友列表 /sdk/uniapp/user/friends/get friend list page 维护。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/update-friends",
+    "title": "更新好友资料",
+    "description": "批量更新好友备注、置顶和扩展字段，并说明商业版单用户入口。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends update-friends",
+    "content": "updateFriends 可批量更新好友关系上的备注、置顶或扩展字段。只传要修改的字段。 import updateFriends from '@/uni modules/unix openim sdk' await updateFriends friendUserIDs: 'user a', 'user b' , remark: '项目成员', isPinned: true, friendUserIDs 不能为空。 remark 、 isPinned 和 ex 都是可选项；未提供表示保持原值。Promise 成功后，最终好友资料通过 onFriendInfoChanged 或重新查询好友列表确认。 商业版还提供 updateFriend 商业版 ，参数为单个 userID ，字段名使用 pinned ： import updateFriend from '@/uni modules/unix openim sdk' await updateFriend userID: 'user a', pinned: true, remark: '负责人' 不要同时对同一好友并发调用两个入口；选择一种并让好友 store 串行合并结果。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/delete-friend",
+    "title": "删除好友",
+    "description": "解除与指定用户的好友关系。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends delete-friend",
+    "content": "deleteFriend 解除当前账号与指定用户的好友关系。 import deleteFriend from '@/uni modules/unix openim sdk' await deleteFriend 'user a' Promise 成功表示请求完成。好友列表应以 onFriendDeleted 事件或重新查询结果为准；完整监听见 查询好友列表 /sdk/uniapp/user/friends/get friend list page 。 删除好友不会自动删除会话、历史消息或加入黑名单。产品如需这些行为，应分别调用对应 API，并明确失败补偿顺序。删除前应由 UI 二次确认，避免误操作。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/add-friend",
+    "title": "发起好友申请",
+    "description": "向指定用户发送好友申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications add-friend",
+    "content": "使用 addFriend 向目标用户发起申请。目标用户、验证文案和可选扩展数据通过 OpenIMAddFriendParams 传入。 import addFriend from '@/uni modules/unix openim sdk' await addFriend toUserID: 'user b', reqMsg: '你好，我是 Alice', ex: '', reqMsg 会展示给接收方，不应包含 Token、内部权限信息或其他敏感数据。 ex 只存放双方约定且可安全公开给申请接收者的扩展字符串。 Promise 成功不等于已经成为好友；接收方仍可能接受或拒绝。申请方可通过 查询发出的好友申请 /sdk/uniapp/user/friend applications/get friend application list as applicant 刷新状态。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient",
+    "title": "查询收到的好友申请",
+    "description": "分页读取收到的申请，并处理申请新增、接受、拒绝和删除事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications get-friend-application-list-as-recipient",
+    "content": "getFriendApplicationListAsRecipient 读取其他用户发给当前账号的申请。本页归属四个好友申请事件，应用应先注册事件，再查询快照。 import getFriendApplicationListAsRecipient, off, onFriendApplicationAccepted, onFriendApplicationAdded, onFriendApplicationDeleted, onFriendApplicationRejected, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const addedSubscription = onFriendApplicationAdded item = upsertApplication item const subscriptions : Array = addedSubscription, onFriendApplicationAccepted item = upsertApplication item , onFriendApplicationRejected item = upsertApplication item , onFriendApplicationDeleted item = removeApplication item , const page = await getFriendApplicationListAsRecipient offset: 0, count: 50 replaceReceivedApplications page?.applications ?? subscriptions.forEach subscription = off subscription 参数可省略；显式分页时 offset 从 0 开始。按申请双方标识与创建时间建立稳定 key，事件和查询结果幂等合并。收到申请后使用接受或拒绝 API处理，不直接修改本地状态冒充服务端成功。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/get-friend-application-list-as-applicant",
+    "title": "查询发出的好友申请",
+    "description": "分页读取当前账号发出的好友申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications get-friend-application-list-as-applicant",
+    "content": "getFriendApplicationListAsApplicant 查询当前账号发出的申请，返回 OpenIMFriendApplicationListResult | null 。 import getFriendApplicationListAsApplicant from '@/uni modules/unix openim sdk' const result = await getFriendApplicationListAsApplicant offset: 0, count: 50 renderSentApplications result?.applications ?? 参数可以省略。分页结果可能在查询期间发生变化，应使用申请的用户标识和时间字段去重，而不是按数组下标更新。 申请状态变化事件统一在 查询收到的好友申请 /sdk/uniapp/user/friend applications/get friend application list as recipient 说明。App 恢复、重新登录或事件可能遗漏时，重新查询本列表。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/get-friend-application-unhandled-count",
+    "title": "查询未处理好友申请数",
+    "description": "查询好友申请入口的未处理数量。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications get-friend-application-unhandled-count",
+    "content": "getFriendApplicationUnhandledCount 返回未处理好友申请数量，结果可能为 null 。 import getFriendApplicationUnhandledCount from '@/uni modules/unix openim sdk' const count = await getFriendApplicationUnhandledCount offset: 0, count: 100 renderApplicationBadge count ?? 0 分页参数用于限制本次统计查询范围，实际产品应使用与服务端约定一致的 count 。不要把 null 永久缓存成 0；它也可能表示当前没有有效结果。 申请新增、接受、拒绝或删除时重新查询数量，避免在多个设备和断线恢复场景下只做本地 +1/ 1 而漂移。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/accept-friend-application",
+    "title": "接受好友申请",
+    "description": "接受指定用户发来的好友申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications accept-friend-application",
+    "content": "acceptFriendApplication 接受目标用户的申请，并可附带处理说明。 import acceptFriendApplication from '@/uni modules/unix openim sdk' await acceptFriendApplication toUserID: 'user b', handleMsg: '已通过', 这里的 toUserID 是申请对方的用户 ID。Promise 成功后，申请状态和好友列表分别由申请事件、好友新增事件或重新查询确认；不要只在一个列表中更新。 重复处理可能由服务端返回状态错误，UI 应在请求期间禁用重复操作，并在失败后重新查询申请详情。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/refuse-friend-application",
+    "title": "拒绝好友申请",
+    "description": "拒绝指定用户发来的好友申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications refuse-friend-application",
+    "content": "refuseFriendApplication 拒绝目标用户的申请。 import refuseFriendApplication from '@/uni modules/unix openim sdk' await refuseFriendApplication toUserID: 'user b', handleMsg: '暂不添加', 处理说明可能对申请方可见，不应包含内部风控原因或敏感信息。Promise 成功后，以 onFriendApplicationRejected 或重新查询结果更新状态。 接受与拒绝互斥。请求开始后锁定该申请项，避免用户快速点击造成并行请求。"
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/delete-friend-requests",
+    "title": "删除好友申请记录",
+    "description": "商业版批量删除指定好友申请记录。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications delete-friend-requests",
+    "content": "deleteFriendRequests 商业版 批量删除明确指定的好友申请记录。 import deleteFriendRequests from '@/uni modules/unix openim sdk' await deleteFriendRequests friendRequests: fromUserID: 'user a', toUserID: 'user b' , , friendRequests 中每项使用 OpenIMSimpleFriendRequest 的 fromUserID 与 toUserID 精确定位。删除申请记录不会自动解除已经建立的好友关系。 Promise 成功后重新查询申请列表和未处理数。批量操作应先在 UI 中确认目标，失败时不要假定部分记录已经删除；以新快照为准。"
+  },
+  {
+    "path": "/sdk/uniapp/user/blacklist/get-black-list",
+    "title": "查询黑名单",
+    "description": "查询黑名单快照，并处理加入与移除黑名单事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user blacklist get-black-list",
+    "content": "公共入口 getBlackList 返回 OpenIMBlackListResult | null 。本页同时归属 onBlackAdded 与 onBlackDeleted 。 import getBlackList, off, onBlackAdded, onBlackDeleted, from '@/uni modules/unix openim sdk' const blackAddedSubscription = onBlackAdded user = upsertBlackUser user const blackDeletedSubscription = onBlackDeleted user = removeBlackUser user.userID const result = await getBlackList replaceBlackList result?.blackUsers ?? off blackAddedSubscription off blackDeletedSubscription 商业版还提供 getBlacks 商业版 ，返回包装字段名为 blacks ： import getBlacks from '@/uni modules/unix openim sdk' const commercialResult = await getBlacks replaceBlackList commercialResult?.blacks ?? 两个入口不要混用返回字段。黑名单与好友关系是独立状态；加入黑名单是否自动影响好友关系取决于服务端策略，客户端应分别查询。"
+  },
+  {
+    "path": "/sdk/uniapp/user/blacklist/add-black",
+    "title": "加入黑名单",
+    "description": "把指定用户加入当前账号的黑名单。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user blacklist add-black",
+    "content": "addBlack 把目标用户加入黑名单，可附带双方约定的扩展字符串。 import addBlack from '@/uni modules/unix openim sdk' await addBlack toUserID: 'user b', ex: '' Promise 成功后，以 onBlackAdded 或重新查询黑名单确认最终状态。不要在 ex 中写入 Token、内部封禁证据或仅管理员可见的数据。 加入黑名单不会自动删除本地历史消息。产品如需隐藏会话或解除好友，应作为独立操作并设计失败补偿。"
+  },
+  {
+    "path": "/sdk/uniapp/user/blacklist/remove-black",
+    "title": "移出黑名单",
+    "description": "把指定用户从当前账号的黑名单移除。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user blacklist remove-black",
+    "content": "removeBlack 按用户 ID 移除黑名单关系。 import removeBlack from '@/uni modules/unix openim sdk' await removeBlack 'user b' Promise 成功后，以 onBlackDeleted 或重新查询结果更新 UI。移出黑名单不会自动恢复已删除的好友关系，也不会重新创建被隐藏或删除的会话。 重复移除可能返回关系状态错误。操作失败时刷新黑名单快照，不要无限重试。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/overview-conversation",
+    "title": "会话概览",
+    "description": "理解会话快照、增量事件、未读数、草稿和会话分组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation overview-conversation",
+    "content": "会话是单聊、群聊或其他消息流的本地索引。 conversationID 是稳定主键；单聊同时有 userID ，群聊同时有 groupID 。界面标题、头像和最新消息都是可变快照，不能替代主键。 OpenIMConversationItem 包含 conversationType 、 showName 、 faceURL 、 unreadCount 、 latestMsg 、草稿、置顶、接收选项和消息序列边界。 latestMsg 是序列化消息字符串，解析失败时保留会话并显示降级摘要，不要删除该项。 建议数据流 1. 注册 onNewConversation 与 onConversationChanged 。 2. 查询完整或分页会话快照。 3. 按 conversationID 幂等插入或替换事件项。 4. 按 isPinned 、时间和业务排序规则展示。 5. App 恢复或重新登录时重新查询，不仅依赖事件。 会话未读数和消息已读是相关但不同的状态。清零会话未读见 标记会话已读 /sdk/uniapp/conversation/managing conversations/mark conversation read ，总未读见 获取总未读数 /sdk/uniapp/conversation/managing conversations/get total unread count 。 商业版会话分组用于把会话组织到自定义、置顶或标记等组中，详见 会话分组概览 /sdk/uniapp/conversation/managing conversation groups/overview conversation groups 。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target",
+    "title": "按目标查询会话",
+    "description": "按目标 ID 和会话类型查询一个会话。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations get-conversation-by-target",
+    "content": "getOneConversation 使用目标 ID 和 OpenIMSessionType 查询单个会话，返回 OpenIMConversationItem | null 。 import OpenIMSessionTypeSingle, getOneConversation, from '@/uni modules/unix openim sdk' const conversation = await getOneConversation sourceID: 'user b', sessionType: OpenIMSessionTypeSingle, 单聊的 sourceID 是对方 userID ，群聊是 groupID 。使用插件导出的会话类型常量，不直接写数字。 null 可能表示本地尚无该会话；发送首条消息或收到消息后，会话可由事件创建。 返回值按 conversationID 合并到 store，不要用 sourceID 直接覆盖其他会话类型。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id",
+    "title": "生成会话 ID",
+    "description": "根据目标 ID 和会话类型取得规范 conversationID。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations get-conversation-id",
+    "content": "getConversationIDBySessionType 返回 Core 使用的规范 conversationID ，适合在尚未生成会话项时构造路由键。 import OpenIMSessionTypeGroup, getConversationIDBySessionType, from '@/uni modules/unix openim sdk' const conversationID = await getConversationIDBySessionType sourceID: 'group 123', sessionType: OpenIMSessionTypeGroup, 不要自行拼接单聊或群聊会话 ID；不同会话类型有各自规则。返回 ID 不代表会话已存在，也不创建服务器数据。需要会话内容时继续调用 按目标查询会话 /sdk/uniapp/conversation/retrieving conversations/get conversation by target 或列表查询。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/get-conversations-by-id",
+    "title": "批量查询会话",
+    "description": "按 conversationID 列表批量读取会话快照。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations get-conversations-by-id",
+    "content": "getMultipleConversation 批量查询会话，返回 OpenIMConversationListResult | null 。 import getMultipleConversation from '@/uni modules/unix openim sdk' const result = await getMultipleConversation 'si user a user b', 'sg group 123' const conversations = result?.conversations ?? 结果不保证与输入顺序一致，也可能缺少本地不存在的会话。按 conversationID 建立映射。大量 ID 应分批查询，避免一次传入无界数组。 本方法只读取快照，不订阅变化。持续更新仍由 查询会话列表 /sdk/uniapp/conversation/retrieving conversations/retrieve conversation list 归属的事件处理。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list",
+    "title": "查询会话列表",
+    "description": "查询完整或分页会话快照，并处理新增与变化事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations retrieve-conversation-list",
+    "content": "getAllConversationList 返回完整本地会话快照；列表较大时使用 getConversationListSplit 分页。本页归属 onNewConversation 和 onConversationChanged 。 import getConversationListSplit, off, onConversationChanged, onNewConversation, from '@/uni modules/unix openim sdk' const newConversationSubscription = onNewConversation result = result.conversations.forEach item = upsertConversation item.conversationID, item const changedSubscription = onConversationChanged result = result.conversations.forEach item = upsertConversation item.conversationID, item const firstPage = await getConversationListSplit offset: 0, count: 100 replaceConversationSnapshot firstPage?.conversations ?? off newConversationSubscription off changedSubscription 分页时继续增加 offset ，直到返回数量少于 count 。查询与事件可能包含相同会话，必须按 conversationID 幂等合并。事件 payload 是列表，即使通常只变化一项也要遍历全部项目。 不要根据本地数组位置更新；置顶、最新消息和未读变化都会改变排序。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/search-conversations",
+    "title": "搜索会话",
+    "description": "按关键词搜索本地会话。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations search-conversations",
+    "content": "searchConversation 使用字符串关键词搜索本地会话，返回 OpenIMConversationListResult | null 。 import searchConversation from '@/uni modules/unix openim sdk' const result = await searchConversation 'Alice' renderSearchResults result?.conversations ?? 调用前去除首尾空白，并在输入为空时由 UI 直接展示正常会话列表。搜索结果是查询时快照；会话变化后可重新搜索，或按 conversationID 合并最新事件项。 匹配范围由 Core 决定，不要承诺搜索所有消息正文。消息内容搜索使用消息领域的查询 API。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/pin-conversation",
+    "title": "置顶或取消置顶会话",
+    "description": "通过 setConversation 修改会话置顶状态。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations pin-conversation",
+    "content": "setConversation 是会话字段的统一更新入口。置顶时只传 conversationID 和 isPinned 。 import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, isPinned: true // 取消置顶：isPinned: false Promise 成功后以 onConversationChanged 更新最终会话，不要直接假定本地排序已稳定。未提供的字段保持原值；不要为了置顶而复制并回写整条会话。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/mark-conversation",
+    "title": "标记会话",
+    "description": "说明商业版标记会话能力在当前 UTS 合同中的边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations mark-conversation",
+    "content": "会话“标记”属于 商业版 能力，通常与会话分组中的标记组配合使用。锁定的 UTS 合同没有独立 markConversation 操作，也没有在 OpenIMSetConversationParams 中暴露 isMarked 。 因此客户端不能通过 ex 或其他字段伪造标记。需要修改时应使用商业版业务后端或已确认的上层服务；随后通过 查询会话列表 /sdk/uniapp/conversation/retrieving conversations/retrieve conversation list 和 会话分组 /sdk/uniapp/conversation/managing conversation groups/overview conversation groups 刷新结果。 没有真实写入 API 时，UI 应隐藏或禁用入口，而不是只改本地状态。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-conversation-remark",
+    "title": "设置会话备注",
+    "description": "说明商业版会话备注字段的读取与写入边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-conversation-remark",
+    "content": "会话备注属于 商业版 扩展。当前 OpenIMConversationItem 和 OpenIMSetConversationParams 没有独立 remark 字段，因此本版本插件不能安全写入该能力。 不要把备注编码进 ex 冒充标准字段。需要使用时，由商业版业务 API维护，并以业务侧返回作为权威；客户端可在会话 UI 中合并展示。 后续合同若正式增加字段，本页会随 interface/schema 哈希变化重新审核。在此之前，公共和商业客户端都不应调用不存在的 setter。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-conversation-extension",
+    "title": "设置会话扩展字段",
+    "description": "通过 setConversation 更新会话 ex。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-conversation-extension",
+    "content": "通过 setConversation 的 ex 更新会话扩展字符串。 import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, ex: JSON.stringify color: 'blue' , ex 是整段替换，不是局部 merge。修改前先读取现值并按业务 schema 合并，避免覆盖其他模块字段。不要存 Token、密钥或仅服务端可见数据。 Promise 成功后以 onConversationChanged 或重新查询确认。解析旧版本或未知字段失败时保留原字符串并降级展示。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-conversation-draft",
+    "title": "保存会话草稿",
+    "description": "保存或清空指定会话的本地草稿文本。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-conversation-draft",
+    "content": "setConversationDraft 保存会话草稿；传空字符串清除草稿。 import setConversationDraft from '@/uni modules/unix openim sdk' await setConversationDraft conversationID, draftText: editorText 草稿属于当前设备的会话状态，不应假定会同步到其他设备。输入框频繁变化时做防抖并串行写入，避免旧请求后完成覆盖新草稿。 会话项中的 draftText 和 draftTextTime 用于恢复与排序提示。退出账号时不要把旧账号草稿带入新账号状态。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-message-receive-option",
+    "title": "设置会话消息接收选项",
+    "description": "通过 setConversation 修改单个会话的 recvMsgOpt。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-message-receive-option",
+    "content": "recvMsgOpt 控制单个会话的消息接收策略，通过 setConversation 更新。 import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, recvMsgOpt: 1 具体数值含义使用插件导出的接收选项常量或服务端约定，不在业务代码中散落裸数字。该设置与账号全局接收策略不同，最终有效行为可能同时受两者影响。 更新后以会话变化事件或重新查询确认，不要仅修改当前页面开关。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/clear-group-mentions",
+    "title": "清除群聊提及状态",
+    "description": "通过 setConversation 清除群会话的 groupAtType。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations clear-group-mentions",
+    "content": "群会话中的 @ 提及提示由 groupAtType 表示。处理完提及后，通过 setConversation 把它重置为无提及状态。 import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, groupAtType: 0 使用合同/服务端定义的“无提及”值。该调用只修改会话提示状态，不删除 @ 消息，也不清理未读数。需要标记已读时另调用 标记会话已读 /sdk/uniapp/conversation/managing conversations/mark conversation read 。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/mark-conversation-read",
+    "title": "标记会话已读",
+    "description": "清理会话未读数，并处理单聊已读回执事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations mark-conversation-read",
+    "content": "markConversationMessageAsRead 把指定会话标为已读。本页同时归属单聊已读回执 onRecvC2CReadReceipt 。 import markConversationMessageAsRead, off, onRecvC2CReadReceipt, from '@/uni modules/unix openim sdk' const receiptSubscription = onRecvC2CReadReceipt result = result.receipts.forEach receipt = mergeReadReceipt receipt await markConversationMessageAsRead conversationID off receiptSubscription 商业版还提供 resetConversationUnread 商业版 ，可把多个会话的未读数重置为指定值： import resetConversationUnread from '@/uni modules/unix openim sdk' await resetConversationUnread conversationIDs: conversationID , num: 0 本地会话未读清零与对端收到已读回执不是同一步。Promise、会话变化和回执事件分别处理。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/mark-all-conversations-read",
+    "title": "标记全部会话已读",
+    "description": "清零当前账号的全部会话未读数。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations mark-all-conversations-read",
+    "content": "markAllConversationMessageAsRead 标记当前账号的全部会话已读。 import markAllConversationMessageAsRead from '@/uni modules/unix openim sdk' await markAllConversationMessageAsRead 这是范围较大的状态变更，UI 应二次确认。完成后不要只把角标设为 0；以会话变化和总未读事件刷新 store，处理服务端或其他设备并发产生的新未读消息。 该调用不会删除消息，也不会修改单个会话的消息接收选项。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/get-total-unread-count",
+    "title": "获取总未读数",
+    "description": "查询总未读快照，并订阅总未读变化事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations get-total-unread-count",
+    "content": "getTotalUnreadMsgCount 返回当前账号总未读快照； onTotalUnreadMessageCountChanged 持续推送新值。 import getTotalUnreadMsgCount, off, onTotalUnreadMessageCountChanged, from '@/uni modules/unix openim sdk' const unreadSubscription = onTotalUnreadMessageCountChanged count = setTotalUnread count setTotalUnread await getTotalUnreadMsgCount ?? 0 off unreadSubscription 先订阅再查询，事件和快照都直接替换总数，不做本地 +1/ 1 。把结果用于 TabBar 与 应用角标 /sdk/uniapp/getting started/handle app lifecycle and device state 时，仍要考虑系统通知权限。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-private-chat",
+    "title": "设置私聊模式",
+    "description": "商业版通过 setConversation 开启或关闭会话私聊模式。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-private-chat",
+    "content": "isPrivateChat 商业版 通过公共的 setConversation 字段写入。 import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, isPrivateChat: true 只传本次字段。私聊模式的消息展示、截屏或销毁规则由商业版服务端和客户端产品共同定义；仅设置布尔值不会自动实现所有 UI 安全策略。 最终状态以会话变化事件中的 isPrivateChat 为准。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-burn-duration",
+    "title": "设置阅后即焚时长",
+    "description": "商业版设置会话的 burnDuration。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-burn-duration",
+    "content": "burnDuration 商业版 表示阅后即焚时长，通过 setConversation 更新。 import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, burnDuration: 30 时长单位和允许范围以商业版服务端协议为准。不要在客户端自行倒计时后直接删除服务端消息；界面应结合消息状态和服务端事件呈现。 关闭能力时使用产品约定的关闭值，并重新查询会话确认。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-message-destruct",
+    "title": "设置消息销毁",
+    "description": "说明商业版会话消息销毁字段的当前写入边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-message-destruct",
+    "content": "OpenIMConversationItem 包含 isMsgDestruct 与 msgDestructTime 商业版 状态，但当前 OpenIMSetConversationParams 没有这两个写入字段。 因此本插件版本只能读取并展示服务端返回的销毁状态，不能通过相近字段或 ex 模拟 setter。需要修改时使用已确认的商业版业务接口，并在完成后重新查询会话。 客户端倒计时只负责展示，消息是否真正销毁必须以 Core/服务端状态为准。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/hide-a-conversation",
+    "title": "隐藏会话",
+    "description": "从当前会话列表隐藏一个会话而不删除消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations hide-a-conversation",
+    "content": "hideConversation 从会话列表隐藏指定会话。 import hideConversation from '@/uni modules/unix openim sdk' await hideConversation conversationID 隐藏不会删除历史消息；后续收到新消息时，会话可能重新出现在列表中。需要永久清理会话及消息时选择对应删除 API，并在 UI 中明确差异。 完成后通过会话事件或重新查询移除本地项，不只操作页面数组。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/hide-all-conversations",
+    "title": "隐藏全部会话",
+    "description": "隐藏当前账号的全部会话但保留消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations hide-all-conversations",
+    "content": "hideAllConversations 隐藏当前账号的全部会话。 import hideAllConversations from '@/uni modules/unix openim sdk' await hideAllConversations 这是范围操作，调用前应二次确认。它不会删除历史消息，后续消息可能重新创建可见会话。完成后重新查询会话快照，避免本地状态与 Core 不一致。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/delete-conversation",
+    "title": "删除会话",
+    "description": "删除会话索引并保留其消息数据。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations delete-conversation",
+    "content": "deleteConversation 删除指定会话项。 import deleteConversation from '@/uni modules/unix openim sdk' await deleteConversation conversationID 该入口与“删除会话并删除全部消息”不同。需要保留本地历史时使用本方法；收到新消息后会话可能再次出现。完成后重新查询或按事件更新会话 store。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/delete-conversation-with-messages",
+    "title": "删除会话及全部消息",
+    "description": "删除指定会话并清理其全部本地消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations delete-conversation-with-messages",
+    "content": "deleteConversationAndDeleteAllMsg 删除会话及其全部消息。 import deleteConversationAndDeleteAllMsg from '@/uni modules/unix openim sdk' await deleteConversationAndDeleteAllMsg conversationID 这是不可轻易恢复的操作，调用前必须确认。它不同于隐藏会话，也不同于只清理消息但保留会话。执行期间停止该会话的分页请求，成功后清空对应消息 store 并刷新会话列表。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/clear-conversation-messages",
+    "title": "清空会话消息",
+    "description": "清理指定会话的全部消息并保留会话项。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations clear-conversation-messages",
+    "content": "clearConversationAndDeleteAllMsg 清空指定会话的消息，但保留会话入口。 import clearConversationAndDeleteAllMsg from '@/uni modules/unix openim sdk' await clearConversationAndDeleteAllMsg conversationID 调用前二次确认，并停止正在进行的历史分页。成功后清空消息 store，再重新查询会话，使用 Core 返回的最新消息、序列与未读状态。 如果连会话也要删除，使用 删除会话及全部消息 /sdk/uniapp/conversation/managing conversations/delete conversation with messages 。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups",
+    "title": "会话分组概览",
+    "description": "商业版会话分组模型、raw 事件解析和生命周期。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups overview-conversation-groups",
+    "content": "会话分组属于 商业版 ，用于把会话组织为自定义组，并维护名称、顺序、隐藏状态、未读数和成员会话 ID。 OpenIMConversationGroupItem 的字段均可选。读取 conversationGroupID 后再作为主键； conversationIDs 可能为 null ，完整成员应以分页查询为准。 五个分组事件返回 opaque JSON 字符串，不是类型化对象： import off, onConversationGroupAdded, onConversationGroupChanged, onConversationGroupDeleted, onConversationGroupMemberAdded, onConversationGroupMemberDeleted, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' function refreshFromRawGroupEvent payload : string try const value = JSON.parseObject payload if value = null refreshConversationGroups catch console.error 'Invalid conversation group event payload' const addedSubscription = onConversationGroupAdded refreshFromRawGroupEvent const subscriptions : Array = addedSubscription, onConversationGroupChanged refreshFromRawGroupEvent , onConversationGroupDeleted refreshFromRawGroupEvent , onConversationGroupMemberAdded refreshFromRawGroupEvent , onConversationGroupMemberDeleted refreshFromRawGroupEvent , subscriptions.forEach subscription = off subscription 校验 JSON 后仍建议重新查询快照，不依赖未冻结的 raw 字段。日志不要输出完整 payload，因为扩展字段可能包含业务数据。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group",
+    "title": "创建会话分组",
+    "description": "商业版创建自定义会话分组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups create-conversation-group",
+    "content": "createConversationGroup 商业版 创建分组，并可把一个会话作为初始成员。 import createConversationGroup from '@/uni modules/unix openim sdk' const result = await createConversationGroup name: '重要会话', order: 100, conversationGroupType: 0, conversationID: conversationID, ex: '', const group = result?.conversationGroup 分组类型使用插件导出的合同值。 conversationID 可省略； ex 是整段业务扩展。返回分组可能为 null ，最终列表以分组事件或重新查询为准。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups",
+    "title": "查询会话分组",
+    "description": "商业版按分组查询类型读取会话分组快照。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups get-conversation-groups",
+    "content": "getConversationGroups 商业版 按 conversationGroupType 查询分组。 import getConversationGroups from '@/uni modules/unix openim sdk' const result = await getConversationGroups conversationGroupType: 0 const groups = result?.conversationGroups ?? 按非空 conversationGroupID 去重并排序。分组项中的 conversationIDs 可能只是当前快照；需要成员和总数时使用 查询分组及会话 /sdk/uniapp/conversation/managing conversation groups/get conversation group info with conversations 。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations",
+    "title": "查询分组及会话",
+    "description": "商业版分页读取一个会话分组及其成员会话。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups get-conversation-group-info-with-conversations",
+    "content": "getConversationGroupInfoWithConversations 商业版 返回分组资料、会话总数和一页会话。 import getConversationGroupInfoWithConversations from '@/uni modules/unix openim sdk' const result = await getConversationGroupInfoWithConversations conversationGroupID: groupID, pagination: pageNumber: 1, showNumber: 100 , pageNumber 从服务端约定的第一页开始，本合同示例使用 1； showNumber 是页大小。返回字段 ConversationTotal 首字母大写，应按真实字段名读取。会话按 conversationID 去重，分组为 null 时不要继续分页。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-by-conversation-id",
+    "title": "查询会话所属分组",
+    "description": "商业版按 conversationID 查询其所属会话分组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups get-conversation-group-by-conversation-id",
+    "content": "getConversationGroupByConversationID 商业版 返回指定会话所属的全部分组。 import getConversationGroupByConversationID from '@/uni modules/unix openim sdk' const result = await getConversationGroupByConversationID conversationID const groups = result?.conversationGroups ?? 一个会话可以属于多个分组，不能只读取第一项。按 conversationGroupID 去重；空数组表示当前没有所属分组，不是查询失败。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group",
+    "title": "更新会话分组",
+    "description": "商业版更新分组名称、扩展字段或隐藏状态。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups update-conversation-group",
+    "content": "updateConversationGroup 商业版 只更新提供的字段。 import updateConversationGroup from '@/uni modules/unix openim sdk' const result = await updateConversationGroup conversationGroupID: groupID, name: '重点跟进', hidden: false, name 、 ex 和 hidden 都可选。 ex 是整段替换，先合并已有业务字段。返回 conversationGroup 可能为空，最终状态以事件或重新查询为准。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order",
+    "title": "设置会话分组顺序",
+    "description": "商业版批量更新会话分组排序值。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups set-conversation-group-order",
+    "content": "setConversationGroupOrder 商业版 批量提交分组 ID 与顺序值。 import setConversationGroupOrder from '@/uni modules/unix openim sdk' await setConversationGroupOrder conversationGroupOrders: conversationGroupID: 'group a', order: 100 , conversationGroupID: 'group b', order: 200 , , 拖拽结束后一次提交完整受影响集合，避免每次移动都发请求。成功后重新查询分组排序；并发编辑时以服务端最终值为准。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups",
+    "title": "把会话加入分组",
+    "description": "商业版把多个会话加入一个或多个分组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups add-conversations-to-groups",
+    "content": "addConversationsToGroups 商业版 使用会话 ID 与分组 ID 的集合更新成员关系。 import addConversationsToGroups from '@/uni modules/unix openim sdk' await addConversationsToGroups conversationIDs: conversationID , conversationGroupIDs: 'group a' , 两个数组都不能为空，并应先去重。Promise 成功后通过成员新增事件或重新查询确认；不要在失败时保留仅本地的成员关系。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups",
+    "title": "把会话移出分组",
+    "description": "商业版从一个或多个分组移除多个会话。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups remove-conversations-from-groups",
+    "content": "removeConversationsFromGroups 商业版 使用与加入相同的成员参数。 import removeConversationsFromGroups from '@/uni modules/unix openim sdk' await removeConversationsFromGroups conversationIDs: conversationID , conversationGroupIDs: 'group a' , 移出分组不会删除会话或消息。成功后处理成员删除事件或重新查询分组；重复移除按服务端状态处理，不做无限重试。"
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group",
+    "title": "删除会话分组",
+    "description": "商业版删除指定会话分组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups delete-conversation-group",
+    "content": "deleteConversationGroup 商业版 删除一个分组。 import deleteConversationGroup from '@/uni modules/unix openim sdk' await deleteConversationGroup conversationGroupID: groupID 删除分组不会删除其中的会话或消息。UI 应二次确认；成功后以分组删除事件或重新查询清理本地分组与成员索引。"
+  },
+  {
+    "path": "/sdk/uniapp/group/overview-group",
+    "title": "群组概览",
+    "description": "理解群资料、成员、申请、权限和群组事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group overview-group",
+    "content": "群组领域以 groupID 为稳定主键，包含群资料、成员、申请和权限。群名、头像、公告、群主和成员数都是可变快照。 import off, onGroupDismissed, onGroupInfoChanged, onJoinedGroupAdded, onJoinedGroupDeleted, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const infoSubscription = onGroupInfoChanged group = upsertGroup group.groupID, group const subscriptions : Array = infoSubscription, onGroupDismissed group = removeGroup group.groupID , onJoinedGroupAdded group = upsertGroup group.groupID, group , onJoinedGroupDeleted group = removeGroup group.groupID , subscriptions.forEach subscription = off subscription 先订阅事件，再查询已加入群组快照。按 groupID 幂等合并；群解散、退出和被移出群的事件语义不同，但都可能要求关闭当前聊天页。 OpenIMGroupItem 的 attachedInfo 以及 displayIsRead 、禁言例外等扩展能力可能依赖商业版。字段缺失时降级，不伪造默认权限。"
+  },
+  {
+    "path": "/sdk/uniapp/group/create-group",
+    "title": "创建群组",
+    "description": "创建群资料并设置初始成员与管理员。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group create-group",
+    "content": "createGroup 接收群资料、初始成员和可选管理员，返回 OpenIMGroupItem | null 。 import createGroup from '@/uni modules/unix openim sdk' const group = await createGroup groupInfo: groupName: '项目群', groupType: 2 , memberUserIDs: 'user b', 'user c' , adminUserIDs: 'user b' , 群类型、验证方式和其他 OpenIMCreateGroupInfo 字段使用插件合同值。成员与管理员先去重，管理员必须符合服务端规则。返回为空时不要创建仅本地群；以 Promise、群新增事件和重新查询共同确认。"
+  },
+  {
+    "path": "/sdk/uniapp/group/update-group-profile",
+    "title": "更新群资料",
+    "description": "通过 setGroupInfo 更新群名、公告、介绍、头像和策略字段。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group update-group-profile",
+    "content": "setGroupInfo 只更新提供的可选字段。 import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, groupName: '新的群名', introduction: '项目协作群', faceURL: 'https://cdn.example.com/group.png', 群主和管理员权限由服务端校验。Promise 成功后通过 onGroupInfoChanged 或重新查询刷新，不直接覆盖未提交字段。 displayIsRead 商业版 是字段级扩展；公共服务端不支持时不要发送。"
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-announcement",
+    "title": "设置群公告",
+    "description": "通过 setGroupInfo 更新群公告。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-announcement",
+    "content": "群公告使用 setGroupInfo 的 notification 字段更新。 import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, notification: '周五 17:00 发布版本' 只传公告字段，避免覆盖群名、头像或策略。公告可能触发群资料事件；以事件或重新查询确认 notificationUpdateTime 与 notificationUserID 。 公告会展示给群成员，不应包含 Token 或内部密钥。"
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-extension",
+    "title": "设置群扩展字段",
+    "description": "通过 setGroupInfo 更新群组 ex。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-extension",
+    "content": "群组业务扩展使用 setGroupInfo 的 ex 字符串。 import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, ex: JSON.stringify department: 'R&D' ex 是整段替换。先读取并校验已有 JSON，再合并本模块字段；解析失败时不要覆盖原值。扩展数据对有权读取群资料的成员可见，不存放秘密。"
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-join-verification",
+    "title": "设置入群验证",
+    "description": "设置群成员加入时的验证策略。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-join-verification",
+    "content": "通过 setGroupInfo 的 needVerification 更新入群验证策略。 import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, needVerification: 1 使用 OpenIMGroupNeedVerification 对应常量，不散落裸数字。策略只影响后续申请；已有申请和成员不会自动重新处理。最终值以群资料事件为准。"
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-member-profile-access",
+    "title": "设置群成员资料可见性",
+    "description": "控制群成员是否可以查看其他成员资料。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-member-profile-access",
+    "content": "通过 setGroupInfo 的 lookMemberInfo 设置群成员资料可见策略。 import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, lookMemberInfo: 1 使用 OpenIMGroupOption 合法值。该策略不替代业务后端的隐私与权限校验；客户端隐藏 UI 也不能视为安全边界。"
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-member-friend-permission",
+    "title": "设置群成员加好友权限",
+    "description": "控制群成员之间是否可以发起好友申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-member-friend-permission",
+    "content": "通过 setGroupInfo 的 applyMemberFriend 更新群成员加好友策略。 import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, applyMemberFriend: 1 使用 OpenIMGroupOption 合法值。该字段由服务端执行，UI 只负责展示；策略变化后以群资料事件刷新。"
+  },
+  {
+    "path": "/sdk/uniapp/group/change-group-mute",
+    "title": "开启或关闭全员禁言",
+    "description": "修改群组全员禁言状态。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group change-group-mute",
+    "content": "changeGroupMute 修改群组全员禁言。 import changeGroupMute from '@/uni modules/unix openim sdk' await changeGroupMute groupID, isMute: true 权限和群状态由服务端校验。Promise 成功后通过群资料事件或重新查询更新 UI。商业版群资料可能包含禁言例外用户列表；公共客户端应把缺失字段视为无扩展信息，而非自行推断。"
+  },
+  {
+    "path": "/sdk/uniapp/group/join-group",
+    "title": "申请加入群组",
+    "description": "向指定群发送加入申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group join-group",
+    "content": "joinGroup 提交入群申请。 import joinGroup from '@/uni modules/unix openim sdk' await joinGroup groupID, reqMsg: '申请加入项目群', joinSource: 2, ex: '', joinSource 使用产品与服务端约定值。Promise 成功不等于已入群：免验证群可能直接加入，需要验证时等待管理员处理。申请文案和 ex 不包含敏感信息。"
+  },
+  {
+    "path": "/sdk/uniapp/group/quit-group",
+    "title": "退出群组",
+    "description": "当前用户主动退出指定群。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group quit-group",
+    "content": "quitGroup 让当前用户退出群组。 import quitGroup from '@/uni modules/unix openim sdk' await quitGroup groupID 群主通常不能直接退出，需先转让群主或解散群。UI 应二次确认；成功后关闭群聊页，并以已加入群删除事件或重新查询清理状态。"
+  },
+  {
+    "path": "/sdk/uniapp/group/dismiss-group",
+    "title": "解散群组",
+    "description": "群主解散指定群组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group dismiss-group",
+    "content": "dismissGroup 解散群组。 import dismissGroup from '@/uni modules/unix openim sdk' await dismissGroup groupID 这是不可逆的高风险操作，只允许有权限的群主执行。成功后所有成员会收到群解散/已加入群删除相关事件；关闭聊天与管理页面，不再发送群消息。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/get-specified-groups-info",
+    "title": "查询指定群资料",
+    "description": "按 groupID 列表批量查询群资料。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups get-specified-groups-info",
+    "content": "getSpecifiedGroupsInfo 批量查询群资料。 import getSpecifiedGroupsInfo from '@/uni modules/unix openim sdk' const result = await getSpecifiedGroupsInfo 'group a', 'group b' const groups = result?.groups ?? 结果不保证与输入顺序一致，按 groupID 映射。未返回群可能不存在、已解散或当前无权访问。大量 ID 分批查询。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/get-joined-group-list",
+    "title": "查询已加入群组",
+    "description": "一次性读取当前账号已加入的群组快照。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups get-joined-group-list",
+    "content": "getJoinedGroupList 返回当前账号已加入群组的完整本地快照。 import getJoinedGroupList from '@/uni modules/unix openim sdk' const result = await getJoinedGroupList replaceJoinedGroups result?.groups ?? 按 groupID 去重，并配合 群组概览 /sdk/uniapp/group/overview group 的事件维护增量。群较多时改用分页入口。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page",
+    "title": "分页查询已加入群组",
+    "description": "按 offset 和 count 分页读取已加入群组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups get-joined-group-list-page",
+    "content": "getJoinedGroupListPage 适合群数量较大的账号。 import getJoinedGroupListPage from '@/uni modules/unix openim sdk' const result = await getJoinedGroupListPage offset: 0, count: 100 appendGroups result?.groups ?? offset 从 0 开始，直到返回数量小于 count 。分页期间群事件可能改变列表，应按 groupID 去重，而不是依赖页内位置。 displayIsRead 和部分禁言扩展字段 商业版 ，缺失时按可选值处理。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/is-join-group",
+    "title": "检查是否已加入群组",
+    "description": "判断当前账号是否属于指定群。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups is-join-group",
+    "content": "isJoinGroup 返回布尔值。 import isJoinGroup from '@/uni modules/unix openim sdk' const joined = await isJoinGroup groupID 该结果是查询时快照。群状态变化后用群事件或重新查询刷新，不把一次 true 永久缓存。未加入时可按群验证策略发起申请。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/search-groups",
+    "title": "搜索已加入群组",
+    "description": "按群 ID 或群名称搜索本地群组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups search-groups",
+    "content": "searchGroups 搜索当前可见的群资料。 import searchGroups from '@/uni modules/unix openim sdk' const result = await searchGroups keywordList: '项目' , isSearchGroupID: true, isSearchGroupName: true, 空关键词由 UI 拦截。结果按 groupID 去重；该 API不是全站群发现接口，是否仅搜索已加入群由 Core 与服务端数据范围决定。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient",
+    "title": "查询收到的入群申请",
+    "description": "分页查询待管理的入群申请，并处理申请事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications get-group-application-list-as-recipient",
+    "content": "getGroupApplicationListAsRecipient 查询当前账号有权处理的入群申请。本页归属新增、接受、拒绝和删除事件。 import getGroupApplicationListAsRecipient, off, onGroupApplicationAccepted, onGroupApplicationAdded, onGroupApplicationDeleted, onGroupApplicationRejected, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const addedSubscription = onGroupApplicationAdded item = upsertGroupApplication item const subscriptions : Array = addedSubscription, onGroupApplicationAccepted item = upsertGroupApplication item , onGroupApplicationRejected item = upsertGroupApplication item , onGroupApplicationDeleted item = removeGroupApplication item , const result = await getGroupApplicationListAsRecipient offset: 0, count: 50 replaceReceivedGroupApplications result?.applications ?? subscriptions.forEach subscription = off subscription 事件与查询幂等合并。处理权限与申请状态由服务端校验；管理员变更后重新查询。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/get-group-application-list-as-applicant",
+    "title": "查询发出的入群申请",
+    "description": "分页查询当前账号发出的入群申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications get-group-application-list-as-applicant",
+    "content": "getGroupApplicationListAsApplicant 返回 OpenIMGroupApplicationListResult | null 。 import getGroupApplicationListAsApplicant from '@/uni modules/unix openim sdk' const result = await getGroupApplicationListAsApplicant offset: 0, count: 50 renderSentGroupApplications result?.applications ?? 参数可省略。按群、申请人和时间字段建立稳定 key；断线恢复后重新查询状态。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/get-group-application-unhandled-count",
+    "title": "查询未处理入群申请数",
+    "description": "查询群管理入口的未处理申请数量。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications get-group-application-unhandled-count",
+    "content": "getGroupApplicationUnhandledCount 返回数量或 null 。 import getGroupApplicationUnhandledCount from '@/uni modules/unix openim sdk' const count = await getGroupApplicationUnhandledCount offset: 0, count: 100 setGroupApplicationCount count ?? 0 多端处理会让本地增减漂移，申请事件到达后重新查询权威数量。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/observe-group-application-badge-count",
+    "title": "观察群申请角标变化",
+    "description": "商业版订阅群申请 badge 数量事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications observe-group-application-badge-count",
+    "content": "onGroupApplicationBadgeCountChanged 商业版 直接提供新的角标数量。 import off, onGroupApplicationBadgeCountChanged, from '@/uni modules/unix openim sdk' const badgeSubscription = onGroupApplicationBadgeCountChanged count = setGroupApplicationCount count off badgeSubscription 用事件值替换本地数量，不做 +1/ 1 。当前没有“清除群申请 badge”的 API；处理申请后通过查询和后续事件刷新，不能调用不存在的方法。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/accept-group-application",
+    "title": "接受入群申请",
+    "description": "接受指定用户加入指定群。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications accept-group-application",
+    "content": "acceptGroupApplication 由有权限的群成员处理申请。 import acceptGroupApplication from '@/uni modules/unix openim sdk' await acceptGroupApplication groupID, fromUserID: 'user b', handleMsg: '已通过' 成功后分别刷新申请列表和群成员列表。UI 在请求期间锁定该申请，避免接受与拒绝并发。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/refuse-group-application",
+    "title": "拒绝入群申请",
+    "description": "拒绝指定用户加入指定群。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications refuse-group-application",
+    "content": "refuseGroupApplication 使用与接受相同的定位字段。 import refuseGroupApplication from '@/uni modules/unix openim sdk' await refuseGroupApplication groupID, fromUserID: 'user b', handleMsg: '暂不通过' 处理说明可能对申请人可见，不写内部风控信息。最终状态以申请事件或重新查询为准。"
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/delete-group-requests",
+    "title": "删除入群申请记录",
+    "description": "商业版批量删除指定入群申请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications delete-group-requests",
+    "content": "deleteGroupRequests 商业版 删除明确指定的申请记录。 import deleteGroupRequests from '@/uni modules/unix openim sdk' await deleteGroupRequests groupRequests: groupID, fromUserID: 'user b' , 使用 OpenIMSimpleGroupRequest 的真实字段定位目标。删除记录不会移除已加入成员。完成后重新查询申请列表与数量。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/get-group-member-list",
+    "title": "查询群成员列表",
+    "description": "分页查询群成员，并处理成员新增、删除和资料变化事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members get-group-member-list",
+    "content": "getGroupMemberList 按过滤条件分页读取成员。本页归属三个成员事件。 import getGroupMemberList, off, onGroupMemberAdded, onGroupMemberDeleted, onGroupMemberInfoChanged, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const addedSubscription = onGroupMemberAdded member = upsertMember member const subscriptions : Array = addedSubscription, onGroupMemberDeleted member = removeMember member.groupID, member.userID , onGroupMemberInfoChanged member = upsertMember member , const result = await getGroupMemberList groupID, filter: 0, offset: 0, count: 100 replaceMembers result?.members ?? subscriptions.forEach subscription = off subscription filter 使用服务端定义的成员过滤值。按 groupID:userID 去重；分页与事件并发时不要按数组位置更新。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/get-specified-group-members-info",
+    "title": "查询指定群成员资料",
+    "description": "按用户 ID 列表批量读取指定群成员。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members get-specified-group-members-info",
+    "content": "getSpecifiedGroupMembersInfo 批量查询群内用户。 import getSpecifiedGroupMembersInfo from '@/uni modules/unix openim sdk' const result = await getSpecifiedGroupMembersInfo groupID, userIDList: 'user a', 'user b' , 结果可能少于输入，按 userID 建立映射。未返回用户可能不在群内或不可访问；不要使用普通用户资料替代群昵称、角色和禁言状态。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/get-users-in-group",
+    "title": "筛选群内用户",
+    "description": "从给定用户列表中返回属于指定群的用户 ID。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members get-users-in-group",
+    "content": "getUsersInGroup 判断一批用户中哪些属于指定群，返回 string | null 。 import getUsersInGroup from '@/uni modules/unix openim sdk' const members = await getUsersInGroup groupID, userIDList: candidateUserIDs 结果是用户 ID，不含成员资料。需要群昵称和角色时再调用指定成员查询。输入去重，并把 null 与空数组分别作为“无有效结果”和“没有匹配成员”处理。"
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/search-group-members",
+    "title": "搜索群成员",
+    "description": "按用户 ID 或群昵称搜索群成员。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members search-group-members",
+    "content": "searchGroupMembers 在指定群内搜索。 import searchGroupMembers from '@/uni modules/unix openim sdk' const result = await searchGroupMembers groupID, keywordList: 'Alice' , isSearchUserID: true, isSearchMemberNickname: true, 空关键词由 UI 拦截。结果按 groupID:userID 去重；它不是全局用户搜索。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/invite-user-to-group",
+    "title": "邀请用户入群",
+    "description": "邀请一个或多个用户加入指定群。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members invite-user-to-group",
+    "content": "inviteUserToGroup 提交用户列表和邀请原因。 import inviteUserToGroup from '@/uni modules/unix openim sdk' await inviteUserToGroup groupID, reason: '加入项目讨论', userIDList: 'user b', 'user c' , 用户列表先去重。Promise 成功后以成员新增事件或重新查询确认；邀请原因可能对目标用户可见，不含敏感信息。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/kick-group-member",
+    "title": "移除群成员",
+    "description": "把一个或多个成员移出指定群。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members kick-group-member",
+    "content": "kickGroupMember 使用 OpenIMGroupInviteParams 相同结构定位成员和填写原因。 import kickGroupMember from '@/uni modules/unix openim sdk' await kickGroupMember groupID, reason: '成员调整', userIDList: 'user b' 这是管理操作，调用前确认权限和目标。不能移除群主；管理员规则由服务端执行。成功后以成员删除事件刷新列表。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-nickname",
+    "title": "设置群成员昵称",
+    "description": "更新成员在指定群内的昵称。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-nickname",
+    "content": "setGroupMemberInfo 是成员资料统一更新入口。 import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', nickname: '项目负责人' 群昵称不同于用户全局昵称。只传本次字段，最终资料以 onGroupMemberInfoChanged 为准。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-role-level",
+    "title": "设置群成员角色",
+    "description": "通过 setGroupMemberInfo 更新成员角色等级。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-role-level",
+    "content": "通过 roleLevel 更新群主、管理员或普通成员角色。 import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', roleLevel: 60 使用 OpenIMGroupMemberRoleLevel 合法常量（20、60、100 对应具体角色以合同定义为准）。高风险角色变更需二次确认；服务端校验操作者权限。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-avatar",
+    "title": "设置群成员头像",
+    "description": "通过 setGroupMemberInfo 更新成员在群内的头像。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-avatar",
+    "content": "通过 faceURL 更新群成员资料中的头像。 import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', faceURL: avatarURL 先把本地图片上传到业务可访问的 HTTPS 地址。不要传 unifile:// 或本地沙盒路径作为远端头像 URL。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-extension",
+    "title": "设置群成员扩展字段",
+    "description": "通过 setGroupMemberInfo 更新成员 ex。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-extension",
+    "content": "成员 ex 是整段业务扩展字符串。 import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', ex: JSON.stringify title: 'PM' 修改前合并已有值，不覆盖其他模块字段。扩展对有权查看成员资料的用户可见，不存秘密。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/transfer-group-owner",
+    "title": "转让群主",
+    "description": "把群主权限转让给指定成员。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members transfer-group-owner",
+    "content": "transferGroupOwner 是不可轻易撤销的高风险操作。 import transferGroupOwner from '@/uni modules/unix openim sdk' await transferGroupOwner groupID, newOwnerUserID: 'user b' 目标必须是有效群成员。UI 二次确认并说明当前群主角色会变化；成功后重新查询群资料和双方成员角色。"
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/change-group-member-mute",
+    "title": "设置成员禁言",
+    "description": "按秒设置指定群成员的禁言时长。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members change-group-member-mute",
+    "content": "changeGroupMemberMute 使用 mutedSeconds 设置禁言时长。 import changeGroupMemberMute from '@/uni modules/unix openim sdk' await changeGroupMemberMute groupID, userID: 'user b', mutedSeconds: 3600 解除禁言使用服务端约定的 0 秒。权限、最大时长和特殊角色限制由服务端校验；最终成员状态以事件或重新查询为准。"
+  },
+  {
+    "path": "/sdk/uniapp/group/check-full-sync-state",
+    "title": "检查群组 full-sync 状态",
+    "description": "商业版检查群列表或指定群成员是否完成全量同步。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group check-full-sync-state",
+    "content": "两个检查接口属于 商业版 ，用于诊断本地数据是否已经完成全量同步。 import checkGroupMemberFullSync, checkLocalGroupFullSync, from '@/uni modules/unix openim sdk' const groups = await checkLocalGroupFullSync const members = await checkGroupMemberFullSync groupID if groups?.IsFullSync == true && members?.IsFullSync == true enableCompleteGroupManagement 返回字段真实名称是 IsFullSync 。 null 或字段缺失不能当作 true 。这些方法只检查状态，不触发同步；未完成时继续观察 SDK 同步事件或稍后查询，避免高频轮询。"
+  },
+  {
+    "path": "/sdk/uniapp/message/overview-message",
+    "title": "消息概览",
+    "description": "理解消息创建、发送、接收、历史、状态和进度事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message overview-message",
+    "content": "OpenIM 消息以 clientMsgID 作为客户端稳定标识，服务端消息还包含 serverMsgID 、会话路由、发送者、时间、内容类型与具体 elem。应用应使用 conversationID:clientMsgID 组合键幂等合并发送结果、实时事件和历史列表。 创建消息只生成 OpenIMMessageItem ，不会发送；随后调用 sendMessage 指定 recvID 或 groupID 。接收方通过消息事件获得增量，首次进入和翻页通过历史 API建立快照。 本页归属发送、文件上传和日志上传进度事件： import off, onSendMessageProgress, onUploadFileProgress, onUploadLogsProgress, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const sendProgressSubscription = onSendMessageProgress event = updateMessageProgress event.clientMsgID, event.progress const subscriptions : Array = sendProgressSubscription, onUploadFileProgress event = updateCurrentUpload event.progress , onUploadLogsProgress event = updateLogUpload event.progress , subscriptions.forEach subscription = off subscription 进度可能重复、跳跃或在最终 Promise 前后到达；只做单调展示，最终成功/失败以 API 结果为准。 文件消息的本地完整路径必须能被原生层读取。 unifile:// 先转为真实沙盒路径；网络 URL 使用对应 by URL 创建入口。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-text-message",
+    "title": "创建文本消息",
+    "description": "创建待发送的普通文本消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-text-message",
+    "content": "createTextMessage 返回 OpenIMMessageItem | null ，不发送消息。 import createTextMessage from '@/uni modules/unix openim sdk' const message = await createTextMessage '你好，OpenIMSDK' if message == null throw new Error 'Failed to create text message' 文本应先按产品限制校验长度。创建成功后把消息传给 发送消息 /sdk/uniapp/message/sending messages/send message ；不要手工拼 OpenIMMessageItem 。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-text-at-message",
+    "title": "创建 @ 文本消息",
+    "description": "在群聊中创建带 @ 用户信息的文本消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-text-at-message",
+    "content": "createTextAtMessage 创建群聊 @ 消息，参数包含正文、被 @ 用户和可选引用信息。 import createTextAtMessage from '@/uni modules/unix openim sdk' const message = await createTextAtMessage text: '@Alice 请确认', atUserIDList: 'user a' , atUsersInfo: atUserID: 'user a', groupNickname: 'Alice' , quoteMessage: null, 字段以 OpenIMCreateTextAtMessageParams 为准，用户列表和显示信息保持一致。商业版 getAtAllTag 商业版 可查询当前服务端使用的“@所有人”标签；HarmonyOS 支持该本地/企业入口。 创建后仍需调用发送 API并填写目标群 ID。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-custom-message",
+    "title": "创建自定义或高级文本消息",
+    "description": "创建业务自定义消息或带实体范围的高级文本。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-custom-message",
+    "content": "createCustomMessage 用于双方已约定 schema 的业务载荷： import createCustomMessage from '@/uni modules/unix openim sdk' const message = await createCustomMessage data: JSON.stringify orderID: 'order 123' , extension: '', descriptionText: '订单卡片', data 、 extension 、 descriptionText 都会发给接收方，不能包含秘密。接收端先验证内容类型和 JSON 字段，再映射业务模型。 createAdvancedTextMessage 使用 OpenIMCreateAdvancedTextMessageParams 创建带文本实体/样式范围的消息。范围必须对应原始文本索引，越界数据应在调用前拒绝。两种入口都只创建消息，不发送。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-image-message-from-full-path",
+    "title": "从完整路径创建图片消息",
+    "description": "使用原生可读的本地完整路径创建图片消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-image-message-from-full-path",
+    "content": "公共入口 createImageMessageFromFullPath 接收本地完整路径： import createImageMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createImageMessageFromFullPath '/data/user/0/app/cache/photo.jpg' 商业版还提供结构化 createImageMessage 商业版 ，参数可包含平台来源路径。两者都要求原生层有读取权限。 unifile:// 、相册临时对象或 content URI 应先通过 uni 平台 API转成插件可读路径。文件不存在或权限不足时，不要进入发送阶段。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-image-message-by-url",
+    "title": "从 URL 创建图片消息",
+    "description": "使用已上传图片的 elem 信息创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-image-message-by-url",
+    "content": "createImageMessageByURL 适合图片已由业务上传并取得可访问 URL 的场景。 import createImageMessageByURL from '@/uni modules/unix openim sdk' const message = await createImageMessageByURL pictureElem OpenIMPictureElem 应包含源图及缩略图等合同字段。URL 必须能被消息参与者访问，尺寸、大小和类型与真实资源一致。不要把本地路径填入 URL 字段。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-sound-message-from-full-path",
+    "title": "从完整路径创建语音消息",
+    "description": "使用本地音频路径和时长创建语音消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-sound-message-from-full-path",
+    "content": "公共入口 createSoundMessageFromFullPath 接收 soundPath 与 duration ： import createSoundMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createSoundMessageFromFullPath soundPath: '/data/user/0/app/cache/voice.m4a', duration: 8, 商业版 createSoundMessage 商业版 使用同一结构。时长单位以合同/服务端约定为准，并与真实媒体一致。录音完成、文件关闭且权限可读后再调用。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-sound-message-by-url",
+    "title": "从 URL 创建语音消息",
+    "description": "使用已上传音频的 OpenIMSoundElem 创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-sound-message-by-url",
+    "content": "createSoundMessageByURL 接收完整 OpenIMSoundElem 。 import createSoundMessageByURL from '@/uni modules/unix openim sdk' const message = await createSoundMessageByURL soundElem URL、UUID、大小、时长和类型应与上传结果一致。资源需对接收方可访问；不要把本地沙盒路径当成远端 URL。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-video-message-from-full-path",
+    "title": "从完整路径创建视频消息",
+    "description": "使用视频、封面完整路径和媒体信息创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-video-message-from-full-path",
+    "content": "公共入口 createVideoMessageFromFullPath 使用 OpenIMCreateVideoMessageParams ： import createVideoMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createVideoMessageFromFullPath videoPath: '/data/user/0/app/cache/video.mp4', videoType: 'mp4', duration: 12, snapshotPath: '/data/user/0/app/cache/video cover.jpg', 商业版 createVideoMessage 商业版 还可使用来源路径字段。视频和封面都必须真实存在并可读；时长、类型与文件一致。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-video-message-by-url",
+    "title": "从 URL 创建视频消息",
+    "description": "使用已上传视频和封面的 OpenIMVideoElem 创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-video-message-by-url",
+    "content": "createVideoMessageByURL 接收 OpenIMVideoElem 。 import createVideoMessageByURL from '@/uni modules/unix openim sdk' const message = await createVideoMessageByURL videoElem 视频 URL、封面 URL、UUID、大小、时长和类型使用上传后的真实值。接收方必须能访问两个资源。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-file-message-from-full-path",
+    "title": "从完整路径创建文件消息",
+    "description": "使用本地文件完整路径和文件名创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-file-message-from-full-path",
+    "content": "公共入口 createFileMessageFromFullPath ： import createFileMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createFileMessageFromFullPath filePath: '/data/user/0/app/cache/report.pdf', fileName: 'report.pdf', 商业版 createFileMessage 商业版 可携带来源路径。调用前校验存在性、大小、扩展名和权限；文件名只用于展示，不能作为路径拼接依据。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-file-message-by-url",
+    "title": "从 URL 创建文件消息",
+    "description": "使用已上传文件的 OpenIMFileElem 创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-file-message-by-url",
+    "content": "createFileMessageByURL 接收 OpenIMFileElem 。 import createFileMessageByURL from '@/uni modules/unix openim sdk' const message = await createFileMessageByURL fileElem 文件 URL、名称、UUID、大小和类型应来自可信上传结果。URL 需要接收方可访问，不直接暴露私有存储凭据。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-card-message",
+    "title": "创建名片消息",
+    "description": "使用 OpenIMCardElem 创建用户名片消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-card-message",
+    "content": "createCardMessage 接收 OpenIMCardElem 。 import createCardMessage from '@/uni modules/unix openim sdk' const message = await createCardMessage userID: 'user b', nickname: 'Alice', faceURL: 'https://cdn.example.com/alice.png', ex: '', 名片是发送时快照，接收方点击后应按 userID 查询最新资料。不要把名片字段当作可信身份认证。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-location-message",
+    "title": "创建位置消息",
+    "description": "使用经纬度和描述创建位置消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-location-message",
+    "content": "createLocationMessage 使用描述、经度和纬度。 import createLocationMessage from '@/uni modules/unix openim sdk' const message = await createLocationMessage descriptionText: '会议室 A', longitude: 121.47, latitude: 31.23, 调用前取得用户授权并校验范围。位置属于敏感数据，发送前明确提示接收范围；不要在日志中记录精确坐标。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-face-message",
+    "title": "创建表情消息",
+    "description": "使用表情索引和业务数据创建消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-face-message",
+    "content": "createFaceMessage 接收 index 与 data 。 import createFaceMessage from '@/uni modules/unix openim sdk' const message = await createFaceMessage index: 1, data: 'smile' 发送与接收端必须共享表情包版本和索引约定。未知索引应显示降级占位，不让解析错误阻断消息列表。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-quote-message",
+    "title": "创建引用回复消息",
+    "description": "创建普通或高级引用消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-quote-message",
+    "content": "createQuoteMessage 使用文本和被引用消息的 JSON 字符串： import createQuoteMessage from '@/uni modules/unix openim sdk' const message = await createQuoteMessage text: '同意', message: JSON.stringify quotedMessage , createAdvancedQuoteMessage 还支持高级文本实体。引用的是消息快照；原消息撤回或删除后，UI 应显示不可用提示而不是崩溃。序列化前使用插件返回的完整消息，不要只复制 clientMsgID 伪造引用对象。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-markdown-message",
+    "title": "创建 Markdown 消息",
+    "description": "商业版创建 Markdown 内容消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-markdown-message",
+    "content": "createMarkdownMessage 商业版 使用 OpenIMCreateMarkdownMessageParams 。 import createMarkdownMessage from '@/uni modules/unix openim sdk' const message = await createMarkdownMessage content: ' 发布完成 ' 具体字段以锁定合同为准。接收端渲染 Markdown 前进行安全过滤，禁用危险 HTML、脚本和不受信任 URL；原始内容不是可信 HTML。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-forward-message",
+    "title": "创建逐条转发消息",
+    "description": "基于现有消息创建可发送的转发消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-forward-message",
+    "content": "createForwardMessage 接收一条完整消息并创建转发对象。 import createForwardMessage from '@/uni modules/unix openim sdk' const forward = await createForwardMessage sourceMessage 创建后仍需向新目标发送。转发前检查原内容、权限与隐私；本地扩展、发送状态等设备字段不应作为接收方权威数据。"
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-merger-message",
+    "title": "创建合并转发消息",
+    "description": "把多条消息合并为摘要与消息列表。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-merger-message",
+    "content": "createMergerMessage 使用标题、摘要和原消息列表创建合并转发。 import createMergerMessage from '@/uni modules/unix openim sdk' const merger = await createMergerMessage messageList: selectedMessages, title: '聊天记录', abstractList: 'Alice: 方案已确认' , 摘要由业务生成但不可与实际消息矛盾。转发前检查每条消息的可分享权限和敏感信息；大型列表限制条数与总大小。"
+  },
+  {
+    "path": "/sdk/uniapp/message/sending-messages/send-message",
+    "title": "发送消息",
+    "description": "把已创建的消息发送给单聊用户或群组。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message sending-messages send-message",
+    "content": "sendMessage 接收 OpenIMSendMessageOptions ，Promise 直接返回最终 OpenIMMessageItem 。 import sendMessage from '@/uni modules/unix openim sdk' const sent = await sendMessage message, recvID: 'user b', groupID: '', isOnlineOnly: false, upsertMessage sent.clientMsgID, sent 单聊填 recvID 、群聊填 groupID ，另一个传空字符串。 offlinePushInfo 可按产品推送策略提供； isOnlineOnly 为 true 时不按普通持久消息处理。 发送进度按 clientMsgID 合并，最终成功以 Promise 为准。失败时保留消息和错误状态供用户重试，不重新创建不同 clientMsgID 的重复消息，除非产品明确要求。"
+  },
+  {
+    "path": "/sdk/uniapp/message/sending-messages/send-message-not-oss",
+    "title": "发送非 OSS 消息",
+    "description": "发送已经准备好远端资源信息的消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message sending-messages send-message-not-oss",
+    "content": "sendMessageNotOss 与 sendMessage 使用同一 options，但跳过普通 OSS 上传流程，适合消息 elem 已包含可访问远端资源的场景。 import sendMessageNotOss from '@/uni modules/unix openim sdk' const sent = await sendMessageNotOss message, recvID, groupID 只有确认资源 URL、大小、类型和权限均完整时使用。把本地路径消息误交给本入口会导致接收方无法访问媒体。普通本地文件优先使用 sendMessage 。"
+  },
+  {
+    "path": "/sdk/uniapp/message/receiving-messages/receive-messages",
+    "title": "接收消息",
+    "description": "订阅单条、批量、离线和只在线消息事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message receiving-messages receive-messages",
+    "content": "不同平台或恢复路径可能使用单条或批量事件。为保证完整性，同时订阅五个入口，并按 conversationID:clientMsgID 去重。 import off, onRecvNewMessage, onRecvNewMessages, onRecvOfflineNewMessage, onRecvOfflineNewMessages, onRecvOnlineOnlyMessage, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const newMessageSubscription = onRecvNewMessage message = mergeMessage message const subscriptions : Array = newMessageSubscription, onRecvOfflineNewMessage message = mergeMessage message , onRecvOnlineOnlyMessage message = mergeOnlineOnlyMessage message , onRecvNewMessages result = result.messages.forEach mergeMessage , onRecvOfflineNewMessages result = result.messages.forEach mergeMessage , subscriptions.forEach subscription = off subscription 只在线消息按产品语义展示，不假定可从历史恢复。事件只提供增量；首次进入、断线恢复和向上翻页仍查询历史。不要在多个页面重复注册同一组全局消息事件，推荐由消息 store 统一持有。"
+  },
+  {
+    "path": "/sdk/uniapp/message/receiving-messages/receive-custom-business-messages",
+    "title": "接收自定义业务与消息扩展事件",
+    "description": "安全解析 raw JSON 字符串，并区分公共与商业版扩展事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message receiving-messages receive-custom-business-messages",
+    "content": "这些事件返回 opaque 字符串。 onRecvCustomBusinessMessage 属于公共接口；消息扩展新增、变化、删除和 KV 变化事件属于 商业版 。 import off, onMessageKvInfoChanged, onRecvCustomBusinessMessage, onRecvMessageExtensionsAdded, onRecvMessageExtensionsChanged, onRecvMessageExtensionsDeleted, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' function handleRawPayload payload : string try const value = JSON.parseObject payload if value = null routeValidatedBusinessEvent value catch console.error 'Invalid custom message event' const customSubscription = onRecvCustomBusinessMessage handleRawPayload const subscriptions : Array = customSubscription, onRecvMessageExtensionsAdded handleRawPayload , onRecvMessageExtensionsChanged handleRawPayload , onRecvMessageExtensionsDeleted handleRawPayload , onMessageKvInfoChanged handleRawPayload , subscriptions.forEach subscription = off subscription 校验版本、事件类型和必填字段后再更新 store；未知事件安全忽略。日志不输出完整 payload。HarmonyOS 当前不支持这四个商业扩展事件，会返回 unsupported subscription。"
+  },
+  {
+    "path": "/sdk/uniapp/message/retrieving-messages/load-older-messages",
+    "title": "加载历史消息",
+    "description": "按会话和 clientMsgID 游标读取历史消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message retrieving-messages load-older-messages",
+    "content": "公共入口 getAdvancedHistoryMessageList 读取历史： import getAdvancedHistoryMessageList from '@/uni modules/unix openim sdk' const page = await getAdvancedHistoryMessageList conversationID, startClientMsgID: '', count: 50, 第一页用空 startClientMsgID ，后续使用当前最早边界消息的 ID。读取结果中的结束标记与消息列表，按 clientMsgID 去重。 商业版 getHistoryMessageList 商业版 额外支持 isReverse 、 viewType 和 lastMinSeq 。不要把它等同于已删除的单独 reverse history 页面；方向通过参数表达。"
+  },
+  {
+    "path": "/sdk/uniapp/message/retrieving-messages/find-messages-by-id",
+    "title": "按 ID 查找消息",
+    "description": "在多个会话中按 clientMsgID 批量定位消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message retrieving-messages find-messages-by-id",
+    "content": "findMessageList 接收查询数组，每项包含会话 ID 与消息 ID 列表。 import findMessageList from '@/uni modules/unix openim sdk' const result = await findMessageList conversationID, clientMsgIDList: 'msg a', 'msg b' , 返回 OpenIMFindMessageResult ，按原查询的会话与消息标识建立映射。未找到项不应导致整个结果失效。需要加载消息前后文时使用商业版上下文查询。"
+  },
+  {
+    "path": "/sdk/uniapp/message/retrieving-messages/load-message-context",
+    "title": "加载消息上下文",
+    "description": "商业版围绕一条锚点消息读取前后文。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message retrieving-messages load-message-context",
+    "content": "fetchSurroundingMessages 商业版 围绕完整锚点消息读取前后文。 import fetchSurroundingMessages from '@/uni modules/unix openim sdk' const result = await fetchSurroundingMessages startMessage: targetMessage, viewType: 0, before: 20, after: 20, viewType 使用产品/合同定义值。结果与实时事件可能重复，按 clientMsgID 去重并保持时间顺序。不要用只包含 ID 的伪消息作为锚点。"
+  },
+  {
+    "path": "/sdk/uniapp/message/searching-messages/search-messages",
+    "title": "搜索本地消息",
+    "description": "按关键词、发送者、类型和时间范围搜索消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message searching-messages search-messages",
+    "content": "searchLocalMessages 在 SDK 本地数据中搜索。 import searchLocalMessages from '@/uni modules/unix openim sdk' const result = await searchLocalMessages conversationID, keywordList: '发布' , keywordListMatchType: 0, senderUserIDList: , messageTypeList: , searchTimePosition: 0, searchTimePeriod: 0, pageIndex: 1, count: 50, 匹配类型、时间单位和页码使用合同/服务端约定。搜索只覆盖已同步到本地且可索引的内容；不要承诺服务器全量历史。结果按会话与消息 ID 去重。"
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/update-typing-status",
+    "title": "更新输入状态",
+    "description": "上报会话输入焦点并处理输入状态变化事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages update-typing-status",
+    "content": "公共入口 changeInputStates 以会话和焦点状态上报输入状态。本页归属 onConversationUserInputStatusChanged 。 import changeInputStates, off, onConversationUserInputStatusChanged, from '@/uni modules/unix openim sdk' const inputSubscription = onConversationUserInputStatusChanged status = updateConversationInputStatus status await changeInputStates conversationID, userID: peerUserID, focus: true off inputSubscription 进入输入框上报 true，失焦或离开页面上报 false，并做节流。商业版兼容入口 typingStatusUpdate 商业版 使用 recvID 和 msgTip ；同一流程不要同时调用两个入口。"
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/get-typing-status",
+    "title": "查询输入状态",
+    "description": "商业版查询指定会话和用户的输入状态。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages get-typing-status",
+    "content": "getInputStates 商业版 查询当前快照。 import getInputStates from '@/uni modules/unix openim sdk' const result = await getInputStates conversationID, userID: peerUserID 输入状态是短时提示，不持久化为业务事实。以事件更新 UI，并设置本地超时自动清除，避免断线后永久显示“正在输入”。"
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/check-speech-to-text",
+    "title": "检查语音转文字能力",
+    "description": "商业版查询当前语音转写能力。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages check-speech-to-text",
+    "content": "getSpeechToTextCapabilities 商业版 返回能力信息。 import getSpeechToTextCapabilities from '@/uni modules/unix openim sdk' const capabilities = await getSpeechToTextCapabilities 在展示转写入口前查询并缓存当前 session 的结果。能力可能随服务端、语言或账号变化；重新登录后刷新。没有能力时隐藏入口，不发送必然失败的请求。"
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/transcribe-audio",
+    "title": "将音频转为文字",
+    "description": "商业版提交音频文件名和数据进行语音转写。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages transcribe-audio",
+    "content": "speechToText 商业版 使用文件名和音频数据。 import speechToText from '@/uni modules/unix openim sdk' const result = await speechToText filename: 'voice.m4a', data: audioBase64 先检查能力，限制音频大小和格式。 data 的编码以商业服务协议为准；不要记录完整音频或 Base64。转写结果需要用户确认，不用于高风险自动决策。"
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/save-local-transcript",
+    "title": "保存本地转写内容",
+    "description": "商业版把更新后的消息内容保存到本地消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages save-local-transcript",
+    "content": "setMessageLocalContent 商业版 把完整消息对象保存到指定会话的本地存储。 import setMessageLocalContent from '@/uni modules/unix openim sdk' await setMessageLocalContent conversationID, message: updatedMessage 先在原消息副本中合并转写字段，不覆盖 clientMsgID 、路由和其他业务 elem。该修改是本地内容，不应假定同步到其他设备或服务端。"
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/translate-text-and-messages",
+    "title": "翻译文本和消息",
+    "description": "商业版翻译文本或指定消息，并说明 HarmonyOS 不支持。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages translate-text-and-messages",
+    "content": "两个接口均属于 商业版 ，Android 与 iOS 支持，HarmonyOS 当前返回 platform unsupported 。 import translateMessage, translateText, from '@/uni modules/unix openim sdk' const textResult = await translateText content: 'Hello', sourceLanguageCode: 'en', targetLanguageCode: 'zh', const translatedMessage = await translateMessage conversationID, clientMsgID, sourceLanguageCode: 'en', targetLanguageCode: 'zh', 语言代码使用商业服务支持的标准。翻译内容可能包含隐私，应遵守服务端数据处理政策。原文始终保留，翻译失败或平台不支持时降级显示原文。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/delete-local-message",
+    "title": "删除本地消息",
+    "description": "按会话和 clientMsgID 删除当前设备中的消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages delete-local-message",
+    "content": "deleteMessageFromLocalStorage 删除本地消息；兼容入口 deleteMessage 使用同一参数。 import deleteMessageFromLocalStorage from '@/uni modules/unix openim sdk' await deleteMessageFromLocalStorage conversationID, clientMsgID 该操作不会撤回对端消息，也不应伪装为服务端删除。成功后从当前设备 store 移除；需要通知对端使用撤回或商业版删除能力。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/delete-saved-messages",
+    "title": "删除已保存消息",
+    "description": "商业版批量删除消息，并处理 onMsgDeleted。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages delete-saved-messages",
+    "content": "deleteMessages 商业版 批量删除明确指定的消息。本页归属公共 onMsgDeleted 事件。 import deleteMessages, off, onMsgDeleted, from '@/uni modules/unix openim sdk' const deletedSubscription = onMsgDeleted message = removeMessageByID message.clientMsgID await deleteMessages deleteParams off deletedSubscription deleteParams 使用锁定的 OpenIMDeleteMessagesParams ，不要只传本地数组。事件和请求结果幂等合并；是否影响其他设备由商业服务语义决定。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/delete-user-messages",
+    "title": "删除用户在会话中的全部消息",
+    "description": "商业版删除指定用户在一个会话中的消息并处理 raw 事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages delete-user-messages",
+    "content": "deleteUserAllMessagesInConv 与事件 onDeleteUserAllMsgsInConv 均属于 商业版 。 import deleteUserAllMessagesInConv, off, onDeleteUserAllMsgsInConv, from '@/uni modules/unix openim sdk' const deleteSubscription = onDeleteUserAllMsgsInConv payload = try const value = JSON.parseObject payload if value = null refreshConversationMessages catch await deleteUserAllMessagesInConv conversationID, userID: targetUserID off deleteSubscription 这是高风险范围删除，需权限与二次确认。raw payload 校验后重新查询，不依赖未冻结字段。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/revoke-a-message",
+    "title": "撤回消息",
+    "description": "撤回指定消息，并处理消息撤回事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages revoke-a-message",
+    "content": "revokeMessage 使用会话和客户端消息 ID。 import off, onNewRecvMessageRevoked, revokeMessage, from '@/uni modules/unix openim sdk' const revokedSubscription = onNewRecvMessageRevoked info = mergeRevokedInfo info await revokeMessage conversationID, clientMsgID off revokedSubscription 服务端校验发送者、时限与权限。撤回后保留消息占位和撤回信息，不简单删除数组项。事件可能先于 Promise 到达，处理需幂等。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/modify-a-message",
+    "title": "修改消息",
+    "description": "商业版修改消息，并处理 modified/edited raw 事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages modify-a-message",
+    "content": "modifyMessage 、 onMessageModified 和 onMessageEdited 属于 商业版 。两个事件都是 raw 字符串。 import modifyMessage, off, onMessageEdited, onMessageModified, from '@/uni modules/unix openim sdk' const modifiedSubscription = onMessageModified payload = refreshModifiedMessage payload const editedSubscription = onMessageEdited payload = refreshModifiedMessage payload const result = await modifyMessage modifyParams off modifiedSubscription off editedSubscription modifyParams 按 OpenIMModifyMessageParams 构造。raw 事件先校验 JSON，再按稳定消息 ID查询或更新；不要记录完整正文。多端编辑按服务端最终版本解决冲突。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/get-pinned-messages",
+    "title": "查询置顶消息",
+    "description": "商业版查询一个会话的置顶消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages get-pinned-messages",
+    "content": "getConversationPinnedMsg 商业版 按会话查询置顶消息。 import getConversationPinnedMsg from '@/uni modules/unix openim sdk' const result = await getConversationPinnedMsg conversationID 以返回 DTO 的消息列表/分页字段为准，按 clientMsgID 去重。置顶变化后重新查询，避免依赖 raw 事件内部字段。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/set-message-pinned",
+    "title": "置顶或取消置顶消息",
+    "description": "商业版修改会话消息置顶状态并处理变化事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages set-message-pinned",
+    "content": "setConversationPinnedMsg 与 onChangedPinnedMsg 属于 商业版 。 import off, onChangedPinnedMsg, setConversationPinnedMsg, from '@/uni modules/unix openim sdk' const pinnedSubscription = onChangedPinnedMsg payload = refreshPinnedMessagesAfterValidJson payload await setConversationPinnedMsg pinParams off pinnedSubscription 参数使用 OpenIMSetConversationPinnedMsgParams 。事件是 raw 字符串，校验后重新查询置顶列表；不要把未验证 payload 强转为消息对象。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/insert-local-single-message",
+    "title": "插入本地单聊消息",
+    "description": "把业务生成的消息插入单聊本地历史。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages insert-local-single-message",
+    "content": "insertSingleMessageToLocalStorage 只写当前设备本地数据库，不发送给对方。 import insertSingleMessageToLocalStorage from '@/uni modules/unix openim sdk' await insertSingleMessageToLocalStorage insertParams insertParams 使用真实 OpenIMInsertSingleMessageParams ，包含消息、发送方和接收方。适合系统迁移或本地提示，不用于伪造已发送消息。确保 ID 不与现有消息冲突。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/insert-local-group-message",
+    "title": "插入本地群聊消息",
+    "description": "把业务生成的消息插入群聊本地历史。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages insert-local-group-message",
+    "content": "insertGroupMessageToLocalStorage 只写本机群聊历史。 import insertGroupMessageToLocalStorage from '@/uni modules/unix openim sdk' await insertGroupMessageToLocalStorage insertParams 参数使用 OpenIMInsertGroupMessageParams ，包含群、发送方和消息。它不广播给群成员；需要真实投递使用发送 API。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/clear-all-local-messages",
+    "title": "清空全部本地消息",
+    "description": "删除当前账号在本设备的全部消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages clear-all-local-messages",
+    "content": "deleteAllMsgFromLocal 清空当前账号本地消息。 import deleteAllMsgFromLocal from '@/uni modules/unix openim sdk' await deleteAllMsgFromLocal 这是高风险范围操作，二次确认并停止所有消息查询。它不保证删除服务端数据；重新同步可能恢复部分消息。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/clear-all-messages",
+    "title": "清空本地与服务端消息",
+    "description": "删除当前账号的全部本地及服务端消息。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages clear-all-messages",
+    "content": "deleteAllMsgFromLocalAndSvr 是更高风险的全局删除。 import deleteAllMsgFromLocalAndSvr from '@/uni modules/unix openim sdk' await deleteAllMsgFromLocalAndSvr 调用前明确影响范围和恢复策略，并进行强确认。成功后重建会话与消息 store；失败时重新查询，不假定原子完成。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/set-message-local-ex",
+    "title": "设置消息本地扩展",
+    "description": "更新一条消息在当前设备的 localEx。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages set-message-local-ex",
+    "content": "setMessageLocalEx 使用会话和消息 ID 更新本地扩展。 import setMessageLocalEx from '@/uni modules/unix openim sdk' await setMessageLocalEx conversationID, clientMsgID, localEx: JSON.stringify localState localEx 不同步到对端。它是整段替换，合并已有 JSON 并限制大小；不存 Token 或不可恢复的重要业务数据。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-read-status/send-group-read-receipts",
+    "title": "上报群消息已读",
+    "description": "商业版发送群消息已读回执并处理 raw 回执事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-read-status send-group-read-receipts",
+    "content": "sendGroupMessageReadReceipt 与 onRecvGroupReadReceipt 属于 商业版 。 import off, onRecvGroupReadReceipt, sendGroupMessageReadReceipt, from '@/uni modules/unix openim sdk' const receiptSubscription = onRecvGroupReadReceipt payload = refreshReadState payload await sendGroupMessageReadReceipt receiptParams off receiptSubscription 参数使用 OpenIMSendGroupMessageReadReceiptParams 。事件为 raw JSON，校验后按消息 ID合并；Promise 成功、事件到达和成员列表查询是不同阶段。"
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-read-status/get-group-message-readers",
+    "title": "查询群消息已读成员",
+    "description": "商业版分页查询读过指定群消息的成员。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-read-status get-group-message-readers",
+    "content": "getGroupMessageReaderList 商业版 使用 OpenIMGetGroupMessageReaderListParams 查询。 import getGroupMessageReaderList from '@/uni modules/unix openim sdk' const result = await getGroupMessageReaderList readerParams 按返回 DTO 的分页字段继续加载，并按 userID 去重。已读成员数据可能随新回执变化，打开详情时重新查询。"
+  },
+  {
+    "path": "/sdk/uniapp/file-uploads/upload-file",
+    "title": "上传文件",
+    "description": "上传本地文件、观察进度，并在商业版取消上传。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp file-uploads upload-file",
+    "content": "uploadFile 上传原生层可读的本地文件，返回 URL/URI、UUID、大小和媒体信息。 import uploadFile from '@/uni modules/unix openim sdk' const result = await uploadFile filepath: '/data/user/0/app/cache/report.pdf', name: 'report.pdf', contentType: 'application/pdf', uuid: createStableUploadUUID , cancelID: 'upload report 1', 路径必须是原生可读的完整路径。 unifile:// 先转换；不要把网络 URL 作为 filepath 。上传进度由 消息概览 /sdk/uniapp/message/overview message 归属的 onUploadFileProgress 提供。 商业版可以通过 cancelUpload 商业版 取消同一 cancelID ： import cancelUpload from '@/uni modules/unix openim sdk' await cancelUpload cancelID: 'upload report 1' 取消是异步请求，最终状态以原上传 Promise 和错误码为准。退出页面时不要删除仍被原生层读取的临时文件，先完成或取消上传。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/overview-calling",
+    "title": "音视频信令概览",
+    "description": "商业版通话邀请、房间凭据、事件和 AV Runtime 的职责边界。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling overview-calling",
+    "content": "本节全部能力属于 商业版 ，要求商业版 OpenIMServer 信令服务。 unix openim sdk 负责邀请、接受、拒绝、取消、挂断、房间凭据和信令事件；它不提供通话 UI、摄像头或音频渲染。 需要完整通话与会议 UI 时，另行集成 openim av runtime 。AV Runtime 复用本插件的唯一登录态，通过类型化 Host RPC调用这些信令 API，不初始化第二套 OpenIM Core。 典型流程： 1. 应用登录 IM，并注册全部信令事件。 2. 主叫构造 OpenIMSignalingInvitationInfo 后调用邀请。 3. 被叫收到 raw 邀请事件，校验 JSON 并展示来电。 4. 被叫申请媒体权限后再接受；拒绝则直接发送 reject。 5. 双方使用返回的 room/token/liveURL 建立媒体连接。 6. 取消、超时、挂断和多设备事件驱动统一 session 状态机。 同一账号/运行时只维护一个活动通话或会议。Token、liveURL 和 raw 信令 payload 不写日志或持久化。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/start-single-call",
+    "title": "发起单人通话",
+    "description": "商业版向一个用户发起音频或视频邀请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls start-single-call",
+    "content": "signalingInvite 商业版 使用 invitation 和可选离线推送信息。 import signalingInvite from '@/uni modules/unix openim sdk' const result = await signalingInvite invitation: inviterUserID: selfUserID, inviteeUserIDList: peerUserID , mediaType: 'video', timeout: 30, sessionType: 1, , offlinePushInfo: title: '视频通话', desc: '收到新的通话邀请' , 返回值可能含 roomID 、 token 、 liveURL 和忙线用户列表，全部按可选字段处理。邀请成功后若页面展示失败，应主动取消。不要在日志中打印 token 或 liveURL。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/start-group-call",
+    "title": "发起群通话",
+    "description": "商业版向群成员发起群组通话邀请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls start-group-call",
+    "content": "signalingInviteInGroup 商业版 使用同一邀请结构，但 invitation 必须包含 groupID 和目标成员。 import signalingInviteInGroup from '@/uni modules/unix openim sdk' const result = await signalingInviteInGroup invitation: inviterUserID: selfUserID, inviteeUserIDList: selectedUserIDs, groupID, mediaType: 'audio', timeout: 30, sessionType: 2, , 发送前确认成员仍在群内并去重。 busyLineUserIDList 只表示本次忙线结果，其他用户仍可能后续接受、拒绝或超时。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/accept-call",
+    "title": "接受通话",
+    "description": "商业版接受邀请并取得房间凭据。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls accept-call",
+    "content": "收到邀请后，先校验当前 session、请求麦克风/摄像头权限，再调用 signalingAccept 。 import signalingAccept from '@/uni modules/unix openim sdk' const result = await signalingAccept invitation 返回的 token 、 roomID 、 liveURL 均可选且敏感，只保存在内存中。权限失败时不得发送 accept；应按产品策略拒绝或提示用户。 Promise 成功与对方接受事件、媒体真正连接是不同阶段。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/reject-call",
+    "title": "拒绝通话",
+    "description": "商业版拒绝当前邀请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls reject-call",
+    "content": "signalingReject 使用收到的完整 invitation。 import signalingReject from '@/uni modules/unix openim sdk' await signalingReject invitation 拒绝后立即关闭本地来电 UI，并等待/幂等处理对端和其他设备事件。不要自行重建 invitation 或修改 roomID 。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/cancel-call",
+    "title": "取消通话邀请",
+    "description": "商业版由主叫取消尚未接通的邀请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls cancel-call",
+    "content": "主叫在对方接受前使用 signalingCancel 。 import signalingCancel from '@/uni modules/unix openim sdk' await signalingCancel invitation 取消与挂断语义不同：取消用于未接通邀请，挂断用于已建立或正在建立的会话。按钮防重复，并以取消/接受竞态事件决定最终状态。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/hang-up-call",
+    "title": "挂断通话",
+    "description": "商业版结束已接受的通话。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls hang-up-call",
+    "content": "signalingHungUp 使用当前会话的 invitation。 import signalingHungUp from '@/uni modules/unix openim sdk' await signalingHungUp invitation 调用前先锁定结束流程，避免本地按钮、远端挂断和网络错误重复执行。发送后关闭媒体连接、释放页面资源，并幂等处理 onHangUp 。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/handle-call-events",
+    "title": "处理通话事件",
+    "description": "商业版统一接收邀请、接受、拒绝、取消、超时、挂断和房间事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls handle-call-events",
+    "content": "所有事件返回 raw JSON 字符串。注册后立即 ACK，异步展示 UI；先校验 JSON，再映射到应用自己的通话领域模型。 import off, onHangUp, onInvitationCancelled, onInvitationTimeout, onInviteeAccepted, onInviteeAcceptedByOtherDevice, onInviteeRejected, onInviteeRejectedByOtherDevice, onReceiveNewInvitation, onRoomParticipantConnected, onRoomParticipantDisconnected, onStreamChange, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' function handleCallPayload payload : string try const value = JSON.parseObject payload if value = null routeValidatedCallEvent value catch console.error 'Invalid call event payload' const invitationSubscription = onReceiveNewInvitation handleCallPayload const subscriptions : Array = invitationSubscription, onInviteeAccepted handleCallPayload , onInviteeAcceptedByOtherDevice handleCallPayload , onInviteeRejected handleCallPayload , onInviteeRejectedByOtherDevice handleCallPayload , onInvitationCancelled handleCallPayload , onInvitationTimeout handleCallPayload , onHangUp handleCallPayload , onRoomParticipantConnected handleCallPayload , onRoomParticipantDisconnected handleCallPayload , onStreamChange handleCallPayload , subscriptions.forEach subscription = off subscription HarmonyOS 当前不支持 onStreamChange ，注册会返回 unsupported subscription；其余信令事件支持。应用用 room/session ID 和运行 generation 去重，过期事件不能打开新页面。raw payload 与 RTC Token 不落日志。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation",
+    "title": "恢复启动时邀请",
+    "description": "商业版在 SDK 启动后查询可能遗漏的当前邀请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling retrieving-call-information restore-pending-invitation",
+    "content": "事件监听建立后调用一次 signalingGetInvitationInfoStartApp ，恢复初始化前到达的邀请。 import signalingGetInvitationInfoStartApp from '@/uni modules/unix openim sdk' const result = await signalingGetInvitationInfoStartApp if result?.invitation = null recoverInvitation result.invitation 可选参数 userID 只用于明确查询用户。无邀请时合法返回 null ，不是错误。恢复结果与实时邀请可能重复，按 room/session 标识去重；每次 runtime 初始化只查询一次。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id",
+    "title": "按群查询通话房间",
+    "description": "商业版查询群当前关联的 roomID 与邀请。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling retrieving-call-information get-room-by-group-id",
+    "content": "signalingGetRoomByGroupID 返回可选 roomID 和 invitation。 import signalingGetRoomByGroupID from '@/uni modules/unix openim sdk' const result = await signalingGetRoomByGroupID groupID 空值表示没有可加入房间。查询结果可能在返回后过期，真正加入前继续处理信令事件并获取有效 Token。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id",
+    "title": "按房间获取 Token",
+    "description": "商业版为指定 roomID 获取 RTC Token 和 liveURL。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling retrieving-call-information get-token-by-room-id",
+    "content": "signalingGetTokenByRoomID 返回可选 Token 与 liveURL。 import signalingGetTokenByRoomID from '@/uni modules/unix openim sdk' const result = await signalingGetTokenByRoomID roomID 凭据只保存在内存并立即交给媒体层，不写日志、文件或持久化 storage。空字段或服务端过期时停止加入流程并重新获取，不复用旧 Token。"
+  },
+  {
+    "path": "/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal",
+    "title": "发送自定义信令",
+    "description": "商业版向房间发送业务自定义信令，并安全解析接收事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling sending-custom-signals send-a-custom-signal",
+    "content": "signalingSendCustomSignaling 发送房间内自定义字符串。两个兼容接收事件可能随平台/版本使用其一，业务应去重而不是重复处理。 import off, onReceiveCustomSignal, onReceiveCustomSignaling, signalingSendCustomSignaling, from '@/uni modules/unix openim sdk' const signalSubscription = onReceiveCustomSignal payload = handleValidatedSignal payload const signalingSubscription = onReceiveCustomSignaling payload = handleValidatedSignal payload await signalingSendCustomSignaling roomID, customInfo: JSON.stringify type: 'raise hand', version: 1 , off signalSubscription off signalingSubscription 接收端用事件 ID/内容哈希去重，校验 type 、 version 和字段。 customInfo 不承担权限认证，不含 Token 或秘密。"
+  },
+  {
+    "path": "/sdk/uniapp/events/overview-events",
+    "title": "事件概览",
+    "description": "管理 OpenIMSDKEventSubscription、off/offAll 与同步生命周期事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp events overview-events",
+    "content": "每个 on... 调用同步返回独立 OpenIMSDKEventSubscription ，其中包含 id 与 eventName 。正常清理使用 off subscription ；不要继续使用旧版“监听函数直接返回取消闭包”的写法。 import off, onSyncServerFailed, onSyncServerFinish, onSyncServerProgress, onSyncServerStart, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const startSubscription = onSyncServerStart reinstalled = beginSyncUI reinstalled const subscriptions : Array = startSubscription, onSyncServerProgress progress = updateSyncProgress progress , onSyncServerFinish reinstalled = finishSyncUI reinstalled , onSyncServerFailed reinstalled = failSyncUI reinstalled , subscriptions.forEach subscription = off subscription 同步事件的 boolean 表示合同定义的重装/同步上下文，不应当作“成功”布尔值；成功与失败由事件名区分。进度值用于展示，不承诺每个整数都到达。 offAll eventName 会删除指定事件名的全部处理器，只适合应用整体重置或受控测试。组件、页面和功能模块不得用它清理自己的单个监听，以免影响其他消费者。 HarmonyOS unsupported 事件 HarmonyOS 当前有十个事件不受原生 HAR 支持：四个 migration 事件、三个消息 extensions 事件、 onMessageKvInfoChanged 、 onStreamChange ，以及合同中登记的 badge/消息扩展事件。注册这些事件只返回 unsupported subscription，不会伪造成功回调。具体商业事件页面会再次标注。 事件处理器应快速返回，把耗时工作排入应用队列。账号切换和 dispose 时先停止接收业务写入，再逐个释放旧句柄。"
+  },
+  {
+    "path": "/sdk/uniapp/events/handle-data-migration-events",
+    "title": "处理数据迁移事件",
+    "description": "商业版观察迁移开始、进度、失败与完成事件。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp events handle-data-migration-events",
+    "content": "四个 migration 事件属于 商业版 ，Android 与 iOS 支持；HarmonyOS 当前全部返回 platform unsupported 。它们来自 Core/插件迁移桥，不等同于普通同步事件。 import off, onMigrationFailed, onMigrationFinished, onMigrationProgress, onMigrationStart, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const startSubscription = onMigrationStart = showMigrationUI const subscriptions : Array = startSubscription, onMigrationProgress payload = handleValidatedMigrationProgress payload , onMigrationFailed payload = handleValidatedMigrationFailure payload , onMigrationFinished = finishMigrationUI , subscriptions.forEach subscription = off subscription 进度和失败 payload 是 opaque 字符串。若为 JSON，先校验再读取；不要向用户或日志暴露内部路径、数据库信息和敏感内容。迁移期间避免并发反初始化或切换账号，完成/失败后重新查询必要快照。"
+  },
+  {
+    "path": "/sdk/uniapp/logger",
+    "title": "日志与诊断",
+    "description": "配置 SDK 日志、上传日志，并安全使用 operationID 关联问题。",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp logger",
+    "content": "初始化时通过 logLevel 、 isLogStandardOutput 和可选 logFilePath 配置 SDK 日志。生产环境使用满足诊断需要的最低级别，并对 Token、用户隐私、消息内容和商业凭据脱敏。 上传日志 uploadLogs 接收行数和扩展说明： import uploadLogs from '@/uni modules/unix openim sdk' const operationID = diagnostic $ Date.now await uploadLogs line: 2000, ex: JSON.stringify scene: 'login timeout' , operationID, operationID 是可选诊断关联值。业务 API示例通常省略它；只有排查请求链路时为一次操作生成唯一值，并与服务端日志关联。它不是用户 ID、幂等键或认证凭据。 上传进度由 onUploadLogsProgress 提供，完整订阅归 消息概览 /sdk/uniapp/message/overview message 。Promise 成功表示上传请求完成，不代表问题已提交给支持团队。 安全要求 上传前取得用户同意，并说明日志范围与保留策略。 ex 只放脱敏场景信息，不写 Token、服务地址凭据或完整消息。 控制 line ，避免无界上传；失败时限次重试。 生产包不要长期启用 verbose 标准输出。 本地数据目录只用于诊断定位，不直接打包整个数据库上传。"
   },
   {
     "path": "/sdk/wasm/overview",

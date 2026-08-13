@@ -1,9 +1,9 @@
 # 当前结构报告
 
-- 页面总数：**813**
-- 导航上下文：**9**
+- 页面总数：**983**
+- 导航上下文：**10**
 - 内容范围：**current-only**
-- 生成时间：`2026-08-04T09:27:31.347Z`
+- 生成时间：`2026-08-13T04:59:19.646Z`
 
 ## 当前保留范围
 
@@ -18,38 +18,39 @@ SDK Reference 应从代码注释或类型定义生成。Platform API 的结构�
 
 | 分支           | 页面数 |  占比 |
 | -------------- | -----: | ----: |
-| `platform-api` |    194 | 23.9% |
-| `sdk`          |    619 | 76.1% |
+| `platform-api` |    194 | 19.7% |
+| `sdk`          |    789 | 80.3% |
 
 ## 按页面模板
 
 | 模板       | 页面数 |  占比 |
 | ---------- | -----: | ----: |
-| `api`      |    179 | 22.0% |
-| `guide`    |    612 | 75.3% |
-| `overview` |     22 |  2.7% |
+| `api`      |    179 | 18.2% |
+| `guide`    |    782 | 79.6% |
+| `overview` |     22 |  2.2% |
 
 ## 按发布状态
 
 | 状态        | 页面数 |  占比 |
 | ----------- | -----: | ----: |
-| `draft`     |      2 |  0.2% |
-| `published` |    682 | 83.9% |
-| `scaffold`  |    129 | 15.9% |
+| `draft`     |      1 |  0.1% |
+| `published` |    854 | 86.9% |
+| `scaffold`  |    128 | 13.0% |
 
 ## 导航上下文
 
-| 上下文键                | 显示名称                 | 页面数 |
-| ----------------------- | ------------------------ | -----: |
-| `chat/platform-api`     | Platform API             |    194 |
-| `chat/sdk/ios`          | SDKs · iOS · v4          |    164 |
-| `chat/sdk/android`      | SDKs · Android · v4      |    129 |
-| `chat/sdk/flutter`      | SDKs · Flutter · v4      |    158 |
-| `chat/sdk/uniapp`       | SDKs · uni-app · v4      |      1 |
-| `chat/sdk/wasm`         | SDKs · WASM · v4         |    161 |
-| `chat/sdk/electron`     | SDKs · Electron · v4     |      4 |
-| `chat/sdk/miniprogram`  | SDKs · Mini Program · v4 |      1 |
-| `chat/sdk/react-native` | SDKs · React Native · v4 |      1 |
+| 上下文键                | 显示名称                        | 页面数 |
+| ----------------------- | ------------------------------- | -----: |
+| `chat/platform-api`     | Platform API                    |    194 |
+| `chat/sdk/ios`          | SDKs · iOS · v4                 |    164 |
+| `chat/sdk/android`      | SDKs · Android · v4             |    128 |
+| `chat/sdk/flutter`      | SDKs · Flutter · v4             |    158 |
+| `chat/sdk/uniapp`       | SDKs · uni-app / uni-app x · v4 |    167 |
+| `chat/sdk/wasm`         | SDKs · WASM · v4                |    165 |
+| `chat/sdk/electron`     | SDKs · Electron · v4            |      4 |
+| `chat/sdk/miniprogram`  | SDKs · Mini Program · v4        |      1 |
+| `chat/sdk/react-native` | SDKs · React Native · v4        |      1 |
+| `chat/sdk/common`       | SDKs · Common reference · v4    |      1 |
 
 ## 说明
 

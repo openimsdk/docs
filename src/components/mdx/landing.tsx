@@ -106,6 +106,13 @@ const sdkCards: HomeCard[] = [
     meta: 'Dart',
   },
   {
+    title: 'uni-app / uni-app x',
+    href: '/sdk/uniapp/overview',
+    description:
+      'Integrate the native UTS SDK into Android, iOS, and commercial HarmonyOS Apps.',
+    meta: 'UTS',
+  },
+  {
     title: 'Electron',
     href: '/sdk/electron/overview',
     description:
@@ -410,6 +417,12 @@ const featureGroups: FeatureGroup[] = [
         description:
           'Use one OpenIMClientSDK integration path across mobile and supported desktop targets.',
         meta: 'Flutter',
+      },
+      {
+        title: 'uni-app / uni-app x SDK',
+        href: '/sdk/uniapp/overview',
+        description: 'Use the native UTS plugin in uni-app and uni-app x mobile Apps.',
+        meta: 'UTS',
       },
       {
         title: 'API setup',

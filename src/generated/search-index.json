@@ -4185,11 +4185,1339 @@
   },
   {
     "path": "/sdk/uniapp/overview",
-    "title": "OpenIM SDK for uni-app",
-    "description": "OpenIM uni-app SDK entry point for App, H5, and supported mini-app targets.",
-    "context": "SDKs · uni-app · v4",
+    "title": "OpenIM SDK for uni-app / uni-app x",
+    "description": "Integrate unix-openim-sdk into Android, iOS, and commercial HarmonyOS Apps built with uni-app or uni-app x.",
+    "context": "SDKs · uni-app / uni-app x · v4",
     "keywords": "sdk uniapp v4 sdk uniapp overview",
-    "content": "Overview Use the uni app SDK when the same OpenIM integration needs to cover App, H5, and supported mini app targets from a uni app codebase. The integration should keep authentication, user identity, message creation, conversation state, and event handling aligned with the rest of the OpenIM SDK family. Platform scope App and H5 builds should use the SDK package and runtime adapter recommended by the OpenIM release you deploy. Mini app targets need additional validation for storage, network, file upload, and websocket behavior. Tokens should still be issued by a trusted backend. Do not generate or hard code user tokens in the client bundle. Core integration path 1. Install the SDK package that matches your OpenIM Server version. 2. Initialize the client with apiAddr , wsAddr , the current userID , and a backend issued token. 3. Register connection and message events before calling login . 4. Send the first text message, then validate message receipt in another signed in client. 5. Add platform specific handling for file messages, push notifications, and background lifecycle. Related SDKs WASM SDK /sdk/wasm/overview for browser and WebAssembly oriented API examples. Flutter SDK /sdk/flutter/overview when mobile and desktop should be handled through Flutter. React Native SDK /sdk/react native/overview when the app is built with React Native."
+    "content": "OpenIM unix openim sdk is a native UTS plugin that provides user, friend, conversation, group, message, event, and local database capabilities to uni app and uni app x Apps. The plugin owns the only OpenIM Core in the host process. Import flat functions from @/uni modules/unix openim sdk ; do not create an SDK instance. Supported environments | Host | Android | iOS | HarmonyOS | | | | | | | uni app Vue 2 / Vue 3 | Supported, API 21+ | Supported, iOS 14+ | Not currently declared | | uni app x | Supported, API 21+ | Supported, iOS 14+ | Commercial, API 24 | | Web / mini apps | Not supported | Not supported | Not supported | Use the HBuilderX/uni app 5.23 series. Android and iOS require a custom base or local native project containing the plugin's native dependencies; the standard base cannot load them. Public and commercial capabilities This documentation covers both public capabilities and commercial extensions. APIs, events, and fields carrying a Commercial badge require the commercial unix openim sdk and a matching OpenIMServer deployment. Edition and platform support are separate: a public API can still return platform unsupported on a particular platform. Commercial extensions include signaling, SDK session snapshots, translation, and selected message or conversation features. onSDKSessionChanged is synthesized by the plugin from initialization, login, logout, token, and account transitions. It is not a native OpenIM Core event. Integration sequence 1. Install unix openim sdk and prepare a custom base or local native project. 2. Call initSDK with apiAddr , wsAddr , platform, logging, and systemType . 3. Save the subscription handles returned by connection, message, and business event listeners. 4. Obtain the current user's userID and token from a trusted backend, then call login userID, token . 5. Wait for onConnectSuccess , load snapshots, and apply subsequent events incrementally. 6. On sign out, call logout and release listeners with off subscription . Call unInitSDK only when the App no longer uses the SDK. Invocation model Promises resolve directly to business values; there is no Web SDK data wrapper. Event registration synchronously returns an OpenIMSDKEventSubscription : import off, onRecvNewMessage from '@/uni modules/unix openim sdk' const messageSubscription = onRecvNewMessage message = console.log message.clientMsgID off messageSubscription Do not use offAll for normal scoped cleanup. It removes every listener owned by the plugin instance and is intended only for full App teardown or controlled test reset. Security boundaries Obtain user tokens from a trusted backend. Never embed administrator tokens, secrets, or fixed user tokens in the App. Physical devices must use reachable apiAddr and wsAddr values; localhost points to the device itself. Do not open, move, or modify the SDK managed database directly. Redact tokens, full private message bodies, and commercial credentials from logs and reports. AV Runtime is a separate UTS plugin. It reuses this plugin's single login session but is not part of the public IM API. Continue with Before you start /sdk/uniapp/getting started/before you start , Install, initialize, and inspect the SDK /sdk/uniapp/getting started/install initialize and inspect sdk , and Event overview /sdk/uniapp/events/overview events ."
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/before-you-start",
+    "title": "Before you start",
+    "description": "Prepare OpenIMServer, a user token, the UTS plugin, and a native build environment.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started before-you-start",
+    "content": "Choose a uni app or uni app x App target and prepare an OpenIMServer, users, and native build environment compatible with unix openim sdk 0.2.0 rc.3 . Web, H5, and mini app targets cannot use this native UTS plugin. Prepare the service and account | Value | Source | Requirement | | | | | | apiAddr | OpenIMServer HTTP API | Complete address reachable from the device | | wsAddr | OpenIMServer WebSocket | Complete address that accepts a persistent connection | | userID | Your backend account mapping | Existing server user matching the token | | Token | Trusted application backend | Grants access only to the current user | Your backend must authenticate its own account before returning the mapped OpenIM user and token. Never place an administrator token or server secret in the App. Public clients connect to a public OpenIMServer deployment; signaling, session, and other commercial features require the corresponding commercial services. On physical devices, do not use the development computer's localhost . Verify network reachability, TLS certificates, reverse proxy rules, and WebSocket upgrades from the actual device. Prepare the plugin and toolchain Install the plugin at uni modules/unix openim sdk , use the HBuilderX/uni app 5.23 series, and prepare: Android: API 21+, a compatible JDK and Android SDK, declared AAR/Maven dependencies, and target ABIs. iOS: iOS 14+, compatible Xcode/CocoaPods, and correctly linked and embedded XCFrameworks. HarmonyOS: uni app x commercial edition only, API 24, with the HAR matching the plugin contract. The standard base does not contain these native dependencies. Build a custom base or use the project's local Android/iOS native workflow. Do not mix public and commercial native artifacts in one plugin directory. Use exported platform constants instead of numeric literals: OpenIMPlatformAndroid , OpenIMPlatformIOS , or OpenIMPlatformHarmony . The required systemType is a descriptive string such as android , ios , or harmony . Release checklist Verify initialization, login, normal message send/receive, and logout on target devices. Test foreground/background transitions, network recovery, token invalidation, and forced logout. Scan Android for duplicate classes/JNI and ABIs; validate iOS signing, embedding, privacy manifests, and device linking. Test commercial signaling against commercial services, not a public server. Keep tokens, secrets, and full private message content out of logs, screenshots, and automation evidence. Continue with Install, initialize, and inspect the SDK /sdk/uniapp/getting started/install initialize and inspect sdk ."
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/environment-specific-implementation",
+    "title": "Integrate by host and platform",
+    "description": "Understand the runtime and build boundaries for uni-app, uni-app x, Android, iOS, and HarmonyOS.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started environment-specific-implementation",
+    "content": "unix openim sdk exposes the same business functions to uni app and uni app x. Differences are limited mainly to language types, page lifecycle, and native build integration. Always import from the same flat plugin root. | Host | Android | iOS | HarmonyOS | | | | | | | uni app Vue 2 / Vue 3 | API 21+ | iOS 14+ | Not currently declared | | uni app x | API 21+ | iOS 14+ | Commercial API 24 | | H5 / Web / mini apps | Not supported | Not supported | Not supported | uni app JavaScript does not provide UTS static type checking, but Promise values and subscription handle semantics are identical. Keep SDK lifetime in an application service rather than reinitializing it from pages. import getLoginStatus, off, onConnectSuccess from '@/uni modules/unix openim sdk' const connection = onConnectSuccess = console.log 'OpenIM connected' const status = await getLoginStatus off connection uni app x Import public UTS types instead of copying interfaces that can drift: import getLoginStatus, type OpenIMLoginStatus from '@/uni modules/unix openim sdk' const status : OpenIMLoginStatus = await getLoginStatus For commercial raw signaling JSON, validate the string and required fields before mapping an UTSJSONObject to your own domain type. Native platform boundaries Android and iOS support public and commercial interfaces, but the plugin must be included in a custom base or local native project. The host App declares permissions, notifications, and background capabilities; the SDK does not request camera, microphone, photo, or notification access for your product. File APIs require a readable absolute native path. Resolve unifile:// through a uni API first. Do not pass a network URL, transient URL, or virtual sandbox path directly to OpenIM Core. HarmonyOS is declared only for uni app x commercial edition. updateFcmToken , updateToken , translateText , and translateMessage return platform unsupported . Ten unavailable events return unsupported subscriptions and never synthesize success; see Event overview /sdk/uniapp/events/overview events . Initialize Core once per application. Pages own and release only their listeners. Account switching must finish old account logout and cleanup before the new login; call unInitSDK only during complete SDK teardown."
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/authenticate-and-manage-session",
+    "title": "Authenticate and manage a session",
+    "description": "Log in, observe connection and token events, inspect login state, and log out safely.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started authenticate-and-manage-session",
+    "content": "After initSDK , register account and connection events before calling login userID, token . Login Promise completion does not imply that the persistent connection is ready; wait for onConnectSuccess before network dependent queries and sends. import off, onConnectFailed, onConnectSuccess, onConnecting, onKickedOffline, onUserTokenExpired, onUserTokenInvalid, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const subscriptions : Array = onConnectSuccess = console.log 'OpenIM connected' , onConnecting = console.log 'OpenIM connecting' , onConnectFailed error = console.error error.errCode, error.errMsg , onKickedOffline = clearCurrentAccount , onUserTokenExpired = requestFreshToken , onUserTokenInvalid error = console.error error.errCode, error.errMsg , function releaseSessionSubscriptions subscriptions.forEach subscription = off subscription subscriptions.length = 0 When onKickedOffline arrives, Core is already transitioning offline. Clear references to the old account and start reauthentication; do not race it with logout . import login from '@/uni modules/unix openim sdk' await login userID, token The required call shape is login userID, token , not an object parameter. Obtain a token matching userID from a trusted backend; the optional diagnostic argument is intentionally omitted from normal examples. import OpenIMLoginStatusLogged, getLoginStatus, getLoginUserID from '@/uni modules/unix openim sdk' const status = await getLoginStatus if status == OpenIMLoginStatusLogged const currentUserID = await getLoginUserID restoreAccountState currentUserID Login state and network connectivity are different: a briefly disconnected account may remain logged in. Report application lifecycle and network transitions once from an application service: import networkStatusChanged, setAppBackgroundStatus from '@/uni modules/unix openim sdk' await setAppBackgroundStatus true await setAppBackgroundStatus false await networkStatusChanged To sign out, wait for logout , release account scoped subscriptions, and clear state. Finish this sequence before logging in another account. import logout from '@/uni modules/unix openim sdk' await logout releaseSessionSubscriptions clearCurrentAccount"
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/send-first-message",
+    "title": "Send your first message",
+    "description": "Create and send a text message in a uni-app or uni-app x App.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started send-first-message",
+    "content": "Use this flow to verify installation, initialization, login, and messaging. Production applications should keep SDK lifetime in an application service. Register onConnectSuccess before login and release its handle when the application scope ends: import off, onConnectSuccess from '@/uni modules/unix openim sdk' const connection = onConnectSuccess = markOpenIMReady off connection For a direct message, set recvID and leave groupID empty. For a group message, leave recvID empty and set a group ID joined by the current user. import createTextMessage, sendMessage from '@/uni modules/unix openim sdk' const message = await createTextMessage 'Hello, OpenIMSDK' if message == null throw new Error 'Failed to create text message' const sentMessage = await sendMessage message, recvID: 'user b', groupID: '', appendOutgoingMessage sentMessage createTextMessage creates a local message object; it does not send. sendMessage resolves directly to the final OpenIMMessageItem , without a data wrapper. Merge outgoing state by clientMsgID , and deduplicate incoming events by the same identifier. For a group: const sentGroupMessage = await sendMessage message, recvID: '', groupID: 'group 123', Verify with two accounts on independent clients: the sender receives a non empty clientMsgID , the receiver obtains the new message event, both clients can reload the message from history, and no old account state changes after logout."
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk",
+    "title": "Install, initialize, and inspect the SDK",
+    "description": "Install the UTS plugin, initialize the only OpenIM Core, and inspect version and data paths.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started install-initialize-and-inspect-sdk",
+    "content": "After installing uni modules/unix openim sdk , initialize it once from an application service. The plugin exports flat functions; do not construct a second SDK instance. import OpenIMLogLevelInfo, OpenIMPlatformAndroid, initSDK, type OpenIMInitConfig, from '@/uni modules/unix openim sdk' const config : OpenIMInitConfig = platformID: OpenIMPlatformAndroid, apiAddr: 'https://im api.example.com', wsAddr: 'wss://im ws.example.com', logLevel: OpenIMLogLevelInfo, isLogStandardOutput: true, systemType: 'android', const initialized = await initSDK config if initialized throw new Error 'OpenIM SDK initialization was not accepted' Use OpenIMPlatformIOS with systemType: 'ios' , or OpenIMPlatformHarmony with systemType: 'harmony' . Reduce console logging in production and configure logFilePath according to your compliance policy. | OpenIMInitConfig field | Type | Description | | | | | | platformID | OpenIMPlatform | One of the exported platform constants. | | apiAddr | string | OpenIMServer HTTP API address. | | wsAddr | string | OpenIMServer WebSocket address. | | dataDir | string \\| null optional | Core data directory; normally use the platform default. | | logFilePath | string \\| null optional | Log path following the platform artifact contract. | | logLevel | OpenIMLogLevel | For example OpenIMLogLevelError or OpenIMLogLevelInfo . | | isLogStandardOutput | boolean | Whether SDK logs are emitted to the system console. | | systemType | string | Required system description; never omit it. | Do not initialize concurrent environments in one process. Sign out, clear application state, and uninitialize before changing service addresses. getSdkVersion and getOpenIMDataPath are synchronous local operations: import getOpenIMDataPath, getSdkVersion from '@/uni modules/unix openim sdk' const version = getSdkVersion const dataPath = getOpenIMDataPath Use the data path only for diagnostics and storage policy. Never edit the SDK database or publish full sandbox paths in logs. import unInitSDK from '@/uni modules/unix openim sdk' unInitSDK unInitSDK returns void . Stop new requests, sign out, and release subscriptions first. Page unload, App backgrounding, and AV Runtime disposal must not uninitialize the IM SDK."
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state",
+    "title": "Handle App lifecycle and device state",
+    "description": "Report lifecycle and network changes, update badges, and register an FCM token.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started handle-app-lifecycle-and-device-state",
+    "content": "An application service should own lifecycle reporting. Use setAppBackgroundStatus and networkStatusChanged as described in the authentication guide; do not report the same transition from multiple pages. import setAppBadge from '@/uni modules/unix openim sdk' await setAppBadge totalUnreadCount setAppBadge synchronizes the current total unread count with the SDK/platform layer. Continue to maintain application UI from unread events. Resolving the Promise does not guarantee that every device configuration displays a launcher badge. Pass 0 to clear it. import updateFcmToken from '@/uni modules/unix openim sdk' await updateFcmToken fcmToken: deviceFcmToken, expireTime: tokenExpireUnixSeconds, fcmToken is the token issued to this device; expireTime is the protocol defined Unix expiry in seconds. Call this only after acquiring or refreshing a valid device token. Never log it or substitute an IM token. HarmonyOS currently returns platform unsupported for updateFcmToken . This is a platform capability gap, not a commercial authentication failure; integrate the Harmony push channel in the host application. A recommended sequence is: initialize; subscribe and log in; register the device token; apply unread events and setAppBadge ; report foreground/background and network transitions; then clear badge/push association and account subscriptions on logout. Push notifications do not replace SDK message events or history synchronization."
+  },
+  {
+    "path": "/sdk/uniapp/getting-started/update-token-and-observe-sdk-session",
+    "title": "Update tokens and observe SDK sessions",
+    "description": "Commercially update a login token and use synthetic session snapshots to prevent cross-account work.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp getting-started update-token-and-observe-sdk-session",
+    "content": "This is a Commercial capability for hosts that share one OpenIM Core with dependent plugins such as AV Runtime. onSDKSessionChanged is synthesized by unix openim sdk ; it is not a native OpenIM Core listener. import getSDKSessionSnapshot, type OpenIMSDKSessionSnapshot from '@/uni modules/unix openim sdk' const snapshot : OpenIMSDKSessionSnapshot = await getSDKSessionSnapshot | Field | Type | Description | | | | | | loginStatus | OpenIMLoginStatus | Current login state. | | userID | string \\| null | Current SDK user, or null when logged out. | | sdkSessionEpoch | number | Session generation, incremented after successful lifecycle or account changes. | | sdkVersion | string | Version of the connected Core. | The snapshot never contains an IM token, API address, or WebSocket address. Pin userID and sdkSessionEpoch before asynchronous work and compare another snapshot before committing the result. import off, onSDKSessionChanged from '@/uni modules/unix openim sdk' const sessionSubscription = onSDKSessionChanged next = cancelRequestsFromOlderEpoch next.sdkSessionEpoch replaceActiveSdkUser next.userID off sessionSubscription Initialization, login, logout, uninitialization, forced logout, token invalidation/expiry, and user changes can advance the epoch. Handlers must be idempotent and must not log tokens or trigger competing logins. import updateToken from '@/uni modules/unix openim sdk' await updateToken token: freshToken Obtain the token from a trusted backend. updateToken is available on Android and iOS; HarmonyOS returns platform unsupported . Continue to use session and connection events after the Promise resolves. Dependent plugins should compare snapshots before and after initialization, cancel only their own work during disposal, and never call IM logout or unInitSDK . Dispose dependent plugins before switching users."
+  },
+  {
+    "path": "/sdk/uniapp/user/overview-user",
+    "title": "User overview",
+    "description": "Understand user profiles, presence, friendships, friend requests, and the blacklist.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user overview-user",
+    "content": "The user domain covers the current profile, public profiles, presence, friendships, friend requests, and blacklist entries. Use stable userID values as keys; nicknames and avatars can change. OpenIMUserInfo includes public userID , nickname , faceURL , ex , and optional createTime . attachedInfo and globalRecvMsgOpt are Commercial extensions and must remain optional. Friend data uses OpenIMFriendUserItem , blacklist data uses OpenIMBlackUserItem , and requests use OpenIMFriendApplicationItem . Register events before loading a snapshot, then merge both sources idempotently by userID . Reload snapshots after reconnection, login, or process restoration; events alone are not a complete database. Read your profile /sdk/uniapp/user/profile/get self user info Subscribe to presence /sdk/uniapp/user/online status/subscribe users status List friends /sdk/uniapp/user/friends/get friend list page Read received friend requests /sdk/uniapp/user/friend applications/get friend application list as recipient Read the blacklist /sdk/uniapp/user/blacklist/get black list Your application backend remains authoritative for identity and authorization. Chat profiles must not replace account authentication."
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/get-users-info",
+    "title": "Get user profiles",
+    "description": "Read public profiles for a list of user IDs.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile get-users-info",
+    "content": "getUsersInfo resolves to OpenIMUserListResult | null . import getUsersInfo from '@/uni modules/unix openim sdk' const result = await getUsersInfo 'user a', 'user b' const users = result?.users ?? users.forEach user = cacheUser user.userID, user Results can be shorter than the request and are not ordered like the input. Map by userID and retain placeholders for missing or inaccessible users. Treat commercial attachedInfo and globalRecvMsgOpt as optional, and never trust ex or attachedInfo as identity credentials. Batch and cache large lookups."
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/get-self-user-info",
+    "title": "Get your profile",
+    "description": "Read the OpenIM profile of the logged-in user.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile get-self-user-info",
+    "content": "getSelfUserInfo resolves to OpenIMUserInfo | null for the current logged in account. import getSelfUserInfo from '@/uni modules/unix openim sdk' const self = await getSelfUserInfo if self = null renderProfile self.nickname, self.faceURL Verify that the returned userID matches the application account. attachedInfo and globalRecvMsgOpt are optional Commercial fields. Refresh this snapshot after login or missed events; ongoing updates arrive through onSelfInfoUpdated on the profile update page."
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/set-self-info",
+    "title": "Update your profile",
+    "description": "Update selected profile fields and process onSelfInfoUpdated.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile set-self-info",
+    "content": "Pass only fields that should change; do not use empty strings to mean “unchanged.” import off, onSelfInfoUpdated, setSelfInfo from '@/uni modules/unix openim sdk' const profileSubscription = onSelfInfoUpdated user = replaceCurrentUser user.userID, user await setSelfInfo nickname: 'OpenIM User', faceURL: 'https://cdn.example.com/avatar.png' off profileSubscription OpenIMSetSelfInfoParams supports nickname , faceURL , ex , and commercial globalRecvMsgOpt . Replace cached data by userID from the event or a fresh query. Each page must release its own handle, or an application user store can own one shared subscription."
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/set-global-message-reception",
+    "title": "Set global message reception",
+    "description": "Set the commercial account-wide globalRecvMsgOpt profile field.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile set-global-message-reception",
+    "content": "globalRecvMsgOpt is a Commercial optional field of OpenIMSetSelfInfoParams . It controls the account globally and is different from a conversation's recvMsgOpt . import setSelfInfo from '@/uni modules/unix openim sdk' await setSelfInfo globalRecvMsgOpt: 0 Use exported OpenIMSetSelfInfoRecvMsgOpt constants and send only this field to avoid overwriting profile data. Confirm the final value with getSelfUserInfo . Hide or disable this control when the deployed edition does not expose the field."
+  },
+  {
+    "path": "/sdk/uniapp/user/profile/set-friend-add-permission",
+    "title": "Set friend-add permission",
+    "description": "Understand the commercial friend-add policy and the current plugin write boundary.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user profile set-friend-add-permission",
+    "content": "Friend add permission is a Commercial account policy. unix openim sdk 0.2.0 rc.3 exposes the related profile data but OpenIMSetSelfInfoParams has no addFriendPermission setter. Do not invent a client setter or store this policy in ex . Change it through a supported commercial backend/administration API, then reload the user profile. If the field is absent, show the capability as unavailable instead of assuming a policy."
+  },
+  {
+    "path": "/sdk/uniapp/user/online-status/subscribe-users-status",
+    "title": "Subscribe to user presence",
+    "description": "Subscribe to user status and merge onUserStatusChanged updates.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user online-status subscribe-users-status",
+    "content": "Register the event before subscribing and querying a snapshot to minimize the event/snapshot gap. import getUserStatus, off, onUserStatusChanged, subscribeUsersStatus from '@/uni modules/unix openim sdk' const presenceSubscription = onUserStatusChanged result = result.statuses.forEach status = replaceUserStatus status.userID, status const userIDs = 'user a', 'user b' await subscribeUsersStatus userIDs const snapshot = await getUserStatus userIDs snapshot?.statuses.forEach status = replaceUserStatus status.userID, status off presenceSubscription Presence can include per platform details. Merge by user and platform; one offline device does not imply that every device is offline. Subscribe only to needed users and later call unsubscribeUsersStatus ."
+  },
+  {
+    "path": "/sdk/uniapp/user/online-status/get-subscribe-users-status",
+    "title": "Get subscribed user presence",
+    "description": "Read a snapshot for users whose status is already subscribed.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user online-status get-subscribe-users-status",
+    "content": "getSubscribeUsersStatus takes no user IDs and returns the current subscribed user snapshot. import getSubscribeUsersStatus from '@/uni modules/unix openim sdk' const result = await getSubscribeUsersStatus result?.statuses.forEach status = replaceUserStatus status.userID, status An empty list can mean no subscriptions or no available presence; it does not diagnose connectivity. Continue merging onUserStatusChanged , and reload this snapshot after foreground restoration or store reconstruction."
+  },
+  {
+    "path": "/sdk/uniapp/user/online-status/unsubscribe-users-status",
+    "title": "Unsubscribe from user presence",
+    "description": "Stop receiving presence changes for selected users.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user online-status unsubscribe-users-status",
+    "content": "import unsubscribeUsersStatus from '@/uni modules/unix openim sdk' await unsubscribeUsersStatus 'user a', 'user b' This removes only the selected server side subscriptions. It does not remove other users or release the local onUserStatusChanged handler. Manage both lifecycles: call this API for unwanted users and off subscription when the local event owner ends. On failure, retain local bookkeeping and retry according to network state rather than looping rapidly."
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/get-friend-list-page",
+    "title": "List friends",
+    "description": "Load friends by page or snapshot and process friend changes.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends get-friend-list-page",
+    "content": "Use getFriendListPage for pagination or getFriendList for a complete small snapshot. Register events before querying. import getFriendListPage, off, onFriendAdded, onFriendDeleted, onFriendInfoChanged, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const subscriptions : Array = onFriendAdded friend = upsertFriend friend.userID, friend , onFriendDeleted friend = removeFriend friend.userID , onFriendInfoChanged friend = upsertFriend friend.userID, friend , const page = await getFriendListPage offset: 0, count: 100 replaceFriendSnapshot page?.friends ?? subscriptions.forEach subscription = off subscription Start offset at 0, continue until fewer than count items return, and deduplicate by userID . getFriendList filterBlack optionally filters blacklist entries but does not merge the two relationship types. Reload after login, reconnection, or state loss."
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/search-friends",
+    "title": "Search friends",
+    "description": "Search current friends by ID, nickname, or remark.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends search-friends",
+    "content": "searchFriends searches only current friends, not every server user. import searchFriends from '@/uni modules/unix openim sdk' const result = await searchFriends keywordList: 'Alice' , isSearchUserID: true, isSearchNickname: true, isSearchRemark: true, renderFriends result?.friends ?? Reject an empty search in the UI, deduplicate results by userID , and merge later friend events. Search flags affect only this query and do not update profiles or server indexes."
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/get-specified-friends-info",
+    "title": "Get selected friend profiles",
+    "description": "Read friendship details for selected user IDs.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends get-specified-friends-info",
+    "content": "import getSpecifiedFriendsInfo from '@/uni modules/unix openim sdk' const result = await getSpecifiedFriendsInfo userIDList: 'user a', 'user b' , filterBlack: false, const friends = result?.friends ?? The result can be shorter or differently ordered. Map it by userID ; missing users may not be friends, may be filtered, or may be inaccessible. filterBlack changes this result only and never removes blacklist relationships."
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/check-friend",
+    "title": "Check friendship",
+    "description": "Check the friendship between the current account and selected users.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends check-friend",
+    "content": "import checkFriend from '@/uni modules/unix openim sdk' const result = await checkFriend 'user a', 'user b' result?.result.forEach relation = cacheFriendRelation relation.userID, relation.result Read results by userID , not array position, and interpret relation values through exported constants rather than numeric literals. This query does not create a friendship; use addFriend when appropriate."
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/update-friends",
+    "title": "Update friend details",
+    "description": "Update friend remarks, pinned state, or extension values.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends update-friends",
+    "content": "updateFriends updates selected fields for one or more friendships. import updateFriends from '@/uni modules/unix openim sdk' await updateFriends friendUserIDs: 'user a', 'user b' , remark: 'Project team', isPinned: true friendUserIDs must not be empty. Omitted remark , isPinned , and ex fields remain unchanged. Confirm through onFriendInfoChanged or a new query. The commercial single user alternative uses pinned : import updateFriend from '@/uni modules/unix openim sdk' await updateFriend userID: 'user a', pinned: true, remark: 'Owner' Do not race updateFriends and Commercial updateFriend for the same user."
+  },
+  {
+    "path": "/sdk/uniapp/user/friends/delete-friend",
+    "title": "Delete a friend",
+    "description": "Remove a friendship with a selected user.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friends delete-friend",
+    "content": "import deleteFriend from '@/uni modules/unix openim sdk' await deleteFriend 'user a' Confirm final state through onFriendDeleted or a fresh friend snapshot. Deleting a friend does not delete conversations/history or add the user to the blacklist. Implement those as explicit operations with a defined compensation order, and ask for user confirmation first."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/add-friend",
+    "title": "Send a friend request",
+    "description": "Send a friend request to another user.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications add-friend",
+    "content": "import addFriend from '@/uni modules/unix openim sdk' await addFriend toUserID: 'user b', reqMsg: 'Hello, I am Alice', ex: '' reqMsg is visible to the recipient. Keep tokens, internal permissions, and sensitive data out of both it and ex . Promise completion means the request was submitted, not accepted; refresh the sent request list for its later status."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient",
+    "title": "List received friend requests",
+    "description": "Read received requests and process add, accept, reject, and delete events.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications get-friend-application-list-as-recipient",
+    "content": "Register all request events before loading the snapshot. import getFriendApplicationListAsRecipient, off, onFriendApplicationAccepted, onFriendApplicationAdded, onFriendApplicationDeleted, onFriendApplicationRejected, type OpenIMSDKEventSubscription, from '@/uni modules/unix openim sdk' const subscriptions : Array = onFriendApplicationAdded item = upsertApplication item , onFriendApplicationAccepted item = upsertApplication item , onFriendApplicationRejected item = upsertApplication item , onFriendApplicationDeleted item = removeApplication item , const page = await getFriendApplicationListAsRecipient offset: 0, count: 50 replaceReceivedApplications page?.applications ?? subscriptions.forEach subscription = off subscription Use a stable key based on both users and creation time. Handle a request with the accept or reject API; never mutate local state to imitate server success."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/get-friend-application-list-as-applicant",
+    "title": "List sent friend requests",
+    "description": "Read friend requests sent by the current account.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications get-friend-application-list-as-applicant",
+    "content": "import getFriendApplicationListAsApplicant from '@/uni modules/unix openim sdk' const result = await getFriendApplicationListAsApplicant offset: 0, count: 50 renderSentApplications result?.applications ?? Parameters are optional. Results can move while pages load, so deduplicate with participant IDs and time fields rather than array indexes. Reload after App restoration, login, or missed events."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/get-friend-application-unhandled-count",
+    "title": "Get unhandled friend-request count",
+    "description": "Read the unhandled count displayed on the friend-request entry.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications get-friend-application-unhandled-count",
+    "content": "import getFriendApplicationUnhandledCount from '@/uni modules/unix openim sdk' const count = await getFriendApplicationUnhandledCount offset: 0, count: 100 renderApplicationBadge count ?? 0 Use pagination limits agreed with the server. A nullable result is not a permanently cacheable zero. Requery after request add, accept, reject, or delete events rather than maintaining only local +1/ 1 counters across devices."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/accept-friend-application",
+    "title": "Accept a friend request",
+    "description": "Accept a friend request from a selected user.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications accept-friend-application",
+    "content": "import acceptFriendApplication from '@/uni modules/unix openim sdk' await acceptFriendApplication toUserID: 'user b', handleMsg: 'Accepted' toUserID identifies the other party. Update the request and friend stores independently from events or fresh queries. Disable duplicate actions while the request is pending; repeated handling can return a state error."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/refuse-friend-application",
+    "title": "Reject a friend request",
+    "description": "Reject a friend request from a selected user.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications refuse-friend-application",
+    "content": "import refuseFriendApplication from '@/uni modules/unix openim sdk' await refuseFriendApplication toUserID: 'user b', handleMsg: 'Not now' The handling message may be visible to the requester, so omit internal risk decisions and sensitive data. Confirm through onFriendApplicationRejected or a fresh request query. Acceptance and rejection are mutually exclusive; lock the UI action while one request is active."
+  },
+  {
+    "path": "/sdk/uniapp/user/friend-applications/delete-friend-requests",
+    "title": "Delete friend-request records",
+    "description": "Commercially delete selected friend-request records in a batch.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user friend-applications delete-friend-requests",
+    "content": "deleteFriendRequests is Commercial . import deleteFriendRequests from '@/uni modules/unix openim sdk' await deleteFriendRequests friendRequests: fromUserID: 'user a', toUserID: 'user b' , Each OpenIMSimpleFriendRequest identifies an exact request. Deleting request history does not remove an established friendship. Confirm targets in the UI and reload both the list and unhandled count; after a batch failure, do not assume which records were removed."
+  },
+  {
+    "path": "/sdk/uniapp/user/blacklist/get-black-list",
+    "title": "Get the blacklist",
+    "description": "Load the blacklist and process add and remove events.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user blacklist get-black-list",
+    "content": "import getBlackList, off, onBlackAdded, onBlackDeleted from '@/uni modules/unix openim sdk' const added = onBlackAdded user = upsertBlackUser user const deleted = onBlackDeleted user = removeBlackUser user.userID const result = await getBlackList replaceBlackList result?.blackUsers ?? off added off deleted The commercial alternative returns a differently named wrapper field: import getBlacks from '@/uni modules/unix openim sdk' const commercialResult = await getBlacks replaceBlackList commercialResult?.blacks ?? Do not mix the blackUsers and Commercial blacks result shapes. Blacklist and friendship are independent relationships."
+  },
+  {
+    "path": "/sdk/uniapp/user/blacklist/add-black",
+    "title": "Add a user to the blacklist",
+    "description": "Add a selected user to the current account blacklist.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user blacklist add-black",
+    "content": "import addBlack from '@/uni modules/unix openim sdk' await addBlack toUserID: 'user b', ex: '' Confirm through onBlackAdded or a fresh blacklist snapshot. Never store tokens, private moderation evidence, or administrator only data in ex . Adding a blacklist entry does not delete local history; conversation hiding and friendship removal are separate operations."
+  },
+  {
+    "path": "/sdk/uniapp/user/blacklist/remove-black",
+    "title": "Remove a user from the blacklist",
+    "description": "Remove the selected blacklist relationship.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp user blacklist remove-black",
+    "content": "import removeBlack from '@/uni modules/unix openim sdk' await removeBlack 'user b' Confirm through onBlackDeleted or a new snapshot. Removal does not restore a deleted friendship or recreate conversations. If repeated removal returns a relation state error, refresh the snapshot instead of retrying indefinitely."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/overview-conversation",
+    "title": "Conversation overview",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Conversation overview.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation overview-conversation",
+    "content": "Conversations are local indexes for direct, group, and other message streams. Use conversationID as the stable key; titles, avatars, unread counts, and latest messages are mutable snapshots. latestMsg is serialized message JSON, so preserve the conversation and show a fallback summary if parsing fails. Register onNewConversation and onConversationChanged before loading a list, merge by conversationID , and reload after login or App restoration. Unread state, message read receipts, and commercial conversation groups are related but separate workflows."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target",
+    "title": "Open a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Open a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations get-conversation-by-target",
+    "content": "getOneConversation resolves a conversation from session type and target ID. import getOneConversation from '@/uni modules/unix openim sdk' const result = await getOneConversation sessionType, sourceID const conversation = result?.conversation ?? null Use a user ID for direct chat or group ID for group chat. A nullable result means no current local conversation; it does not create one."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id",
+    "title": "Resolve a conversation ID",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Resolve a conversation ID.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations get-conversation-id",
+    "content": "import getConversationIDBySessionType from '@/uni modules/unix openim sdk' const conversationID = await getConversationIDBySessionType sourceID, sessionType The returned ID is the canonical local key for the given direct or group target. Use exported session type constants instead of numeric literals, and do not construct conversation IDs manually."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/get-conversations-by-id",
+    "title": "Get conversations by ID",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get conversations by ID.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations get-conversations-by-id",
+    "content": "import getMultipleConversation from '@/uni modules/unix openim sdk' const result = await getMultipleConversation 'single user a', 'group group a' const conversations = result?.conversations ?? Results may be shorter or differently ordered than the request. Map by conversationID and preserve placeholders for missing local conversations."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list",
+    "title": "Get the conversation list",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get the conversation list.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations retrieve-conversation-list",
+    "content": "Register conversation events before loading a snapshot. Use getAllConversationList for a complete result or getConversationListSplit for pages. import getConversationListSplit, off, onConversationChanged, onNewConversation from '@/uni modules/unix openim sdk' const changed = onConversationChanged items = items.forEach upsertConversation const created = onNewConversation items = items.forEach upsertConversation const page = await getConversationListSplit offset: 0, count: 100 replaceConversations page?.conversations ?? off changed off created Paginate from offset 0, deduplicate by conversationID , and requery after account or synchronization changes."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/retrieving-conversations/search-conversations",
+    "title": "Search conversations",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Search conversations.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation retrieving-conversations search-conversations",
+    "content": "import searchConversation from '@/uni modules/unix openim sdk' const result = await searchConversation 'project' renderConversations result?.conversations ?? This searches local conversation metadata. Reject an empty keyword in the UI, deduplicate by conversationID , and do not treat local results as an authoritative server wide search."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/pin-conversation",
+    "title": "Pin or unpin a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Pin or unpin a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations pin-conversation",
+    "content": "import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, isPinned: true Pass only the field being changed; use false to unpin. Apply the final onConversationChanged snapshot before re sorting instead of assuming Promise completion defines the final order."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/mark-conversation",
+    "title": "Mark or unmark a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Mark or unmark a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations mark-conversation",
+    "content": "Conversation marking is a Commercial concept, but the frozen 0.2.0 rc.3 contract has neither markConversation nor an isMarked setter field. Do not emulate it through ex or local only state. Use a supported commercial backend capability and then refresh conversations/groups, or disable the UI."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-conversation-remark",
+    "title": "Set a conversation remark",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set a conversation remark.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-conversation-remark",
+    "content": "Conversation remarks are Commercial , but the frozen conversation model and setter expose no standard remark field. Do not encode one into ex as if it were a Core field. Maintain it through an authoritative commercial business API and merge it into the UI."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-conversation-extension",
+    "title": "Set conversation extra data",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set conversation extra data.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-conversation-extension",
+    "content": "import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, ex: JSON.stringify color: 'blue' ex is replaced as one string, not merged. Read and merge your versioned business schema first, preserve unknown fields, and never store tokens or server only secrets."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-conversation-draft",
+    "title": "Set a conversation draft",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set a conversation draft.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-conversation-draft",
+    "content": "import setConversationDraft from '@/uni modules/unix openim sdk' await setConversationDraft conversationID, draftText: editorText An empty draft clears it. Persist drafts deliberately as text, update UI from the changed conversation, and avoid storing tokens or sensitive transient editor state."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-message-receive-option",
+    "title": "Set conversation message reception",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set conversation message reception.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-message-receive-option",
+    "content": "import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, recvMsgOpt: 1 Use exported receive option constants rather than naked numbers. This conversation setting is distinct from the account wide option and can be constrained by both. Confirm through the changed conversation or a new query."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/clear-group-mentions",
+    "title": "Reset group mention status",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Reset group mention status.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations clear-group-mentions",
+    "content": "import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, groupAtType: 0 Use the contract defined “no mention” value. This clears only the group mention indicator; it neither removes @ messages nor marks unread messages as read."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/mark-conversation-read",
+    "title": "Mark a conversation as read",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Mark a conversation as read.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations mark-conversation-read",
+    "content": "Use markConversationMessageAsRead to clear normal unread state. The commercial resetConversationUnread is an additional reset entry point. Direct read receipts arrive through onRecvC2CReadReceipt . import markConversationMessageAsRead, off, onRecvC2CReadReceipt from '@/uni modules/unix openim sdk' const receiptSubscription = onRecvC2CReadReceipt items = mergeReadReceipts items await markConversationMessageAsRead conversationID off receiptSubscription Do not infer message level receipts solely from the conversation unread count."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/mark-all-conversations-read",
+    "title": "Mark all conversations as read",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Mark all conversations as read.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations mark-all-conversations-read",
+    "content": "import markAllConversationMessageAsRead from '@/uni modules/unix openim sdk' await markAllConversationMessageAsRead This clears conversation unread state for the current account. Confirm final totals from unread events or a fresh query; it does not delete messages or guarantee per message read receipts."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/get-total-unread-count",
+    "title": "Track the total unread count",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Track the total unread count.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations get-total-unread-count",
+    "content": "import getTotalUnreadMsgCount, off, onTotalUnreadMessageCountChanged from '@/uni modules/unix openim sdk' const unreadSubscription = onTotalUnreadMessageCountChanged count = renderBadge count const count = await getTotalUnreadMsgCount renderBadge count ?? 0 off unreadSubscription Load a snapshot and then apply events. Requery after login or synchronization rather than maintaining only local increments."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-private-chat",
+    "title": "Enable or disable burn after reading",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Enable or disable burn after reading.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-private-chat",
+    "content": "isPrivateChat is a Commercial field accepted by the public setConversation operation. import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, isPrivateChat: true Pass only this field. The host must still implement the corresponding product UI/security behavior; confirm the final flag from conversation updates."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-burn-duration",
+    "title": "Set the burn duration",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set the burn duration.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-burn-duration",
+    "content": "burnDuration is Commercial . import setConversation from '@/uni modules/unix openim sdk' await setConversation conversationID, burnDuration: 30 Use the server defined unit, range, and disabled value. Client countdown UI does not itself delete server messages; reload the conversation to confirm the setting."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/set-message-destruct",
+    "title": "Schedule server message deletion",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Schedule server message deletion.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations set-message-destruct",
+    "content": "OpenIMConversationItem can expose commercial isMsgDestruct and msgDestructTime , but the frozen setter cannot write them. Treat them as read only Commercial state. Use an explicitly supported business API to change policy and then reload; client countdown UI is not authoritative deletion."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/hide-a-conversation",
+    "title": "Hide a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Hide a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations hide-a-conversation",
+    "content": "import hideConversation from '@/uni modules/unix openim sdk' await hideConversation conversationID Hiding removes the conversation from the visible list without deleting its message history. A later incoming message or product action can make it visible again; reload the list rather than deleting cached history."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/hide-all-conversations",
+    "title": "Hide all conversations",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Hide all conversations.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations hide-all-conversations",
+    "content": "import hideAllConversations from '@/uni modules/unix openim sdk' await hideAllConversations This hides every current conversation without deleting message history. Treat it as a destructive list action, confirm with the user, and rebuild the snapshot after completion."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/delete-conversation",
+    "title": "Delete a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations delete-conversation",
+    "content": "import deleteConversation from '@/uni modules/unix openim sdk' await deleteConversation conversationID This removes the conversation entry without promising to delete its message history. Use the explicit conversation and message operation when that is the intended product action, and confirm destructive actions in the UI."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/delete-conversation-with-messages",
+    "title": "Delete a conversation and its messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete a conversation and its messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations delete-conversation-with-messages",
+    "content": "import deleteConversationAndDeleteAllMsg from '@/uni modules/unix openim sdk' await deleteConversationAndDeleteAllMsg conversationID This destructive operation removes the conversation and its messages according to Core/server policy. Ask for confirmation, stop writes to the conversation, and reload lists after completion."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversations/clear-conversation-messages",
+    "title": "Clear messages in a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Clear messages in a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversations clear-conversation-messages",
+    "content": "import clearConversationAndDeleteAllMsg from '@/uni modules/unix openim sdk' await clearConversationAndDeleteAllMsg conversationID The conversation remains while its messages are cleared according to Core/server policy. Confirm the action, stop concurrent pagination/sends, and reload both conversation and message state afterward."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups",
+    "title": "Conversation group overview",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Conversation group overview.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups overview-conversation-groups",
+    "content": "Conversation groups are Commercial . Keep group and membership stores synchronized from snapshots plus five events. import off, onConversationGroupAdded, onConversationGroupChanged, onConversationGroupDeleted, onConversationGroupMemberAdded, onConversationGroupMemberDeleted, from '@/uni modules/unix openim sdk' const subscriptions = onConversationGroupAdded upsertGroup , onConversationGroupChanged upsertGroup , onConversationGroupDeleted removeGroup , onConversationGroupMemberAdded mergeMembers , onConversationGroupMemberDeleted removeMembers , subscriptions.forEach subscription = off subscription Merge by group and conversation IDs, preserve ordering, and reload snapshots after login or synchronization gaps."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group",
+    "title": "Create a conversation group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a conversation group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups create-conversation-group",
+    "content": "import createConversationGroup from '@/uni modules/unix openim sdk' const group = await createConversationGroup groupName: 'Priority', conversationIDList This is Commercial . Use non empty unique conversation IDs and merge the returned group/event by its stable ID."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups",
+    "title": "Get conversation groups",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get conversation groups.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups get-conversation-groups",
+    "content": "import getConversationGroups from '@/uni modules/unix openim sdk' const result = await getConversationGroups replaceConversationGroups result?.groups ?? This Commercial snapshot is ordered by server/Core state. Merge later group events and reload after account or synchronization changes."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations",
+    "title": "Get conversations in a group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get conversations in a group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups get-conversation-group-info-with-conversations",
+    "content": "import getConversationGroupInfoWithConversations from '@/uni modules/unix openim sdk' const result = await getConversationGroupInfoWithConversations conversationGroupID The Commercial result combines group metadata with member conversations. Treat it as a snapshot and merge later group/membership events by stable IDs."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-by-conversation-id",
+    "title": "getConversationGroupByConversationID",
+    "description": "OpenIM uni-app / uni-app x SDK guide for getConversationGroupByConversationID.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups get-conversation-group-by-conversation-id",
+    "content": "import getConversationGroupByConversationID from '@/uni modules/unix openim sdk' const result = await getConversationGroupByConversationID conversationID This Commercial operation returns the group association for one conversation. Use the returned group ID rather than inferring membership from UI order."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group",
+    "title": "Update a conversation group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Update a conversation group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups update-conversation-group",
+    "content": "import updateConversationGroup from '@/uni modules/unix openim sdk' await updateConversationGroup conversationGroupID, groupName: 'Important' The Commercial update changes only supplied fields. Confirm final state through onConversationGroupChanged or a fresh group query."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order",
+    "title": "Reorder conversation groups",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Reorder conversation groups.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups set-conversation-group-order",
+    "content": "import setConversationGroupOrder from '@/uni modules/unix openim sdk' await setConversationGroupOrder conversationGroupIDList Send the complete desired unique group ID order for this Commercial operation. Serialize concurrent reorder requests and refresh after failure."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups",
+    "title": "Add conversations to groups",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Add conversations to groups.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups add-conversations-to-groups",
+    "content": "import addConversationsToGroups from '@/uni modules/unix openim sdk' await addConversationsToGroups conversationGroupIDList, conversationIDList This Commercial batch adds explicit conversations to explicit groups. Deduplicate both arrays and confirm membership from events or a new snapshot."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups",
+    "title": "Remove conversations from groups",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Remove conversations from groups.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups remove-conversations-from-groups",
+    "content": "import removeConversationsFromGroups from '@/uni modules/unix openim sdk' await removeConversationsFromGroups conversationGroupIDList, conversationIDList This Commercial batch changes group membership only; it does not hide or delete conversations. Refresh membership after partial or failed operations."
+  },
+  {
+    "path": "/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group",
+    "title": "Delete a conversation group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete a conversation group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp conversation managing-conversation-groups delete-conversation-group",
+    "content": "import deleteConversationGroup from '@/uni modules/unix openim sdk' await deleteConversationGroup conversationGroupID Deleting a Commercial group does not delete its conversations or messages. Confirm destructive UI and remove the group only after the event or refreshed snapshot."
+  },
+  {
+    "path": "/sdk/uniapp/group/overview-group",
+    "title": "Group overview",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Group overview.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group overview-group",
+    "content": "Groups use stable groupID keys. Build snapshots and then merge group events idempotently. import off, onGroupDismissed, onGroupInfoChanged, onJoinedGroupAdded, onJoinedGroupDeleted from '@/uni modules/unix openim sdk' const subscriptions = onGroupInfoChanged upsertGroup , onGroupDismissed removeGroup , onJoinedGroupAdded upsertGroup , onJoinedGroupDeleted removeGroup , subscriptions.forEach subscription = off subscription Treat membership roles, mute state, join policy, and commercial extension fields as server authoritative. Reload after login or synchronization gaps."
+  },
+  {
+    "path": "/sdk/uniapp/group/create-group",
+    "title": "Create a group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group create-group",
+    "content": "import createGroup from '@/uni modules/unix openim sdk' const result = await createGroup groupInfo: groupName: 'Project' , memberUserIDs: 'user b' Use valid group type and member IDs, then merge the returned group/event by groupID . Creation is not proof that every optional invite succeeded; reload membership when needed."
+  },
+  {
+    "path": "/sdk/uniapp/group/update-group-profile",
+    "title": "Update group profile",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Update group profile.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group update-group-profile",
+    "content": "import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, groupName: 'New project name', faceURL: avatarURL Pass only fields that should change. The server enforces role permissions; confirm final data through onGroupInfoChanged or a new query."
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-announcement",
+    "title": "Publish a group announcement",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Publish a group announcement.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-announcement",
+    "content": "import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, notification: 'Release on Friday at 17:00' Send only notification , then confirm its update time and author from group information. Announcements are visible to members and must not contain secrets."
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-extension",
+    "title": "Set group extra data",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set group extra data.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-extension",
+    "content": "import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, ex: JSON.stringify department: 'R&D' ex is a whole value replacement. Parse and merge the existing versioned schema, preserve unknown fields, and never place secrets in member readable data."
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-join-verification",
+    "title": "Set group join verification",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set group join verification.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-join-verification",
+    "content": "import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, needVerification: 1 Use exported OpenIMGroupNeedVerification constants. The policy affects future joins, not existing members or requests; confirm from the updated group."
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-member-profile-access",
+    "title": "Set member profile access",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set member profile access.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-member-profile-access",
+    "content": "import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, lookMemberInfo: 1 Use valid OpenIMGroupOption values. The server remains responsible for privacy enforcement; hiding a client control is not sufficient protection."
+  },
+  {
+    "path": "/sdk/uniapp/group/set-group-member-friend-permission",
+    "title": "Set member friend request permission",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set member friend request permission.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group set-group-member-friend-permission",
+    "content": "import setGroupInfo from '@/uni modules/unix openim sdk' await setGroupInfo groupID, applyMemberFriend: 1 Use valid OpenIMGroupOption values. The server enforces this policy; UI visibility alone is not an authorization boundary."
+  },
+  {
+    "path": "/sdk/uniapp/group/change-group-mute",
+    "title": "Change group mute status",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Change group mute status.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group change-group-mute",
+    "content": "import changeGroupMute from '@/uni modules/unix openim sdk' await changeGroupMute groupID, isMute: true The server validates moderator permissions. Confirm group wide mute from updated group information; do not assume it changes individual member mute expirations identically."
+  },
+  {
+    "path": "/sdk/uniapp/group/join-group",
+    "title": "Apply to join a group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Apply to join a group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group join-group",
+    "content": "import joinGroup from '@/uni modules/unix openim sdk' await joinGroup groupID, reqMsg: 'Please add me', joinSource: 2, ex: '' Use the documented GroupJoinSource value and keep request text free of secrets. Promise completion may mean pending verification rather than membership; verify from application state/events."
+  },
+  {
+    "path": "/sdk/uniapp/group/quit-group",
+    "title": "Leave a group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Leave a group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group quit-group",
+    "content": "import quitGroup from '@/uni modules/unix openim sdk' await quitGroup groupID Ask for confirmation. The group owner may need to transfer ownership or dismiss the group instead. Remove local state only after an event or refreshed joined group list."
+  },
+  {
+    "path": "/sdk/uniapp/group/dismiss-group",
+    "title": "Dismiss a group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Dismiss a group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group dismiss-group",
+    "content": "import dismissGroup from '@/uni modules/unix openim sdk' await dismissGroup groupID This owner only destructive action ends the group according to server policy. Confirm explicitly and process onGroupDismissed ; do not equate local navigation with successful dismissal."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/get-specified-groups-info",
+    "title": "Get group information",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get group information.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups get-specified-groups-info",
+    "content": "import getSpecifiedGroupsInfo from '@/uni modules/unix openim sdk' const result = await getSpecifiedGroupsInfo 'group a', 'group b' Results can be missing or reordered. Map by groupID and treat server returned role, policy, and mute fields as authoritative snapshots."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/get-joined-group-list",
+    "title": "Get joined groups",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get joined groups.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups get-joined-group-list",
+    "content": "import getJoinedGroupList from '@/uni modules/unix openim sdk' const result = await getJoinedGroupList replaceJoinedGroups result?.groups ?? Use this for a complete manageable snapshot, deduplicate by groupID , and merge joined/deleted/info events. Use the paged API for large lists."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page",
+    "title": "Get joined groups by page",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get joined groups by page.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups get-joined-group-list-page",
+    "content": "import getJoinedGroupListPage from '@/uni modules/unix openim sdk' const result = await getJoinedGroupListPage offset: 0, count: 100 Continue until a page returns fewer than count items. Group state may change during pagination, so deduplicate by groupID and merge events idempotently."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/is-join-group",
+    "title": "Check group membership",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Check group membership.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups is-join-group",
+    "content": "import isJoinGroup from '@/uni modules/unix openim sdk' const joined = await isJoinGroup groupID Use the returned boolean for current membership, but refresh after join/quit events or account changes. This query neither joins the group nor checks moderation permissions."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-groups/search-groups",
+    "title": "Search groups",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Search groups.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-groups search-groups",
+    "content": "import searchGroups from '@/uni modules/unix openim sdk' const result = await searchGroups keywordList: 'project' , isSearchGroupID: true, isSearchGroupName: true Reject empty searches, map results by groupID , and distinguish local/joined group search semantics from a server wide group directory."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient",
+    "title": "Get received group applications",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get received group applications.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications get-group-application-list-as-recipient",
+    "content": "Register request events before loading the received snapshot. import getGroupApplicationListAsRecipient, off, onGroupApplicationAccepted, onGroupApplicationAdded, onGroupApplicationDeleted, onGroupApplicationRejected from '@/uni modules/unix openim sdk' const subscriptions = onGroupApplicationAdded upsertRequest , onGroupApplicationAccepted upsertRequest , onGroupApplicationRejected upsertRequest , onGroupApplicationDeleted removeRequest , const result = await getGroupApplicationListAsRecipient offset: 0, count: 50 replaceRequests result?.applications ?? subscriptions.forEach subscription = off subscription Merge with a stable group/applicant key and use explicit accept/reject operations."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/get-group-application-list-as-applicant",
+    "title": "Get sent group applications",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get sent group applications.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications get-group-application-list-as-applicant",
+    "content": "import getGroupApplicationListAsApplicant from '@/uni modules/unix openim sdk' const result = await getGroupApplicationListAsApplicant offset: 0, count: 50 This lists requests sent by the current account. Deduplicate across changing pages and reload after application events or App restoration."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/get-group-application-unhandled-count",
+    "title": "Get the pending group application count",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get the pending group application count.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications get-group-application-unhandled-count",
+    "content": "import getGroupApplicationUnhandledCount from '@/uni modules/unix openim sdk' const count = await getGroupApplicationUnhandledCount offset: 0, count: 100 renderGroupRequestBadge count ?? 0 Requery after add/accept/reject/delete changes instead of maintaining only local counters across devices."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/observe-group-application-badge-count",
+    "title": "Get the group application badge count",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get the group application badge count.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications observe-group-application-badge-count",
+    "content": "onGroupApplicationBadgeCountChanged is Commercial . import off, onGroupApplicationBadgeCountChanged from '@/uni modules/unix openim sdk' const badgeSubscription = onGroupApplicationBadgeCountChanged count = renderGroupRequestBadge count off badgeSubscription Treat it as an incremental UI signal and reload the request/count snapshot after login or missed events. This platform event replaces the unavailable clear badge operation."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/accept-group-application",
+    "title": "Accept a group application",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Accept a group application.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications accept-group-application",
+    "content": "import acceptGroupApplication from '@/uni modules/unix openim sdk' await acceptGroupApplication groupID, fromUserID, handleMsg: 'Accepted' The server validates moderator authority and request state. Disable duplicate UI actions and confirm both request and member state from events or snapshots."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/refuse-group-application",
+    "title": "Reject a group application",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Reject a group application.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications refuse-group-application",
+    "content": "import refuseGroupApplication from '@/uni modules/unix openim sdk' await refuseGroupApplication groupID, fromUserID, handleMsg: 'Not accepted' Keep private moderation evidence out of the handling text. Acceptance and rejection are mutually exclusive; confirm from events or a refreshed request list."
+  },
+  {
+    "path": "/sdk/uniapp/group/group-applications/delete-group-requests",
+    "title": "Delete group applications",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete group applications.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group group-applications delete-group-requests",
+    "content": "import deleteGroupRequests from '@/uni modules/unix openim sdk' await deleteGroupRequests groupRequests: groupID, fromUserID This Commercial batch deletes request records, not group membership. Confirm targets and refresh both request list and count after any failure."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/get-group-member-list",
+    "title": "List group members",
+    "description": "OpenIM uni-app / uni-app x SDK guide for List group members.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members get-group-member-list",
+    "content": "import getGroupMemberList, off, onGroupMemberAdded, onGroupMemberDeleted, onGroupMemberInfoChanged from '@/uni modules/unix openim sdk' const added = onGroupMemberAdded upsertMember const deleted = onGroupMemberDeleted removeMember const changed = onGroupMemberInfoChanged upsertMember const result = await getGroupMemberList groupID, filter: 0, offset: 0, count: 100 replaceMembers result?.members ?? off added ; off deleted ; off changed Use exported filters, paginate, and merge by groupID,userID . Reload after role or synchronization changes."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/get-specified-group-members-info",
+    "title": "Get specified group member profiles",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get specified group member profiles.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members get-specified-group-members-info",
+    "content": "import getSpecifiedGroupMembersInfo from '@/uni modules/unix openim sdk' const result = await getSpecifiedGroupMembersInfo groupID, userIDList: 'user a', 'user b' Map results by userID ; missing entries can reflect non membership or access policy. Do not rely on input order."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/get-users-in-group",
+    "title": "Check group membership",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Check group membership.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members get-users-in-group",
+    "content": "import getUsersInGroup from '@/uni modules/unix openim sdk' const result = await getUsersInGroup groupID, userIDList Use this to check which requested users belong to one group. Interpret results by user ID, not position; it does not add or remove members."
+  },
+  {
+    "path": "/sdk/uniapp/group/retrieving-group-members/search-group-members",
+    "title": "Search group members",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Search group members.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group retrieving-group-members search-group-members",
+    "content": "import searchGroupMembers from '@/uni modules/unix openim sdk' const result = await searchGroupMembers groupID, keywordList: 'Alice' , isSearchUserID: true, isSearchMemberNickname: true Reject empty keywords and use explicit search flags. This searches group member data and does not replace public user lookup."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/invite-user-to-group",
+    "title": "Invite users to a group",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Invite users to a group.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members invite-user-to-group",
+    "content": "import inviteUserToGroup from '@/uni modules/unix openim sdk' await inviteUserToGroup groupID, userIDList: 'user b' , reason: 'Project collaboration' The server applies group policy and permissions. Promise completion does not guarantee every target joined; confirm with member events or a refreshed member list."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/kick-group-member",
+    "title": "Remove group members",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Remove group members.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members kick-group-member",
+    "content": "import kickGroupMember from '@/uni modules/unix openim sdk' await kickGroupMember groupID, userIDList: 'user b' , reason: 'Removed by moderator' Confirm this destructive moderation action and keep private evidence out of a potentially visible reason. Apply member deleted events or reload membership."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-nickname",
+    "title": "Update a member’s group nickname",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Update a member’s group nickname.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-nickname",
+    "content": "import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', nickname: 'Alice Design ' Send only the nickname field and confirm through member info events. The server validates who can edit each member."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-role-level",
+    "title": "Manage group administrators",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Manage group administrators.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-role-level",
+    "content": "import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', roleLevel: 60 Use exported OpenIMGroupMemberRoleLevel constants. Role changes are high risk moderation actions; require confirmation and let the server enforce authority."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-avatar",
+    "title": "Update a group member’s avatar",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Update a group member’s avatar.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-avatar",
+    "content": "import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', faceURL: avatarURL Upload local media first and pass a remotely reachable HTTPS URL. Do not store unifile:// or a sandbox path as a remote avatar."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/set-group-member-extension",
+    "title": "Set a group member extension",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set a group member extension.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members set-group-member-extension",
+    "content": "import setGroupMemberInfo from '@/uni modules/unix openim sdk' await setGroupMemberInfo groupID, userID: 'user b', ex: JSON.stringify title: 'PM' ex replaces the whole value. Merge a versioned schema, preserve unknown fields, and store no secrets in member visible data."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/transfer-group-owner",
+    "title": "Transfer group ownership",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Transfer group ownership.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members transfer-group-owner",
+    "content": "import transferGroupOwner from '@/uni modules/unix openim sdk' await transferGroupOwner groupID, newOwnerUserID: 'user b' Require explicit confirmation: ownership and moderator permissions change immediately according to server policy. Reload group/member role state after completion."
+  },
+  {
+    "path": "/sdk/uniapp/group/managing-group-members/change-group-member-mute",
+    "title": "Mute or unmute a group member",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Mute or unmute a group member.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group managing-group-members change-group-member-mute",
+    "content": "import changeGroupMemberMute from '@/uni modules/unix openim sdk' await changeGroupMemberMute groupID, userID: 'user b', mutedSeconds: 600 Use server defined duration limits and the defined unmute value. Confirm from member updates; client countdown UI is not the authorization source."
+  },
+  {
+    "path": "/sdk/uniapp/group/check-full-sync-state",
+    "title": "Check group full-sync state",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Check group full-sync state.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp group check-full-sync-state",
+    "content": "The following Commercial diagnostics compare local group data with synchronized state: import checkGroupMemberFullSync, checkLocalGroupFullSync from '@/uni modules/unix openim sdk' const groupsReady = await checkLocalGroupFullSync const membersReady = await checkGroupMemberFullSync groupID Use them for recovery diagnostics and gate refreshes, not as a replacement for normal group/member queries. Retry with bounded backoff after synchronization events."
+  },
+  {
+    "path": "/sdk/uniapp/message/overview-message",
+    "title": "Message overview",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Message overview.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message overview-message",
+    "content": "Use clientMsgID as the stable client identifier and merge send results, realtime events, and history by conversationID,clientMsgID . Creation only builds an OpenIMMessageItem ; sendMessage performs delivery. import off, onSendMessageProgress, onUploadFileProgress, onUploadLogsProgress from '@/uni modules/unix openim sdk' const send = onSendMessageProgress event = updateMessageProgress event.clientMsgID, event.progress const file = onUploadFileProgress event = updateCurrentUpload event.progress const logs = onUploadLogsProgress event = updateLogUpload event.progress off send ; off file ; off logs Progress can repeat or skip values; only final API completion defines success. Convert unifile:// to a readable native path before local file creation."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-text-message",
+    "title": "Create a text message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a text message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-text-message",
+    "content": "import createTextMessage from '@/uni modules/unix openim sdk' const message = await createTextMessage 'Hello, OpenIMSDK' if message == null throw new Error 'Failed to create text message' Validate product length limits first. Creation does not send; pass the returned OpenIMMessageItem to sendMessage rather than constructing one manually."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-text-at-message",
+    "title": "Create an @ message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create an @ message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-text-at-message",
+    "content": "import createTextAtMessage from '@/uni modules/unix openim sdk' const message = await createTextAtMessage text: '@Alice please review', atUserIDList: 'user a' , atUsersInfo: atUserID: 'user a', groupNickname: 'Alice' , quoteMessage: null, Keep mention IDs and display metadata aligned. Commercial getAtAllTag returns the deployed “mention everyone” tag. Send the created message with a target group ID."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-custom-message",
+    "title": "Create a custom message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a custom message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-custom-message",
+    "content": "import createCustomMessage from '@/uni modules/unix openim sdk' const message = await createCustomMessage data: JSON.stringify orderID: 'order 123' , extension: '', descriptionText: 'Order card', All fields reach the recipient. Version and validate a shared schema and store no secrets. createAdvancedTextMessage creates entity/styled text; reject entity ranges outside the original text."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-image-message-from-full-path",
+    "title": "Create an image message from a file",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create an image message from a file.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-image-message-from-full-path",
+    "content": "import createImageMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createImageMessageFromFullPath '/data/user/0/app/cache/photo.jpg' Commercial createImageMessage accepts structured source path metadata. Both require a readable native path. Resolve unifile:// , temporary album objects, or content URIs through the host platform and verify existence/permission before sending."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-image-message-by-url",
+    "title": "Create an image message from a URL",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create an image message from a URL.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-image-message-by-url",
+    "content": "import createImageMessageByURL from '@/uni modules/unix openim sdk' const message = await createImageMessageByURL pictureElem Provide uploaded source/thumbnail URLs and matching dimensions, size, and type. URLs must be accessible to conversation participants; do not place local paths in URL fields."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-sound-message-from-full-path",
+    "title": "Create an audio message from a file",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create an audio message from a file.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-sound-message-from-full-path",
+    "content": "import createSoundMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createSoundMessageFromFullPath soundPath: '/data/user/0/app/cache/voice.m4a', duration: 8 Commercial createSoundMessage uses the structured form. Wait until recording is closed and readable; make duration match the actual media and the contract unit."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-sound-message-by-url",
+    "title": "Create an audio message from a URL",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create an audio message from a URL.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-sound-message-by-url",
+    "content": "import createSoundMessageByURL from '@/uni modules/unix openim sdk' const message = await createSoundMessageByURL soundElem Use upload result URL, UUID, size, duration, and type values. The remote resource must be accessible to recipients; a sandbox path is not a media URL."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-video-message-from-full-path",
+    "title": "Create a video message from files",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a video message from files.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-video-message-from-full-path",
+    "content": "import createVideoMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createVideoMessageFromFullPath videoPath: '/data/user/0/app/cache/video.mp4', videoType: 'mp4', duration: 12, snapshotPath: '/data/user/0/app/cache/video cover.jpg', Commercial createVideoMessage can carry source path metadata. Video and cover must exist, be readable, and match declared type/duration."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-video-message-by-url",
+    "title": "Create a video message from URLs",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a video message from URLs.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-video-message-by-url",
+    "content": "import createVideoMessageByURL from '@/uni modules/unix openim sdk' const message = await createVideoMessageByURL videoElem Populate video and cover upload metadata accurately. Both resources must be accessible to recipients and must not expose private storage credentials."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-file-message-from-full-path",
+    "title": "Create a file message from a file",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a file message from a file.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-file-message-from-full-path",
+    "content": "import createFileMessageFromFullPath from '@/uni modules/unix openim sdk' const message = await createFileMessageFromFullPath filePath: '/data/user/0/app/cache/report.pdf', fileName: 'report.pdf', Commercial createFileMessage can include source path metadata. Validate path, permission, size, and extension. Treat fileName as display text, never as a path component."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-file-message-by-url",
+    "title": "Create a file message from a URL",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a file message from a URL.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-file-message-by-url",
+    "content": "import createFileMessageByURL from '@/uni modules/unix openim sdk' const message = await createFileMessageByURL fileElem Use trusted upload result URL, name, UUID, size, and type values. The URL must be accessible to recipients without exposing private storage credentials."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-card-message",
+    "title": "Create a contact card message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a contact card message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-card-message",
+    "content": "import createCardMessage from '@/uni modules/unix openim sdk' const message = await createCardMessage userID: 'user b', nickname: 'Alice', faceURL: 'https://cdn.example.com/alice.png', ex: '' A card is a send time snapshot. Resolve current profile data by userID when opened, and never treat card fields as authenticated identity."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-location-message",
+    "title": "Create a location message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a location message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-location-message",
+    "content": "import createLocationMessage from '@/uni modules/unix openim sdk' const message = await createLocationMessage descriptionText: 'Room A', longitude: 121.47, latitude: 31.23 Obtain user permission and validate coordinate ranges. Clearly communicate recipients before sending sensitive location data, and omit precise coordinates from logs."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-face-message",
+    "title": "Create an emoji message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create an emoji message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-face-message",
+    "content": "import createFaceMessage from '@/uni modules/unix openim sdk' const message = await createFaceMessage index: 1, data: 'smile' Sender and receiver must share the same sticker package/version mapping. Render an unknown index placeholder instead of failing the message list."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-quote-message",
+    "title": "Create a reply message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a reply message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-quote-message",
+    "content": "import createQuoteMessage from '@/uni modules/unix openim sdk' const message = await createQuoteMessage text: 'Agreed', message: JSON.stringify quotedMessage Use the complete SDK message snapshot, not a fabricated ID only object. createAdvancedQuoteMessage also supports text entities. Render a safe unavailable state if the quoted source is later revoked or deleted."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-markdown-message",
+    "title": "Create a Markdown message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a Markdown message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-markdown-message",
+    "content": "import createMarkdownMessage from '@/uni modules/unix openim sdk' const message = await createMarkdownMessage content: ' Release complete ' This is Commercial . Sanitize Markdown at render time, disable unsafe HTML/scripts/URLs, and never treat raw content as trusted HTML."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-forward-message",
+    "title": "Create a forwarded message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a forwarded message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-forward-message",
+    "content": "import createForwardMessage from '@/uni modules/unix openim sdk' const forward = await createForwardMessage sourceMessage Creation does not send. Check content sharing permissions and privacy first; device local extension/send state fields are not recipient authoritative data."
+  },
+  {
+    "path": "/sdk/uniapp/message/creating-messages/create-merger-message",
+    "title": "Create a merged forward message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Create a merged forward message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message creating-messages create-merger-message",
+    "content": "import createMergerMessage from '@/uni modules/unix openim sdk' const merger = await createMergerMessage messageList: selectedMessages, title: 'Chat history', abstractList: 'Alice: Approved' , Keep summaries consistent with source messages, verify sharing permission and sensitive content, and limit total message count/size."
+  },
+  {
+    "path": "/sdk/uniapp/message/sending-messages/send-message",
+    "title": "Send a message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Send a message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message sending-messages send-message",
+    "content": "import sendMessage from '@/uni modules/unix openim sdk' const sent = await sendMessage message, recvID: 'user b', groupID: '', isOnlineOnly: false upsertMessage sent.clientMsgID, sent Set recvID for direct chat or groupID for group chat and leave the other empty. The Promise resolves directly to OpenIMMessageItem . Preserve failed messages for retry under the same clientMsgID unless your product explicitly creates a new send."
+  },
+  {
+    "path": "/sdk/uniapp/message/sending-messages/send-message-not-oss",
+    "title": "Send an uploaded media message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Send an uploaded media message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message sending-messages send-message-not-oss",
+    "content": "import sendMessageNotOss from '@/uni modules/unix openim sdk' const sent = await sendMessageNotOss message, recvID, groupID Use this only when the message already contains complete remotely accessible media metadata. A local path message sent through this route may be inaccessible to recipients; use normal sendMessage for local uploads."
+  },
+  {
+    "path": "/sdk/uniapp/message/receiving-messages/receive-messages",
+    "title": "Receive messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Receive messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message receiving-messages receive-messages",
+    "content": "Subscribe to single, batch, offline, and online only delivery paths, then deduplicate by conversationID,clientMsgID . import off, onRecvNewMessage, onRecvNewMessages, onRecvOfflineNewMessage, onRecvOfflineNewMessages, onRecvOnlineOnlyMessage from '@/uni modules/unix openim sdk' const subscriptions = onRecvNewMessage mergeMessage , onRecvOfflineNewMessage mergeMessage , onRecvOnlineOnlyMessage mergeOnlineOnlyMessage , onRecvNewMessages result = result.messages.forEach mergeMessage , onRecvOfflineNewMessages result = result.messages.forEach mergeMessage , subscriptions.forEach subscription = off subscription Online only messages may not exist in history. A single application message store should own these global listeners; history queries remain necessary for snapshots and recovery."
+  },
+  {
+    "path": "/sdk/uniapp/message/receiving-messages/receive-custom-business-messages",
+    "title": "Receive custom business messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Receive custom business messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message receiving-messages receive-custom-business-messages",
+    "content": "These listeners deliver opaque JSON strings. onRecvCustomBusinessMessage is public; four extension/KV listeners are Commercial and unsupported on HarmonyOS. import off, onRecvCustomBusinessMessage from '@/uni modules/unix openim sdk' function handleRawPayload payload : string try const value = JSON.parseObject payload if value = null routeValidatedBusinessEvent value catch console.error 'Invalid custom message event' const customSubscription = onRecvCustomBusinessMessage handleRawPayload off customSubscription uni app JavaScript should use protected JSON.parse . Validate version, kind, and required fields before updating state, safely ignore unknown payloads, and never log the complete string."
+  },
+  {
+    "path": "/sdk/uniapp/message/retrieving-messages/load-older-messages",
+    "title": "Load message history",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Load message history.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message retrieving-messages load-older-messages",
+    "content": "import getAdvancedHistoryMessageList from '@/uni modules/unix openim sdk' const page = await getAdvancedHistoryMessageList conversationID, startClientMsgID: '', count: 50 Use an empty cursor for the first page and the earliest boundary message ID for the next. Deduplicate by clientMsgID and honor the returned end marker. Commercial getHistoryMessageList additionally supports isReverse , viewType , and lastMinSeq ; direction is a parameter, not a separate reverse history API."
+  },
+  {
+    "path": "/sdk/uniapp/message/retrieving-messages/find-messages-by-id",
+    "title": "Find messages by ID",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Find messages by ID.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message retrieving-messages find-messages-by-id",
+    "content": "import findMessageList from '@/uni modules/unix openim sdk' const result = await findMessageList conversationID, clientMsgIDList: 'msg a', 'msg b' Map OpenIMFindMessageResult by conversation and requested message IDs. Missing messages should not invalidate the complete batch."
+  },
+  {
+    "path": "/sdk/uniapp/message/retrieving-messages/load-message-context",
+    "title": "Load message context",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Load message context.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message retrieving-messages load-message-context",
+    "content": "import fetchSurroundingMessages from '@/uni modules/unix openim sdk' const result = await fetchSurroundingMessages startMessage: targetMessage, viewType: 0, before: 20, after: 20 This is Commercial . Use a complete SDK message as the anchor, merge duplicates by clientMsgID , and preserve chronological ordering."
+  },
+  {
+    "path": "/sdk/uniapp/message/searching-messages/search-messages",
+    "title": "Search messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Search messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message searching-messages search-messages",
+    "content": "import searchLocalMessages from '@/uni modules/unix openim sdk' const result = await searchLocalMessages conversationID, keywordList: 'release' , keywordListMatchType: 0, senderUserIDList: , messageTypeList: , searchTimePosition: 0, searchTimePeriod: 0, pageIndex: 1, count: 50, Use contract defined matching and time semantics. Search covers locally synchronized/indexable data, not guaranteed full server history. Deduplicate by conversation and message ID."
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/update-typing-status",
+    "title": "Report typing status",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Report typing status.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages update-typing-status",
+    "content": "changeInputStates updates typing/input state; commercial typingStatusUpdate provides the legacy compatible route. Receive updates through onConversationUserInputStatusChanged . import changeInputStates, off, onConversationUserInputStatusChanged from '@/uni modules/unix openim sdk' const typingSubscription = onConversationUserInputStatusChanged state = renderTyping state await changeInputStates conversationID, focus: true off typingSubscription Debounce high frequency UI changes and expire stale indicators locally."
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/get-typing-status",
+    "title": "Get typing status",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get typing status.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages get-typing-status",
+    "content": "import getInputStates from '@/uni modules/unix openim sdk' const state = await getInputStates conversationID This Commercial snapshot can become stale quickly. Combine it with typing events and a local timeout; never use it for authorization or durable presence."
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/check-speech-to-text",
+    "title": "Check audio transcription availability",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Check audio transcription availability.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages check-speech-to-text",
+    "content": "import getSpeechToTextCapabilities from '@/uni modules/unix openim sdk' const capabilities = await getSpeechToTextCapabilities This Commercial query should gate transcription UI. Capability can vary by deployment and account; do not infer it solely from plugin version."
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/transcribe-audio",
+    "title": "Transcribe audio",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Transcribe audio.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages transcribe-audio",
+    "content": "import speechToText from '@/uni modules/unix openim sdk' const result = await speechToText soundMessage This is Commercial . Use a complete sound message, expose consent/privacy behavior, and store the returned transcript according to product policy rather than modifying the original media."
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/save-local-transcript",
+    "title": "Save a local transcript",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Save a local transcript.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages save-local-transcript",
+    "content": "import setMessageLocalContent from '@/uni modules/unix openim sdk' await setMessageLocalContent conversationID, clientMsgID, content: transcript This Commercial local only value is device state and does not edit the server message. Version any structured content and avoid storing unnecessary sensitive transcript data."
+  },
+  {
+    "path": "/sdk/uniapp/message/composing-messages/translate-text-and-messages",
+    "title": "Translate text and messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Translate text and messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message composing-messages translate-text-and-messages",
+    "content": "translateText and translateMessage are Commercial on Android and iOS. HarmonyOS returns platform unsupported . import translateText from '@/uni modules/unix openim sdk' const result = await translateText text: 'Hello', targetLanguage: 'zh CN' Use the exact frozen parameter model, keep source text/message intact, and display translation as derived content. Treat language output as untrusted user visible text and preserve privacy consent."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/delete-local-message",
+    "title": "Delete a local message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete a local message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages delete-local-message",
+    "content": "import deleteMessageFromLocalStorage from '@/uni modules/unix openim sdk' await deleteMessageFromLocalStorage conversationID, clientMsgID The compatible deleteMessage uses the same parameters. This affects only local storage and must not be presented as remote deletion or revocation."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/delete-saved-messages",
+    "title": "Delete messages in a batch",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete messages in a batch.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages delete-saved-messages",
+    "content": "import deleteMessages, off, onMsgDeleted from '@/uni modules/unix openim sdk' const deletedSubscription = onMsgDeleted message = removeMessageByID message.clientMsgID await deleteMessages deleteParams off deletedSubscription deleteMessages is Commercial and uses OpenIMDeleteMessagesParams ; onMsgDeleted is public. Merge request/event idempotently and follow the deployed service's cross device semantics."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/delete-user-messages",
+    "title": "Delete all messages from a user in a group chat",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Delete all messages from a user in a group chat.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages delete-user-messages",
+    "content": "import deleteUserAllMessagesInConv, off, onDeleteUserAllMsgsInConv from '@/uni modules/unix openim sdk' const subscription = onDeleteUserAllMsgsInConv payload = refreshAfterValidatedJson payload await deleteUserAllMessagesInConv conversationID, userID: targetUserID off subscription This Commercial range deletion requires authority and strong confirmation. Validate opaque JSON and refresh rather than depending on unfrozen fields."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/revoke-a-message",
+    "title": "Revoke a message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Revoke a message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages revoke-a-message",
+    "content": "import off, onNewRecvMessageRevoked, revokeMessage from '@/uni modules/unix openim sdk' const revokedSubscription = onNewRecvMessageRevoked mergeRevokedInfo await revokeMessage conversationID, clientMsgID off revokedSubscription The server enforces sender, time, and permission rules. Keep a revoked placeholder instead of blindly removing the array entry; Promise and event order is not guaranteed."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/modify-a-message",
+    "title": "Modify a message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Modify a message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages modify-a-message",
+    "content": "import modifyMessage, off, onMessageEdited, onMessageModified from '@/uni modules/unix openim sdk' const modified = onMessageModified refreshModifiedMessage const edited = onMessageEdited refreshModifiedMessage const result = await modifyMessage modifyParams off modified ; off edited These are Commercial . Validate raw event JSON, refresh by stable message ID, redact message bodies from logs, and use the server's final version for multi device conflicts."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/get-pinned-messages",
+    "title": "Get pinned messages in a conversation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get pinned messages in a conversation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages get-pinned-messages",
+    "content": "import getConversationPinnedMsg from '@/uni modules/unix openim sdk' const result = await getConversationPinnedMsg conversationID This is Commercial . Follow returned pagination/list fields, deduplicate by clientMsgID , and reload after pin change events."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/set-message-pinned",
+    "title": "Pin or unpin a message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Pin or unpin a message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages set-message-pinned",
+    "content": "import off, onChangedPinnedMsg, setConversationPinnedMsg from '@/uni modules/unix openim sdk' const pinnedSubscription = onChangedPinnedMsg payload = refreshPinnedMessagesAfterValidJson payload await setConversationPinnedMsg pinParams off pinnedSubscription Both are Commercial . Validate the raw event and reload the pinned list instead of casting opaque JSON directly to a message."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/insert-local-single-message",
+    "title": "Insert a local one-to-one message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Insert a local one-to-one message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages insert-local-single-message",
+    "content": "import insertSingleMessageToLocalStorage from '@/uni modules/unix openim sdk' await insertSingleMessageToLocalStorage insertParams Use a real OpenIMInsertSingleMessageParams with message, sender, and receiver. This inserts device local history and sends nothing; prevent ID collisions and never fake remote delivery."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/insert-local-group-message",
+    "title": "Insert a local group message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Insert a local group message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages insert-local-group-message",
+    "content": "import insertGroupMessageToLocalStorage from '@/uni modules/unix openim sdk' await insertGroupMessageToLocalStorage insertParams Use OpenIMInsertGroupMessageParams with group, sender, and message. This updates only local history and does not broadcast to group members."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/clear-all-local-messages",
+    "title": "Clear all local messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Clear all local messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages clear-all-local-messages",
+    "content": "import deleteAllMsgFromLocal from '@/uni modules/unix openim sdk' await deleteAllMsgFromLocal This high risk operation clears all local messages for the account. Confirm, stop concurrent queries, and remember that server synchronization may restore some data."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/clear-all-messages",
+    "title": "Clear local and server messages",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Clear local and server messages.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages clear-all-messages",
+    "content": "import deleteAllMsgFromLocalAndSvr from '@/uni modules/unix openim sdk' await deleteAllMsgFromLocalAndSvr This is a higher risk account wide local/server deletion. Explain scope/recovery, require strong confirmation, and rebuild conversation/message state after success or ambiguous failure."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-messages/set-message-local-ex",
+    "title": "Set a local message extension",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Set a local message extension.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-messages set-message-local-ex",
+    "content": "import setMessageLocalEx from '@/uni modules/unix openim sdk' await setMessageLocalEx conversationID, clientMsgID, localEx: JSON.stringify localState localEx is device local and replaced as one value. Merge/version JSON, constrain size, and store no tokens or irreplaceable business data."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-read-status/send-group-read-receipts",
+    "title": "Report group messages as read",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Report group messages as read.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-read-status send-group-read-receipts",
+    "content": "import off, onRecvGroupReadReceipt, sendGroupMessageReadReceipt from '@/uni modules/unix openim sdk' const receiptSubscription = onRecvGroupReadReceipt refreshReadState await sendGroupMessageReadReceipt receiptParams off receiptSubscription Both are Commercial . Validate raw JSON and merge by message ID. Request completion, event arrival, and reader list updates are separate stages."
+  },
+  {
+    "path": "/sdk/uniapp/message/managing-read-status/get-group-message-readers",
+    "title": "Get members who read a group message",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get members who read a group message.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp message managing-read-status get-group-message-readers",
+    "content": "import getGroupMessageReaderList from '@/uni modules/unix openim sdk' const result = await getGroupMessageReaderList readerParams This Commercial operation uses OpenIMGetGroupMessageReaderListParams . Continue through returned pagination fields, deduplicate by userID , and refresh because new receipts can change the list."
+  },
+  {
+    "path": "/sdk/uniapp/file-uploads/upload-file",
+    "title": "Upload a file",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Upload a file.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp file-uploads upload-file",
+    "content": "import uploadFile from '@/uni modules/unix openim sdk' const result = await uploadFile filepath: '/data/user/0/app/cache/report.pdf', name: 'report.pdf', contentType: 'application/pdf', uuid: createStableUploadUUID , cancelID: 'upload report 1', Use a readable absolute native path. Resolve unifile:// first and never pass a network URL as filepath . Observe progress through onUploadFileProgress . import cancelUpload from '@/uni modules/unix openim sdk' await cancelUpload cancelID: 'upload report 1' cancelUpload is Commercial . The original upload Promise defines the final state. Do not delete a temporary file while native code may still read it."
+  },
+  {
+    "path": "/sdk/uniapp/calling/overview-calling",
+    "title": "Audio and video calling overview",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Audio and video calling overview.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling overview-calling",
+    "content": "Every capability in this section is Commercial and requires the commercial signaling services. unix openim sdk handles invitations, accept/reject/cancel/hangup, room credentials, and events; it does not provide call UI or render camera/audio. For complete call and meeting UI, integrate openim av runtime . It reuses this plugin's only login through typed Host RPC and never initializes another OpenIM Core. A typical flow registers all signaling events, invites with OpenIMSignalingInvitationInfo , validates the raw incoming payload, requests media permission before accepting, creates media from room credentials, and drives one session state machine from cancel/timeout/hangup/multi device events. Never persist or log token, liveURL, or raw signaling payload."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/start-single-call",
+    "title": "Start a one-to-one call",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Start a one-to-one call.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls start-single-call",
+    "content": "import signalingInvite from '@/uni modules/unix openim sdk' const result = await signalingInvite invitation: inviterUserID: selfUserID, inviteeUserIDList: peerUserID , mediaType: 'video', timeout: 30, sessionType: 1 , offlinePushInfo: title: 'Video call', desc: 'Incoming call' , This is Commercial . Treat roomID , token , liveURL , and busy user results as optional; cancel an accepted invitation if presentation fails, and never log credentials."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/start-group-call",
+    "title": "Start a group call",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Start a group call.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls start-group-call",
+    "content": "import signalingInviteInGroup from '@/uni modules/unix openim sdk' const result = await signalingInviteInGroup invitation: inviterUserID: selfUserID, inviteeUserIDList: selectedUserIDs, groupID, mediaType: 'audio', timeout: 30, sessionType: 2 , This is Commercial . Deduplicate targets and verify current membership. Busy users do not determine later accept/reject/timeout outcomes for all other invitees."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/accept-call",
+    "title": "Accept a call",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Accept a call.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls accept-call",
+    "content": "import signalingAccept from '@/uni modules/unix openim sdk' const result = await signalingAccept invitation This is Commercial . Validate the session and obtain microphone/camera permission before sending accept. Keep optional token/room/live URL only in memory. Promise completion, remote events, and media connection are separate phases."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/reject-call",
+    "title": "Reject a call",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Reject a call.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls reject-call",
+    "content": "import signalingReject from '@/uni modules/unix openim sdk' await signalingReject invitation Use the complete received Commercial invitation; do not reconstruct it or alter roomID . Close local incoming UI and handle remote/multi device events idempotently."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/cancel-call",
+    "title": "Cancel a call invitation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Cancel a call invitation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls cancel-call",
+    "content": "import signalingCancel from '@/uni modules/unix openim sdk' await signalingCancel invitation This Commercial operation is for a caller before connection; hangup is for an accepted/connecting session. Prevent duplicate actions and resolve cancel/accept races from events."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/hang-up-call",
+    "title": "End a call",
+    "description": "OpenIM uni-app / uni-app x SDK guide for End a call.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls hang-up-call",
+    "content": "import signalingHungUp from '@/uni modules/unix openim sdk' await signalingHungUp invitation Lock the Commercial ending transition so local, remote, and network causes cannot execute it twice. Close media resources and process onHangUp idempotently."
+  },
+  {
+    "path": "/sdk/uniapp/calling/managing-calls/handle-call-events",
+    "title": "Handle call events",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Handle call events.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling managing-calls handle-call-events",
+    "content": "All Commercial call events deliver raw JSON strings. Acknowledge quickly, validate JSON, then map to your own call domain model. import off, onHangUp, onInvitationCancelled, onInvitationTimeout, onInviteeAccepted, onInviteeRejected, onReceiveNewInvitation from '@/uni modules/unix openim sdk' function handleCallPayload payload : string try const value = JSON.parseObject payload if value = null routeValidatedCallEvent value catch console.error 'Invalid call event payload' const subscriptions = onReceiveNewInvitation handleCallPayload , onInviteeAccepted handleCallPayload , onInviteeRejected handleCallPayload , onInvitationCancelled handleCallPayload , onInvitationTimeout handleCallPayload , onHangUp handleCallPayload , subscriptions.forEach subscription = off subscription Also register the documented other device and room participant events. HarmonyOS returns an unsupported subscription for onStreamChange . Deduplicate by room/session plus runtime generation, and never log raw payloads or RTC tokens."
+  },
+  {
+    "path": "/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation",
+    "title": "Restore a pending call invitation",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Restore a pending call invitation.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling retrieving-call-information restore-pending-invitation",
+    "content": "Call this Commercial operation once after event listeners are armed: import signalingGetInvitationInfoStartApp from '@/uni modules/unix openim sdk' const result = await signalingGetInvitationInfoStartApp if result?.invitation = null recoverInvitation result.invitation No invitation legitimately resolves to null . Deduplicate recovery against realtime events by room/session ID and perform only one startup request per runtime initialization."
+  },
+  {
+    "path": "/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id",
+    "title": "Get a group call room",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get a group call room.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling retrieving-call-information get-room-by-group-id",
+    "content": "import signalingGetRoomByGroupID from '@/uni modules/unix openim sdk' const result = await signalingGetRoomByGroupID groupID The Commercial room ID and invitation are optional. Empty means no joinable room. Treat the snapshot as short lived and obtain a valid token immediately before joining."
+  },
+  {
+    "path": "/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id",
+    "title": "Get a call room token",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Get a call room token.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling retrieving-call-information get-token-by-room-id",
+    "content": "import signalingGetTokenByRoomID from '@/uni modules/unix openim sdk' const result = await signalingGetTokenByRoomID roomID This Commercial result contains optional token/live URL. Keep credentials only in memory, stop when fields are absent/expired, and never reuse or log an old token."
+  },
+  {
+    "path": "/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal",
+    "title": "Send a custom signal",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Send a custom signal.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp calling sending-custom-signals send-a-custom-signal",
+    "content": "import off, onReceiveCustomSignal, onReceiveCustomSignaling, signalingSendCustomSignaling from '@/uni modules/unix openim sdk' const signal = onReceiveCustomSignal handleValidatedSignal const signaling = onReceiveCustomSignaling handleValidatedSignal await signalingSendCustomSignaling roomID, customInfo: JSON.stringify type: 'raise hand', version: 1 off signal ; off signaling These are Commercial . Compatible platforms may use either receive event, so deduplicate by event ID/content hash. Validate type/version/fields; custom content is not authorization and must not contain secrets."
+  },
+  {
+    "path": "/sdk/uniapp/events/overview-events",
+    "title": "Events overview",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Events overview.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp events overview-events",
+    "content": "Every on... call synchronously returns an OpenIMSDKEventSubscription with id and eventName . Release only your handle with off subscription . import off, onSyncServerFailed, onSyncServerFinish, onSyncServerProgress, onSyncServerStart from '@/uni modules/unix openim sdk' const subscriptions = onSyncServerStart reinstalled = beginSyncUI reinstalled , onSyncServerProgress updateSyncProgress , onSyncServerFinish reinstalled = finishSyncUI reinstalled , onSyncServerFailed reinstalled = failSyncUI reinstalled , subscriptions.forEach subscription = off subscription The boolean describes the contract's reinstall/sync context, not success. offAll eventName removes every handler for an event and is reserved for full App reset or controlled tests. HarmonyOS returns unsupported subscriptions for ten unavailable events: four migrations plus the documented message extension/KV, badge, and stream events. It never fabricates success. Handlers should return quickly and queue expensive work."
+  },
+  {
+    "path": "/sdk/uniapp/events/handle-data-migration-events",
+    "title": "Handle data migration events",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Handle data migration events.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp events handle-data-migration-events",
+    "content": "These four Commercial events are available on Android/iOS and return unsupported subscriptions on HarmonyOS. import off, onMigrationFailed, onMigrationFinished, onMigrationProgress, onMigrationStart from '@/uni modules/unix openim sdk' const subscriptions = onMigrationStart showMigrationUI , onMigrationProgress handleValidatedMigrationProgress , onMigrationFailed handleValidatedMigrationFailure , onMigrationFinished finishMigrationUI , subscriptions.forEach subscription = off subscription Progress/failure payloads are opaque strings. Validate JSON before reading it and redact paths, database details, and sensitive content. Avoid account switching or uninitialization during migration; reload snapshots after completion/failure."
+  },
+  {
+    "path": "/sdk/uniapp/logger",
+    "title": "Logging",
+    "description": "OpenIM uni-app / uni-app x SDK guide for Logging.",
+    "context": "SDKs · uni-app / uni-app x · v4",
+    "keywords": "sdk uniapp v4 sdk uniapp logger",
+    "content": "Configure logLevel , isLogStandardOutput , and optional logFilePath during initialization. Use the lowest production level that supports diagnosis and redact tokens, private content, and commercial credentials. import uploadLogs from '@/uni modules/unix openim sdk' const operationID = diagnostic $ Date.now await uploadLogs line: 2000, ex: JSON.stringify scene: 'login timeout' , operationID operationID is an optional diagnostic correlation value, not a user ID, idempotency key, or credential. Upload progress belongs to onUploadLogsProgress ; completion does not itself open a support case. Obtain user consent, limit line count/retries, keep ex redacted, disable verbose production output, and never upload the entire local database as a shortcut."
   },
   {
     "path": "/sdk/wasm/overview",

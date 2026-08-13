@@ -24,7 +24,8 @@ test('reads locale publication state per platform audit', () => {
   assert.deepEqual(getPublishedClientSdkLocales('/sdk/flutter/overview'), ['en', 'zh']);
   assert.equal(isClientSdkLocalePublished('/sdk/flutter/overview', 'en'), true);
   assert.equal(isClientSdkLocalePublished('/sdk/wasm/overview', 'zh'), true);
-  assert.equal(isClientSdkLocalePublished('/sdk/uniapp/overview', 'zh'), false);
+  assert.deepEqual(getPublishedClientSdkLocales('/sdk/uniapp/overview'), ['en', 'zh']);
+  assert.equal(isClientSdkLocalePublished('/sdk/uniapp/overview', 'zh'), true);
 });
 
 test('lookup keeps active route detection independent from audit completeness', () => {
