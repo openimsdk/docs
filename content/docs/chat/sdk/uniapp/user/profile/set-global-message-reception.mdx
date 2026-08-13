@@ -11,12 +11,30 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/profile/set-global-message-reception'
 ---
 
-`globalRecvMsgOpt` is a <span className="enterprise-field-badge">Commercial</span> optional field of `OpenIMSetSelfInfoParams`. It controls the account globally and is different from a conversation's `recvMsgOpt`.
+`globalRecvMsgOpt` is a <span className="enterprise-field-badge">Commercial field</span> that defines the account's default message-reception and notification policy. It is not an ordinary nickname, avatar, or display-profile field.
 
 ```uts
-import { setSelfInfo } from '@/uni_modules/unix-openim-sdk'
+import {
+  setSelfInfo,
+  type OpenIMSetSelfInfoRecvMsgOpt,
+} from '@/uni_modules/unix-openim-sdk'
 
-await setSelfInfo({ globalRecvMsgOpt: 0 })
+const receiveWithoutNotification : OpenIMSetSelfInfoRecvMsgOpt = 2
+await setSelfInfo({
+  globalRecvMsgOpt: receiveWithoutNotification,
+})
 ```
 
-Use exported `OpenIMSetSelfInfoRecvMsgOpt` constants and send only this field to avoid overwriting profile data. Confirm the final value with `getSelfUserInfo()`. Hide or disable this control when the deployed edition does not expose the field.
+The contract permits these values:
+
+| Value | Meaning |
+| --- | --- |
+| `0` | Receive messages normally and allow offline push or notifications. |
+| `1` | Do not receive messages. Use only when the product explicitly needs to stop delivery and the server policy is understood. |
+| `2` | Receive messages without offline push or notifications, equivalent to all-day do not disturb. |
+
+Pass only `globalRecvMsgOpt` so changing message policy does not overwrite nickname, avatar, or `ex`. The plugin has no separate setter for this field.
+
+A conversation's `recvMsgOpt` is a more specific conversation-level option; see [Set message reception for a conversation](/sdk/uniapp/conversation/managing-conversations/set-message-receive-option). When account and conversation settings coexist, display the final conversation state returned by the server rather than inferring it only from a local switch.
+
+Promise success means that the update request completed, not that `onSelfInfoUpdated` has arrived. See [Update your profile](/sdk/uniapp/user/profile/set-self-info) for the event and `getSelfUserInfo()` reconciliation. Public editions may omit this field; show the control according to capability configuration and do not interpret absence as a particular policy.

@@ -11,24 +11,91 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/blacklist/get-black-list'
 ---
 
-```uts
-import { getBlackList, off, onBlackAdded, onBlackDeleted } from '@/uni_modules/unix-openim-sdk'
+The OpenIMSDK blacklist records users that the current account has blocked. Use `getBlackList()` to build blacklist settings, show relationship state on profile cards, and restrict chat entry points.
 
-const added = onBlackAdded((user) => upsertBlackUser(user))
-const deleted = onBlackDeleted((user) => removeBlackUser(user.userID))
+Blacklist and group management are separate capabilities. Use group-member APIs to mute, remove, or change a group member's role; `getBlackList()` reads only the current user's personal blacklist.
+
+## Get the blacklist
+
+Call `getBlackList()` after initialization, login, and connection readiness. The Promise resolves directly to `OpenIMBlackListResult` or `null`; an empty `blackUsers` array means there are no blocked users.
+
+```uts
+import { getBlackList } from '@/uni_modules/unix-openim-sdk'
+
 const result = await getBlackList()
-replaceBlackList(result?.blackUsers ?? [])
-off(added)
-off(deleted)
+const blockedUsers = result?.blackUsers ?? []
+replaceBlockedUsers(blockedUsers)
 ```
 
-The commercial alternative returns a differently named wrapper field:
+Profile cards, conversation menus, and contact lists normally need only a set of blocked `userID` values. Use `userID` as the key; nickname and avatar are presentation fields.
+
+```uts
+const blockedUserIDs = new Set<string>()
+blockedUsers.forEach((user) => blockedUserIDs.add(user.userID))
+
+function isBlocked(userID : string) : boolean {
+  return blockedUserIDs.has(userID)
+}
+```
+
+The commercial edition also exposes `getBlacks()` <span className="enterprise-field-badge">Commercial</span>, whose wrapper field is named `blacks`:
 
 ```uts
 import { getBlacks } from '@/uni_modules/unix-openim-sdk'
 
 const commercialResult = await getBlacks()
-replaceBlackList(commercialResult?.blacks ?? [])
+replaceBlockedUsers(commercialResult?.blacks ?? [])
 ```
 
-Do not mix the `blackUsers` and <span className="enterprise-field-badge">Commercial</span> `blacks` result shapes. Blacklist and friendship are independent relationships.
+Do not mix the `blackUsers` and `blacks` result shapes. Choose the entry that matches the installed edition rather than querying two snapshots.
+
+## Blacklist item fields
+
+Every `blackUsers` item is an `OpenIMBlackUserItem`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | Blocked user's ID and the merge key for the list and events. |
+| `nickname` | `string` | Display nickname. |
+| `faceURL` | `string` | Avatar URL. |
+| `ownerUserID` | `string` | Owner of this blacklist relationship, normally the signed-in user. |
+| `operatorUserID` | `string` | User that performed the block operation. |
+| `createTime` | `number` | Time when the relationship was created. |
+| `addSource` | `number` | Source value for the relationship. |
+| `ex` | `string` | Application extension; parse only a confirmed format. |
+| `attachedInfo` | `string` | SDK attachment data; parse only a confirmed contract. |
+
+If the UI also displays public profile or friend remark data, merge by `userID` while preserving the distinct sources of `OpenIMBlackUserItem`, `OpenIMFriendUserItem`, and `OpenIMPublicUserItem`.
+
+## Results and incremental changes
+
+Replace the current blacklist snapshot with the returned array after `getBlackList()` succeeds. The query itself does not trigger add or delete events. Requery on first entry, re-login, and explicit refresh.
+
+This page is the complete owner for `onBlackAdded` and `onBlackDeleted`:
+
+```uts
+import {
+  off,
+  onBlackAdded,
+  onBlackDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const blacklistSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onBlackAdded((user) => {
+    upsertBlockedUser(user.userID, user)
+  }),
+  onBlackDeleted((user) => {
+    removeBlockedUser(user.userID)
+  }),
+]
+
+function releaseBlacklistSubscriptions() {
+  blacklistSubscriptions.forEach((subscription) => off(subscription))
+  blacklistSubscriptions.length = 0
+}
+```
+
+Merge events by `userID`. After blocking, the other user cannot send to the current user, but the current user can still send to that user. Enforce a bidirectional product restriction separately if required. Blacklist and friendship remain independent state; do not assume that blocking removes a friend.
+
+Call `releaseBlacklistSubscriptions()` on logout, account switch, or destruction of the blacklist state layer.

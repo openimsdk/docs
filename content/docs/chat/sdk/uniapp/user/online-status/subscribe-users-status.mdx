@@ -11,19 +11,67 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/online-status/subscribe-users-status'
 ---
 
-Register the event before subscribing and querying a snapshot to minimize the event/snapshot gap.
+Online status means that a user is connected to OpenIMServer. It does not mean that the user is viewing the App, a conversation, or a message. Subscribe only to users required by the current UI or product flow. One account can subscribe to at most 3,000 users; do not subscribe to the entire directory.
+
+`subscribeUsersStatus()` establishes the subscription and resolves to a string result rather than a status array. After subscribing, call `getUserStatus()` for the current snapshot and merge later changes from `onUserStatusChanged`.
 
 ```uts
-import { getUserStatus, off, onUserStatusChanged, subscribeUsersStatus } from '@/uni_modules/unix-openim-sdk'
+import {
+  getUserStatus,
+  subscribeUsersStatus,
+} from '@/uni_modules/unix-openim-sdk'
 
-const presenceSubscription = onUserStatusChanged((result) => {
-  result.statuses.forEach((status) => replaceUserStatus(status.userID, status))
-})
-const userIDs = ['user_a', 'user_b']
+const userIDs = uniqueUserIDs(['user_a', 'user_b'])
+
 await subscribeUsersStatus(userIDs)
+
 const snapshot = await getUserStatus(userIDs)
-snapshot?.statuses.forEach((status) => replaceUserStatus(status.userID, status))
-off(presenceSubscription)
+snapshot?.statuses.forEach((status) => {
+  replaceUserStatus(status.userID, status)
+})
 ```
 
-Presence can include per-platform details. Merge by user and platform; one offline device does not imply that every device is offline. Subscribe only to needed users and later call `unsubscribeUsersStatus()`.
+Remove blank and duplicate IDs first. Subscription success, snapshot query, and later events are three separate stages; do not treat the subscription's string result as an online-status object.
+
+### Online-status fields
+
+`getUserStatus()` returns `OpenIMUserStatusListResult` or `null`. Every `statuses` element is an `OpenIMUserStatusItem`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | User that owns the state and the cache merge key. |
+| `status` | `number` | Aggregated online state. Interpret it with exported status constants rather than inventing numeric meanings. |
+| `platformIDs` | `number[]` | Currently online platforms. An empty array does not reveal a specific device or last-active time. |
+
+One device going offline does not necessarily mean that all devices are offline. Display the aggregated `status` together with `platformIDs` according to the server's multi-device policy.
+
+## Listen for online-status changes
+
+This page is the complete owner for `onUserStatusChanged`. Register the event before subscribing and querying the snapshot to minimize the gap:
+
+```uts
+import {
+  off,
+  onUserStatusChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const statusSubscription = onUserStatusChanged((result) => {
+  result.statuses.forEach((status) => {
+    replaceUserStatus(status.userID, status)
+  })
+})
+
+await subscribeUsersStatus(userIDs)
+
+const current = await getUserStatus(userIDs)
+current?.statuses.forEach((status) => {
+  replaceUserStatus(status.userID, status)
+})
+
+function releaseStatusListener() {
+  off(statusSubscription)
+}
+```
+
+Merge both snapshot and events idempotently by `userID`. Call `releaseStatusListener()` on logout, account switch, or state-layer destruction. When some users are no longer needed, also [unsubscribe from their status](/sdk/uniapp/user/online-status/unsubscribe-users-status) to release subscription capacity.

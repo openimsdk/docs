@@ -11,7 +11,55 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient'
 ---
 
-Register all request events before loading the snapshot.
+`getFriendApplicationListAsRecipient()` queries applications sent to the current account. The uni-app / uni-app x `OpenIMApplicationListParams` has only pagination fields and does not expose Wasm's `handleResults` filter. Filter by `handleResult` after the query if the UI should show only pending applications.
+
+## Parameters
+
+The parameter object can be omitted. To request an explicit page, use:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` or `null` | No | Pagination offset; use `0` for the first page. |
+| `count` | `number` or `null` | No | Number of applications requested. |
+
+```uts
+import { getFriendApplicationListAsRecipient } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendApplicationListAsRecipient({
+  offset: 0,
+  count: 20,
+})
+
+const applications = result?.applications ?? []
+replaceReceivedApplications(applications)
+```
+
+The Promise resolves directly to `OpenIMFriendApplicationListResult` or `null`. `applications` contains the current page of `OpenIMFriendApplicationItem[]`; querying does not itself trigger an application event.
+
+### Friend-application fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `fromUserID` | `string` | Applicant's user ID. |
+| `fromNickname` | `string` | Applicant nickname snapshot. |
+| `fromFaceURL` | `string` | Applicant avatar snapshot. |
+| `toUserID` | `string` | Recipient user ID. |
+| `toNickname` | `string` | Recipient nickname snapshot. |
+| `toFaceURL` | `string` | Recipient avatar snapshot. |
+| `reqMsg` | `string` | Application message. |
+| `handleResult` | `number` | Processing result: `0` pending, `1` accepted, `-1` rejected. |
+| `handlerUserID` | `string` | Processing user ID; can be empty while pending. |
+| `handleMsg` | `string` | Processing comment. |
+| `handleTime` | `number` | Processing time; do not treat it as valid while pending. |
+| `createTime` | `number` | Record creation time. |
+| `ex` | `string` | Application extension string. |
+| `attachedInfo` | `string` | SDK attachment data; parse only a confirmed contract. |
+
+Use `fromUserID:toUserID` as the merge key. Nicknames and avatars are snapshots from application creation or synchronization. Query the relevant user's current profile with `getUsersInfo()` when freshness matters.
+
+## Synchronize friend-application changes
+
+This page is the complete owner for the added, accepted, rejected, and deleted events. Register them before loading the snapshot.
 
 ```uts
 import {
@@ -25,14 +73,20 @@ import {
 } from '@/uni_modules/unix-openim-sdk'
 
 const subscriptions : Array<OpenIMSDKEventSubscription> = [
-  onFriendApplicationAdded((item) => upsertApplication(item)),
-  onFriendApplicationAccepted((item) => upsertApplication(item)),
-  onFriendApplicationRejected((item) => upsertApplication(item)),
-  onFriendApplicationDeleted((item) => removeApplication(item)),
+  onFriendApplicationAdded((item) => mergeFriendApplication(item.fromUserID, item.toUserID, item)),
+  onFriendApplicationAccepted((item) => mergeFriendApplication(item.fromUserID, item.toUserID, item)),
+  onFriendApplicationRejected((item) => mergeFriendApplication(item.fromUserID, item.toUserID, item)),
+  onFriendApplicationDeleted((item) => removeFriendApplication(item.fromUserID, item.toUserID)),
 ]
 const page = await getFriendApplicationListAsRecipient({ offset: 0, count: 50 })
 replaceReceivedApplications(page?.applications ?? [])
-subscriptions.forEach((subscription) => off(subscription))
+
+function releaseFriendApplicationSubscriptions() {
+  subscriptions.forEach((subscription) => off(subscription))
+  subscriptions.length = 0
+}
 ```
 
-Use a stable key based on both users and creation time. Handle a request with the accept or reject API; never mutate local state to imitate server success.
+Route an event to the sent or received list according to whether the current user is `toUserID`. An accepted application creates a friendship that is merged through `onFriendAdded` on [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page). Pagination can be reset when events alter the list.
+
+Accept or reject a received application through the corresponding API; never mutate `handleResult` locally to imitate server success. Call `releaseFriendApplicationSubscriptions()` on logout, account switch, or destruction of the friend-application state layer.

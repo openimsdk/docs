@@ -11,13 +11,34 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/profile/get-self-user-info'
 ---
 
-`getSelfUserInfo()` resolves to `OpenIMUserInfo | null` for the current logged-in account.
+After initialization, login, and connection readiness, call `getSelfUserInfo()` to query the current account's profile:
 
 ```uts
-import { getSelfUserInfo } from '@/uni_modules/unix-openim-sdk'
+import {
+  getSelfUserInfo,
+  type OpenIMUserInfo,
+} from '@/uni_modules/unix-openim-sdk'
 
-const self = await getSelfUserInfo()
-if (self != null) renderProfile(self.nickname, self.faceURL)
+const currentUser : OpenIMUserInfo | null = await getSelfUserInfo()
+if (currentUser != null) {
+  renderProfile(currentUser.nickname, currentUser.faceURL)
+}
 ```
 
-Verify that the returned `userID` matches the application account. `attachedInfo` and `globalRecvMsgOpt` are optional <span className="enterprise-field-badge">Commercial</span> fields. Refresh this snapshot after login or missed events; ongoing updates arrive through `onSelfInfoUpdated` on the profile-update page.
+## Return result
+
+The Promise resolves directly to `OpenIMUserInfo` or `null`, without a `{ data }` wrapper. A non-null object contains:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | Signed-in user's OpenIMSDK user ID and the stable identifier for this profile snapshot. |
+| `nickname` | `string` | Account-level nickname. |
+| `faceURL` | `string` | Account-level avatar URL. |
+| `createTime` | `number` or `null` (optional) | Time when the user record was created. |
+| `globalRecvMsgOpt` <span className="enterprise-field-badge">Commercial field</span> | `number` or `null` (optional) | Account-level message reception option. See [Set global message reception](/sdk/uniapp/user/profile/set-global-message-reception). |
+| `attachedInfo` <span className="enterprise-field-badge">Commercial field</span> | `string` or `null` (optional) | SDK attachment data. Parse it only according to a confirmed application contract. |
+| `ex` | `string` | Account-level extension string defined by the application. |
+
+Verify that the returned `userID` matches the current application account. Do not fabricate an empty user object when the result is `null`; use login state and redacted diagnostics to determine why a snapshot is unavailable.
+
+This query establishes a snapshot and does not trigger a profile event. Clear it when switching accounts. See [Update your profile](/sdk/uniapp/user/profile/set-self-info) for merging `onSelfInfoUpdated` and reconciling with another query.
