@@ -14,7 +14,22 @@ sourcePath: '/sdk/uniapp/calling/managing-calls/accept-call'
 ```uts
 import { signalingAccept } from '@/uni_modules/unix-openim-sdk'
 
-const result = await signalingAccept({ invitation })
+const roomCredentials = await signalingAccept({ invitation })
 ```
 
-This is <span className="enterprise-field-badge">Commercial</span>. Validate the session and obtain microphone/camera permission before sending accept. Keep optional token/room/live URL only in memory. Promise completion, remote events, and media connection are separate phases.
+`signalingAccept()` is <span className="enterprise-field-badge">Commercial</span>. Pass the original `OpenIMSignalingInvitationInfo` received from `onReceiveNewInvitation`; it must retain the room, inviter, invitees, and session type. Do not reconstruct it.
+
+Validate the active SDK session and request microphone or camera permission before accepting. If permission is denied, do not send an accept request; reject the call or explain the failure according to the product flow.
+
+## Result
+
+The Promise resolves to `OpenIMSignalingAcceptResult | null`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `roomID` | `string` or `null` | Media room identifier for this call. |
+| `token` | `string` or `null` | Short-lived credential used to join the room. |
+| `liveURL` | `string` or `null` | Media service connection address. |
+| `invitation` | `OpenIMSignalingInvitationInfo` or `null` | Invitation snapshot returned by the server. |
+
+Keep these values only in memory. Join the media engine only after obtaining a valid `roomID` and `token`. Promise completion, remote signaling events, and an established media connection are separate phases; continue merging state through [call events](/sdk/uniapp/calling/managing-calls/handle-call-events).

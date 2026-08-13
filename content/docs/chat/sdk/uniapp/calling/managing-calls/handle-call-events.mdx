@@ -11,23 +11,64 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/managing-calls/handle-call-events'
 ---
 
-All <span className="enterprise-field-badge">Commercial</span> call events deliver raw JSON strings. Acknowledge quickly, validate JSON, then map to your own call domain model.
+Keep <span className="enterprise-field-badge">Commercial</span> call listeners in one call-state layer. Merge invitation lifecycle, participant connection, and stream changes into the same local state keyed by `roomID`. Every event delivers a raw JSON string; keep the callback short, validate JSON, and then map it to the application's call domain model.
+
+| Event | Purpose |
+| --- | --- |
+| `onReceiveNewInvitation` | A new call invitation arrived. |
+| `onInviteeAccepted`, `onInviteeRejected` | The current invitation was accepted or rejected. |
+| `onInvitationCancelled`, `onInvitationTimeout` | The invitation was cancelled or timed out. |
+| `onInviteeAcceptedByOtherDevice`, `onInviteeRejectedByOtherDevice` | Another device for the same account handled it. |
+| `onHangUp` | A participant ended the call. |
+| `onRoomParticipantConnected`, `onRoomParticipantDisconnected` | Room participant connection changed. |
+| `onStreamChange` | Participant media stream state changed. |
 
 ```uts
-import { off, onHangUp, onInvitationCancelled, onInvitationTimeout, onInviteeAccepted, onInviteeRejected, onReceiveNewInvitation } from '@/uni_modules/unix-openim-sdk'
+import {
+  off,
+  onHangUp,
+  onInvitationCancelled,
+  onInvitationTimeout,
+  onInviteeAccepted,
+  onInviteeAcceptedByOtherDevice,
+  onInviteeRejected,
+  onInviteeRejectedByOtherDevice,
+  onReceiveNewInvitation,
+  onRoomParticipantConnected,
+  onRoomParticipantDisconnected,
+  onStreamChange,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
 
 function handleCallPayload(payload : string) {
   try {
     const value = JSON.parseObject<UTSJSONObject>(payload)
     if (value != null) routeValidatedCallEvent(value)
-  } catch (_) { console.error('Invalid call event payload') }
+  } catch (_) {
+    console.error('Invalid call event payload')
+  }
 }
-const subscriptions = [
-  onReceiveNewInvitation(handleCallPayload), onInviteeAccepted(handleCallPayload),
-  onInviteeRejected(handleCallPayload), onInvitationCancelled(handleCallPayload),
-  onInvitationTimeout(handleCallPayload), onHangUp(handleCallPayload),
+
+const invitationSubscription = onReceiveNewInvitation(handleCallPayload)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  invitationSubscription,
+  onInviteeAccepted(handleCallPayload),
+  onInviteeAcceptedByOtherDevice(handleCallPayload),
+  onInviteeRejected(handleCallPayload),
+  onInviteeRejectedByOtherDevice(handleCallPayload),
+  onInvitationCancelled(handleCallPayload),
+  onInvitationTimeout(handleCallPayload),
+  onHangUp(handleCallPayload),
+  onRoomParticipantConnected(handleCallPayload),
+  onRoomParticipantDisconnected(handleCallPayload),
+  onStreamChange(handleCallPayload),
 ]
-subscriptions.forEach((subscription) => off(subscription))
+
+function removeCallListeners() {
+  subscriptions.forEach((subscription) => off(subscription))
+}
 ```
 
-Also register the documented other-device and room-participant events. HarmonyOS returns an unsupported subscription for `onStreamChange`. Deduplicate by room/session plus runtime generation, and never log raw payloads or RTC tokens.
+This page is the sole complete listener owner for these 11 events. Merge participant state using both room and user IDs; do not rely on event order, display names, or array positions. Deduplicate with the room ID, local session ID, and runtime generation so stale events cannot reopen UI. Call `removeCallListeners()` when the call state layer is destroyed, the user logs out, or the account changes.
+
+HarmonyOS returns a `platform-unsupported` subscription for `onStreamChange` and does not fabricate a stream event. The other signaling events on this page are supported. Never log raw payloads or RTC tokens.

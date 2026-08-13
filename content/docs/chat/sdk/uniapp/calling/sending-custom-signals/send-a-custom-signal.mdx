@@ -11,13 +11,67 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-```uts
-import { off, onReceiveCustomSignal, onReceiveCustomSignaling, signalingSendCustomSignaling } from '@/uni_modules/unix-openim-sdk'
+The <span className="enterprise-field-badge">Commercial</span> `signalingSendCustomSignaling()` operation sends lightweight application negotiation data to a call room, such as a raised-hand state or layout hint. It is not a chat message API and does not replace a media-engine data channel.
 
-const signal = onReceiveCustomSignal(handleValidatedSignal)
-const signaling = onReceiveCustomSignaling(handleValidatedSignal)
-await signalingSendCustomSignaling({ roomID, customInfo: JSON.stringify({ type: 'raise-hand', version: 1 }) })
-off(signal); off(signaling)
+## Send a signal
+
+`customInfo` is a string. Define and version a stable format before serializing structured data.
+
+```uts
+import {
+  off,
+  onReceiveCustomSignal,
+  onReceiveCustomSignaling,
+  signalingSendCustomSignaling,
+} from '@/uni_modules/unix-openim-sdk'
+
+const signal = {
+  version: 1,
+  eventID: createBusinessEventID(),
+  type: 'hand-raised',
+  userID: currentUserID,
+  sentAt: Date.now(),
+}
+
+await signalingSendCustomSignaling({
+  roomID,
+  customInfo: JSON.stringify(signal),
+})
 ```
 
-These are <span className="enterprise-field-badge">Commercial</span>. Compatible platforms may use either receive event, so deduplicate by event ID/content hash. Validate type/version/fields; custom content is not authorization and must not contain secrets.
+Promise success means OpenIMServer accepted the send request, not that every participant processed it. Keep the payload small and include a protocol version and idempotency ID. Do not put files, chat history, durable state, or credentials in `customInfo`.
+
+## Receive a signal
+
+`onReceiveCustomSignal` and `onReceiveCustomSignaling` are raw JSON compatibility events for different commercial Core/service versions. Subscribe only to the event produced by the actual deployment. If both are needed for compatibility, deduplicate by `roomID:eventID`.
+
+```uts
+function handleValidatedSignal(payload : string) {
+  try {
+    const event = JSON.parseObject<UTSJSONObject>(payload)
+    if (event == null) return
+
+    const eventRoomID = event.getString('roomID')
+    const customInfo = event.getString('customInfo')
+    if (eventRoomID != activeRoomID || customInfo == null) return
+
+    const signal = JSON.parseObject<UTSJSONObject>(customInfo)
+    if (signal == null) return
+    applyValidatedCallSignal(eventRoomID, signal)
+  } catch (_) {
+    console.warn('Invalid custom call signal')
+  }
+}
+
+const signalSubscription = onReceiveCustomSignal(handleValidatedSignal)
+const signalingSubscription = onReceiveCustomSignaling(handleValidatedSignal)
+
+function removeCustomSignalListeners() {
+  off(signalSubscription)
+  off(signalingSubscription)
+}
+```
+
+Validate the outer room, then validate the custom JSON protocol version, event ID, type, and business fields before returning an application object. This page owns the complete listener examples for both compatibility events. Call `removeCustomSignalListeners()` when leaving the call, logging out, or switching accounts.
+
+Custom client signals are not authorization. Never grant host, payment, or privacy permissions from them. Store authoritative state in a trusted backend, and refresh durable state from the room query or backend after reconnecting instead of treating transient custom signals as replayable records.

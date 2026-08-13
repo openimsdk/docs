@@ -11,12 +11,53 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/managing-calls/start-group-call'
 ---
 
-```uts
-import { signalingInviteInGroup } from '@/uni_modules/unix-openim-sdk'
+The <span className="enterprise-field-badge">Commercial</span> `signalingInviteInGroup()` operation starts a group call. It invites only the users listed in `inviteeUserIDList`; setting `groupID` does not automatically invite every group member.
 
-const result = await signalingInviteInGroup({
-  invitation: { inviterUserID: selfUserID, inviteeUserIDList: selectedUserIDs, groupID, mediaType: 'audio', timeout: 30, sessionType: 2 },
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation.inviterUserID` | `string` | Yes | Current user ID. |
+| `invitation.inviteeUserIDList` | `string[]` | Yes | Selected members; exclude the inviter. |
+| `invitation.groupID` | `string` | Yes | Target group ID. |
+| `invitation.roomID` | `string` | Yes | Shared unique room identifier. |
+| `invitation.timeout` | `number` | Yes | Invitation timeout in seconds. |
+| `invitation.mediaType` | `string` | Yes | `audio` or `video` by application convention. |
+| `invitation.sessionType` | `number` | Yes | Use the matching group session constant. |
+| `invitation.platformID` | `number` | Yes | Current native platform constant. |
+| `invitation.customData` | `string` | No | Application extension data. |
+| `invitation.initiateTime` | `number` | No | Invitation start time. The signaling flow normally maintains it, so new calls can omit it. |
+| `invitation.busyLineUserIDList` | `string[]` | No | Busy-user list returned by an existing flow. Omit it when starting a new invitation. |
+| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | No | Offline push content. |
+| `offlinePushInfo.title` | `string` | Conditional | Push title, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.desc` | `string` | Conditional | Push body, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.ex` | `string` | Conditional | Extension string, required when `offlinePushInfo` is provided. Pass an empty string if unused. |
+| `offlinePushInfo.iOSPushSound` | `string` | Conditional | iOS push sound, required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditional | Whether the push updates the iOS badge, required when `offlinePushInfo` is provided. |
+
+```uts
+import {
+  OpenIMPlatformAndroid,
+  OpenIMSessionTypeWriteGroup,
+  signalingInviteInGroup,
+} from '@/uni_modules/unix-openim-sdk'
+
+const roomCredentials = await signalingInviteInGroup({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: selectedGroupMemberIDs,
+    customData: JSON.stringify({ source: 'group-call' }),
+    groupID,
+    roomID: groupID,
+    timeout: 30,
+    mediaType: 'video',
+    sessionType: OpenIMSessionTypeWriteGroup,
+    platformID: OpenIMPlatformAndroid,
+  },
+  offlinePushInfo,
 })
 ```
 
-This is <span className="enterprise-field-badge">Commercial</span>. Deduplicate targets and verify current membership. Busy users do not determine later accept/reject/timeout outcomes for all other invitees.
+This example reuses the group ID as the room ID. If the application generates a different room ID, all participants must use that value. Use `OpenIMPlatformIOS` on iOS. Exclude the current user, blank IDs, and duplicates, and verify that selected users are still group members.
+
+The Promise resolves to `OpenIMSignalingInviteResult | null`; see [Start a one-to-one call](/sdk/uniapp/calling/managing-calls/start-single-call) for all fields. A busy-user list only identifies members who were busy at invite time. It must not cancel invitations for other users, and success does not mean anyone has accepted. Merge later acceptance, rejection, and timeout through [call events](/sdk/uniapp/calling/managing-calls/handle-call-events).

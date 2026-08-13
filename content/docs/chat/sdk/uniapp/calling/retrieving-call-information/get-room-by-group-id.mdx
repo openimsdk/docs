@@ -14,7 +14,20 @@ sourcePath: '/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-i
 ```uts
 import { signalingGetRoomByGroupID } from '@/uni_modules/unix-openim-sdk'
 
-const result = await signalingGetRoomByGroupID({ groupID })
+const room = await signalingGetRoomByGroupID({ groupID })
 ```
 
-The <span className="enterprise-field-badge">Commercial</span> room ID and invitation are optional. Empty means no joinable room. Treat the snapshot as short-lived and obtain a valid token immediately before joining.
+The <span className="enterprise-field-badge">Commercial</span> `signalingGetRoomByGroupID()` operation takes a group ID, not a custom room ID.
+
+## Result
+
+The Promise resolves to `OpenIMSignalingGetRoomByGroupIDResult | null`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `roomID` | `string` or `null` | Room identifier for the current group call. |
+| `invitation` | `OpenIMSignalingInvitationInfo` or `null` | Original invitation associated with the room. |
+
+Unlike the Wasm result, the uni-app / uni-app x contract does not include participant records. Obtain participant state from the media engine or application state; do not invent a `participant` field.
+
+A null result or empty `roomID` means there is no joinable call. Treat the snapshot as short-lived, continue handling signaling events, and obtain a valid token immediately before joining. Even when the application uses custom room IDs for group calls, query with `groupID` and merge the returned `roomID` into the active call state.
