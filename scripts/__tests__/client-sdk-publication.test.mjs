@@ -15,6 +15,7 @@ test('detects all registered active SDK routes and excludes legacy native routes
   assert.equal(getClientSdkPlatform('/sdk/ios/overview'), 'ios');
   assert.equal(getClientSdkPlatform('/sdk/flutter/overview/'), 'flutter');
   assert.equal(getClientSdkPlatform('/sdk/wasm/overview'), 'wasm');
+  assert.equal(getClientSdkPlatform('/sdk/uniapp/overview'), 'uniapp');
   assert.equal(isClientSdkRoute('/sdk/ios/open-channel/overview'), false);
 });
 
@@ -23,6 +24,7 @@ test('reads locale publication state per platform audit', () => {
   assert.deepEqual(getPublishedClientSdkLocales('/sdk/flutter/overview'), ['en', 'zh']);
   assert.equal(isClientSdkLocalePublished('/sdk/flutter/overview', 'en'), true);
   assert.equal(isClientSdkLocalePublished('/sdk/wasm/overview', 'zh'), true);
+  assert.equal(isClientSdkLocalePublished('/sdk/uniapp/overview', 'zh'), false);
 });
 
 test('lookup keeps active route detection independent from audit completeness', () => {

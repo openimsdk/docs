@@ -80,6 +80,38 @@ test('uses current WASM vocabulary with a platform-specific overview label', () 
   assert.equal(labels['Retrieve message history'], wasmLabels['Retrieve message history']);
 });
 
+test('builds the uni-app task tree from WASM structure plus native contract differences', () => {
+  const sidebar = mirrorClientSdkSidebar(wasmSidebar, 'uniapp');
+  const paths = getClientSdkSidebarPaths(sidebar);
+  const omitted = getOmittedClientSdkPaths(wasmSidebar, 'uniapp');
+
+  assert.equal(paths.length, 167);
+  assert.equal(omitted.length, 4);
+  assert.equal(new Set(paths).size, paths.length);
+  assert.ok(paths.every((path) => path.startsWith('/sdk/uniapp/')));
+  for (const path of [
+    '/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk',
+    '/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state',
+    '/sdk/uniapp/getting-started/update-token-and-observe-sdk-session',
+    '/sdk/uniapp/group/check-full-sync-state',
+    '/sdk/uniapp/message/composing-messages/translate-text-and-messages',
+    '/sdk/uniapp/events/handle-data-migration-events',
+    '/sdk/uniapp/message/creating-messages/create-image-message-from-full-path',
+    '/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-by-conversation-id',
+  ]) {
+    assert.ok(paths.includes(path), path);
+  }
+  for (const path of [
+    '/sdk/uniapp/conversation/managing-conversations/clear-local-conversations',
+    '/sdk/uniapp/group/group-applications/clear-group-application-badge-count',
+    '/sdk/uniapp/group/retrieving-group-members/get-group-member-owner-and-admin',
+    '/sdk/uniapp/message/retrieving-messages/load-newer-messages',
+    '/sdk/uniapp/message/creating-messages/create-image-message-by-file',
+  ]) {
+    assert.equal(paths.includes(path), false, path);
+  }
+});
+
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }

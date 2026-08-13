@@ -155,6 +155,67 @@ test('rejects conversationID on the Flutter Message model', () => {
   assert.ok(errors.some((error) => error.includes('does not expose conversationID')));
 });
 
+test('accepts uni-app root imports, direct Promise results, and handle-based event cleanup', () => {
+  const platform = getClientSdkPlatform('uniapp');
+  const path = '/sdk/uniapp/events/overview-events';
+  const page = auditPage(path, platform.sdkCommit);
+  page.openimSources = [`data/structure/uniapp-sdk-doc-manifest.json#${platform.sdkCommit}`];
+  page.sdkMethods = ['onRecvNewMessage', 'off'];
+  page.sdkEvents = ['onRecvNewMessage'];
+  const source = `\`\`\`uts
+import { onRecvNewMessage, off } from '@/uni_modules/unix-openim-sdk'
+
+const subscription = onRecvNewMessage((message) => {
+  console.log(message.clientMsgID)
+})
+
+off(subscription)
+\`\`\``;
+  const errors = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit: {
+      schemaVersion: 1,
+      sources: { uniappSdk: { tag: platform.sdkTag, commit: platform.sdkCommit } },
+      pages: [page],
+    },
+    manualPages: new Map([[path, source]]),
+  });
+  assert.deepEqual(errors, []);
+});
+
+test('rejects Wasm-style calls and unsafe uni-app initialization and listener examples', () => {
+  const platform = getClientSdkPlatform('uniapp');
+  const path = '/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk';
+  const page = auditPage(path, platform.sdkCommit);
+  page.openimSources = [`data/structure/uniapp-sdk-doc-manifest.json#${platform.sdkCommit}`];
+  page.sdkMethods = ['initSDK', 'onRecvNewMessage'];
+  page.sdkEvents = ['onRecvNewMessage'];
+  const source = `\`\`\`uts
+import { initSDK } from 'unix-openim-sdk'
+const sdk = openimsdk.initSDK({ apiAddr, wsAddr })
+const { data } = await sdk.login({ userID, token })
+OpenIM.on('onRecvNewMessage', handler)
+OpenIM.off('onRecvNewMessage', handler)
+\`\`\``;
+  const errors = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit: {
+      schemaVersion: 1,
+      sources: { uniappSdk: { tag: platform.sdkTag, commit: platform.sdkCommit } },
+      pages: [page],
+    },
+    manualPages: new Map([[path, source]]),
+  });
+  assert.ok(errors.some((error) => error.includes('absolute uni_modules import')));
+  assert.ok(errors.some((error) => error.includes('WASM SDK instance')));
+  assert.ok(errors.some((error) => error.includes('WsResponse.data')));
+  assert.ok(errors.some((error) => error.includes('object-style login')));
+  assert.ok(errors.some((error) => error.includes('systemType')));
+  assert.ok(errors.some((error) => error.includes('subscription handle')));
+});
+
 function auditPage(path, commit) {
   return {
     currentPath: path,

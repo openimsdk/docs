@@ -1,6 +1,7 @@
-import flutterAudit from '@/data/structure/flutter-content-audit.json';
-import iosAudit from '@/data/structure/ios-content-audit.json';
-import ownership from '@/data/structure/wasm-api-ownership.json';
+import flutterAudit from '../../data/structure/flutter-content-audit.json' with { type: 'json' };
+import iosAudit from '../../data/structure/ios-content-audit.json' with { type: 'json' };
+import ownership from '../../data/structure/wasm-api-ownership.json' with { type: 'json' };
+import uniappOwnership from '../../data/structure/uniapp-api-ownership.json' with { type: 'json' };
 
 type OwnershipEntry = {
   name: string;
@@ -10,6 +11,7 @@ type OwnershipEntry = {
 };
 
 type NativePlatform = 'flutter' | 'ios';
+type ClientSdkPlatform = 'wasm' | NativePlatform | 'uniapp';
 
 type ClientSdkAuditPage = {
   currentPath: string;
@@ -39,6 +41,18 @@ const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
   flutter: flutterAudit.pages as ClientSdkAuditPage[],
   ios: iosAudit.pages as ClientSdkAuditPage[],
 };
+
+type UniAppOwnershipEntry = {
+  name: string;
+  page: string | null;
+  disposition: string;
+  edition: 'public' | 'commercial';
+};
+
+const uniappCallables = uniappOwnership.callables as Array<
+  UniAppOwnershipEntry & { role: 'operation' | 'event-subscription' | 'event-control' }
+>;
+const uniappEvents = uniappOwnership.events as UniAppOwnershipEntry[];
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
   flutter: {
@@ -83,6 +97,11 @@ const partialCommercialConceptSources: Record<string, string[]> = {
     '/sdk/ios/calling/managing-calls/handle-call-events',
     '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
   ],
+  '/sdk/uniapp/calling/overview-calling': [
+    '/sdk/uniapp/calling/managing-calls/start-single-call',
+    '/sdk/uniapp/calling/managing-calls/handle-call-events',
+    '/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation',
+  ],
 };
 
 // These capabilities share general-purpose setters with open-source fields. Classify the
@@ -104,6 +123,13 @@ const fullCommercialConceptPages = new Set([
   '/sdk/ios/conversation/managing-conversations/set-message-destruct',
   '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
   '/sdk/ios/message/composing-messages/save-local-transcript',
+  '/sdk/uniapp/conversation/managing-conversations/set-private-chat',
+  '/sdk/uniapp/conversation/managing-conversations/set-burn-duration',
+  '/sdk/uniapp/conversation/managing-conversations/set-message-destruct',
+  '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
+  '/sdk/uniapp/message/composing-messages/save-local-transcript',
+  '/sdk/uniapp/user/profile/set-friend-add-permission',
 ]);
 
 function applyCommercialConceptOverride(
@@ -144,16 +170,42 @@ function getWasmPageCommercialInfo(pagePath: string): PageCommercialInfo {
   };
 }
 
+function getUniAppPageCommercialInfo(pagePath: string): PageCommercialInfo {
+  const pageCallables = uniappCallables.filter((entry) => entry.page === pagePath);
+  const commercialMethods = pageCallables
+    .filter((entry) => entry.edition === 'commercial')
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
+  const openSourceMethods = pageCallables
+    .filter((entry) => entry.edition === 'public')
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
+  const commercialEvents = uniappEvents
+    .filter((entry) => entry.page === pagePath && entry.edition === 'commercial')
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
+
+  if (commercialMethods.length === 0 && commercialEvents.length === 0) {
+    return { kind: 'none', methods: [], openSourceMethods, events: [] };
+  }
+  return {
+    kind: openSourceMethods.length === 0 ? 'full' : 'partial',
+    methods: commercialMethods,
+    openSourceMethods,
+    events: commercialEvents,
+  };
+}
+
 function parseClientSdkPath(
   pagePath: string,
 ):
-  | { platform: 'wasm'; wasmPath: string }
+  | { platform: 'wasm' | 'uniapp'; wasmPath: string }
   | { platform: NativePlatform; wasmPath: string }
   | undefined {
-  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios|uniapp)(\/.*)$/);
   if (!match) return undefined;
 
-  const platform = match[1] as 'wasm' | NativePlatform;
+  const platform = match[1] as ClientSdkPlatform;
   return {
     platform,
     wasmPath: `/sdk/wasm${match[2]}`,
@@ -195,18 +247,22 @@ export function getPageCommercialInfo(pagePath: string): PageCommercialInfo {
   if (route.platform === 'wasm') {
     return applyCommercialConceptOverride(pagePath, getWasmPageCommercialInfo(route.wasmPath));
   }
+  if (route.platform === 'uniapp') {
+    return applyCommercialConceptOverride(pagePath, getUniAppPageCommercialInfo(pagePath));
+  }
 
-  const page = nativeAudits[route.platform].find(
+  const nativePlatform = route.platform as NativePlatform;
+  const page = nativeAudits[nativePlatform].find(
     (entry) => entry.currentPath === pagePath && entry.disposition !== 'omit',
   );
   if (!page) return { kind: 'none', methods: [], openSourceMethods: [], events: [] };
 
   const commercialMethods = page.sdkMethods.filter((name) =>
-    commercialMethodNames.has(normalizePlatformSymbol(route.platform, name, 'method')),
+    commercialMethodNames.has(normalizePlatformSymbol(nativePlatform, name, 'method')),
   );
   const openSourceMethods = page.sdkMethods.filter((name) => !commercialMethods.includes(name));
   const commercialEvents = page.sdkEvents.filter((name) =>
-    commercialEventNames.has(normalizePlatformSymbol(route.platform, name, 'event')),
+    commercialEventNames.has(normalizePlatformSymbol(nativePlatform, name, 'event')),
   );
 
   if (commercialMethods.length === 0 && commercialEvents.length === 0) {

@@ -4,9 +4,11 @@ import iosAuditData from '../../data/structure/ios-content-audit.json' with { ty
 import iosSidebarData from '../../data/structure/ios-sidebar.json' with { type: 'json' };
 import wasmAuditData from '../../data/structure/wasm-content-audit.json' with { type: 'json' };
 import wasmSidebarData from '../../data/structure/wasm-sidebar.json' with { type: 'json' };
+import uniappAuditData from '../../data/structure/uniapp-content-audit.json' with { type: 'json' };
+import uniappSidebarData from '../../data/structure/uniapp-sidebar.json' with { type: 'json' };
 
 export type ReviewLocale = 'en' | 'zh';
-export type ClientSdkPlatform = 'flutter' | 'ios' | 'wasm';
+export type ClientSdkPlatform = 'flutter' | 'ios' | 'wasm' | 'uniapp';
 
 type ReviewStatus =
   | 'deferred'
@@ -81,12 +83,17 @@ const publicationLookup = createClientSdkPublicationLookup({
     pages: wasmAuditData.pages as ClientSdkAuditPage[],
     activePaths: flattenSidebarPaths(wasmSidebarData.nodes),
   },
+  uniapp: {
+    pages: uniappAuditData.pages as ClientSdkAuditPage[],
+    activePaths: flattenSidebarPaths(uniappSidebarData.nodes),
+  },
 });
 
 const platformNames: Record<ClientSdkPlatform, string> = {
   flutter: 'Flutter',
   ios: 'iOS',
   wasm: 'WASM',
+  uniapp: 'uni-app / uni-app x',
 };
 
 export function getClientSdkPendingReviewBody(platform: ClientSdkPlatform): string {
