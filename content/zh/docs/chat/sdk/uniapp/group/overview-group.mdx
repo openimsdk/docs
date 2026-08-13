@@ -1,0 +1,32 @@
+---
+title: '群组概览'
+description: '理解群资料、成员、申请、权限和群组事件。'
+sourcePath: '/sdk/uniapp/group/overview-group'
+---
+
+群组领域以 `groupID` 为稳定主键，包含群资料、成员、申请和权限。群名、头像、公告、群主和成员数都是可变快照。
+
+```uts
+import {
+  off,
+  onGroupDismissed,
+  onGroupInfoChanged,
+  onJoinedGroupAdded,
+  onJoinedGroupDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const infoSubscription = onGroupInfoChanged((group) => upsertGroup(group.groupID, group))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  infoSubscription,
+  onGroupDismissed((group) => removeGroup(group.groupID)),
+  onJoinedGroupAdded((group) => upsertGroup(group.groupID, group)),
+  onJoinedGroupDeleted((group) => removeGroup(group.groupID)),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+先订阅事件，再查询已加入群组快照。按 `groupID` 幂等合并；群解散、退出和被移出群的事件语义不同，但都可能要求关闭当前聊天页。
+
+`OpenIMGroupItem` 的 `attachedInfo` 以及 `displayIsRead`、禁言例外等扩展能力可能依赖商业版。字段缺失时降级，不伪造默认权限。

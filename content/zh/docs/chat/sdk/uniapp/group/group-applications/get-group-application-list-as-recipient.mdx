@@ -1,0 +1,33 @@
+---
+title: '查询收到的入群申请'
+description: '分页查询待管理的入群申请，并处理申请事件。'
+sourcePath: '/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient'
+---
+
+`getGroupApplicationListAsRecipient()` 查询当前账号有权处理的入群申请。本页归属新增、接受、拒绝和删除事件。
+
+```uts
+import {
+  getGroupApplicationListAsRecipient,
+  off,
+  onGroupApplicationAccepted,
+  onGroupApplicationAdded,
+  onGroupApplicationDeleted,
+  onGroupApplicationRejected,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const addedSubscription = onGroupApplicationAdded((item) => upsertGroupApplication(item))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onGroupApplicationAccepted((item) => upsertGroupApplication(item)),
+  onGroupApplicationRejected((item) => upsertGroupApplication(item)),
+  onGroupApplicationDeleted((item) => removeGroupApplication(item)),
+]
+
+const result = await getGroupApplicationListAsRecipient({ offset: 0, count: 50 })
+replaceReceivedGroupApplications(result?.applications ?? [])
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+事件与查询幂等合并。处理权限与申请状态由服务端校验；管理员变更后重新查询。

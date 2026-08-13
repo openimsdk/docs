@@ -1,0 +1,31 @@
+---
+title: '查询群成员列表'
+description: '分页查询群成员，并处理成员新增、删除和资料变化事件。'
+sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
+---
+
+`getGroupMemberList()` 按过滤条件分页读取成员。本页归属三个成员事件。
+
+```uts
+import {
+  getGroupMemberList,
+  off,
+  onGroupMemberAdded,
+  onGroupMemberDeleted,
+  onGroupMemberInfoChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const addedSubscription = onGroupMemberAdded((member) => upsertMember(member))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onGroupMemberDeleted((member) => removeMember(member.groupID, member.userID)),
+  onGroupMemberInfoChanged((member) => upsertMember(member)),
+]
+
+const result = await getGroupMemberList({ groupID, filter: 0, offset: 0, count: 100 })
+replaceMembers(result?.members ?? [])
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+`filter` 使用服务端定义的成员过滤值。按 `groupID:userID` 去重；分页与事件并发时不要按数组位置更新。
