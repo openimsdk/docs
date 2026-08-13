@@ -11,6 +11,64 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/overview-conversation'
 ---
 
-Conversations are local indexes for direct, group, and other message streams. Use `conversationID` as the stable key; titles, avatars, unread counts, and latest messages are mutable snapshots. `latestMsg` is serialized message JSON, so preserve the conversation and show a fallback summary if parsing fails.
+A conversation is the local index and display snapshot for one-to-one, group, notification, and other message streams. It provides the stable `conversationID`, target identity, title, avatar, unread count, draft, pin state, receive option, and serialized latest message.
 
-Register `onNewConversation` and `onConversationChanged` before loading a list, merge by `conversationID`, and reload after login or App restoration. Unread state, message read receipts, and commercial conversation groups are related but separate workflows.
+Messages and conversations are related but not interchangeable. Message APIs create, send, and query `OpenIMMessageItem`; conversation APIs organize chat entry points and aggregate unread and latest-message state. Do not edit the SDK database or derive authoritative conversation state only from the visible message array.
+
+## Conversation model
+
+Use `conversationID` as the stable merge key. Common `OpenIMConversationItem` fields are:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | Stable identifier for snapshots, events, routing, and mutation APIs. |
+| `conversationType` | `number` | Conversation/session type. Interpret it with exported constants. |
+| `userID` | `string` | Peer user ID for one-to-one conversations. |
+| `groupID` | `string` | Group ID for group conversations. |
+| `showName` | `string` | Current display-name snapshot for conversation lists and chat titles. |
+| `faceURL` | `string` | Current avatar snapshot. |
+| `unreadCount` | `number` | Current unread count for this conversation. |
+| `recvMsgOpt` | `number` | Conversation-level reception option. |
+| `isPinned` | `boolean` | Whether the conversation is pinned. |
+| `latestMsg` | `string` | Serialized latest `OpenIMMessageItem`; validate before parsing. |
+| `latestMsgSendTime` | `number` | Latest-message send time. |
+| `draftText` / `draftTextTime` | `string` / `number` | Local draft content and update time. |
+| `ex` | `string` | Application extension string. |
+
+`latestMsg` parsing failure does not mean the conversation is invalid. Keep the item and display a fallback summary until a later message or query provides recognizable content. Names, avatars, unread counts, latest messages, and drafts are snapshots and can change; never use them as keys.
+
+The Private contract adds commercial conversation-policy, notification, attached-info, burn-duration, destruct, and grouping-related fields. A mixed page must treat those fields as optional and keep the public conversation flow working when they are absent.
+
+## Establish snapshots
+
+Use [Get the conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list) for the main paginated snapshot. Other query pages cover one target, a known ID set, canonical ID generation, and local search.
+
+Query operations do not create conversations. A first sent or received message can later create one and trigger `onNewConversation`. After login, synchronization, reconnect, account switch, or process restoration, query the snapshots required by the current UI instead of expecting events alone to reconstruct the database.
+
+## Update conversation state
+
+Conversation mutations include pinning, read state, draft text, receive options, marks, remarks, extensions, private-chat policy, burn duration, and commercial grouping. A mutation Promise means only that its request completed. Merge `onConversationChanged` afterward or query again; do not assume that every other device and event stream has already updated.
+
+Unread state spans several scopes:
+
+- Per-conversation unread state is in `OpenIMConversationItem.unreadCount`.
+- The application total is maintained by [Get the total unread count](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count).
+- Group-message read receipts are message-domain state, not the conversation unread total.
+
+## Keep state synchronized
+
+The canonical `onNewConversation` and `onConversationChanged` listeners live on [Get the conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list). Register them before loading the first snapshot and merge by `conversationID`.
+
+Other events have their own owners: total unread count, commercial conversation deletion, and raw commercial conversation-group changes. Do not register one event from every component. Let a conversation store own the listener handles and distribute state to pages.
+
+## Conversation groups
+
+<span className="enterprise-field-badge">Commercial</span> conversation groups organize one conversation into one or more custom groups without copying or moving its messages. Group items, membership, ordering, raw events, and queries are documented in [Conversation groups overview](/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups).
+
+Deleting a conversation group does not delete its conversations. Likewise, deleting or hiding a conversation and removing a conversation from a group are distinct operations.
+
+## State and privacy boundaries
+
+The local conversation database belongs to OpenIM Core. Use SDK APIs to query and mutate it; do not inspect or edit database files. Clear all old-account application snapshots on logout or account switch, and guard late asynchronous writes with the account identity or commercial session epoch.
+
+Do not put tokens, private message bodies, or unredacted custom payloads in `ex`, logs, analytics, or automation evidence. When rendering `latestMsg`, apply the same content validation and privacy policy used by the message UI.

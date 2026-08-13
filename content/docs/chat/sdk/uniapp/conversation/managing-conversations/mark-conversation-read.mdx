@@ -11,14 +11,29 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/managing-conversations/mark-conversation-read'
 ---
 
-Use `markConversationMessageAsRead()` to clear normal unread state. The commercial `resetConversationUnread()` is an additional reset entry point. Direct read receipts arrive through `onRecvC2CReadReceipt`.
+Use `markConversationMessageAsRead()` to clear ordinary unread state for one conversation. The commercial `resetConversationUnread()` is an additional entry that can set unread count for multiple conversations. One-to-one message read receipts arrive through `onRecvC2CReadReceipt`.
 
 ```uts
 import { markConversationMessageAsRead, off, onRecvC2CReadReceipt } from '@/uni_modules/unix-openim-sdk'
 
-const receiptSubscription = onRecvC2CReadReceipt((items) => mergeReadReceipts(items))
+const receiptSubscription = onRecvC2CReadReceipt((result) => {
+  result.receipts.forEach((receipt) => mergeReadReceipt(receipt))
+})
 await markConversationMessageAsRead(conversationID)
-off(receiptSubscription)
 ```
 
-Do not infer message-level receipts solely from the conversation unread count.
+The <span className="enterprise-field-badge">Commercial</span> reset operation uses:
+
+```uts
+import { resetConversationUnread } from '@/uni_modules/unix-openim-sdk'
+
+await resetConversationUnread({ conversationIDs: [conversationID], num: 0 })
+```
+
+Local unread reset and a remote read receipt are not the same stage. After Promise success, merge the latest conversation from `onConversationChanged` by `conversationID` or requery it. For a one-to-one receipt, locate the peer's conversation and update the messages listed in each receipt.
+
+For a group conversation, this API clears only the current account's conversation unread count. Use [Send group read receipts](/sdk/uniapp/message/managing-read-status/send-group-read-receipts) for member-level group read state. Release `receiptSubscription` on component teardown, logout, or account switch:
+
+```uts
+off(receiptSubscription)
+```

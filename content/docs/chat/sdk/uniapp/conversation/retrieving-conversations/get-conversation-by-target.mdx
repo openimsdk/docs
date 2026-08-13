@@ -11,13 +11,27 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target'
 ---
 
-`getOneConversation()` resolves a conversation from session type and target ID.
+`getOneConversation()` queries one conversation by target ID and `OpenIMSessionType`. It resolves directly to `OpenIMConversationItem` or `null`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sourceID` | `string` | Yes | Target ID: the other user's `userID` for one-to-one chat or `groupID` for group chat. |
+| `sessionType` | `OpenIMSessionType` | Yes | Conversation type. Use exported constants such as `OpenIMSessionTypeSingle` and the corresponding group type. |
 
 ```uts
-import { getOneConversation } from '@/uni_modules/unix-openim-sdk'
+import {
+  OpenIMSessionTypeSingle,
+  getOneConversation,
+} from '@/uni_modules/unix-openim-sdk'
 
-const result = await getOneConversation({ sessionType, sourceID })
-const conversation = result?.conversation ?? null
+const conversation = await getOneConversation({
+  sourceID: 'user_b',
+  sessionType: OpenIMSessionTypeSingle,
+})
 ```
 
-Use a user ID for direct chat or group ID for group chat. A nullable result means no current local conversation; it does not create one.
+The same string can identify different targets under different session types, so both fields must be correct. Do not pass numeric literals, and do not pass a `conversationID` as `sourceID`; use the conversation-ID query when that ID is already known.
+
+`null` can mean that the local database does not yet contain the conversation. Sending or receiving the first message can create it through a later event. This query does not create a conversation or trigger an event. Merge a non-null result by `conversationID`, not only by `sourceID`, so another session type is not overwritten.

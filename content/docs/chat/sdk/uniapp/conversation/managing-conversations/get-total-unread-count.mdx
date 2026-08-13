@@ -11,6 +11,10 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/managing-conversations/get-total-unread-count'
 ---
 
+`getTotalUnreadMsgCount()` returns the current account's aggregate conversation unread count. The value is an account snapshot, not a sum that the UI should maintain independently.
+
+Register the event before querying to reduce the synchronization gap:
+
 ```uts
 import { getTotalUnreadMsgCount, off, onTotalUnreadMessageCountChanged } from '@/uni_modules/unix-openim-sdk'
 
@@ -20,4 +24,6 @@ renderBadge(count ?? 0)
 off(unreadSubscription)
 ```
 
-Load a snapshot and then apply events. Requery after login or synchronization rather than maintaining only local increments.
+Both the query and `onTotalUnreadMessageCountChanged` provide replacement totals. Do not apply local `+1` and `-1` deltas, which drift when messages are read on another device or during synchronization.
+
+This page is the complete owner for the total-unread event. Call `off(unreadSubscription)` on logout, account switch, or destruction of the badge state layer. Requery after login and synchronization. When using the value for the TabBar or [application badge](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state), also account for notification permission and operating-system badge behavior.
