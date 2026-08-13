@@ -1,6 +1,6 @@
 ---
-title: 'List friends'
-description: 'Load friends by page or snapshot and process friend changes.'
+title: 'Get the friend list'
+description: 'Page through the current user’s friend list with the uni-app / uni-app x SDK.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
@@ -11,11 +11,54 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/friends/get-friend-list-page'
 ---
 
-Use `getFriendListPage()` for pagination or `getFriendList()` for a complete small snapshot. Register events before querying.
+Register friend events before the initial query, then call `getFriendListPage()` to establish the current snapshot.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Pagination offset. Pass `0` for the first page. |
+| `count` | `number` | Yes | Number of friends to request. |
+| `filterBlack` | `boolean` | No | Whether to exclude blacklisted users from the results. |
+
+```uts
+import { getFriendListPage } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendListPage({
+  offset: 0,
+  count: 50,
+  filterBlack: true,
+})
+```
+
+After the Promise succeeds, `result?.friends` is the current page of `OpenIMFriendUserItem[]`. Increase `offset` by the requested item count to load the next page. Reset pagination after a friend is added or removed. The native API returns `OpenIMFriendListResult | null` directly; there is no `{ data }` wrapper.
+
+### Friend profile fields
+
+`OpenIMFriendUserItem` describes the current account's relationship with one friend:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | The friend's user ID and the stable identifier in the friend list. |
+| `nickname` | `string` | The friend's account-level nickname. |
+| `faceURL` | `string` | The friend's account-level avatar URL. |
+| `remark` | `string` | A remark the current account assigned to this friend. |
+| `isPinned` | `boolean` | Whether the friend is pinned in the contacts list. |
+| `ownerUserID` | `string` | The user ID that owns this friendship, normally the current account. |
+| `operatorUserID` | `string` | The user ID that created or updated the relationship. |
+| `addSource` | `number` | Value describing the source through which the friendship was added. |
+| `createTime` | `number` | Time when the friendship was created. |
+| `ex` | `string` | Friendship extension string. |
+| `attachedInfo` | `string` | SDK attachment data. Parse it only according to a confirmed application contract. |
+
+`nickname` and `faceURL` are snapshots of the account profile. `remark`, `isPinned`, `ex`, and `attachedInfo` belong to the friendship. Do not overwrite a non-friend's `OpenIMPublicUserItem` with an `OpenIMFriendUserItem`, and do not write a friend remark back to the account nickname.
+
+## Synchronize friend changes
+
+This page owns the complete listeners for `onFriendAdded`, `onFriendInfoChanged`, and `onFriendDeleted`. The query establishes a snapshot; events merge incremental changes by `userID`.
 
 ```uts
 import {
-  getFriendListPage,
   off,
   onFriendAdded,
   onFriendDeleted,
@@ -23,14 +66,15 @@ import {
   type OpenIMSDKEventSubscription,
 } from '@/uni_modules/unix-openim-sdk'
 
-const subscriptions : Array<OpenIMSDKEventSubscription> = [
-  onFriendAdded((friend) => upsertFriend(friend.userID, friend)),
+const friendSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onFriendAdded((friend) => mergeFriend(friend.userID, friend)),
+  onFriendInfoChanged((friend) => mergeFriend(friend.userID, friend)),
   onFriendDeleted((friend) => removeFriend(friend.userID)),
-  onFriendInfoChanged((friend) => upsertFriend(friend.userID, friend)),
 ]
-const page = await getFriendListPage({ offset: 0, count: 100 })
-replaceFriendSnapshot(page?.friends ?? [])
-subscriptions.forEach((subscription) => off(subscription))
+
+function removeFriendListeners() {
+  friendSubscriptions.forEach((subscription) => off(subscription))
+}
 ```
 
-Start `offset` at 0, continue until fewer than `count` items return, and deduplicate by `userID`. `getFriendList(filterBlack)` optionally filters blacklist entries but does not merge the two relationship types. Reload after login, reconnection, or state loss.
+Call `removeFriendListeners()` when signing out, switching accounts, or destroying the contacts state layer.

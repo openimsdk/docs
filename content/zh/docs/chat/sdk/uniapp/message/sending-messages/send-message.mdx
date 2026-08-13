@@ -1,23 +1,34 @@
 ---
 title: '发送消息'
-description: '把已创建的消息发送给单聊用户或群组。'
+description: '使用 uni-app / uni-app x SDK 发送待发送消息对象。'
 sourcePath: '/sdk/uniapp/message/sending-messages/send-message'
 ---
 
-`sendMessage()` 接收 `OpenIMSendMessageOptions`，Promise 直接返回最终 `OpenIMMessageItem`。
+`sendMessage()` 发送由消息创建 API 返回的 `OpenIMMessageItem`。单聊只填写 `recvID`，群聊只填写 `groupID`。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `recvID` | `string` | 条件必填 | 单聊时填写接收方用户 ID；群聊时传空字符串。 |
+| `groupID` | `string` | 条件必填 | 群聊时填写目标群组 ID；单聊时传空字符串。 |
+| `message` | `OpenIMMessageItem` | 是 | 待发送的消息对象。 |
+| `offlinePushInfo` | `OpenIMOfflinePush` | 否 | 离线推送配置。 |
+| `isOnlineOnly` | `boolean` | 否 | 是否只向在线客户端投递；此类消息不进入本地历史。 |
 
 ```uts
 import { sendMessage } from '@/uni_modules/unix-openim-sdk'
 
-const sent = await sendMessage({
-  message,
-  recvID: 'user_b',
+const sentMessage = await sendMessage({
+  recvID: receiverUserID,
   groupID: '',
+  message,
   isOnlineOnly: false,
 })
-upsertMessage(sent.clientMsgID, sent)
 ```
 
-单聊填 `recvID`、群聊填 `groupID`，另一个传空字符串。`offlinePushInfo` 可按产品推送策略提供；`isOnlineOnly` 为 true 时不按普通持久消息处理。
+Promise 成功后，直接返回服务端确认的 `OpenIMMessageItem`，原生 UTS API 不使用 `{ data }` 包装。发送端应使用返回对象按 `clientMsgID` 替换本地待发送项；常用字段和内容字段见[消息概览](/zh/sdk/uniapp/message/overview-message)。
 
-发送进度按 `clientMsgID` 合并，最终成功以 Promise 为准。失败时保留消息和错误状态供用户重试，不重新创建不同 `clientMsgID` 的重复消息，除非产品明确要求。
+其他客户端通过新消息事件接收。Promise 成功、接收事件到达和历史查询校准是不同阶段。提供失败重试时，应继续保留同一个 `clientMsgID` 下的待发送消息，除非产品明确创建一次新的发送。
+
+资源已由业务上传并写入 URL 型消息时，使用 [`sendMessageNotOss()`](/zh/sdk/uniapp/message/sending-messages/send-message-not-oss)。

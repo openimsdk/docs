@@ -6,6 +6,8 @@ sourcePath: '/sdk/uniapp/conversation/managing-conversations/mark-conversation-r
 
 `markConversationMessageAsRead()` 把指定会话标为已读。本页同时归属单聊已读回执 `onRecvC2CReadReceipt`。
 
+用户打开会话并阅读完当前可见消息后再调用。不要在只预览通知、后台收到消息或尚未展示聊天页时提前标记已读。
+
 ```uts
 import {
   markConversationMessageAsRead,
@@ -30,3 +32,7 @@ await resetConversationUnread({ conversationIDs: [conversationID], num: 0 })
 ```
 
 本地会话未读清零与对端收到已读回执不是同一步。Promise、会话变化和回执事件分别处理。
+
+Promise 成功后，通过 `onConversationChanged` 取得最新会话并按 `conversationID` 合并未读数；需要立即校准时重新查询该会话。单聊回执中的 `receipts` 应先定位对端用户对应的单聊，再按每项消息 ID 列表更新已读状态。
+
+群聊中调用本 API 只清理当前账号的会话未读数。需要上报群成员级已读状态时，另见[上报群消息已读](/sdk/uniapp/message/managing-read-status/send-group-read-receipts)。组件卸载、退出登录或切换账号时释放 `receiptSubscription`。

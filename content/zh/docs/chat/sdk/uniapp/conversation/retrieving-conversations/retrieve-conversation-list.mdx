@@ -4,7 +4,16 @@ description: '查询完整或分页会话快照，并处理新增与变化事件
 sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-`getAllConversationList()` 返回完整本地会话快照；列表较大时使用 `getConversationListSplit()` 分页。本页归属 `onNewConversation` 和 `onConversationChanged`。
+会话列表应使用 `getConversationListSplit()` 分页建立本地快照。虽然 Private 合同仍导出非分页 `getAllConversationList()` 作为兼容能力，面向真实应用和公开文档的推荐流程统一使用分页，避免会话较多时一次加载全部本地记录。
+
+## 分页获取会话
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次读取数量；根据页面和设备性能设置合理上限。 |
 
 ```uts
 import {
@@ -28,6 +37,39 @@ off(newConversationSubscription)
 off(changedSubscription)
 ```
 
-分页时继续增加 `offset`，直到返回数量少于 `count`。查询与事件可能包含相同会话，必须按 `conversationID` 幂等合并。事件 payload 是列表，即使通常只变化一项也要遍历全部项目。
+Promise 成功直接返回 `OpenIMConversationListResult | null`，从 `conversations` 读取当前页。第一页用于替换当前账号快照；后续页按 `conversationID` 合并。返回 `null` 时不要伪造成功的空列表，应结合登录状态和错误诊断决定保留旧快照还是展示加载失败。
 
-不要根据本地数组位置更新；置顶、最新消息和未读变化都会改变排序。
+分页时继续增加 `offset`，直到返回数量少于 `count`。在前一页加载期间收到会话事件后，列表排序和分页边界可能变化；应让 store 按主键合并，并在刷新或同步完成时从 offset 0 重新建立快照。不要只把后续页追加到数组后永久依赖旧 offset。
+
+### 会话字段
+
+`OpenIMConversationItem` 中常用字段如下：
+
+| 字段 | 说明 |
+| --- | --- |
+| `conversationID` | 会话稳定主键，列表与事件都按该字段合并。 |
+| `conversationType` | 单聊、群聊或通知会话类型。 |
+| `userID` / `groupID` | 单聊对端用户或群聊群组 ID，根据会话类型使用。 |
+| `showName` / `faceURL` | 当前会话展示名称与头像快照。 |
+| `unreadCount` | 当前会话未读数。 |
+| `latestMsg` | 最新消息序列化字符串；解析失败时保留会话并展示降级摘要。 |
+| `latestMsgSendTime` | 最新消息发送时间，可参与普通会话排序。 |
+| `draftText` / `draftTextTime` | 本地草稿内容和更新时间。 |
+| `isPinned` | 是否置顶。排序时先应用置顶规则，再处理时间。 |
+| `recvMsgOpt` | 会话级消息接收选项。 |
+
+完整字段及商业扩展见[会话概览](/sdk/uniapp/conversation/overview-conversation)。不要根据本地数组位置更新；置顶、最新消息、草稿和未读变化都会改变排序。
+
+### 列表排序
+
+推荐先把分页与事件结果写入以 `conversationID` 为键的映射，再计算展示数组。通常先显示置顶会话，组内按最新消息或草稿时间排序，并为时间相同项提供稳定的 ID 次序。不要直接在事件回调中对页面数组做局部交换。
+
+`latestMsg` 解析失败不影响会话存在。保留该项并显示未知消息摘要；收到后续可识别消息或重新查询时自然更新。
+
+## 保持列表同步
+
+本页是 `onNewConversation` 和 `onConversationChanged` 的完整监听归属页。应先注册事件，再查询第一页，缩小登录同步期间的丢失窗口。两种事件都携带 `OpenIMConversationListResult`，即使通常只变化一个会话，也要遍历全部 `conversations`。
+
+Promise 成功、事件到达和重新查询是不同阶段。App 前台恢复、同步完成、断线重连或切换账号后重新查询快照；退出登录或销毁会话 store 时分别 `off(newConversationSubscription)` 和 `off(changedSubscription)`。
+
+切换账号时，在启动新账号查询前停止旧账号分页请求的状态写入。即使旧 Promise 迟到，也不能把旧 `conversationID` 列表合入新账号；可使用应用账号世代或商业版 `sdkSessionEpoch` 做完成前校验。

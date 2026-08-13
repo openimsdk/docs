@@ -1,46 +1,118 @@
 ---
 title: '发送第一条消息'
-description: '在 uni-app / uni-app x App 中创建文本消息并验证单聊或群聊发送链路。'
+description: '在 uni-app / uni-app x App 中初始化 SDK、登录并验证单聊或群聊的首条文本消息。'
 sourcePath: '/sdk/uniapp/getting-started/send-first-message'
 ---
 
-本页把安装、初始化、登录和消息发送串成最小验证链路。正式项目应把 SDK 生命周期放在应用级 service，并按照各功能页拆分状态管理。
+本页说明如何在 uni-app / uni-app x App 中安装并初始化 `unix-openim-sdk`，登录后发送第一条文本消息。开始前，请先完成[开始之前](/sdk/uniapp/getting-started/before-you-start)列出的服务、用户、Token、插件和原生构建环境准备。
 
-## 1. 初始化并登录
+OpenIMSDK 消息的发送对象可以是用户或群组。单聊消息使用目标用户 `recvID`；群聊消息使用目标群组 `groupID`。
 
-先按[安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)初始化，再从可信后端取得 `userID` 和 Token。登录前注册连接事件，连接成功后才允许发送。
+## 准备消息目标
 
-```uts
-import {
-  off,
-  onConnectSuccess,
-} from '@/uni_modules/unix-openim-sdk'
+单聊测试需要一个已存在的接收方用户。群聊测试需要一个已存在并且当前用户有权发言的 `groupID`；发送群聊消息时不再传接收方用户 ID，也不需要指定某个群成员。
 
-const connectSubscription = onConnectSuccess(() => {
-  markOpenIMReady()
-})
+| 场景 | 需要准备的目标标识 |
+| --- | --- |
+| 单聊 | 已存在的接收方用户 ID，发送时写入 `recvID`，`groupID` 为空字符串。 |
+| 群聊 | 已存在的群 ID，发送时写入 `groupID`，`recvID` 为空字符串。 |
 
-// 应用作用域结束时释放。
-off(connectSubscription)
-```
+### 确认目标可用
 
-完整登录和事件清理见[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。
+首条消息通常用于验证客户端、OpenIMServer 和另一客户端之间的完整链路。发送前确认：
 
-## 2. 准备目标
+- 单聊接收方用户已存在，且服务端策略允许当前用户向其发送消息。
+- 群聊目标 `groupID` 已存在，当前用户已加入该群，并且没有被群状态或禁言策略禁止发言。
+- 两个测试客户端使用不同用户登录；不要用同一账号的界面现象代替对端收件验证。
 
-| 场景 | `recvID` | `groupID` |
-| --- | --- | --- |
-| 单聊 | 已存在的接收用户 ID | 空字符串 |
-| 群聊 | 空字符串 | 当前用户已加入的群 ID |
+## 开始使用
 
-目标用户或群组必须在服务端存在。是否允许发送还会受到好友、群成员、禁言和服务端策略影响。
+按照下面步骤发送首条文本消息。
 
-## 3. 创建并发送文本消息
+### 第 1 步：安装 UTS 插件
+
+把 `unix-openim-sdk` 安装到项目的 `uni_modules/unix-openim-sdk` 目录。插件包含原生依赖，标准基座不能直接加载；运行前需要构建包含该插件的自定义基座，或使用项目的本地 Android/iOS 原生构建流程。
+
+业务页面统一从插件根路径扁平导入函数与类型：
 
 ```uts
 import {
   createTextMessage,
   sendMessage,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+不需要创建 SDK 实例，也不要导入或直接调用 Android、iOS、HarmonyOS 平台目录中的实现文件。
+
+### 第 2 步：初始化 OpenIM SDK
+
+在 App 作用域调用一次 `initSDK()`。下面以 Android 为例；iOS 和 HarmonyOS 使用各自的平台常量与 `systemType`。
+
+```uts
+import {
+  OpenIMLogLevelInfo,
+  OpenIMPlatformAndroid,
+  initSDK,
+  type OpenIMInitConfig,
+} from '@/uni_modules/unix-openim-sdk'
+
+const config : OpenIMInitConfig = {
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://im-api.example.com',
+  wsAddr: 'wss://im-ws.example.com',
+  logLevel: OpenIMLogLevelInfo,
+  isLogStandardOutput: true,
+  systemType: 'android',
+}
+
+const initialized = await initSDK(config)
+if (!initialized) {
+  throw new Error('OpenIM SDK initialization was not accepted')
+}
+```
+
+`apiAddr` 和 `wsAddr` 必须能从实际设备访问，`systemType` 不可省略。完整字段、iOS/HarmonyOS 常量、版本查询和反初始化规则见[安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)。
+
+### 第 3 步：连接到 OpenIMServer
+
+使用[开始之前](/sdk/uniapp/getting-started/before-you-start)约定的业务接口取得当前用户的 `userID` 和 Token。登录前先按[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)注册连接与 Token 事件；本页只保留首条消息主流程，不重复定义完整监听器。
+
+```uts
+import { login } from '@/uni_modules/unix-openim-sdk'
+
+const session = await loadOpenIMSDKSession()
+await login(session.userID, session.token)
+```
+
+`login()` 的 Promise 成功表示登录请求完成；收到由认证页面统一处理的 `onConnectSuccess` 后，再调用依赖连接的消息 API。uni-app / uni-app x 的 `login()` 使用两个位置参数，不接受 Wasm 的对象式登录参数。
+
+### 第 4 步：确定消息目标
+
+单聊只需要接收方用户 ID。把已经确认存在的用户 ID 写入 `recvID`：
+
+```uts
+const recvID = 'user_b'
+const groupID = ''
+```
+
+群聊只使用群 ID。可以复用业务系统已有的 `groupID`，也可以先通过管理后台、业务后端或群组 API 创建测试群，并保存返回的群 ID：
+
+```uts
+const recvID = ''
+const groupID = 'group_123'
+```
+
+创建群组时可以设置初始成员，但发送群消息本身不再传某个接收用户 ID。
+
+### 第 5 步：创建并发送消息
+
+发送文本消息分两步：先用 `createTextMessage()` 创建本地 `OpenIMMessageItem`，再通过 `sendMessage()` 发送到目标用户或群组。
+
+```uts
+import {
+  createTextMessage,
+  sendMessage,
+  type OpenIMMessageItem,
 } from '@/uni_modules/unix-openim-sdk'
 
 const message = await createTextMessage('你好，OpenIMSDK')
@@ -48,34 +120,34 @@ if (message == null) {
   throw new Error('Failed to create text message')
 }
 
-const sentMessage = await sendMessage({
+const sentMessage : OpenIMMessageItem = await sendMessage({
+  recvID,
+  groupID,
   message,
-  recvID: 'user_b',
-  groupID: '',
 })
 
 appendOutgoingMessage(sentMessage)
 ```
 
-`createTextMessage()` 只创建本地消息对象，不会发送。`sendMessage()` 成功后直接返回最终 `OpenIMMessageItem`，不需要读取 `{ data }`。发送端按 `clientMsgID` 合并返回值；接收端通过新消息事件按同一标识去重。
+`createTextMessage()` 的 Promise 只返回待发送消息对象，不会发送消息，也不会触发新消息事件。`sendMessage()` 直接返回发送后的 `OpenIMMessageItem`，不需要读取 Wasm 响应中的 `{ data }`。
 
-群聊只需把 `recvID` 改为空字符串，并填入 `groupID`：
+发送端应按 `clientMsgID` 用 `sentMessage` 替换本地待发送项；另一已登录客户端通过新消息事件获得消息对象。完整事件、批量与单条回调、清理和会话路由见[接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)，本页不重复注册。
 
-```uts
-const sentGroupMessage = await sendMessage({
-  message,
-  recvID: '',
-  groupID: 'group_123',
-})
-```
+## 验证发送结果
 
-## 4. 双端验证
+使用两个账号和两个独立客户端验证以下阶段：
 
-用两个不同账号和两个独立客户端验证：
+1. A 端 `sendMessage()` 成功并返回非空 `clientMsgID`。
+2. A 端按 `clientMsgID` 合并返回消息，而不是向列表重复追加一条。
+3. B 端收到新消息事件，并能读取相同业务内容。
+4. A、B 重新进入会话后，都能从历史消息中查询到该消息。
 
-1. A 端发送后获得非空 `clientMsgID`，消息状态进入发送成功。
-2. B 端收到新消息事件，并能解析到相同业务内容。
-3. A、B 重新进入会话后，都能从历史消息中读取该消息。
-4. 退出 SDK 后普通事件不再写入旧账号状态。
+Promise 成功和对端事件到达是两个阶段，应分别验证。排查失败时记录脱敏后的错误码、当前用户 ID、目标用户或群组 ID、`clientMsgID`，并与 OpenIMServer 日志对应；不要记录 Token 或完整私聊内容。
 
-下一步阅读[发送消息](/sdk/uniapp/message/sending-messages/send-message)、[接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)和[加载历史消息](/sdk/uniapp/message/retrieving-messages/load-older-messages)。
+## 下一步
+
+- [开始之前](/sdk/uniapp/getting-started/before-you-start)
+- [用户认证](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [按宿主和平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)
+- [发送消息](/sdk/uniapp/message/sending-messages/send-message)
+- [接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)

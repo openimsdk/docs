@@ -6,6 +6,10 @@ sourcePath: '/sdk/uniapp/conversation/managing-conversations/set-message-destruc
 
 `OpenIMConversationItem` 包含 `isMsgDestruct` 与 `msgDestructTime` <span className="enterprise-field-badge">商业版</span> 状态，但当前 `OpenIMSetConversationParams` 没有这两个写入字段。
 
-因此本插件版本只能读取并展示服务端返回的销毁状态，不能通过相近字段或 `ex` 模拟 setter。需要修改时使用已确认的商业版业务接口，并在完成后重新查询会话。
+服务端消息定期删除由这两个字段共同描述：`isMsgDestruct` 是开关，`msgDestructTime` 是删除周期。它不是阅后即焚；阅后即焚使用 `isPrivateChat` 和 `burnDuration`。
 
-客户端倒计时只负责展示，消息是否真正销毁必须以 Core/服务端状态为准。
+因此本插件版本只能读取并展示服务端返回的销毁状态，不能照搬 Wasm 的 `setConversation({ isMsgDestruct, msgDestructTime })`，也不能通过相近字段或 `ex` 模拟 setter。需要修改时使用已经确认并鉴权的商业业务接口，并在完成后重新查询会话。
+
+达到删除周期后，服务端策略清理的是服务端保存的消息，不代表当前设备或其他已经同步过消息的客户端会立即删除本地副本。客户端卸载重装、清除数据或在新设备同步时，已被服务端清理的消息可能无法再次拉取。
+
+客户端倒计时只负责展示，消息是否真正销毁必须以 Core/服务端状态为准。该页保留与 Wasm 相同的业务边界，但明确记录当前 unix 源码合同没有写入能力，避免发布不存在的 API。

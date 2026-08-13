@@ -1,10 +1,65 @@
 ---
 title: '事件概览'
-description: '管理 OpenIMSDKEventSubscription、off/offAll 与同步生命周期事件。'
+description: '注册 uni-app / uni-app x SDK 事件，并按业务生命周期同步连接与数据状态。'
 sourcePath: '/sdk/uniapp/events/overview-events'
 ---
 
-每个 `on...()` 调用同步返回独立 `OpenIMSDKEventSubscription`，其中包含 `id` 与 `eventName`。正常清理使用 `off(subscription)`；不要继续使用旧版“监听函数直接返回取消闭包”的写法。
+`unix-openim-sdk` 通过 `on...()` 函数推送连接、同步、用户、好友、会话、群组、消息和商业信令相关事件。所有事件函数都从 `@/uni_modules/unix-openim-sdk` 扁平导入，不需要为不同领域创建 SDK 实例或原生 listener 对象。
+
+## 注册与移除事件
+
+每次 `on...()` 调用同步返回一个独立的 `OpenIMSDKEventSubscription`，其中包含 `id` 与 `eventName`。应用必须保存该句柄，并在拥有它的页面、状态层或账号作用域结束时传给 `off(subscription)`。
+
+```uts
+import {
+  off,
+  onConnectSuccess,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const connectionSubscription : OpenIMSDKEventSubscription = onConnectSuccess(() => {
+  setConnectionState('connected')
+})
+
+// 拥有该监听的作用域结束时执行。
+off(connectionSubscription)
+```
+
+不要继续使用旧版“监听函数直接返回取消闭包”的写法，也不要调用 `connectionSubscription()`。同一个事件可以有多个订阅者；`off()` 只删除传入句柄对应的处理器，不影响其他模块。
+
+`offAll(eventName)` 会删除指定事件名的全部处理器，只适合应用整体销毁、可控测试重置或明确拥有该事件全部监听的基础设施。普通组件、页面和功能模块不得用它代替局部清理，否则会移除其他消费者的监听。
+
+事件处理器应尽快返回。耗时查询、文件操作和网络请求应进入应用队列，并在写回状态前确认当前登录用户或商业版 session epoch 没有变化。每个事件的完整监听代码只放在下表链接的归属页面，本页不重复其他领域的业务处理器。
+
+## 选择注册时机
+
+| 事件范围 | 建议生命周期 | 对应页面 |
+| --- | --- | --- |
+| 连接和 Token | 在 `login()` 前注册，切换账号时清理 | [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session) |
+| 用户、好友和黑名单 | 联系人状态层初始化时注册 | [用户概览](/sdk/uniapp/user/overview-user) |
+| 会话列表 | 会话列表状态层初始化时注册 | [获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list) |
+| 会话未读数 | 应用角标状态层初始化时注册 | [维护总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count) |
+| 群组列表 | 群组状态层初始化时注册 | [群组概览](/sdk/uniapp/group/overview-group) |
+| 群成员 | 群成员状态层初始化时注册 | [分页查询群成员](/sdk/uniapp/group/retrieving-group-members/get-group-member-list) |
+| 入群申请 | 群申请状态层初始化时注册 | [获取收到的入群申请](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |
+| 消息 | 消息状态层初始化时注册 | [接收消息](/sdk/uniapp/message/receiving-messages/receive-messages) |
+| 商业信令 | 通话功能初始化时注册 | [通话事件](/sdk/uniapp/calling/managing-calls/handle-call-events) |
+| SDK session | 依赖唯一 Core 的商业插件初始化时注册 | [更新 Token 与观察 SDK session](/sdk/uniapp/getting-started/update-token-and-observe-sdk-session) |
+
+不要在每次组件渲染、`onShow` 或列表刷新时重复注册。多次注册同一个逻辑会造成重复消息、未读数反复累加，或让旧账号的异步结果写入新账号界面。
+
+查询 API 用于建立页面进入时的快照，事件用于合并后续增量。业务实体应使用稳定标识合并，例如消息使用 `clientMsgID`、会话使用 `conversationID`、好友与黑名单使用 `userID`、群成员使用 `groupID:userID`。不要使用数组下标或展示名称去重。
+
+## 监听初始化同步
+
+登录后 SDK 会同步 OpenIMServer 数据。以下事件适合驱动全局同步状态和进度展示：
+
+| 事件 | 处理器参数 | 含义 |
+| --- | --- | --- |
+| `onSyncServerStart` | `reinstalled: boolean` | 开始同步；布尔值表示本地库是否因重装或等价重建进入同步。 |
+| `onSyncServerProgress` | `progress: number` | 同步进度变化；用于展示，不承诺每个整数都会到达。 |
+| `onSyncServerFinish` | `reinstalled: boolean` | 本轮同步完成，可以重新查询依赖完整数据的页面。 |
+| `onSyncServerFailed` | `reinstalled: boolean` | 本轮同步失败，应记录当前同步上下文并等待重试或连接恢复。 |
 
 ```uts
 import {
@@ -16,23 +71,45 @@ import {
   type OpenIMSDKEventSubscription,
 } from '@/uni_modules/unix-openim-sdk'
 
-const startSubscription = onSyncServerStart((reinstalled) => beginSyncUI(reinstalled))
-const subscriptions : Array<OpenIMSDKEventSubscription> = [
-  startSubscription,
-  onSyncServerProgress((progress) => updateSyncProgress(progress)),
-  onSyncServerFinish((reinstalled) => finishSyncUI(reinstalled)),
-  onSyncServerFailed((reinstalled) => failSyncUI(reinstalled)),
+const syncSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onSyncServerStart((reinstalled) => {
+    setSyncState('syncing', 0, reinstalled)
+  }),
+  onSyncServerProgress((progress) => {
+    setSyncProgress(progress)
+  }),
+  onSyncServerFinish((reinstalled) => {
+    setSyncState('ready', 100, reinstalled)
+    refreshVisibleSnapshots()
+  }),
+  onSyncServerFailed((reinstalled) => {
+    setSyncState('failed', 0, reinstalled)
+  }),
 ]
 
-subscriptions.forEach((subscription) => off(subscription))
+function releaseSyncSubscriptions() {
+  syncSubscriptions.forEach((subscription) => off(subscription))
+  syncSubscriptions.length = 0
+}
 ```
 
-同步事件的 boolean 表示合同定义的重装/同步上下文，不应当作“成功”布尔值；成功与失败由事件名区分。进度值用于展示，不承诺每个整数都到达。
+三个 boolean 回调参数都描述合同定义的重装/同步上下文，不是“操作是否成功”的通用返回值；完成或失败由事件名区分。同步事件描述 Core 的同步生命周期，不是某个查询 API 的 Promise 回调，也没有业务实体合并键；状态应按当前登录用户隔离。
 
-`offAll(eventName)` 会删除指定事件名的全部处理器，只适合应用整体重置或受控测试。组件、页面和功能模块不得用它清理自己的单个监听，以免影响其他消费者。
+本页是四个同步事件以及 `off()` / `offAll()` 控制语义的归属页。退出登录、切换账号或销毁 SDK 作用域时调用 `releaseSyncSubscriptions()`。同步完成后数据仍会继续变化：重新查询当前页面快照，并继续通过各领域归属页的增量事件更新同一状态层。
 
-## HarmonyOS unsupported 事件
+## HarmonyOS 不支持事件
 
-HarmonyOS 当前有十个事件不受原生 HAR 支持：四个 migration 事件、三个消息 extensions 事件、`onMessageKvInfoChanged`、`onStreamChange`，以及合同中登记的 badge/消息扩展事件。注册这些事件只返回 unsupported subscription，不会伪造成功回调。具体商业事件页面会再次标注。
+商业版 HarmonyOS 的锁定 HAR 缺少以下十个事件，因此订阅会稳定返回 `platform-unsupported`，不会伪造成功回调：
 
-事件处理器应快速返回，把耗时工作排入应用队列。账号切换和 dispose 时先停止接收业务写入，再逐个释放旧句柄。
+- `onMigrationStart`
+- `onMigrationProgress`
+- `onMigrationFailed`
+- `onMigrationFinished`
+- `onRecvMessageExtensionsAdded`
+- `onRecvMessageExtensionsChanged`
+- `onRecvMessageExtensionsDeleted`
+- `onMessageKvInfoChanged`
+- `onStreamChange`
+- `onGroupApplicationBadgeCountChanged`
+
+平台支持状态和“是否为商业版”是两个独立维度。应用应识别 `platform-unsupported` 并关闭对应入口或采用平台替代方案，不要无限重试，也不要把未发生的事件模拟成成功。

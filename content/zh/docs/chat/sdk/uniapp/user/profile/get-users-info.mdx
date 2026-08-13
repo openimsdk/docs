@@ -1,21 +1,84 @@
 ---
-title: '批量查询用户资料'
-description: '按 userID 列表查询用户公开资料。'
+title: '获取用户资料'
+description: '按 userID 批量查询应用用户的公开资料。'
 sourcePath: '/sdk/uniapp/user/profile/get-users-info'
 ---
 
-使用 `getUsersInfo()` 批量取得聊天展示所需的用户资料。参数是用户 ID 数组，Promise 返回 `OpenIMUserListResult | null`。
+`getUsersInfo()` 可以按 `userID` 查询应用用户的公开资料，适合展示好友候选人、陌生人资料卡和消息发送者资料。
+
+如果产品需要按昵称、手机号、组织、邮箱或其他业务字段检索用户，应先由业务后端完成搜索和权限校验，再把返回的 `userID` 传给 `getUsersInfo()`。管理员 Token 只能保存在可信后端，用户目录管理也必须由后端执行。
+
+## 查询公开资料
+
+传入要查询的 OpenIMSDK 用户 ID 数组。调用前应去重并控制单次请求数量；不要在长列表滚动时为每一行单独请求。
 
 ```uts
-import { getUsersInfo } from '@/uni_modules/unix-openim-sdk'
+import {
+  getUsersInfo,
+  type OpenIMUserInfo,
+} from '@/uni_modules/unix-openim-sdk'
 
-const result = await getUsersInfo(['user_a', 'user_b'])
-const users = result?.users ?? []
-users.forEach((user) => cacheUser(user.userID, user))
+const userIDList : Array<string> = uniqueUserIDs(['user_a', 'user_b'])
+const result = await getUsersInfo(userIDList)
+const users : Array<OpenIMUserInfo> = result?.users ?? []
+
+users.forEach((user) => {
+  cachePublicUser(user.userID, user)
+})
 ```
 
-返回列表不保证与输入顺序一致，也可能少于请求数量。应按 `userID` 建立映射，并为不存在、无权限或未返回的用户保留占位状态。
+Promise 成功后直接返回 `OpenIMUserListResult | null`，其中 `users` 是查询到的 `OpenIMUserInfo[]`；`OpenIMPublicUserItem` 是该资料类型的公开场景别名。返回列表不保证与输入顺序一致，也可能少于请求数量。应按 `userID` 建立映射，并为不存在、无权限或未返回的用户保留占位状态。
 
-`OpenIMUserInfo` 字段见[用户概览](/sdk/uniapp/user/overview-user)。其中 `attachedInfo` 与 `globalRecvMsgOpt` 是商业版字段；公共客户端必须把它们视为可选值。不要把用户资料响应中的 `ex` 或 `attachedInfo` 当作可信身份凭据。
+页面常用字段如下：
 
-大量用户应按业务可接受的批次查询并缓存，避免列表滚动时为每一行单独请求。
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | OpenIMSDK 用户 ID。 |
+| `nickname` | `string` | 账号级公开昵称。 |
+| `faceURL` | `string` | 账号级公开头像地址。 |
+| `createTime` | `number \| null`（可选） | 用户记录创建时间。 |
+| `ex` | `string` | 账号级扩展字段，格式由业务约定。 |
+| `attachedInfo` <span className="enterprise-field-badge">商业版字段</span> | `string \| null`（可选） | 仅按已确认的商业业务协议解析。 |
+| `globalRecvMsgOpt` <span className="enterprise-field-badge">商业版字段</span> | `number \| null`（可选） | 账号全局消息接收选项；陌生人资料卡通常不需要展示。 |
+
+`ex` 和 `attachedInfo` 都不能作为可信身份、权限或认证凭据。客户端也不能通过用户 API 修改其他账号资料；当前用户自己的资料通过 `setSelfInfo()` 更新。
+
+## 调用结果与资料刷新
+
+以返回的 `users` 更新当前公开资料快照。打开资料卡、手动刷新、断线重连，或收到业务后端的资料变更通知时，重新调用该方法。页面同时展示多个用户时，先收集可见项中的 `userID`，去重后批量查询，再按 `userID` 合并结果。
+
+SDK 没有面向任意公开用户资料的通用变更事件。`onSelfInfoUpdated` 只携带当前登录用户的资料，不能把它作为其他用户的公开资料写入缓存。当前账号资料的读取、更新和事件同步见[更新当前用户资料](/sdk/uniapp/user/profile/set-self-info)。
+
+## 搜索添加好友
+
+搜索并添加好友时，通常先由业务后端返回候选 `userID`，再调用 `getUsersInfo()` 展示公开资料。用户确认目标后，再进入好友申请流程。
+
+```uts
+async function searchUsersForFriendRequest(keyword : string) : Promise<Array<OpenIMUserInfo>> {
+  const userIDs = await searchUserIDsFromBusinessBackend(keyword)
+  if (userIDs.length == 0) {
+    return []
+  }
+
+  const result = await getUsersInfo(uniqueUserIDs(userIDs))
+  return result?.users ?? []
+}
+```
+
+如果产品只支持按用户 ID 精确搜索，可以直接把经过格式校验的输入值作为 `userID` 查询。模糊搜索或按敏感字段搜索时，后端必须负责鉴权、限流、脱敏和审计。
+
+## 按场景选择展示数据
+
+| 场景 | 优先使用 |
+| --- | --- |
+| 应用用户搜索、陌生人资料卡 | `OpenIMPublicUserItem` / `OpenIMUserInfo` |
+| 好友列表、联系人页、好友备注 | `OpenIMFriendUserItem` |
+| 群成员列表、群内昵称、群角色 | `OpenIMGroupMemberItem` |
+
+好友备注和群内昵称分别来自好友关系与群成员资料。相关用法见[分页获取好友列表](/sdk/uniapp/user/friends/get-friend-list-page)、[获取指定好友资料](/sdk/uniapp/user/friends/get-specified-friends-info)和[分页查询群成员](/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。
+
+## 下一步
+
+- [分页获取好友列表](/sdk/uniapp/user/friends/get-friend-list-page)
+- [获取指定好友资料](/sdk/uniapp/user/friends/get-specified-friends-info)
+- [获取收到的好友申请](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient)

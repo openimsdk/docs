@@ -6,6 +6,15 @@ sourcePath: '/sdk/uniapp/user/friends/update-friends'
 
 `updateFriends()` 可批量更新好友关系上的备注、置顶或扩展字段。只传要修改的字段。
 
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `friendUserIDs` | `string[]` | 是 | 要更新的好友用户 ID 列表；同一组更新值会应用到全部目标。 |
+| `remark` | `string \| null` | 否 | 新备注。 |
+| `isPinned` | `boolean \| null` | 否 | 是否置顶好友。 |
+| `ex` | `string \| null` | 否 | 新扩展字符串，会完整覆盖旧值。 |
+
 ```uts
 import { updateFriends } from '@/uni_modules/unix-openim-sdk'
 
@@ -16,7 +25,9 @@ await updateFriends({
 })
 ```
 
-`friendUserIDs` 不能为空。`remark`、`isPinned` 和 `ex` 都是可选项；未提供表示保持原值。Promise 成功后，最终好友资料通过 `onFriendInfoChanged` 或重新查询好友列表确认。
+`friendUserIDs` 不能为空；除目标列表外，至少提供一个实际更新字段。不同好友需要不同值时应分别调用。`ex` 是完整字符串，不会自动合并 JSON 字段。
+
+Promise 成功表示更新请求完成，不等同于好友事件已经到达。最终资料通过 `onFriendInfoChanged` 按 `userID` 合并，完整监听见[分页获取好友列表](/sdk/uniapp/user/friends/get-friend-list-page)；必要时重新查询校准。
 
 商业版还提供 `updateFriend()` <span className="enterprise-field-badge">商业版</span>，参数为单个 `userID`，字段名使用 `pinned`：
 
@@ -26,4 +37,4 @@ import { updateFriend } from '@/uni_modules/unix-openim-sdk'
 await updateFriend({ userID: 'user_a', pinned: true, remark: '负责人' })
 ```
 
-不要同时对同一好友并发调用两个入口；选择一种并让好友 store 串行合并结果。
+`updateFriend()` 使用单个 `userID`，并把置顶字段命名为 `pinned`；其 `remark` 和 `ex` 仍是完整覆盖值。不要同时对同一好友并发调用两个入口；选择一种并让好友 store 串行合并结果。

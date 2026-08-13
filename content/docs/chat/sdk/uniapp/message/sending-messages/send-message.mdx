@@ -1,6 +1,6 @@
 ---
 title: 'Send a message'
-description: 'OpenIM uni-app / uni-app x SDK guide for Send a message.'
+description: 'Send a pending message object with the uni-app / uni-app x SDK.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
@@ -11,11 +11,31 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/sending-messages/send-message'
 ---
 
+`sendMessage()` sends an `OpenIMMessageItem` returned by a message creation API. For a one-to-one chat, set only `recvID`; for a group chat, set only `groupID`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `recvID` | `string` | Conditional | Recipient's user ID for a one-to-one chat. Pass an empty string for a group chat. |
+| `groupID` | `string` | Conditional | Target group ID for a group chat. Pass an empty string for a one-to-one chat. |
+| `message` | `OpenIMMessageItem` | Yes | Pending message object to send. |
+| `offlinePushInfo` | `OpenIMOfflinePush` | No | Offline push configuration. |
+| `isOnlineOnly` | `boolean` | No | Whether to deliver only to online clients. Online-only messages are not stored in local history. |
+
 ```uts
 import { sendMessage } from '@/uni_modules/unix-openim-sdk'
 
-const sent = await sendMessage({ message, recvID: 'user_b', groupID: '', isOnlineOnly: false })
-upsertMessage(sent.clientMsgID, sent)
+const sentMessage = await sendMessage({
+  recvID: receiverUserID,
+  groupID: '',
+  message,
+  isOnlineOnly: false,
+})
 ```
 
-Set `recvID` for direct chat or `groupID` for group chat and leave the other empty. The Promise resolves directly to `OpenIMMessageItem`. Preserve failed messages for retry under the same `clientMsgID` unless your product explicitly creates a new send.
+When the Promise resolves, the returned value is the server-confirmed `OpenIMMessageItem`; the native UTS API does not wrap it in `{ data }`. On the sending client, replace the local pending item by `clientMsgID` with the returned object. For common and content-specific fields, see [Message overview](/sdk/uniapp/message/overview-message).
+
+Other clients receive the message through new-message events. Promise completion, arrival of the receiving event, and reconciliation through a history query are separate stages. Keep a failed pending message under the same `clientMsgID` when offering a retry unless the product deliberately creates a new send.
+
+If the resource has already been uploaded by your application and stored in a URL-based message, use [`sendMessageNotOss()`](/sdk/uniapp/message/sending-messages/send-message-not-oss).

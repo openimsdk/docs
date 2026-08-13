@@ -6,6 +6,15 @@ sourcePath: '/sdk/uniapp/user/friend-applications/get-friend-application-list-as
 
 `getFriendApplicationListAsApplicant()` 查询当前账号发出的申请，返回 `OpenIMFriendApplicationListResult | null`。
 
+## 参数说明
+
+参数对象可以省略；显式分页时使用：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number \| null` | 否 | 分页偏移量，首页传 `0`。 |
+| `count` | `number \| null` | 否 | 本次请求的申请数量。 |
+
 ```uts
 import { getFriendApplicationListAsApplicant } from '@/uni_modules/unix-openim-sdk'
 
@@ -13,6 +22,6 @@ const result = await getFriendApplicationListAsApplicant({ offset: 0, count: 50 
 renderSentApplications(result?.applications ?? [])
 ```
 
-参数可以省略。分页结果可能在查询期间发生变化，应使用申请的用户标识和时间字段去重，而不是按数组下标更新。
+Promise 成功后，`applications` 是当前页已发出的 `OpenIMFriendApplicationItem[]`，字段含义见[获取收到的好友申请](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient)。该查询本身不会触发申请事件。
 
-申请状态变化事件统一在[查询收到的好友申请](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient)说明。App 恢复、重新登录或事件可能遗漏时，重新查询本列表。
+分页结果可能在查询期间发生变化。事件按 `fromUserID:toUserID` 合并，而不是按数组下标更新；分页期间收到变化时可以重置分页并重新查询。完整监听统一放在收到的申请页面。App 恢复、重新登录或事件可能遗漏时，重新建立本列表快照。

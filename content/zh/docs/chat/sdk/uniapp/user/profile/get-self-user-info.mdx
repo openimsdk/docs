@@ -1,20 +1,37 @@
 ---
-title: '查询自己的资料'
-description: '读取当前已登录用户的 OpenIM 资料。'
+title: '获取当前用户资料'
+description: '查询当前已登录用户的 OpenIM 资料快照。'
 sourcePath: '/sdk/uniapp/user/profile/get-self-user-info'
 ---
 
-`getSelfUserInfo()` 查询当前 SDK 登录账号的资料，返回 `OpenIMUserInfo | null`。调用前应确认 SDK 已登录且连接可用。
+完成初始化、登录并确认连接可用后，调用 `getSelfUserInfo()` 查询当前账号资料：
 
 ```uts
-import { getSelfUserInfo } from '@/uni_modules/unix-openim-sdk'
+import {
+  getSelfUserInfo,
+  type OpenIMUserInfo,
+} from '@/uni_modules/unix-openim-sdk'
 
-const self = await getSelfUserInfo()
-if (self != null) {
-  renderProfile(self.nickname, self.faceURL)
+const currentUser : OpenIMUserInfo | null = await getSelfUserInfo()
+if (currentUser != null) {
+  renderProfile(currentUser.nickname, currentUser.faceURL)
 }
 ```
 
-以返回的 `userID` 校验应用账号与 SDK 账号是否一致。`nickname`、`faceURL` 和 `ex` 属于公共字段；`attachedInfo` 与 `globalRecvMsgOpt` <span className="enterprise-field-badge">商业版</span> 为可选扩展，不应在公共环境中强制解包。
+## 返回结果
 
-资料变化由[修改自己的资料](/sdk/uniapp/user/profile/set-self-info)页面归属的 `onSelfInfoUpdated` 事件推送。重新登录或事件可能遗漏时，重新调用本方法建立快照。
+Promise 成功后直接返回 `OpenIMUserInfo | null`，没有 `{ data }` 包装。非空对象字段如下：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 当前登录用户的 OpenIMSDK 用户 ID，也是资料快照的稳定标识。 |
+| `nickname` | `string` | 账号级昵称。 |
+| `faceURL` | `string` | 账号级头像地址。 |
+| `createTime` | `number \| null`（可选） | 用户记录创建时间。 |
+| `globalRecvMsgOpt` <span className="enterprise-field-badge">商业版字段</span> | `number \| null`（可选） | 当前账号的全局消息接收方式；常量和语义见[设置全局消息接收方式](/sdk/uniapp/user/profile/set-global-message-reception)。 |
+| `attachedInfo` <span className="enterprise-field-badge">商业版字段</span> | `string \| null`（可选） | SDK 附加信息；只按已确认的业务约定解析。 |
+| `ex` | `string` | 由业务约定的账号级扩展字符串。 |
+
+以返回的 `userID` 校验应用账号与 SDK 当前账号是否一致。`null` 不应被伪造成空用户对象；应结合登录状态和错误日志判断当前是否没有可用快照。
+
+该查询只建立当前资料快照，不触发资料事件。切换账号时必须清理旧快照；资料更新后的 `onSelfInfoUpdated` 合并和重新查询方式见[更新当前用户资料](/sdk/uniapp/user/profile/set-self-info)。
