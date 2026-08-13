@@ -11,10 +11,20 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/managing-group-members/transfer-group-owner'
 ---
 
+Only the current owner can call `transferGroupOwner()`. `newOwnerUserID` must identify an existing member of the group.
+
+The operation receives `groupID` and `newOwnerUserID`. Validate both against the latest group/member snapshot and prevent a duplicate submission while transfer is in flight. Local role visibility is only a UI hint; OpenIMServer verifies ownership and target membership.
+
 ```uts
 import { transferGroupOwner } from '@/uni_modules/unix-openim-sdk'
 
 await transferGroupOwner({ groupID, newOwnerUserID: 'user_b' })
 ```
 
-Require explicit confirmation: ownership and moderator permissions change immediately according to server policy. Reload group/member role state after completion.
+## State after the call
+
+Promise success means that OpenIMServer completed the transfer: the previous owner becomes a regular member and the target obtains the owner role. `onGroupMemberInfoChanged` carries individual member records, so one transfer can produce changes for both users. Merge each by `groupID:userID`.
+
+Do not infer success from the number of events. Query the affected members again when the UI must confirm roles. If the old owner intends to leave, complete and verify the transfer first, then call `quitGroup()`. Dismissing the group affects every member and is not a substitute for ordinary transfer. Require explicit confirmation and explain the permission change.
+
+After transfer, recalculate every management action in the UI from the new member roles. Stop any old-owner-only mutation that was queued before the transfer, and revalidate the account and group before writing a late asynchronous result.

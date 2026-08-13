@@ -11,10 +11,22 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/group-applications/accept-group-application'
 ---
 
+`acceptGroupApplication()` lets an authorized group member accept one join application.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string` | Yes | Target group ID. |
+| `fromUserID` | `string` | Yes | Applicant user ID. |
+| `handleMsg` | `string` | Yes | Processing comment. It can be shown to the applicant, so do not include internal risk information. |
+
 ```uts
 import { acceptGroupApplication } from '@/uni_modules/unix-openim-sdk'
 
-await acceptGroupApplication({ groupID, fromUserID, handleMsg: 'Accepted' })
+await acceptGroupApplication({ groupID, fromUserID: 'user_b', handleMsg: 'Approved' })
 ```
 
-The server validates moderator authority and request state. Disable duplicate UI actions and confirm both request and member state from events or snapshots.
+Promise success means that the accept request completed, not that both the application and member events arrived. Refresh the application and member lists separately, or merge `onGroupApplicationAccepted` and `onGroupMemberAdded` by their respective keys.
+
+Lock this application while the request is in flight so accept and reject cannot race. The server validates permission, current application state, member limits, and duplicate membership. On failure, preserve the application and requery instead of changing local `handleResult`.

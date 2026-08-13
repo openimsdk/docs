@@ -11,10 +11,20 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/set-group-extension'
 ---
 
+Use `setGroupInfo()` to replace the group's `ex` string. Read and merge the current versioned schema before writing.
+
 ```uts
 import { setGroupInfo } from '@/uni_modules/unix-openim-sdk'
 
-await setGroupInfo({ groupID, ex: JSON.stringify({ department: 'R&D' }) })
+await setGroupInfo({
+  groupID,
+  ex: JSON.stringify({
+    ...previous,
+    projectID: 'project-42',
+  }),
+})
 ```
 
-`ex` is a whole-value replacement. Parse and merge the existing versioned schema, preserve unknown fields, and never place secrets in member-readable data.
+`ex` is a complete replacement. When several modules share it, use stable namespaces and preserve fields owned by the others. If parsing fails, keep the original value rather than overwriting it. Members allowed to read group profiles can see this data, so never store secrets.
+
+After Promise success, merge the latest group profile from `onGroupInfoChanged` by `groupID` or query it again.

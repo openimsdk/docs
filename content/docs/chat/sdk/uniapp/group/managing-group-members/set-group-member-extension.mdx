@@ -11,10 +11,20 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/managing-group-members/set-group-member-extension'
 ---
 
+`ex` is one complete string; the SDK does not merge JSON. Preserve other application modules' namespaces before writing.
+
 ```uts
 import { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'
 
-await setGroupMemberInfo({ groupID, userID: 'user_b', ex: JSON.stringify({ title: 'PM' }) })
+const previous = JSON.parse(member.ex || '{}')
+
+await setGroupMemberInfo({
+  groupID,
+  userID: 'user_b',
+  ex: JSON.stringify({ ...previous, title: 'maintainer' }),
+})
 ```
 
-`ex` replaces the whole value. Merge a versioned schema, preserve unknown fields, and store no secrets in member-visible data.
+Preserve unknown fields in a versioned schema and keep the original value when parsing fails. Users allowed to view member profiles can see the extension; store no tokens or secrets.
+
+After Promise success, merge `onGroupMemberInfoChanged` by `groupID:userID`.

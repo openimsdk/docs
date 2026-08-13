@@ -11,15 +11,50 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
 ---
 
+`getGroupMemberList()` reads members by filter and page. This page owns the added, deleted, and info-changed member events.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string` | Yes | Target group ID. |
+| `filter` | `number` | Yes | Server-defined member filter; do not use a UI index. |
+| `offset` | `number` | Yes | Offset; use `0` for the first page. |
+| `count` | `number` | Yes | Members requested in this page. |
+
 ```uts
 import { getGroupMemberList, off, onGroupMemberAdded, onGroupMemberDeleted, onGroupMemberInfoChanged } from '@/uni_modules/unix-openim-sdk'
 
-const added = onGroupMemberAdded(upsertMember)
-const deleted = onGroupMemberDeleted(removeMember)
-const changed = onGroupMemberInfoChanged(upsertMember)
+const added = onGroupMemberAdded((member) => upsertMember(member))
+const deleted = onGroupMemberDeleted((member) => removeMember(member.groupID, member.userID))
+const changed = onGroupMemberInfoChanged((member) => upsertMember(member))
 const result = await getGroupMemberList({ groupID, filter: 0, offset: 0, count: 100 })
 replaceMembers(result?.members ?? [])
 off(added); off(deleted); off(changed)
 ```
 
-Use exported filters, paginate, and merge by `(groupID,userID)`. Reload after role or synchronization changes.
+The Promise resolves directly to `OpenIMGroupMemberListResult` or `null`; `members` contains the current page. A `null` result is not the same as an empty member page. Preserve error/loading state for `null`, and interpret an empty array as a valid page with no members.
+
+### Group member fields
+
+| Field | Description |
+| --- | --- |
+| `groupID`, `userID` | Stable member identity, combined as `groupID:userID`. |
+| `nickname`, `faceURL` | In-group display profile. |
+| `roleLevel` | Owner, administrator, or regular-member role. |
+| `joinTime`, `joinSource`, `inviterUserID` | Join time, source, and inviter. |
+| `muteEndTime` | Mute end time; compare it with current time. |
+| `operatorUserID` | User that performed the latest relevant operation. |
+| `ex`, `attachedInfo` | Extension data; parse only a confirmed business contract. |
+
+Cache by `groupID:userID`. Do not overwrite in-group display data with account-level `getUsersInfo()` results, and do not reuse role or mute state across groups.
+
+Continue until a page is shorter than `count`. Joins, exits, removals, and role changes can move page boundaries, so merge events by key and rebuild from offset 0 when complete ordering matters.
+
+## Listen for member changes
+
+This page is the complete owner for the three member events. Add or replace by `groupID:userID`; delete the exact same key. Do not mutate an array position when pagination and events run concurrently.
+
+If deletion targets the current user, stop sending and refresh the joined-group list. Recompute permissions after role or mute changes. Release every handle on logout, account switch, or member-store destruction. Query Promise success establishes only a page snapshot and does not itself trigger member events.
+
+Inviting, removing, muting, or editing a member has three possible observations: the mutation Promise, the member event, and a reconciliation query. Treat them separately and never make a local object change stand in for server confirmation.

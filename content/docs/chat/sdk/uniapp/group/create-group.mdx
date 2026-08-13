@@ -11,10 +11,35 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/create-group'
 ---
 
+`createGroup()` creates a group with initial profile data and member lists.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo.groupName` | `string` | Yes | Group name. |
+| `groupInfo.groupType` | `2` | Yes | Group type supported by the current contract. |
+| `groupInfo.notification` | `string` or `null` | No | Initial announcement. |
+| `groupInfo.introduction` | `string` or `null` | No | Initial introduction. |
+| `groupInfo.faceURL` | `string` or `null` | No | Avatar URL. |
+| `groupInfo.ex` | `string` or `null` | No | Complete extension string. |
+| `memberUserIDs` | `string[]` | Yes | Initial regular members. |
+| `adminUserIDs` | `string[]` or `null` | No | Initial administrators. |
+
 ```uts
 import { createGroup } from '@/uni_modules/unix-openim-sdk'
 
-const result = await createGroup({ groupInfo: { groupName: 'Project' }, memberUserIDs: ['user_b'] })
+const group = await createGroup({
+  groupInfo: { groupName: 'Project group', groupType: 2 },
+  memberUserIDs: ['user_b', 'user_c'],
+  adminUserIDs: ['user_b'],
+})
 ```
 
-Use valid group type and member IDs, then merge the returned group/event by `groupID`. Creation is not proof that every optional invite succeeded; reload membership when needed.
+Remove blank and duplicate member IDs first. Administrators must also satisfy the server's membership and role rules; do not put the same user into conflicting role lists. `ex` is not merged as JSON by the SDK.
+
+## Return result
+
+The Promise resolves directly to `OpenIMGroupItem` or `null`. Merge a non-null result into the group store by `groupID`; do not create a local-only group for `null`.
+
+Promise success means that the creation request completed, not that every optional membership change has been observed. Reconcile the group list through `onJoinedGroupAdded` or a group query, and verify initial members and administrators through the member list.

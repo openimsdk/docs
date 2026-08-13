@@ -11,10 +11,43 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page'
 ---
 
+Use `getJoinedGroupListPage()` for accounts with many joined groups.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Offset; use `0` for the first page. |
+| `count` | `number` | Yes | Number of groups to read. |
+
 ```uts
 import { getJoinedGroupListPage } from '@/uni_modules/unix-openim-sdk'
 
 const result = await getJoinedGroupListPage({ offset: 0, count: 100 })
+appendGroups(result?.groups ?? [])
 ```
 
-Continue until a page returns fewer than `count` items. Group state may change during pagination, so deduplicate by `groupID` and merge events idempotently.
+## Return result
+
+The Promise resolves directly to `OpenIMGroupListResult` or `null`; `groups` contains the current page. Increase the offset until a page contains fewer than `count` items.
+
+### Group profile fields
+
+| Field | Description |
+| --- | --- |
+| `groupID` | Stable group identifier. |
+| `groupName`, `faceURL` | Group name and avatar snapshot. |
+| `notification`, `introduction` | Announcement and introduction. |
+| `ownerUserID`, `creatorUserID`, `createTime` | Owner, creator, and creation time. |
+| `memberCount`, `status`, `groupType` | Member-count, group-state, and type snapshot. |
+| `needVerification` | Join-verification policy. |
+| `lookMemberInfo`, `applyMemberFriend` | Member-profile and friend-application policy. |
+| `notificationUpdateTime`, `notificationUserID` | Latest announcement update metadata. |
+| `ex` | Application extension string. |
+| `attachedInfo` <span className="enterprise-field-badge">Commercial field</span> | Commercial attachment data; parse only a confirmed contract. |
+
+Member count and permission fields are snapshots and do not replace member pagination or server authorization. See [Group overview](/sdk/uniapp/group/overview-group) for events and the model.
+
+Group events can move page boundaries. Merge pages into a map keyed by `groupID`, rebuild from offset 0 after App restoration/synchronization or group add/delete events, and stop old-account page writes during account switching.
+
+Use the first page to replace the current account's group snapshot and later pages to merge by `groupID`. Do not retain old-account group objects after switching users. Group names and member counts can change while paging, so calculate visible ordering only after merging the latest snapshot and events.
