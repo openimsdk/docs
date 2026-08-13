@@ -1,0 +1,33 @@
+---
+title: '日志与诊断'
+description: '配置 SDK 日志、上传日志，并安全使用 operationID 关联问题。'
+sourcePath: '/sdk/uniapp/logger'
+---
+
+初始化时通过 `logLevel`、`isLogStandardOutput` 和可选 `logFilePath` 配置 SDK 日志。生产环境使用满足诊断需要的最低级别，并对 Token、用户隐私、消息内容和商业凭据脱敏。
+
+## 上传日志
+
+`uploadLogs()` 接收行数和扩展说明：
+
+```uts
+import { uploadLogs } from '@/uni_modules/unix-openim-sdk'
+
+const operationID = `diagnostic-${Date.now()}`
+await uploadLogs(
+  { line: 2000, ex: JSON.stringify({ scene: 'login-timeout' }) },
+  operationID,
+)
+```
+
+`operationID` 是可选诊断关联值。业务 API示例通常省略它；只有排查请求链路时为一次操作生成唯一值，并与服务端日志关联。它不是用户 ID、幂等键或认证凭据。
+
+上传进度由 `onUploadLogsProgress` 提供，完整订阅归[消息概览](/sdk/uniapp/message/overview-message)。Promise 成功表示上传请求完成，不代表问题已提交给支持团队。
+
+## 安全要求
+
+- 上传前取得用户同意，并说明日志范围与保留策略。
+- `ex` 只放脱敏场景信息，不写 Token、服务地址凭据或完整消息。
+- 控制 `line`，避免无界上传；失败时限次重试。
+- 生产包不要长期启用 verbose 标准输出。
+- 本地数据目录只用于诊断定位，不直接打包整个数据库上传。

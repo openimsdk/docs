@@ -1,0 +1,52 @@
+---
+title: '处理通话事件'
+description: '商业版统一接收邀请、接受、拒绝、取消、超时、挂断和房间事件。'
+sourcePath: '/sdk/uniapp/calling/managing-calls/handle-call-events'
+---
+
+所有事件返回 raw JSON 字符串。注册后立即 ACK，异步展示 UI；先校验 JSON，再映射到应用自己的通话领域模型。
+
+```uts
+import {
+  off,
+  onHangUp,
+  onInvitationCancelled,
+  onInvitationTimeout,
+  onInviteeAccepted,
+  onInviteeAcceptedByOtherDevice,
+  onInviteeRejected,
+  onInviteeRejectedByOtherDevice,
+  onReceiveNewInvitation,
+  onRoomParticipantConnected,
+  onRoomParticipantDisconnected,
+  onStreamChange,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+function handleCallPayload(payload : string) {
+  try {
+    const value = JSON.parseObject<UTSJSONObject>(payload)
+    if (value != null) routeValidatedCallEvent(value)
+  } catch (_) {
+    console.error('Invalid call event payload')
+  }
+}
+
+const invitationSubscription = onReceiveNewInvitation(handleCallPayload)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  invitationSubscription,
+  onInviteeAccepted(handleCallPayload),
+  onInviteeAcceptedByOtherDevice(handleCallPayload),
+  onInviteeRejected(handleCallPayload),
+  onInviteeRejectedByOtherDevice(handleCallPayload),
+  onInvitationCancelled(handleCallPayload),
+  onInvitationTimeout(handleCallPayload),
+  onHangUp(handleCallPayload),
+  onRoomParticipantConnected(handleCallPayload),
+  onRoomParticipantDisconnected(handleCallPayload),
+  onStreamChange(handleCallPayload),
+]
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+HarmonyOS 当前不支持 `onStreamChange`，注册会返回 unsupported subscription；其余信令事件支持。应用用 room/session ID 和运行 generation 去重，过期事件不能打开新页面。raw payload 与 RTC Token 不落日志。

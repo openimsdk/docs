@@ -1,0 +1,20 @@
+---
+title: '音视频信令概览'
+description: '商业版通话邀请、房间凭据、事件和 AV Runtime 的职责边界。'
+sourcePath: '/sdk/uniapp/calling/overview-calling'
+---
+
+本节全部能力属于<span className="enterprise-field-badge">商业版</span>，要求商业版 OpenIMServer 信令服务。`unix-openim-sdk` 负责邀请、接受、拒绝、取消、挂断、房间凭据和信令事件；它不提供通话 UI、摄像头或音频渲染。
+
+需要完整通话与会议 UI 时，另行集成 `openim-av-runtime`。AV Runtime 复用本插件的唯一登录态，通过类型化 Host RPC调用这些信令 API，不初始化第二套 OpenIM Core。
+
+典型流程：
+
+1. 应用登录 IM，并注册全部信令事件。
+2. 主叫构造 `OpenIMSignalingInvitationInfo` 后调用邀请。
+3. 被叫收到 raw 邀请事件，校验 JSON 并展示来电。
+4. 被叫申请媒体权限后再接受；拒绝则直接发送 reject。
+5. 双方使用返回的 room/token/liveURL 建立媒体连接。
+6. 取消、超时、挂断和多设备事件驱动统一 session 状态机。
+
+同一账号/运行时只维护一个活动通话或会议。Token、liveURL 和 raw 信令 payload 不写日志或持久化。

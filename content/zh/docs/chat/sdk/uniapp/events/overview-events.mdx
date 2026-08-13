@@ -1,0 +1,38 @@
+---
+title: '事件概览'
+description: '管理 OpenIMSDKEventSubscription、off/offAll 与同步生命周期事件。'
+sourcePath: '/sdk/uniapp/events/overview-events'
+---
+
+每个 `on...()` 调用同步返回独立 `OpenIMSDKEventSubscription`，其中包含 `id` 与 `eventName`。正常清理使用 `off(subscription)`；不要继续使用旧版“监听函数直接返回取消闭包”的写法。
+
+```uts
+import {
+  off,
+  onSyncServerFailed,
+  onSyncServerFinish,
+  onSyncServerProgress,
+  onSyncServerStart,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const startSubscription = onSyncServerStart((reinstalled) => beginSyncUI(reinstalled))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  startSubscription,
+  onSyncServerProgress((progress) => updateSyncProgress(progress)),
+  onSyncServerFinish((reinstalled) => finishSyncUI(reinstalled)),
+  onSyncServerFailed((reinstalled) => failSyncUI(reinstalled)),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+同步事件的 boolean 表示合同定义的重装/同步上下文，不应当作“成功”布尔值；成功与失败由事件名区分。进度值用于展示，不承诺每个整数都到达。
+
+`offAll(eventName)` 会删除指定事件名的全部处理器，只适合应用整体重置或受控测试。组件、页面和功能模块不得用它清理自己的单个监听，以免影响其他消费者。
+
+## HarmonyOS unsupported 事件
+
+HarmonyOS 当前有十个事件不受原生 HAR 支持：四个 migration 事件、三个消息 extensions 事件、`onMessageKvInfoChanged`、`onStreamChange`，以及合同中登记的 badge/消息扩展事件。注册这些事件只返回 unsupported subscription，不会伪造成功回调。具体商业事件页面会再次标注。
+
+事件处理器应快速返回，把耗时工作排入应用队列。账号切换和 dispose 时先停止接收业务写入，再逐个释放旧句柄。
