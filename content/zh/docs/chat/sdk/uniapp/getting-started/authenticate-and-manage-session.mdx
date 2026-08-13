@@ -1,0 +1,100 @@
+---
+title: '认证与管理登录会话'
+description: '登录 OpenIM、处理连接与 Token 事件、查询登录状态并安全退出。'
+sourcePath: '/sdk/uniapp/getting-started/authenticate-and-manage-session'
+---
+
+完成 `initSDK()` 后，先注册连接与账号事件，再调用 `login(userID, token)`。Promise 成功表示登录请求完成；依赖长连接的查询和发送应等待 `onConnectSuccess`。
+
+## 注册登录事件
+
+每次 `on...` 调用都返回独立的 `OpenIMSDKEventSubscription`。保存全部句柄，并在账号或应用作用域结束时逐个释放。
+
+```uts
+import {
+  off,
+  onConnectFailed,
+  onConnectSuccess,
+  onConnecting,
+  onKickedOffline,
+  onUserTokenExpired,
+  onUserTokenInvalid,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const connectSubscription = onConnectSuccess(() => {
+  console.log('OpenIM connected')
+})
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  connectSubscription,
+  onConnecting(() => console.log('OpenIM connecting')),
+  onConnectFailed((error) => console.error(error.errCode, error.errMsg)),
+  onKickedOffline(() => clearCurrentAccount()),
+  onUserTokenExpired(() => requestFreshToken()),
+  onUserTokenInvalid((error) => console.error(error.errCode, error.errMsg)),
+]
+
+function releaseSessionSubscriptions() {
+  subscriptions.forEach((subscription) => off(subscription))
+  subscriptions.length = 0
+}
+```
+
+`onKickedOffline` 到达时，SDK 已进入下线流程。业务应清空旧账号界面与缓存引用，并引导重新认证，不要再并发调用一次 `logout()`。
+
+## 登录
+
+```uts
+import { login } from '@/uni_modules/unix-openim-sdk'
+
+await login(userID, token)
+```
+
+`login` 的真实签名是 `login(userID, token)`，不是对象参数。Token 必须来自可信后端，并且与 `userID` 对应。不要仅凭 Promise 成功就立即发送消息；应让连接事件驱动 ready 状态。
+
+## 查询当前状态
+
+```uts
+import {
+  OpenIMLoginStatusLogged,
+  getLoginStatus,
+  getLoginUserID,
+} from '@/uni_modules/unix-openim-sdk'
+
+const status = await getLoginStatus()
+if (status == OpenIMLoginStatusLogged) {
+  const currentUserID = await getLoginUserID()
+  restoreAccountState(currentUserID)
+}
+```
+
+`getLoginStatus()` 返回 `OpenIMLoginStatusLogout`、`OpenIMLoginStatusLogging` 或 `OpenIMLoginStatusLogged`。登录状态与网络连接状态不同：已登录账号在短暂断网时仍可能处于 Logged 状态。
+
+## 上报前后台与网络变化
+
+```uts
+import {
+  networkStatusChanged,
+  setAppBackgroundStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+await setAppBackgroundStatus(true)  // 进入后台
+await setAppBackgroundStatus(false) // 回到前台
+await networkStatusChanged()        // 网络恢复或网络类型变化
+```
+
+把这些调用接到 App 级生命周期，避免多个页面重复上报。它们不会创建新会话，也不能替代登录或 Token 更新。
+
+## 主动退出与切换账号
+
+```uts
+import { logout } from '@/uni_modules/unix-openim-sdk'
+
+await logout()
+releaseSessionSubscriptions()
+clearCurrentAccount()
+```
+
+切换账号时必须等待旧账号退出和状态清理完成，再注册新账号作用域的事件并登录。不要让两个账号的登录、退出或查询并发执行。
+
+商业版可以不重新登录而更新 Token，并通过合成 session 快照校验 epoch，见[更新 Token 与观察 SDK session](/sdk/uniapp/getting-started/update-token-and-observe-sdk-session)。

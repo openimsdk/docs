@@ -1,0 +1,53 @@
+---
+title: 'Send your first message'
+description: 'Create and send a text message in a uni-app or uni-app x App.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'draft'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/send-first-message'
+---
+
+Use this flow to verify installation, initialization, login, and messaging. Production applications should keep SDK lifetime in an application service.
+
+Register `onConnectSuccess` before login and release its handle when the application scope ends:
+
+```uts
+import { off, onConnectSuccess } from '@/uni_modules/unix-openim-sdk'
+
+const connection = onConnectSuccess(() => markOpenIMReady())
+off(connection)
+```
+
+For a direct message, set `recvID` and leave `groupID` empty. For a group message, leave `recvID` empty and set a group ID joined by the current user.
+
+```uts
+import { createTextMessage, sendMessage } from '@/uni_modules/unix-openim-sdk'
+
+const message = await createTextMessage('Hello, OpenIMSDK')
+if (message == null) throw new Error('Failed to create text message')
+
+const sentMessage = await sendMessage({
+  message,
+  recvID: 'user_b',
+  groupID: '',
+})
+appendOutgoingMessage(sentMessage)
+```
+
+`createTextMessage()` creates a local message object; it does not send. `sendMessage()` resolves directly to the final `OpenIMMessageItem`, without a `{ data }` wrapper. Merge outgoing state by `clientMsgID`, and deduplicate incoming events by the same identifier.
+
+For a group:
+
+```uts
+const sentGroupMessage = await sendMessage({
+  message,
+  recvID: '',
+  groupID: 'group_123',
+})
+```
+
+Verify with two accounts on independent clients: the sender receives a non-empty `clientMsgID`, the receiver obtains the new-message event, both clients can reload the message from history, and no old-account state changes after logout.

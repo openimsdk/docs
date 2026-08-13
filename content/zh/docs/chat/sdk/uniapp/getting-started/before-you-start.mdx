@@ -1,0 +1,46 @@
+---
+title: '开始之前'
+description: '准备 OpenIMServer、用户 Token、UTS 插件和目标平台原生构建环境。'
+sourcePath: '/sdk/uniapp/getting-started/before-you-start'
+---
+
+接入前先确定目标是 uni-app 还是 uni-app x App，并准备与 `unix-openim-sdk 0.2.0-rc.3` 兼容的 OpenIMServer、用户与原生构建环境。Web、H5 和小程序不能使用本 UTS 原生插件。
+
+## 准备服务与账号
+
+客户端初始化需要以下信息：
+
+| 数据 | 来源 | 要求 |
+| --- | --- | --- |
+| `apiAddr` | OpenIMServer HTTP API | 设备可访问的完整地址 |
+| `wsAddr` | OpenIMServer WebSocket | 设备可建立长连接的完整地址 |
+| `userID` | 业务后端的账号映射 | 与 Token 对应且在服务端存在 |
+| Token | 可信业务后端 | 只授予当前用户，不在客户端生成 |
+
+业务后端应先验证自己的登录态，再为该业务账号返回 OpenIM 用户与 Token。App 不应持有管理员 Token 或服务端 secret。公共版客户端连接公共 OpenIMServer；使用信令、session 或其他商业能力时，应连接已部署相应服务的商业版环境。
+
+真机测试时，`apiAddr` 和 `wsAddr` 不能使用开发机的 `localhost`。还要确认设备与服务端网络互通、TLS 证书有效、反向代理允许 WebSocket 升级。
+
+## 准备插件与构建环境
+
+把插件安装在项目的 `uni_modules/unix-openim-sdk`。使用 HBuilderX/uni-app `5.23` 系列，并按目标平台准备：
+
+- Android：API 21+、JDK 与 Android SDK，构建产物需包含插件声明的 AAR/Maven 依赖和目标 ABI。
+- iOS：iOS 14+、匹配的 Xcode/CocoaPods，构建产物需正确链接并嵌入 XCFramework。
+- HarmonyOS：仅 uni-app x 商业版，API 24；使用与插件合同一致的 HAR。
+
+标准基座不包含这些原生依赖。开发阶段应打包含插件的自定义基座，或使用项目提供的本地 Android/iOS 原生构建流程。不要把公共与商业原生制品混装在同一个插件目录中。
+
+## 选择平台标识
+
+初始化使用插件导出的常量，不直接写数字：Android 使用 `OpenIMPlatformAndroid`，iPhone 使用 `OpenIMPlatformIOS`，HarmonyOS 使用 `OpenIMPlatformHarmony`。`systemType` 是当前系统说明字符串，例如 `android`、`ios` 或 `harmony`，不可省略。
+
+## 发布前检查
+
+- 在真实目标设备上完成初始化、登录、普通消息收发与退出。
+- 验证 App 前后台、网络断开恢复、Token 失效和被踢下线。
+- Android 检查重复 class/JNI 与 ABI；iOS 检查签名、embed、隐私清单和真机链接。
+- 商业版额外验证信令与对应服务，不要用公共服务端结果判断商业 API。
+- 日志、截图和自动化证据中不得包含 Token、secret 或完整私聊内容。
+
+准备完成后，先阅读[安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)，再进入[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。

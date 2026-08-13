@@ -1,0 +1,54 @@
+---
+title: 'Integrate by host and platform'
+description: 'Understand the runtime and build boundaries for uni-app, uni-app x, Android, iOS, and HarmonyOS.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'draft'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/environment-specific-implementation'
+---
+
+`unix-openim-sdk` exposes the same business functions to uni-app and uni-app x. Differences are limited mainly to language types, page lifecycle, and native build integration. Always import from the same flat plugin root.
+
+| Host | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | API 21+ | iOS 14+ | Not currently declared |
+| uni-app x | API 21+ | iOS 14+ | Commercial API 24 |
+| H5 / Web / mini apps | Not supported | Not supported | Not supported |
+
+## uni-app
+
+JavaScript does not provide UTS static type checking, but Promise values and subscription-handle semantics are identical. Keep SDK lifetime in an application service rather than reinitializing it from pages.
+
+```javascript
+import { getLoginStatus, off, onConnectSuccess } from '@/uni_modules/unix-openim-sdk'
+
+const connection = onConnectSuccess(() => console.log('OpenIM connected'))
+const status = await getLoginStatus()
+off(connection)
+```
+
+## uni-app x
+
+Import public UTS types instead of copying interfaces that can drift:
+
+```uts
+import { getLoginStatus, type OpenIMLoginStatus } from '@/uni_modules/unix-openim-sdk'
+
+const status : OpenIMLoginStatus = await getLoginStatus()
+```
+
+For commercial raw signaling JSON, validate the string and required fields before mapping an `UTSJSONObject` to your own domain type.
+
+## Native platform boundaries
+
+Android and iOS support public and commercial interfaces, but the plugin must be included in a custom base or local native project. The host App declares permissions, notifications, and background capabilities; the SDK does not request camera, microphone, photo, or notification access for your product.
+
+File APIs require a readable absolute native path. Resolve `unifile://` through a uni API first. Do not pass a network URL, transient URL, or virtual sandbox path directly to OpenIM Core.
+
+HarmonyOS is declared only for uni-app x commercial edition. `updateFcmToken`, `updateToken`, `translateText`, and `translateMessage` return `platform-unsupported`. Ten unavailable events return unsupported subscriptions and never synthesize success; see [Event overview](/sdk/uniapp/events/overview-events).
+
+Initialize Core once per application. Pages own and release only their listeners. Account switching must finish old-account logout and cleanup before the new login; call `unInitSDK()` only during complete SDK teardown.

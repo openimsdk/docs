@@ -1,29 +1,68 @@
 ---
-title: 'OpenIM uni-app SDK 概览'
-description: 'OpenIM uni-app SDK 入口，用于 App、H5 和支持的小程序目标。'
+title: 'OpenIM uni-app / uni-app x SDK 概览'
+description: '在 uni-app 与 uni-app x 的 Android、iOS 和商业版 HarmonyOS App 中接入 unix-openim-sdk。'
 sourcePath: '/sdk/uniapp/overview'
 ---
 
-## 概览
+OpenIM `unix-openim-sdk` 是 UTS 原生插件，为 uni-app 和 uni-app x 的 App 端提供用户、好友、会话、群组、消息、事件与本地数据库能力。插件在宿主进程中持有唯一的 OpenIM Core；业务代码直接从 `@/uni_modules/unix-openim-sdk` 导入函数，不创建 SDK 实例。
 
-当你希望在一个 uni-app 工程中覆盖 App、H5 以及支持的小程序目标时，可以从 uni-app SDK 开始。接入时应保持认证、用户身份、消息创建、会话状态和事件处理模型与其他 OpenIMClientSDK 一致。
+## 支持范围
 
-## 适用范围
+| 宿主 | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | 支持，API 21+ | 支持，iOS 14+ | 暂不宣称支持 |
+| uni-app x | 支持，API 21+ | 支持，iOS 14+ | 商业版支持，API 24 |
+| Web / 小程序 | 不支持 | 不支持 | 不支持 |
 
-- App 和 H5 构建应使用与你部署的 OpenIMServer 版本匹配的 SDK 包和运行时适配方式。
-- 小程序目标需要额外确认本地存储、网络请求、文件上传和 WebSocket 行为。
-- token 必须由可信后端签发，不应在客户端包内生成或写死用户 token。
+接入和本地编译使用 HBuilderX/uni-app `5.23` 系列。Android、iOS 需要包含插件原生依赖的自定义基座或本地原生工程，标准基座不能加载这些原生制品。
 
-## 核心接入路径
+## 公共版与商业版
 
-1. 安装与你的 OpenIMServer 版本匹配的 SDK 包。
-2. 使用 `apiAddr`、`wsAddr`、当前 `userID` 和后端签发的 token 初始化客户端。
-3. 在调用 `login()` 前注册连接事件和消息事件。
-4. 发送第一条文本消息，并在另一个已登录客户端确认收到消息。
-5. 再补充文件消息、推送通知和后台生命周期等平台差异处理。
+同一套文档覆盖公共能力和商业版扩展。标有“商业版”的 API、事件或字段需要商业版 `unix-openim-sdk` 与匹配的 OpenIMServer；没有徽标的能力属于公共接口。商业版归属与平台支持是两个维度：公共 API 也可能在某个平台返回 `platform-unsupported`，页面会单独列出。
 
-## 相关 SDK
+商业版增加信令、SDK session 快照、翻译和部分消息/会话扩展。`onSDKSessionChanged` 是插件层根据初始化、登录、退出、Token 与账号变化合成的事件，不是 OpenIM Core 原生事件。
 
-- [WASM SDK](/sdk/wasm/overview)：查看浏览器和 WebAssembly 方向的核心 API 示例。
-- [Flutter SDK](/sdk/flutter/overview)：适合用 Flutter 覆盖移动端和桌面端。
-- [React Native SDK](/sdk/react-native/overview)：适合 React Native 应用。
+## 接入顺序
+
+1. 安装 `unix-openim-sdk`，为目标平台准备自定义基座或本地原生工程。
+2. 调用 `initSDK()`，配置 `apiAddr`、`wsAddr`、平台、日志和 `systemType`。
+3. 保存连接、消息和业务事件返回的订阅句柄。
+4. 从可信后端取得当前用户的 `userID` 与 Token，再调用 `login(userID, token)`。
+5. 等待 `onConnectSuccess` 后查询快照数据，并用事件增量更新应用状态。
+6. 用户退出时先 `logout()`，再通过 `off(subscription)` 清理监听；只有不再使用 SDK 时才调用 `unInitSDK()`。
+
+## 调用模型
+
+Promise 成功直接返回业务值，不使用 Web SDK 的 `{ data }` 包装。事件注册同步返回 `OpenIMSDKEventSubscription`，取消时必须传回同一句柄：
+
+```uts
+import {
+  off,
+  onRecvNewMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const messageSubscription = onRecvNewMessage((message) => {
+  console.log(message.clientMsgID)
+})
+
+// 页面或账号作用域结束时清理。
+off(messageSubscription)
+```
+
+不要使用 `offAll()` 代替正常的局部清理。它会移除当前插件实例中的全部监听，只适合应用整体销毁或可控的测试重置。
+
+## 安全边界
+
+- Token 必须由可信后端签发，不要把管理员 Token、secret 或固定用户 Token 写入 App。
+- `apiAddr` 与 `wsAddr` 必须从设备真实可访问；真机不能把 `localhost` 当作开发机。
+- SDK 的数据库目录和文件由插件管理，不要直接修改内部数据库。
+- 日志和错误上报应脱敏，避免记录 Token、完整消息内容与商业业务凭据。
+- AV Runtime 是独立 UTS 插件；它复用本插件的唯一登录态，但不属于本 SDK 的公共 IM API。
+
+## 下一步
+
+- [开始之前](/sdk/uniapp/getting-started/before-you-start)
+- [安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)
+- [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [发送第一条消息](/sdk/uniapp/getting-started/send-first-message)
+- [事件概览](/sdk/uniapp/events/overview-events)

@@ -1,0 +1,62 @@
+---
+title: '更新 Token 与观察 SDK session'
+description: '商业版更新登录 Token，并通过合成 session 快照防止账号与异步请求串线。'
+sourcePath: '/sdk/uniapp/getting-started/update-token-and-observe-sdk-session'
+---
+
+本页能力属于<span className="enterprise-field-badge">商业版</span>。它用于宿主与 AV Runtime 等插件共享唯一 OpenIM Core 时，读取当前登录快照、更新 Token，并在账号或 SDK 生命周期变化时取消旧请求。
+
+`onSDKSessionChanged` 是 `unix-openim-sdk` 的插件层合成事件，不是 OpenIM Core 原生 listener。Android、iOS 与 HarmonyOS 都由统一 session tracker 生成该事件。
+
+## 读取 session 快照
+
+```uts
+import {
+  getSDKSessionSnapshot,
+  type OpenIMSDKSessionSnapshot,
+} from '@/uni_modules/unix-openim-sdk'
+
+const snapshot : OpenIMSDKSessionSnapshot = await getSDKSessionSnapshot()
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `loginStatus` | `OpenIMLoginStatus` | 当前登录状态。 |
+| `userID` | `string \| null` | 当前 SDK 用户；未登录时为 `null`。 |
+| `sdkSessionEpoch` | `number` | session 世代。生命周期或账号成功变化后递增。 |
+| `sdkVersion` | `string` | 当前插件所连接 Core 的版本。 |
+
+快照不包含 IM Token、API 地址或 WebSocket 地址。异步流程开始时保存 `userID` 与 `sdkSessionEpoch`，完成前再次读取并比较；不一致时丢弃旧结果，不要写入新账号状态。
+
+## 订阅 session 变化
+
+```uts
+import {
+  off,
+  onSDKSessionChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const sessionSubscription = onSDKSessionChanged((snapshot) => {
+  cancelRequestsFromOlderEpoch(snapshot.sdkSessionEpoch)
+  replaceActiveSdkUser(snapshot.userID)
+})
+
+// 应用或依赖插件销毁时执行。
+off(sessionSubscription)
+```
+
+初始化、登录、退出、反初始化、被踢下线、Token 无效或过期，以及当前用户变化，都可能推动 epoch。处理器必须幂等，不能在事件中记录 Token 或反复触发并行登录。
+
+## 热更新 Token
+
+```uts
+import { updateToken } from '@/uni_modules/unix-openim-sdk'
+
+await updateToken({ token: freshToken })
+```
+
+Token 由可信后端签发。`updateToken()` 只在 Android 和 iOS 可用；HarmonyOS 当前稳定返回 `platform-unsupported`，应按产品策略重新登录或等待后续平台实现。更新成功后继续以 session 事件和连接状态判断当前会话，不要把 Promise 成功等同于所有网络请求都已恢复。
+
+## 与其他插件协作
+
+AV Runtime 等依赖插件应在初始化前后各读取一次快照，确认用户与 epoch 未变化；dispose 时只取消自己的订阅和请求，不调用 IM SDK 的 `logout()` 或 `unInitSDK()`。用户切换时先销毁依赖插件，再退出并登录新账号。

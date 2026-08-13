@@ -1,0 +1,83 @@
+---
+title: 'Authenticate and manage a session'
+description: 'Log in, observe connection and token events, inspect login state, and log out safely.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'draft'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/authenticate-and-manage-session'
+---
+
+After `initSDK()`, register account and connection events before calling `login(userID, token)`. Login Promise completion does not imply that the persistent connection is ready; wait for `onConnectSuccess` before network-dependent queries and sends.
+
+```uts
+import {
+  off,
+  onConnectFailed,
+  onConnectSuccess,
+  onConnecting,
+  onKickedOffline,
+  onUserTokenExpired,
+  onUserTokenInvalid,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  onConnectSuccess(() => console.log('OpenIM connected')),
+  onConnecting(() => console.log('OpenIM connecting')),
+  onConnectFailed((error) => console.error(error.errCode, error.errMsg)),
+  onKickedOffline(() => clearCurrentAccount()),
+  onUserTokenExpired(() => requestFreshToken()),
+  onUserTokenInvalid((error) => console.error(error.errCode, error.errMsg)),
+]
+
+function releaseSessionSubscriptions() {
+  subscriptions.forEach((subscription) => off(subscription))
+  subscriptions.length = 0
+}
+```
+
+When `onKickedOffline` arrives, Core is already transitioning offline. Clear references to the old account and start reauthentication; do not race it with `logout()`.
+
+```uts
+import { login } from '@/uni_modules/unix-openim-sdk'
+
+await login(userID, token)
+```
+
+The signature is `login(userID, token, operationID?)`, not an object parameter. Obtain a token matching `userID` from a trusted backend.
+
+```uts
+import { OpenIMLoginStatusLogged, getLoginStatus, getLoginUserID } from '@/uni_modules/unix-openim-sdk'
+
+const status = await getLoginStatus()
+if (status == OpenIMLoginStatusLogged) {
+  const currentUserID = await getLoginUserID()
+  restoreAccountState(currentUserID)
+}
+```
+
+Login state and network connectivity are different: a briefly disconnected account may remain logged in.
+
+Report application lifecycle and network transitions once from an application service:
+
+```uts
+import { networkStatusChanged, setAppBackgroundStatus } from '@/uni_modules/unix-openim-sdk'
+
+await setAppBackgroundStatus(true)
+await setAppBackgroundStatus(false)
+await networkStatusChanged()
+```
+
+To sign out, wait for `logout()`, release account-scoped subscriptions, and clear state. Finish this sequence before logging in another account.
+
+```uts
+import { logout } from '@/uni_modules/unix-openim-sdk'
+
+await logout()
+releaseSessionSubscriptions()
+clearCurrentAccount()
+```

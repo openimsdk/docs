@@ -1,36 +1,65 @@
 ---
-title: 'OpenIM SDK for uni-app'
-description: 'OpenIM uni-app SDK entry point for App, H5, and supported mini-app targets.'
+title: 'OpenIM SDK for uni-app / uni-app x'
+description: 'Integrate unix-openim-sdk into Android, iOS, and commercial HarmonyOS Apps built with uni-app or uni-app x.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'overview'
 status: 'draft'
-lastUpdated: '2026-06-30'
+lastUpdated: '2026-08-13'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/overview'
 ---
 
-## Overview
+OpenIM `unix-openim-sdk` is a native UTS plugin that provides user, friend, conversation, group, message, event, and local-database capabilities to uni-app and uni-app x Apps. The plugin owns the only OpenIM Core in the host process. Import flat functions from `@/uni_modules/unix-openim-sdk`; do not create an SDK instance.
 
-Use the uni-app SDK when the same OpenIM integration needs to cover App, H5, and supported mini-app targets from a uni-app codebase. The integration should keep authentication, user identity, message creation, conversation state, and event handling aligned with the rest of the OpenIM SDK family.
+## Supported environments
 
-## Platform scope
+| Host | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | Supported, API 21+ | Supported, iOS 14+ | Not currently declared |
+| uni-app x | Supported, API 21+ | Supported, iOS 14+ | Commercial, API 24 |
+| Web / mini apps | Not supported | Not supported | Not supported |
 
-- App and H5 builds should use the SDK package and runtime adapter recommended by the OpenIM release you deploy.
-- Mini-app targets need additional validation for storage, network, file upload, and websocket behavior.
-- Tokens should still be issued by a trusted backend. Do not generate or hard-code user tokens in the client bundle.
+Use the HBuilderX/uni-app `5.23` series. Android and iOS require a custom base or local native project containing the plugin's native dependencies; the standard base cannot load them.
 
-## Core integration path
+## Public and commercial capabilities
 
-1. Install the SDK package that matches your OpenIM Server version.
-2. Initialize the client with `apiAddr`, `wsAddr`, the current `userID`, and a backend-issued token.
-3. Register connection and message events before calling `login()`.
-4. Send the first text message, then validate message receipt in another signed-in client.
-5. Add platform-specific handling for file messages, push notifications, and background lifecycle.
+This documentation covers both public capabilities and commercial extensions. APIs, events, and fields carrying a **Commercial** badge require the commercial `unix-openim-sdk` and a matching OpenIMServer deployment. Edition and platform support are separate: a public API can still return `platform-unsupported` on a particular platform.
 
-## Related SDKs
+Commercial extensions include signaling, SDK session snapshots, translation, and selected message or conversation features. `onSDKSessionChanged` is synthesized by the plugin from initialization, login, logout, token, and account transitions. It is not a native OpenIM Core event.
 
-- [WASM SDK](/sdk/wasm/overview) for browser and WebAssembly-oriented API examples.
-- [Flutter SDK](/sdk/flutter/overview) when mobile and desktop should be handled through Flutter.
-- [React Native SDK](/sdk/react-native/overview) when the app is built with React Native.
+## Integration sequence
+
+1. Install `unix-openim-sdk` and prepare a custom base or local native project.
+2. Call `initSDK()` with `apiAddr`, `wsAddr`, platform, logging, and `systemType`.
+3. Save the subscription handles returned by connection, message, and business event listeners.
+4. Obtain the current user's `userID` and token from a trusted backend, then call `login(userID, token)`.
+5. Wait for `onConnectSuccess`, load snapshots, and apply subsequent events incrementally.
+6. On sign-out, call `logout()` and release listeners with `off(subscription)`. Call `unInitSDK()` only when the App no longer uses the SDK.
+
+## Invocation model
+
+Promises resolve directly to business values; there is no Web SDK `{ data }` wrapper. Event registration synchronously returns an `OpenIMSDKEventSubscription`:
+
+```uts
+import { off, onRecvNewMessage } from '@/uni_modules/unix-openim-sdk'
+
+const messageSubscription = onRecvNewMessage((message) => {
+  console.log(message.clientMsgID)
+})
+
+off(messageSubscription)
+```
+
+Do not use `offAll()` for normal scoped cleanup. It removes every listener owned by the plugin instance and is intended only for full App teardown or controlled test reset.
+
+## Security boundaries
+
+- Obtain user tokens from a trusted backend. Never embed administrator tokens, secrets, or fixed user tokens in the App.
+- Physical devices must use reachable `apiAddr` and `wsAddr` values; `localhost` points to the device itself.
+- Do not open, move, or modify the SDK-managed database directly.
+- Redact tokens, full private-message bodies, and commercial credentials from logs and reports.
+- AV Runtime is a separate UTS plugin. It reuses this plugin's single login session but is not part of the public IM API.
+
+Continue with [Before you start](/sdk/uniapp/getting-started/before-you-start), [Install, initialize, and inspect the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk), and [Event overview](/sdk/uniapp/events/overview-events).

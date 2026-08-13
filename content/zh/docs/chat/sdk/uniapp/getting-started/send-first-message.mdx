@@ -1,0 +1,81 @@
+---
+title: '发送第一条消息'
+description: '在 uni-app / uni-app x App 中创建文本消息并验证单聊或群聊发送链路。'
+sourcePath: '/sdk/uniapp/getting-started/send-first-message'
+---
+
+本页把安装、初始化、登录和消息发送串成最小验证链路。正式项目应把 SDK 生命周期放在应用级 service，并按照各功能页拆分状态管理。
+
+## 1. 初始化并登录
+
+先按[安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)初始化，再从可信后端取得 `userID` 和 Token。登录前注册连接事件，连接成功后才允许发送。
+
+```uts
+import {
+  off,
+  onConnectSuccess,
+} from '@/uni_modules/unix-openim-sdk'
+
+const connectSubscription = onConnectSuccess(() => {
+  markOpenIMReady()
+})
+
+// 应用作用域结束时释放。
+off(connectSubscription)
+```
+
+完整登录和事件清理见[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。
+
+## 2. 准备目标
+
+| 场景 | `recvID` | `groupID` |
+| --- | --- | --- |
+| 单聊 | 已存在的接收用户 ID | 空字符串 |
+| 群聊 | 空字符串 | 当前用户已加入的群 ID |
+
+目标用户或群组必须在服务端存在。是否允许发送还会受到好友、群成员、禁言和服务端策略影响。
+
+## 3. 创建并发送文本消息
+
+```uts
+import {
+  createTextMessage,
+  sendMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const message = await createTextMessage('你好，OpenIMSDK')
+if (message == null) {
+  throw new Error('Failed to create text message')
+}
+
+const sentMessage = await sendMessage({
+  message,
+  recvID: 'user_b',
+  groupID: '',
+})
+
+appendOutgoingMessage(sentMessage)
+```
+
+`createTextMessage()` 只创建本地消息对象，不会发送。`sendMessage()` 成功后直接返回最终 `OpenIMMessageItem`，不需要读取 `{ data }`。发送端按 `clientMsgID` 合并返回值；接收端通过新消息事件按同一标识去重。
+
+群聊只需把 `recvID` 改为空字符串，并填入 `groupID`：
+
+```uts
+const sentGroupMessage = await sendMessage({
+  message,
+  recvID: '',
+  groupID: 'group_123',
+})
+```
+
+## 4. 双端验证
+
+用两个不同账号和两个独立客户端验证：
+
+1. A 端发送后获得非空 `clientMsgID`，消息状态进入发送成功。
+2. B 端收到新消息事件，并能解析到相同业务内容。
+3. A、B 重新进入会话后，都能从历史消息中读取该消息。
+4. 退出 SDK 后普通事件不再写入旧账号状态。
+
+下一步阅读[发送消息](/sdk/uniapp/message/sending-messages/send-message)、[接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)和[加载历史消息](/sdk/uniapp/message/retrieving-messages/load-older-messages)。

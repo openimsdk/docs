@@ -1,0 +1,37 @@
+---
+title: 'Handle App lifecycle and device state'
+description: 'Report lifecycle and network changes, update badges, and register an FCM token.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'draft'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state'
+---
+
+An application service should own lifecycle reporting. Use `setAppBackgroundStatus()` and `networkStatusChanged()` as described in the authentication guide; do not report the same transition from multiple pages.
+
+```uts
+import { setAppBadge } from '@/uni_modules/unix-openim-sdk'
+
+await setAppBadge(totalUnreadCount)
+```
+
+`setAppBadge()` synchronizes the current total unread count with the SDK/platform layer. Continue to maintain application UI from unread events. Resolving the Promise does not guarantee that every device configuration displays a launcher badge. Pass `0` to clear it.
+
+```uts
+import { updateFcmToken } from '@/uni_modules/unix-openim-sdk'
+
+await updateFcmToken({
+  fcmToken: deviceFcmToken,
+  expireTime: tokenExpireUnixSeconds,
+})
+```
+
+`fcmToken` is the token issued to this device; `expireTime` is the protocol-defined Unix expiry in seconds. Call this only after acquiring or refreshing a valid device token. Never log it or substitute an IM token.
+
+HarmonyOS currently returns `platform-unsupported` for `updateFcmToken`. This is a platform capability gap, not a commercial-authentication failure; integrate the Harmony push channel in the host application.
+
+A recommended sequence is: initialize; subscribe and log in; register the device token; apply unread events and `setAppBadge()`; report foreground/background and network transitions; then clear badge/push association and account subscriptions on logout. Push notifications do not replace SDK message events or history synchronization.
