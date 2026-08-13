@@ -1,0 +1,36 @@
+---
+title: '消息概览'
+description: '理解消息创建、发送、接收、历史、状态和进度事件。'
+sourcePath: '/sdk/uniapp/message/overview-message'
+---
+
+OpenIM 消息以 `clientMsgID` 作为客户端稳定标识，服务端消息还包含 `serverMsgID`、会话路由、发送者、时间、内容类型与具体 elem。应用应使用 `conversationID:clientMsgID` 组合键幂等合并发送结果、实时事件和历史列表。
+
+创建消息只生成 `OpenIMMessageItem`，不会发送；随后调用 `sendMessage()` 指定 `recvID` 或 `groupID`。接收方通过消息事件获得增量，首次进入和翻页通过历史 API建立快照。
+
+本页归属发送、文件上传和日志上传进度事件：
+
+```uts
+import {
+  off,
+  onSendMessageProgress,
+  onUploadFileProgress,
+  onUploadLogsProgress,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const sendProgressSubscription = onSendMessageProgress((event) => {
+  updateMessageProgress(event.clientMsgID, event.progress)
+})
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  sendProgressSubscription,
+  onUploadFileProgress((event) => updateCurrentUpload(event.progress)),
+  onUploadLogsProgress((event) => updateLogUpload(event.progress)),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+进度可能重复、跳跃或在最终 Promise 前后到达；只做单调展示，最终成功/失败以 API 结果为准。
+
+文件消息的本地完整路径必须能被原生层读取。`unifile://` 先转为真实沙盒路径；网络 URL 使用对应 by-URL 创建入口。

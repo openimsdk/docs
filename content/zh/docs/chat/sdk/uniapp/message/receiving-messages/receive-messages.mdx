@@ -1,0 +1,32 @@
+---
+title: '接收消息'
+description: '订阅单条、批量、离线和只在线消息事件。'
+sourcePath: '/sdk/uniapp/message/receiving-messages/receive-messages'
+---
+
+不同平台或恢复路径可能使用单条或批量事件。为保证完整性，同时订阅五个入口，并按 `conversationID:clientMsgID` 去重。
+
+```uts
+import {
+  off,
+  onRecvNewMessage,
+  onRecvNewMessages,
+  onRecvOfflineNewMessage,
+  onRecvOfflineNewMessages,
+  onRecvOnlineOnlyMessage,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const newMessageSubscription = onRecvNewMessage((message) => mergeMessage(message))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  newMessageSubscription,
+  onRecvOfflineNewMessage((message) => mergeMessage(message)),
+  onRecvOnlineOnlyMessage((message) => mergeOnlineOnlyMessage(message)),
+  onRecvNewMessages((result) => result.messages.forEach(mergeMessage)),
+  onRecvOfflineNewMessages((result) => result.messages.forEach(mergeMessage)),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+只在线消息按产品语义展示，不假定可从历史恢复。事件只提供增量；首次进入、断线恢复和向上翻页仍查询历史。不要在多个页面重复注册同一组全局消息事件，推荐由消息 store 统一持有。
