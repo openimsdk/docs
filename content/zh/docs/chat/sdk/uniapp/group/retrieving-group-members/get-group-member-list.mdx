@@ -1,0 +1,64 @@
+---
+title: '查询群成员列表'
+description: '分页查询群成员，并处理成员新增、删除和资料变化事件。'
+sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
+---
+
+`getGroupMemberList()` 按过滤条件分页读取成员。本页归属三个成员事件。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string` | 是 | 目标群 ID。 |
+| `filter` | `number` | 是 | 服务端定义的成员过滤值；不要用 UI 下标替代。 |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次读取成员数量。 |
+
+```uts
+import {
+  getGroupMemberList,
+  off,
+  onGroupMemberAdded,
+  onGroupMemberDeleted,
+  onGroupMemberInfoChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const addedSubscription = onGroupMemberAdded((member) => upsertMember(member))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onGroupMemberDeleted((member) => removeMember(member.groupID, member.userID)),
+  onGroupMemberInfoChanged((member) => upsertMember(member)),
+]
+
+const result = await getGroupMemberList({ groupID, filter: 0, offset: 0, count: 100 })
+replaceMembers(result?.members ?? [])
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+Promise 成功直接返回 `OpenIMGroupMemberListResult | null`，从 `members` 读取当前页。
+
+### 群成员字段
+
+| 字段 | 说明 |
+| --- | --- |
+| `groupID`、`userID` | 成员稳定标识，组合为 `groupID:userID`。 |
+| `nickname`、`faceURL` | 群内成员展示资料。 |
+| `roleLevel` | 群主、管理员或普通成员角色值。 |
+| `joinTime`、`joinSource`、`inviterUserID` | 入群时间、来源和邀请人。 |
+| `muteEndTime` | 禁言结束时间；结合当前时间判断是否仍在禁言。 |
+| `operatorUserID` | 最近相关操作人。 |
+| `ex`、`attachedInfo` | 扩展信息，只按业务约定解析。 |
+
+群内昵称与用户账号昵称可以不同。成员列表使用成员对象展示，不要用 `getUsersInfo()` 返回的账号资料覆盖 `nickname`。角色和禁言状态也只属于该群，不能跨群复用。
+
+分页时继续增加 offset，直到返回数量少于 count。成员加入、退出、被移除或角色变化会改变分页边界；事件到达时按主键合并，并在需要完整顺序时从 offset 0 重新查询。
+
+## 监听成员变化
+
+本页是 `onGroupMemberAdded`、`onGroupMemberDeleted` 和 `onGroupMemberInfoChanged` 的完整监听归属页。按 `groupID:userID` 新增、删除或替换；分页与事件并发时不要按数组位置更新。
+
+成员变化可能影响权限、成员数和当前聊天页。删除事件若指向当前用户，应停止发送并刷新群列表；角色或禁言变化应重新计算可用操作。退出登录、切换账号或销毁成员 store 时逐个释放订阅句柄。
+
+查询 Promise 成功只建立当前页快照，不触发成员事件。邀请、移除和资料修改操作则分别等待 Promise、成员事件或重新查询，不能把本地对象修改当作服务端确认。

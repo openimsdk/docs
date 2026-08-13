@@ -1,0 +1,54 @@
+---
+title: '分页查询已加入群组'
+description: '按 offset 和 count 分页读取已加入群组。'
+sourcePath: '/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page'
+---
+
+`getJoinedGroupListPage()` 适合群数量较大的账号。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次读取的群数量。 |
+
+```uts
+import { getJoinedGroupListPage } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getJoinedGroupListPage({ offset: 0, count: 100 })
+appendGroups(result?.groups ?? [])
+```
+
+## 返回结果
+
+Promise 成功直接返回 `OpenIMGroupListResult | null`，从 `groups` 读取当前页 `OpenIMGroupItem[]`。`offset` 从 0 开始，直到返回数量小于 `count`。
+
+### 群资料字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 群稳定标识。 |
+| `groupName` | `string` | 群名称。 |
+| `notification` | `string` | 群公告。 |
+| `introduction` | `string` | 群简介。 |
+| `faceURL` | `string` | 群头像地址。 |
+| `ownerUserID` | `string` | 当前群主用户 ID。 |
+| `creatorUserID` | `string` | 群创建人用户 ID。 |
+| `createTime` | `number` | 群创建时间。 |
+| `memberCount` | `number` | 当前成员数快照。 |
+| `status` | `number` | 群状态。 |
+| `groupType` | `number` | 群类型。 |
+| `needVerification` | `number` | 入群验证策略。 |
+| `lookMemberInfo` | `number` | 普通成员查看成员资料的策略。 |
+| `applyMemberFriend` | `number` | 群成员之间申请好友的策略。 |
+| `notificationUpdateTime` | `number` | 群公告更新时间。 |
+| `notificationUserID` | `string` | 最近更新群公告的用户 ID。 |
+| `ex` | `string` | 群扩展字符串。 |
+| `attachedInfo` <span className="enterprise-field-badge">商业版</span> | `string` | 商业附加信息，只按已确认协议解析。 |
+
+`memberCount` 和权限字段都是查询时快照，不能替代成员分页或服务端权限校验。完整模型与事件见[群组概览](/sdk/uniapp/group/overview-group)。
+
+分页期间群事件可能改变列表，应先把结果写入以 `groupID` 为键的映射，再计算排序；不要依赖页内位置。App 恢复、同步完成或群新增/删除事件到达后，可从 offset 0 重建快照。
+
+第一页应替换当前账号快照，后续页按 `groupID` 合并。切换账号时停止旧分页结果写入并清空群 store，避免把旧账号群列表追加到新账号。

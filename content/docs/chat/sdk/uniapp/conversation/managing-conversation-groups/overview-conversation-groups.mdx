@@ -1,0 +1,90 @@
+---
+title: 'Conversation group overview'
+description: 'OpenIM uni-app / uni-app x SDK guide for Conversation group overview.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+Conversation groups are <span className="enterprise-field-badge">Commercial</span>. They organize conversations into custom groups with a name, order, hidden state, unread snapshot, and member conversation IDs.
+
+## Group types
+
+Creation uses `OpenIMConversationGroupType`; queries use `OpenIMConversationGroupQueryType`. They belong to different operation contracts. Do not pass a UI tab index directly as either SDK type.
+
+One conversation can belong to several groups. Groups organize conversation entry points; they do not copy or move message data. Deleting a group or removing membership does not delete the underlying conversation.
+
+## Group data
+
+Every `OpenIMConversationGroupItem` field is optional:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationGroupID` | `string` or `null` | Stable group identifier. Cache only after validating it. |
+| `name` | `string` or `null` | Group name. |
+| `order` | `number` or `null` | Sort value. |
+| `ex` | `string` or `null` | Application extension; parse only a confirmed format. |
+| `conversationGroupType` | `number` or `null` | Group type. |
+| `hidden` | `boolean` or `null` | Whether the group is hidden. |
+| `unreadCount` | `number` or `null` | Group-level unread snapshot. |
+| `conversationIDs` | `string[]` or `null` | Member IDs included in this response; it might not be a complete paginated set. |
+
+Use a non-empty `conversationGroupID` as the index key. Names, order, and hidden state can change. Query [group information with conversations](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) when complete membership, conversation objects, and total count are needed.
+
+## Available operations
+
+| Task | Page |
+| --- | --- |
+| Create a group and optionally add one initial conversation | [Create a conversation group](/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group) |
+| Query groups | [Get conversation groups](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups) |
+| Query group metadata, members, and total count | [Get a group with its conversations](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) |
+| Query all groups containing one conversation | [Get groups for a conversation](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-by-conversation-id) |
+| Add or remove membership | [Add conversations to groups](/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups), [Remove conversations from groups](/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups) |
+| Update name, extension, or hidden state | [Update a conversation group](/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group) |
+| Change group ordering | [Set conversation-group order](/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order) |
+| Delete a group | [Delete a conversation group](/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group) |
+
+Query a snapshot when the page opens. After a mutation Promise succeeds, continue to wait for an event or requery. When raw event fields are not frozen, never replace a query result with guessed local state.
+
+## Listen for group changes
+
+The five group events return opaque JSON strings rather than typed objects:
+
+```uts
+import {
+  off,
+  onConversationGroupAdded,
+  onConversationGroupChanged,
+  onConversationGroupDeleted,
+  onConversationGroupMemberAdded,
+  onConversationGroupMemberDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+function refreshFromRawGroupEvent(payload : string) {
+  try {
+    const value = JSON.parseObject<UTSJSONObject>(payload)
+    if (value != null) refreshConversationGroups()
+  } catch (_) {
+    console.error('Invalid conversation group event payload')
+  }
+}
+
+const addedSubscription = onConversationGroupAdded(refreshFromRawGroupEvent)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onConversationGroupChanged(refreshFromRawGroupEvent),
+  onConversationGroupDeleted(refreshFromRawGroupEvent),
+  onConversationGroupMemberAdded(refreshFromRawGroupEvent),
+  onConversationGroupMemberDeleted(refreshFromRawGroupEvent),
+]
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+The added, changed, and deleted events describe group objects; the member-added and member-deleted events describe membership. Because the raw payload has no frozen DTO, validate only that it is valid JSON and then requery the related snapshot.
+
+Do not depend on unfrozen fields after JSON validation. Handlers should return quickly and isolate refresh tasks by the current logged-in user. Stop old-account writes before releasing each handle on account switch or dispose. Never log a complete payload because `ex` and other fields can contain application data.

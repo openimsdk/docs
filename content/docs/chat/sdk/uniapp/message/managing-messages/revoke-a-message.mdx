@@ -1,0 +1,55 @@
+---
+title: 'Revoke a message'
+description: 'OpenIM uni-app / uni-app x SDK guide for Revoke a message.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/managing-messages/revoke-a-message'
+---
+
+Use `revokeMessage()` when other conversation members should see a revoked-message state. Normal deletion only changes current-account visibility.
+
+To edit sent content instead, see [Modify a message](/sdk/uniapp/message/managing-messages/modify-a-message). Do not substitute deletion for revocation because the recipient-visible semantics differ.
+
+## Revoke one message
+
+```uts
+import { off, onNewRecvMessageRevoked, revokeMessage } from '@/uni_modules/unix-openim-sdk'
+
+const revokedSubscription = onNewRecvMessageRevoked((info) => {
+  if (info != null) markMessageRevoked(info.clientMsgID, info)
+})
+await revokeMessage({ conversationID, clientMsgID })
+
+function removeRevokeListener() {
+  off(revokedSubscription)
+}
+```
+
+After Promise success, the caller can mark the matching local message as revoked. Online clients receive `onNewRecvMessageRevoked` and should update the bubble rather than deleting the array entry. The server enforces sender, time-window, and message-type rules.
+
+If the call fails, do not leave a fabricated revoked placeholder. Promise success means only that the current request completed, not that every client interface has processed its event.
+
+## Return result
+
+`revokeMessage()` resolves to a string result, not a message object. Continue using the requested `clientMsgID` locally and reconcile other clients through the event.
+
+The event may arrive before the Promise resolves. Treat both paths as updates to the same stable message state instead of appending a second row.
+
+## Listen for revocation events
+
+This page owns `onNewRecvMessageRevoked`. Its value is `OpenIMMessageRevokedItem | null`; merge by `clientMsgID`. `isAdminRevoke` can select an administrator-specific notice. Event and Promise order is not guaranteed, so processing must be idempotent. Remove the listener on component disposal, logout, or account change.
+
+After a new login, revocation changes are synchronized through message events. Do not retain a subscription from the previous account or infer revocation completion from a history request callback.
+
+## Related pages
+
+- [Delete saved messages](/sdk/uniapp/message/managing-messages/delete-saved-messages)
+- [Modify a message](/sdk/uniapp/message/managing-messages/modify-a-message)
+- [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages)
+- [Send a message](/sdk/uniapp/message/sending-messages/send-message)
+- [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)

@@ -1,0 +1,28 @@
+---
+title: 'Report typing status'
+description: 'OpenIM uni-app / uni-app x SDK guide for Report typing status.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/composing-messages/update-typing-status'
+---
+
+Pass `focus: true` when the user starts typing. Pass `false` after sending, when the input loses focus, when switching conversations, or when typing stops. Typing state belongs to `conversationID`; it neither saves a draft nor writes a message.
+
+```uts
+import { changeInputStates, off, onConversationUserInputStatusChanged } from '@/uni_modules/unix-openim-sdk'
+
+const typingSubscription = onConversationUserInputStatusChanged((status) => {
+  updateConversationInputStatus(status)
+})
+await changeInputStates({ conversationID, userID: peerUserID, focus: true })
+off(typingSubscription)
+```
+
+Report `true` when the input gains focus and `false` on blur or page exit, and throttle high-frequency changes. Commercial compatibility method `typingStatusUpdate()` <span className="enterprise-field-badge">Commercial</span> uses `recvID` and `msgTip`; do not call both routes for one typing flow. Expire stale indicators locally.
+
+Deduplicate state changes instead of reporting every keyboard event. Promise completion only means the request was accepted; it does not mean a remote interface has already updated. This page is the sole owner of `onConversationUserInputStatusChanged`. Replace the current `platformIDs` snapshot by `conversationID:userID`, and call `off(typingSubscription)` when the component, login, or account scope ends.

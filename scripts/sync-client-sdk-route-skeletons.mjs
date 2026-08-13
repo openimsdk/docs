@@ -52,20 +52,50 @@ const conversationGroupTitles = {
     'conversation/managing-conversation-groups/delete-conversation-group':
       'deleteConversationGroup',
   },
+  uniapp: {
+    'conversation/managing-conversation-groups/get-conversation-group-by-conversation-id':
+      'getConversationGroupByConversationID',
+  },
 };
 
+const uniappBaselineSuffixes = new Map([
+  ['message/creating-messages/create-image-message-from-full-path', 'message/creating-messages/create-image-message-by-file'],
+  ['message/creating-messages/create-sound-message-from-full-path', 'message/creating-messages/create-sound-message-by-file'],
+  ['message/creating-messages/create-video-message-from-full-path', 'message/creating-messages/create-video-message-by-file'],
+  ['message/creating-messages/create-file-message-from-full-path', 'message/creating-messages/create-file-message-by-file'],
+  ['conversation/managing-conversation-groups/get-conversation-group-by-conversation-id', 'conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id'],
+  ['group/group-applications/observe-group-application-badge-count', 'group/group-applications/get-group-application-badge-count'],
+]);
+
+const uniappExtensionTitles = new Map([
+  ['getting-started/install-initialize-and-inspect-sdk', 'Install, initialize, and inspect the SDK'],
+  ['getting-started/handle-app-lifecycle-and-device-state', 'Handle App lifecycle and device state'],
+  ['getting-started/update-token-and-observe-sdk-session', 'Update tokens and observe SDK sessions'],
+  ['group/check-full-sync-state', 'Check group full-sync state'],
+  ['message/composing-messages/translate-text-and-messages', 'Translate text and messages'],
+  ['events/handle-data-migration-events', 'Handle data migration events'],
+]);
+
+function platformName(platformId) {
+  if (platformId === 'ios') return 'iOS';
+  if (platformId === 'uniapp') return 'uni-app / uni-app x';
+  return 'Flutter';
+}
+
 export function resolveClientSdkRouteTitle({ platformId, suffix, baselineTitle }) {
-  if (suffix === 'overview')
-    return `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`;
+  if (suffix === 'overview') return `OpenIM SDK for ${platformName(platformId)}`;
+  if (platformId === 'uniapp' && uniappExtensionTitles.has(suffix)) {
+    return uniappExtensionTitles.get(suffix);
+  }
   return conversationGroupTitles[platformId]?.[suffix] ?? baselineTitle;
 }
 
 export function buildClientSdkSkeleton({ path, platformId, title }) {
-  const platformName = platformId === 'ios' ? 'iOS' : 'Flutter';
+  const displayName = platformName(platformId);
   const template = path === `/sdk/${platformId}/overview` ? 'overview' : 'guide';
   return `---
 title: '${escapeSingleQuote(title)}'
-description: 'OpenIM ${platformName} SDK guide for ${escapeSingleQuote(title)}.'
+description: 'OpenIM ${displayName} SDK guide for ${escapeSingleQuote(title)}.'
 product: 'sdk'
 context: 'chat/sdk/${platformId}'
 template: '${template}'
@@ -79,7 +109,7 @@ generatedBy: 'sync-client-sdk-route-skeletons'
 
 ## Overview
 
-The English version of this OpenIM ${platformName} SDK guide is deferred until the reviewed Chinese documentation is complete.
+The English version of this OpenIM ${displayName} SDK guide is deferred until the reviewed Chinese documentation is complete.
 `;
 }
 
@@ -87,8 +117,8 @@ export function isGeneratedClientSdkSkeleton(source) {
   return (
     /generatedBy:\s*['"]sync-client-sdk-route-skeletons['"]/.test(source) ||
     (/status:\s*['"]draft['"]/.test(source) &&
-      /context:\s*['"]chat\/sdk\/(?:ios|flutter)['"]/.test(source) &&
-      /The English version of this OpenIM (?:iOS|Flutter) SDK guide is deferred/.test(source))
+      /context:\s*['"]chat\/sdk\/(?:ios|flutter|uniapp)['"]/.test(source) &&
+      /The English version of this OpenIM (?:iOS|Flutter|uni-app \/ uni-app x) SDK guide is deferred/.test(source))
   );
 }
 
@@ -101,16 +131,19 @@ export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) 
   );
   return getClientSdkSidebarPaths(sidebar).map((path) => {
     const suffix = path.replace(`/sdk/${platformId}/`, '');
-    const baseline = wasmBySuffix.get(suffix);
+    const baseline = wasmBySuffix.get(
+      platformId === 'uniapp' ? (uniappBaselineSuffixes.get(suffix) ?? suffix) : suffix,
+    );
     const existing = routeByPath.get(path);
-    if (!baseline && !existing)
+    const extensionTitle = platformId === 'uniapp' ? uniappExtensionTitles.get(suffix) : undefined;
+    if (!baseline && !existing && !extensionTitle)
       throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     return {
       path,
       title: resolveClientSdkRouteTitle({
         platformId,
         suffix,
-        baselineTitle: existing?.title ?? baseline.title,
+        baselineTitle: existing?.title ?? baseline?.title ?? extensionTitle,
       }),
     };
   });
@@ -125,7 +158,7 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
   const otherRoutes = routes.filter((route) => route.contextKey !== platform.contextKey);
   const baseId = Math.max(...otherRoutes.map((route) => route.id)) + 1;
   const baseSourceIndex = Math.max(...otherRoutes.map((route) => route.sourceIndex)) + 1;
-  const contextTitle = `SDKs · ${platformId === 'ios' ? 'iOS' : 'Flutter'} · v4`;
+  const contextTitle = `SDKs · ${platformName(platformId)} · v4`;
   const wasmBySuffix = new Map(
     routes
       .filter((route) => route.contextKey === 'chat/sdk/wasm')
@@ -134,23 +167,29 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
   const existingByPath = new Map(current.map((route) => [route.path, route]));
   const nativeRoutes = getClientSdkSidebarPaths(sidebar).map((path, index) => {
     const suffix = path.replace(`${platform.routePrefix}/`, '');
-    const baseline = wasmBySuffix.get(suffix);
+    const baseline = wasmBySuffix.get(
+      platformId === 'uniapp' ? (uniappBaselineSuffixes.get(suffix) ?? suffix) : suffix,
+    );
     const template = baseline ?? existingByPath.get(path);
-    if (!template)
+    const extensionTitle = platformId === 'uniapp' ? uniappExtensionTitles.get(suffix) : undefined;
+    const fallbackTemplate = routes.find(
+      (route) => route.contextKey === 'chat/sdk/wasm' && route.template === 'guide',
+    );
+    if (!template && !extensionTitle)
       throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     const title = resolveClientSdkRouteTitle({
       platformId,
       suffix,
-      baselineTitle: template.title,
+      baselineTitle: template?.title ?? extensionTitle,
     });
     return {
-      ...template,
+      ...(template ?? fallbackTemplate),
       id: baseId + index,
       path,
       relativePath: `sdk/${platformId}/${suffix}`,
       sourcePath: path,
       title,
-      description: `OpenIM ${platformId === 'ios' ? 'iOS' : 'Flutter'} SDK guide for ${title}.`,
+      description: `OpenIM ${platformName(platformId)} SDK guide for ${title}.`,
       platform: platformId,
       contextKey: platform.contextKey,
       contextTitle,
@@ -165,10 +204,32 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
   return withoutPlatform;
 }
 
+export function replaceClientSdkStructureRecords({ platformId, routes, structure }) {
+  const platform = getClientSdkPlatform(platformId);
+  const current = structure.filter((record) => record.context === platform.contextKey);
+  if (current.length === 0)
+    throw new Error(`[${platformId}] cannot locate the existing structure range`);
+  const replacement = routes
+    .filter((route) => route.contextKey === platform.contextKey)
+    .map((route) => ({
+      sourcePath: route.sourcePath,
+      openimPath: route.path,
+      title: route.title,
+      context: route.contextKey,
+      template: route.template,
+      contentFile: route.contentFile,
+    }));
+  const firstIndex = structure.findIndex((record) => record.context === platform.contextKey);
+  const withoutPlatform = structure.filter((record) => record.context !== platform.contextKey);
+  withoutPlatform.splice(firstIndex, 0, ...replacement);
+  return withoutPlatform;
+}
+
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
   const platformIds = requested.length > 0 ? requested : ['ios', 'flutter'];
   let routes = await readJson('src/generated/routes.json');
+  let structure = await readJson('data/structure/chat-pages.json');
 
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);
@@ -213,12 +274,20 @@ async function main() {
       `Synchronized ${platformId} English route skeletons (${skeletonRoutes.length} active, ${staleRemoved} stale removed, ${manualPreserved} manual preserved).`,
     );
     routes = replaceClientSdkRouteRecords({ platformId, sidebar, routes });
+    structure = replaceClientSdkStructureRecords({ platformId, routes, structure });
   }
-  await writeFile(
-    resolve(root, 'src/generated/routes.json'),
-    `${JSON.stringify(routes, null, 2)}\n`,
-    'utf8',
-  );
+  await Promise.all([
+    writeFile(
+      resolve(root, 'src/generated/routes.json'),
+      `${JSON.stringify(routes, null, 2)}\n`,
+      'utf8',
+    ),
+    writeFile(
+      resolve(root, 'data/structure/chat-pages.json'),
+      `${JSON.stringify(structure, null, 2)}\n`,
+      'utf8',
+    ),
+  ]);
 }
 
 async function listMdxFiles(directory) {

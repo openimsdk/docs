@@ -1,0 +1,119 @@
+---
+title: '接收消息'
+description: '订阅单条、批量、离线和只在线消息事件。'
+sourcePath: '/sdk/uniapp/message/receiving-messages/receive-messages'
+---
+
+消息页通常同时处理实时新消息、应用进入后台后到达的离线消息、只在线投递的消息，以及首次进入会话时主动读取的历史消息。事件提供增量，历史 API 按 `conversationID` 建立快照。
+
+不同 Core 版本或恢复路径可能使用单条或批量事件。为保证完整性，可以同时订阅五个入口，但必须按 `conversationID:clientMsgID` 去重。在组件卸载、退出登录或切换账号前使用订阅句柄调用 `off()`，避免同一批消息被重复合并。
+
+## 消息类型
+
+每条 `OpenIMMessageItem` 根据 `contentType` 和对应 elem 选择渲染方式：文本读取 `textElem`，@ 文本读取 `atTextElem`，自定义消息读取 `customElem`，图片、音频、视频和文件分别读取对应媒体 elem。未知类型应显示降级内容，而不是执行未校验的 `content`。
+
+```uts
+function renderMessage(message : OpenIMMessageItem) {
+  if (message.textElem != null) return renderTextMessage(message)
+  if (message.atTextElem != null) return renderMentionMessage(message)
+  if (message.customElem != null) return renderCustomMessage(message)
+  if (
+    message.pictureElem != null ||
+    message.soundElem != null ||
+    message.videoElem != null ||
+    message.fileElem != null
+  ) {
+    return renderFileLikeMessage(message)
+  }
+  return renderUnsupportedMessage(message)
+}
+```
+
+消息事件可能包含当前用户没有打开的会话。`OpenIMMessageItem` 不直接提供 `conversationID`；应根据 `sessionType`、`sendID`、`recvID` 和 `groupID` 计算或查询目标会话，再按 `clientMsgID` 去重。
+
+```uts
+function mergeMessage(message : OpenIMMessageItem) {
+  const targetConversationID = getConversationIDForMessage(message)
+  if (targetConversationID.length == 0) return
+  mergeMessageByClientMsgID(targetConversationID, message)
+}
+```
+
+### 图片、音频、视频和文件消息
+
+接收端无需重新上传文件，只需读取消息中已有的资源地址、大小、名称、时长或快照图并展示。如果产品一次发送多个文件，通常连续发送多条文件消息，或用一条经过版本校验的自定义消息承载文件组；每条消息仍以 `clientMsgID` 作为稳定标识。
+
+## 事件处理器
+
+```uts
+import {
+  off,
+  onRecvNewMessage,
+  onRecvNewMessages,
+  onRecvOfflineNewMessage,
+  onRecvOfflineNewMessages,
+  onRecvOnlineOnlyMessage,
+  type OpenIMMessageItem,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const newMessageSubscription = onRecvNewMessage((message) => {
+  if (message != null) mergeMessage(message)
+})
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  newMessageSubscription,
+  onRecvOfflineNewMessage((message) => {
+    if (message != null) mergeMessage(message)
+  }),
+  onRecvOnlineOnlyMessage((message) => {
+    if (message != null) mergeOnlineOnlyMessage(message)
+  }),
+  onRecvNewMessages((result) => {
+    if (result != null) result.messages.forEach(mergeMessage)
+  }),
+  onRecvOfflineNewMessages((result) => {
+    if (result != null) result.messages.forEach(mergeMessage)
+  }),
+]
+
+function removeMessageListeners() {
+  subscriptions.forEach((subscription) => off(subscription))
+}
+```
+
+`onRecvNewMessages` 和 `onRecvOfflineNewMessages` 返回 `OpenIMMessageListResult | null`，其中 `messages` 是数组；三个单条事件返回 `OpenIMMessageItem | null`。单数和复数入口可能描述同一消息，所以不能按事件次数插入。
+
+调用 `setAppBackgroundStatus(true)` 后到达的消息通常走离线入口；回到前台时再设置为 `false`。离线消息与实时消息复用同一个合并函数，筛选当前会话、按 `clientMsgID` 去重并保持时间顺序。
+
+只在线消息由发送方设置 `isOnlineOnly: true`。它不会进入 SDK 本地消息存储，也不能通过历史接口回放，通常只适合临时提示或业务通知；是否加入当前界面由产品规则决定，不应把它当作可靠聊天记录。
+
+本页是五个接收事件的完整归属页。先根据消息路由字段确定会话，再用“目标会话 + `clientMsgID`”幂等合并。不要在多个页面重复注册同一组全局事件，推荐由消息 store 统一持有；状态层销毁时调用 `removeMessageListeners()`。
+
+撤回消息通过 `onNewRecvMessageRevoked` 更新为撤回态，处理见[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)。
+
+## 首次进入会话时读取历史
+
+事件只负责新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史快照，参数和返回结构见[加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)。历史结果和事件可能包含同一条消息，两条路径必须使用相同的去重规则。
+
+如果事件注册在全局消息状态层，不要在每次进入同一个聊天页面时重复注册。需要显示当前会话历史时，只读取该会话的边界快照；重新登录后的消息变化由新的登录作用域事件同步，不要把事件到达视为某次历史查询的完成回调。
+
+## 将群聊会话标记为已读
+
+用户进入群聊并看到最新消息后，可以清理会话未读数。这个操作不等同于群消息成员级已读回执，调用方式见[标记会话已读](/zh/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)。会话列表和总未读角标分别由会话域事件最终同步。
+
+## 验证接收流程
+
+- 用另一个已登录账号向目标会话发送消息，确认前台入口收到且列表只渲染一次。
+- 设置后台状态后再次发送，确认离线入口合并；回到前台后恢复状态。
+- 发送只在线消息，确认它不会进入本地历史。
+- 撤回一条消息，确认对应 `clientMsgID` 更新为撤回态。
+- 标记会话已读，确认会话未读数和总角标随事件更新。
+
+测试单条和批量入口时，只断言每个 `clientMsgID` 最终出现一次，不应要求固定使用某一个入口。后台恢复测试还应确认前后台状态调用成对执行，退出账号后旧订阅不再改变新账号状态。
+
+## 相关页面
+
+- [消息概览](/zh/sdk/uniapp/message/overview-message)
+- [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)
+- [加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)
+- [标记会话已读](/zh/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)

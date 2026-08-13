@@ -1,0 +1,70 @@
+---
+title: '发送自定义信令'
+description: '商业版向房间发送业务自定义信令，并安全解析接收事件。'
+sourcePath: '/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal'
+---
+
+`signalingSendCustomSignaling()` 用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。
+
+## 发送信令
+
+`customInfo` 是字符串。需要传递结构化数据时，先定义稳定的数据格式并序列化为 JSON。
+
+```uts
+import {
+  off,
+  onReceiveCustomSignal,
+  onReceiveCustomSignaling,
+  signalingSendCustomSignaling,
+} from '@/uni_modules/unix-openim-sdk'
+
+const signal = {
+  version: 1,
+  eventID: createBusinessEventID(),
+  type: 'hand-raised',
+  userID: currentUserID,
+  sentAt: Date.now(),
+}
+
+await signalingSendCustomSignaling({
+  roomID,
+  customInfo: JSON.stringify(signal),
+})
+```
+
+Promise 成功表示 OpenIMServer 已接受本次发送，不等于其他参与者已经处理该数据。`customInfo` 应保持精简，并包含协议版本和业务幂等 ID。大文件、聊天记录、长期状态和敏感凭据不应放入其中。
+
+## 接收信令
+
+`onReceiveCustomSignal` 和 `onReceiveCustomSignaling` 是兼容不同 Core/商业服务版本的 raw JSON 事件。实际部署只订阅其中真实产生的一种；若为了兼容同时订阅，必须按 `roomID:eventID` 去重。
+
+```uts
+function handleValidatedSignal(payload : string) {
+  try {
+    const event = JSON.parseObject<UTSJSONObject>(payload)
+    if (event == null) return
+
+    const eventRoomID = event.getString('roomID')
+    const customInfo = event.getString('customInfo')
+    if (eventRoomID != activeRoomID || customInfo == null) return
+
+    const signal = JSON.parseObject<UTSJSONObject>(customInfo)
+    if (signal == null) return
+    applyValidatedCallSignal(eventRoomID, signal)
+  } catch (_) {
+    console.warn('无法解析通话自定义信令')
+  }
+}
+
+const signalSubscription = onReceiveCustomSignal(handleValidatedSignal)
+const signalingSubscription = onReceiveCustomSignaling(handleValidatedSignal)
+
+function removeCustomSignalListeners() {
+  off(signalSubscription)
+  off(signalingSubscription)
+}
+```
+
+解析函数应检查 JSON 结构、协议版本、`eventID`、`type` 和业务字段，再返回已验证的应用内对象。本页是两个兼容事件的完整监听示例归属页。离开通话页、退出登录或切换账号时调用 `removeCustomSignalListeners()`。
+
+自定义信令不承担权限认证。不要信任客户端信令来授予主持人、付费或隐私权限；需要权威校验的状态应由可信后端保存和判断。连接恢复后，通过房间查询或业务后端校准长期状态，不要把自定义信令当作可重放的权威记录。

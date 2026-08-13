@@ -1,0 +1,67 @@
+---
+title: '处理通话事件'
+description: '商业版统一接收邀请、接受、拒绝、取消、超时、挂断和房间事件。'
+sourcePath: '/sdk/uniapp/calling/managing-calls/handle-call-events'
+---
+
+通话状态层应集中监听邀请生命周期、参与者连接状态和媒体流变化，并按 `roomID` 合并到同一份本地状态。所有事件返回 raw JSON 字符串；回调应尽快完成，异步展示 UI，并先校验 JSON 再映射到应用自己的通话领域模型。
+
+| 事件 | 用途 |
+| --- | --- |
+| `onReceiveNewInvitation` | 收到新的通话邀请。 |
+| `onInviteeAccepted`、`onInviteeRejected` | 当前邀请被接受或拒绝。 |
+| `onInvitationCancelled`、`onInvitationTimeout` | 邀请被取消或超时。 |
+| `onInviteeAcceptedByOtherDevice`、`onInviteeRejectedByOtherDevice` | 同一账号的其他设备处理邀请。 |
+| `onHangUp` | 通话参与者挂断。 |
+| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 房间参与者连接状态变化。 |
+| `onStreamChange` | 参与者媒体流状态变化。 |
+
+```uts
+import {
+  off,
+  onHangUp,
+  onInvitationCancelled,
+  onInvitationTimeout,
+  onInviteeAccepted,
+  onInviteeAcceptedByOtherDevice,
+  onInviteeRejected,
+  onInviteeRejectedByOtherDevice,
+  onReceiveNewInvitation,
+  onRoomParticipantConnected,
+  onRoomParticipantDisconnected,
+  onStreamChange,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+function handleCallPayload(payload : string) {
+  try {
+    const value = JSON.parseObject<UTSJSONObject>(payload)
+    if (value != null) routeValidatedCallEvent(value)
+  } catch (_) {
+    console.error('Invalid call event payload')
+  }
+}
+
+const invitationSubscription = onReceiveNewInvitation(handleCallPayload)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  invitationSubscription,
+  onInviteeAccepted(handleCallPayload),
+  onInviteeAcceptedByOtherDevice(handleCallPayload),
+  onInviteeRejected(handleCallPayload),
+  onInviteeRejectedByOtherDevice(handleCallPayload),
+  onInvitationCancelled(handleCallPayload),
+  onInvitationTimeout(handleCallPayload),
+  onHangUp(handleCallPayload),
+  onRoomParticipantConnected(handleCallPayload),
+  onRoomParticipantDisconnected(handleCallPayload),
+  onStreamChange(handleCallPayload),
+]
+
+function removeCallListeners() {
+  subscriptions.forEach((subscription) => off(subscription))
+}
+```
+
+本页是以上 11 个通话事件的唯一完整监听归属页。参与者状态还要结合用户 ID 更新；不要按事件顺序、展示名称或数组下标合并。应用应使用 `roomID`、本地 session ID 和运行 generation 去重，过期事件不能打开新页面。退出登录、切换账号或销毁通话状态层时调用 `removeCallListeners()`。
+
+HarmonyOS 当前不支持 `onStreamChange`，注册会返回 `platform-unsupported` subscription，不会伪造媒体流事件；其余本页信令事件支持。raw payload 与 RTC Token 不写入日志或持久化存储。

@@ -35,6 +35,19 @@ const clientSdkPlatforms = {
     sidebarPath: 'data/structure/wasm-sidebar.json',
     localizedOutputPath: 'src/generated/wasm-sdk-zh-content.json',
   },
+  uniapp: {
+    id: 'uniapp',
+    contextKey: 'chat/sdk/uniapp',
+    routePrefix: '/sdk/uniapp',
+    manualRoot: 'content/zh/docs/chat/sdk/uniapp',
+    auditPath: 'data/structure/uniapp-content-audit.json',
+    labelsPath: 'data/structure/uniapp-navigation-labels.json',
+    sidebarPath: 'data/structure/uniapp-sidebar.json',
+    localizedOutputPath: 'src/generated/uniapp-sdk-zh-content.json',
+    sdkSourceKey: 'uniappSdk',
+    sdkTag: '0.2.0-rc.3',
+    sdkCommit: 'e71e3f68827f9f7af354526fecbaded25dc14de9',
+  },
 };
 
 export const clientSdkPlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));

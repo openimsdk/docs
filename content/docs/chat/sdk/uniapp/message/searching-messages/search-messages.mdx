@@ -1,0 +1,135 @@
+---
+title: 'Search messages'
+description: 'OpenIM uni-app / uni-app x SDK guide for Search messages.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/searching-messages/search-messages'
+---
+
+`searchLocalMessages()` searches messages already synchronized into the current user's local database. For a group, pass the group's `conversationID`, not the `groupID` used when sending. If you only have the group ID, first obtain the conversation ID with [Get a conversation ID](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id).
+
+Use a backend search service for cross-user audit, complete server-side history, complex permission filtering, or global ranking. It can return `conversationID` and `clientMsgID` so the client can locate each hit.
+
+## Create a search query
+
+`keywordList` accepts one or more terms. A normal search box represents one input, so trim it and reject empty values before calling the SDK.
+
+```uts
+import {
+  OpenIMMessageTypeAtText,
+  OpenIMMessageTypeText,
+  searchLocalMessages,
+  type OpenIMMessageItem,
+  type OpenIMSearchMessageResult,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await searchLocalMessages({
+  conversationID,
+  keywordList: [keyword.trim()],
+  keywordListMatchType: 0,
+  senderUserIDList: [],
+  messageTypeList: [OpenIMMessageTypeText, OpenIMMessageTypeAtText],
+  searchTimePosition: 0,
+  searchTimePeriod: 0,
+  pageIndex: 1,
+  count: 20,
+})
+```
+
+## Advanced search
+
+Narrow the query by sender, content type, and time window. In `OpenIMSearchLocalMessagesParams`, every filter and paging field except `conversationID` is required. Use an empty array for an unrestricted list and the server-defined `0` values when time is unrestricted.
+
+```uts
+const result = await searchLocalMessages({
+  conversationID,
+  keywordList: ['release'],
+  keywordListMatchType: 0,
+  senderUserIDList: [senderUserID],
+  messageTypeList: [OpenIMMessageTypeText],
+  searchTimePosition,
+  searchTimePeriod,
+  pageIndex: 1,
+  count: 20,
+})
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` or `null` | No | Conversation to search; omit it to search the current locally visible scope. |
+| `keywordList` | `string[]` | Yes | Search terms. |
+| `keywordListMatchType` | `number` | Yes | Multi-keyword matching mode defined by the SDK contract. |
+| `senderUserIDList` | `string[]` | Yes | Restrict to these senders; use an empty array for no restriction. |
+| `messageTypeList` | `OpenIMMessageType[]` | Yes | Restrict to these content types; use an empty array for no restriction. |
+| `searchTimePosition` | `number` | Yes | End of the search window, as a Unix timestamp in seconds. |
+| `searchTimePeriod` | `number` | Yes | Number of seconds to search backward from the end position. |
+| `pageIndex` | `number` | Yes | Page number; the first page is `1`. |
+| `count` | `number` | Yes | Number of results per page. |
+
+Add the appropriate `OpenIMMessageType` constants when the UI searches images, files, or custom messages. Matching modes, time units, and page numbering must follow the SDK and server contract.
+
+## Handle paginated results
+
+The Promise resolves to `OpenIMSearchMessageResult | null`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `totalCount` | `number` | Total number of messages matching the query. |
+| `searchResultItems` | `OpenIMSearchMessageResultItem[]` | Results grouped by conversation. |
+
+Each result item contains:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | Owning conversation. |
+| `conversationType` | `OpenIMSessionType` | Conversation type. |
+| `showName`, `faceURL` | `string` | Conversation display name and avatar snapshot. |
+| `latestMsgSendTime` | `number` or `null` | Latest message time in this result group. |
+| `messageCount` | `number` | Number of matching messages in the group. |
+| `messageList` | `OpenIMMessageItem[]` | Matching messages. |
+
+Preserve both the conversation ID and message ID when flattening grouped results:
+
+```uts
+type SearchMessageRow = {
+  conversationID : string
+  clientMsgID : string
+  message : OpenIMMessageItem
+}
+
+function toSearchRows(result : OpenIMSearchMessageResult) : Array<SearchMessageRow> {
+  const rows : Array<SearchMessageRow> = []
+  result.searchResultItems.forEach((item) => {
+    item.messageList.forEach((message) => {
+      const clientMsgID = message.clientMsgID
+      if (clientMsgID != null) {
+        rows.push({ conversationID: item.conversationID, clientMsgID, message })
+      }
+    })
+  })
+  return rows
+}
+```
+
+Keep all filters unchanged while incrementing `pageIndex`. When any condition changes, reset the page to `1` and clear old rows. Deduplicate by `conversationID:clientMsgID`; do not persist selection by array position. A search does not emit message events.
+
+## Handle changes to search results
+
+A hit can be revoked or deleted while the search page is open, and newly synchronized messages can change the result set. Use the shared handlers described in [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages), [Delete saved messages](/sdk/uniapp/message/managing-messages/delete-saved-messages), and [Revoke a message](/sdk/uniapp/message/managing-messages/revoke-a-message). This page owns querying and pagination, not duplicate event registrations.
+
+Navigate with the result's `conversationID` and `clientMsgID`. To display nearby chat records, use the complete hit as the start point for [Load message context](/sdk/uniapp/message/retrieving-messages/load-message-context), rather than assembling context with `findMessageList()`.
+
+Re-run the current page query when the UI needs a fresh snapshot. Search Promises, event increments, and reconciliation queries are independent. Clear previous-account search state after login changes.
+
+## Related pages
+
+- [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [Load older messages](/sdk/uniapp/message/retrieving-messages/load-older-messages)
+- [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages)

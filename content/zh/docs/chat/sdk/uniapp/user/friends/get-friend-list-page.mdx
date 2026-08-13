@@ -1,0 +1,73 @@
+---
+title: '分页获取好友列表'
+description: '使用 uni-app / uni-app x SDK 分页查询当前用户的好友列表。'
+sourcePath: '/sdk/uniapp/user/friends/get-friend-list-page'
+---
+
+先注册好友事件，再调用 `getFriendListPage()` 建立当前好友快照。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次请求的好友数量。 |
+| `filterBlack` | `boolean` | 否 | 是否从结果中过滤黑名单用户。 |
+
+```uts
+import { getFriendListPage } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendListPage({
+  offset: 0,
+  count: 50,
+  filterBlack: true,
+})
+```
+
+Promise 成功后，`result?.friends` 是当前页 `OpenIMFriendUserItem[]`。继续加载时按请求条目数增加 `offset`；好友增删后重置分页。原生 API 直接返回 `OpenIMFriendListResult | null`，不使用 `{ data }` 包装。
+
+### 好友资料字段
+
+`OpenIMFriendUserItem` 表示当前账号与一个好友的关系资料：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 好友的用户 ID，也是好友列表的稳定标识。 |
+| `nickname` | `string` | 好友的账号级昵称。 |
+| `faceURL` | `string` | 好友的账号级头像地址。 |
+| `remark` | `string` | 当前账号为该好友设置的备注。 |
+| `isPinned` | `boolean` | 该好友是否在联系人列表中置顶。 |
+| `ownerUserID` | `string` | 这条好友关系所属的用户 ID，通常是当前账号。 |
+| `operatorUserID` | `string` | 建立或更新这条关系的操作用户 ID。 |
+| `addSource` | `number` | 好友关系的添加来源值。 |
+| `createTime` | `number` | 好友关系创建时间。 |
+| `ex` | `string` | 好友关系扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息；只按已确认的业务约定解析。 |
+
+`nickname`、`faceURL` 是账号资料快照，`remark`、`isPinned`、`ex` 和 `attachedInfo` 属于好友关系。不要用 `OpenIMFriendUserItem` 覆盖陌生人的 `OpenIMPublicUserItem`，也不要把好友备注写回账号昵称。
+
+## 同步好友变化
+
+本页是 `onFriendAdded`、`onFriendInfoChanged` 和 `onFriendDeleted` 的完整监听归属页。查询负责建立快照，事件负责按 `userID` 合并增量。
+
+```uts
+import {
+  off,
+  onFriendAdded,
+  onFriendDeleted,
+  onFriendInfoChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const friendSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onFriendAdded((friend) => mergeFriend(friend.userID, friend)),
+  onFriendInfoChanged((friend) => mergeFriend(friend.userID, friend)),
+  onFriendDeleted((friend) => removeFriend(friend.userID)),
+]
+
+function removeFriendListeners() {
+  friendSubscriptions.forEach((subscription) => off(subscription))
+}
+```
+
+退出登录、切换账号或销毁联系人状态层时调用 `removeFriendListeners()`。

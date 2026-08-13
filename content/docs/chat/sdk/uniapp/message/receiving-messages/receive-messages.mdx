@@ -1,0 +1,133 @@
+---
+title: 'Receive messages'
+description: 'OpenIM uni-app / uni-app x SDK guide for Receive messages.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/receiving-messages/receive-messages'
+---
+
+Message views normally combine realtime messages, messages received while the app was in the background, online-only messages, and a history snapshot loaded when the conversation opens. Events provide increments; history APIs provide a `conversationID`-scoped snapshot.
+
+Different Core versions and recovery paths may deliver through single-message or batch events. Subscribe to all five paths for completeness, but deduplicate by `conversationID:clientMsgID`. Before a component is destroyed, the user logs out, or the account changes, call `off()` with every subscription handle.
+
+Register these handlers on the same login-scoped plugin session. Do not interpret an incoming event as the completion callback for a history or mark-as-read request; each flow has its own lifecycle.
+
+## Message types
+
+Choose rendering from `contentType` and the corresponding elem on `OpenIMMessageItem`: `textElem` for text, `atTextElem` for mentions, `customElem` for custom content, and the matching media elem for images, audio, video, and files. Show a safe fallback for unknown types instead of executing unvalidated `content`.
+
+```uts
+function renderMessage(message : OpenIMMessageItem) {
+  if (message.textElem != null) return renderTextMessage(message)
+  if (message.atTextElem != null) return renderMentionMessage(message)
+  if (message.customElem != null) return renderCustomMessage(message)
+  if (
+    message.pictureElem != null ||
+    message.soundElem != null ||
+    message.videoElem != null ||
+    message.fileElem != null
+  ) {
+    return renderFileLikeMessage(message)
+  }
+  return renderUnsupportedMessage(message)
+}
+```
+
+Events can contain messages for conversations that are not currently open. `OpenIMMessageItem` does not carry `conversationID`; derive or look up the conversation from `sessionType`, `sendID`, `recvID`, and `groupID`, then deduplicate by `clientMsgID`.
+
+```uts
+function mergeMessage(message : OpenIMMessageItem) {
+  const targetConversationID = getConversationIDForMessage(message)
+  if (targetConversationID.length == 0) return
+  mergeMessageByClientMsgID(targetConversationID, message)
+}
+```
+
+### Image, audio, video, and file messages
+
+The receiver does not upload these files again. Read and render the resource URL, size, filename, duration, or snapshot from the media elem. To send several files, applications normally send several file messages or one versioned custom message describing a group; each message still uses `clientMsgID` as its stable identifier.
+
+## Event handlers
+
+```uts
+import {
+  off,
+  onRecvNewMessage,
+  onRecvNewMessages,
+  onRecvOfflineNewMessage,
+  onRecvOfflineNewMessages,
+  onRecvOnlineOnlyMessage,
+  type OpenIMMessageItem,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const subscriptions = [
+  onRecvNewMessage((message) => {
+    if (message != null) mergeMessage(message)
+  }),
+  onRecvOfflineNewMessage((message) => {
+    if (message != null) mergeMessage(message)
+  }),
+  onRecvOnlineOnlyMessage((message) => {
+    if (message != null) mergeOnlineOnlyMessage(message)
+  }),
+  onRecvNewMessages((result) => {
+    if (result != null) result.messages.forEach(mergeMessage)
+  }),
+  onRecvOfflineNewMessages((result) => {
+    if (result != null) result.messages.forEach(mergeMessage)
+  }),
+]
+
+function removeMessageListeners() {
+  subscriptions.forEach((subscription) => off(subscription))
+}
+```
+
+`onRecvNewMessages` and `onRecvOfflineNewMessages` return `OpenIMMessageListResult | null`; its `messages` field is the array. The three single-message handlers return `OpenIMMessageItem | null`. Single and batch paths may describe the same message, so never insert by event count.
+
+Unlike the Wasm recommendation to select one canonical batch path for a known deployment, the native plugin exposes compatibility paths that may vary with Core delivery and recovery behavior. The application store can subscribe to all of them only because it uses one shared idempotent merge function.
+
+Messages that arrive after `setAppBackgroundStatus(true)` normally use an offline path. Set the status back to `false` on foreground entry. Reuse one merge function for offline and realtime delivery, filter by conversation, deduplicate by `clientMsgID`, and preserve chronological order.
+
+An online-only message has `isOnlineOnly: true` on the send. It is not stored in local SDK history and cannot be recovered through a history API. Use it only for transient hints or business notifications, and do not treat it as a reliable chat record.
+
+Decide separately whether an online-only item belongs in the visible chat view. If it is rendered, keep it out of durable pagination and make the temporary behavior clear to users.
+
+This page owns all five receive events. Resolve the target conversation first and then merge by `conversationID:clientMsgID`. A single application message store should own these global listeners. Call `removeMessageListeners()` when that login-scoped store is disposed.
+
+Revocation arrives through `onNewRecvMessageRevoked`; see [Revoke a message](/sdk/uniapp/message/managing-messages/revoke-a-message).
+
+## Load history when opening a conversation
+
+Events only describe newly delivered messages. Load a history snapshot when a conversation first opens, when the user pages upward, or when restoring gaps after a disconnect. See [Load older messages](/sdk/uniapp/message/retrieving-messages/load-older-messages). History and events can contain the same message, so use the same deduplication key for both.
+
+Do not register this global listener set every time a chat page opens. The page should only query its conversation snapshot; a login-scoped store owns the events. After login changes, clear the previous account's state and establish a new event scope.
+
+A history query does not trigger any of the receive events. Because pagination and realtime delivery may overlap, the history merge must use exactly the same `conversationID:clientMsgID` key as the global event store.
+
+## Mark a group conversation as read
+
+After the user opens a group chat and sees its latest messages, clear the conversation unread count as described in [Mark a conversation as read](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read). This is separate from member-level group read receipts. Conversation events eventually synchronize the list and total badge.
+
+## Verify the receive flow
+
+- Send from another logged-in account and verify that the foreground message renders once.
+- Set the app background state, send again, and verify offline merging before restoring foreground state.
+- Send an online-only message and verify that it is absent from local history.
+- Revoke a message and verify that the matching `clientMsgID` becomes revoked.
+- Mark the conversation as read and verify the conversation and total unread counts.
+
+When testing single and batch delivery, assert that each `clientMsgID` appears once rather than requiring one particular callback. Also verify balanced foreground/background calls and that old subscriptions stop affecting state after logout.
+
+## Related pages
+
+- [Message overview](/sdk/uniapp/message/overview-message)
+- [Send a message](/sdk/uniapp/message/sending-messages/send-message)
+- [Load older messages](/sdk/uniapp/message/retrieving-messages/load-older-messages)
+- [Mark a conversation as read](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)

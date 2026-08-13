@@ -1,0 +1,38 @@
+---
+title: '创建群组'
+description: '创建群资料并设置初始成员与管理员。'
+sourcePath: '/sdk/uniapp/group/create-group'
+---
+
+`createGroup()` 接收群资料、初始成员和可选管理员，返回 `OpenIMGroupItem | null`。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo.groupName` | `string` | 是 | 群名称。 |
+| `groupInfo.groupType` | `2` | 是 | 当前合同支持的群类型固定为 `2`。 |
+| `groupInfo.notification` | `string` 或 `null` | 否 | 初始群公告。 |
+| `groupInfo.introduction` | `string` 或 `null` | 否 | 群简介。 |
+| `groupInfo.faceURL` | `string` 或 `null` | 否 | 群头像 URL。 |
+| `groupInfo.ex` | `string` 或 `null` | 否 | 群扩展字符串，完整写入。 |
+| `memberUserIDs` | `string[]` | 是 | 初始普通成员用户 ID。 |
+| `adminUserIDs` | `string[]` 或 `null` | 否 | 初始管理员用户 ID。 |
+
+```uts
+import { createGroup } from '@/uni_modules/unix-openim-sdk'
+
+const group = await createGroup({
+  groupInfo: { groupName: '项目群', groupType: 2 },
+  memberUserIDs: ['user_b', 'user_c'],
+  adminUserIDs: ['user_b'],
+})
+```
+
+成员与管理员列表应先去除空值和重复 ID。管理员必须同时符合服务端的成员与权限规则；不要把当前用户或同一用户重复放入冲突角色列表。`ex` 不会自动合并 JSON。
+
+## 返回结果
+
+Promise 成功直接返回 `OpenIMGroupItem | null`。非空结果可以按 `groupID` 合入群组 store；返回 `null` 时不要创建仅本地群。
+
+Promise 成功只表示创建请求完成。群列表最终通过 `onJoinedGroupAdded`、指定群查询或已加入群列表校准；初始成员与管理员则通过群成员查询确认。

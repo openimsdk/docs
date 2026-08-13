@@ -1,0 +1,29 @@
+---
+title: 'Restore a pending call invitation'
+description: 'OpenIM uni-app / uni-app x SDK guide for Restore a pending call invitation.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation'
+---
+
+Call the <span className="enterprise-field-badge">Commercial</span> `signalingGetInvitationInfoStartApp()` operation once after event listeners are armed. It returns the invitation snapshot that may need recovery when the app starts or returns to the foreground:
+
+```uts
+import { signalingGetInvitationInfoStartApp } from '@/uni_modules/unix-openim-sdk'
+
+const result = await signalingGetInvitationInfoStartApp()
+if (result?.invitation != null) recoverInvitation(result.invitation)
+```
+
+An optional `{ userID }` parameter can explicitly identify the queried user, but the current login session normally supplies it.
+
+## Result
+
+The Promise resolves to `OpenIMSignalingGetInvitationInfoStartAppResult | null`. Its `invitation` field is `OpenIMSignalingInvitationInfo | null`. A null result or `invitation: null` is the valid “no pending invitation” state, not an error.
+
+This query only reads a snapshot and does not emit call events. Restore the incoming-call UI only when the invitation and its `roomID` are valid. The recovered snapshot may duplicate a realtime event, so deduplicate by room and local session identifiers. Perform only one startup request per runtime initialization, then continue listening for cancellation, timeout, acceptance, and hangup through [call events](/sdk/uniapp/calling/managing-calls/handle-call-events).

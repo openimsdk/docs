@@ -1,0 +1,82 @@
+---
+title: '会话概览'
+description: '理解会话快照、增量事件、未读数、草稿和会话分组。'
+sourcePath: '/sdk/uniapp/conversation/overview-conversation'
+---
+
+会话是单聊、群聊或其他消息流的本地索引。`conversationID` 是稳定主键；单聊同时有 `userID`，群聊同时有 `groupID`。界面标题、头像和最新消息都是可变快照，不能替代主键。
+
+## 会话标识
+
+`conversationID` 是列表、事件、未读数和消息查询之间的稳定关联键。按目标查询时，单聊使用对端 `userID` 和单聊类型，群聊使用 `groupID` 和对应群会话类型；不要只按 `userID` 或 `groupID` 覆盖其他类型的会话。
+
+会话项中的 `showName` 和 `faceURL` 是当前展示快照。好友备注、群名称或头像变化后它们可能改变；业务不应把展示名称作为缓存主键。
+
+## 会话数据
+
+`OpenIMConversationItem` 主要包含：
+
+| 数据 | 用途 |
+| --- | --- |
+| `conversationType`、`userID`、`groupID` | 判断会话类型和目标。 |
+| `showName`、`faceURL` | 展示标题与头像。 |
+| `unreadCount` | 当前会话未读数。 |
+| `latestMsg`、`latestMsgSendTime` | 最新消息摘要与排序时间。 |
+| `draftText`、`draftTextTime` | 当前设备保存的草稿。 |
+| `isPinned` | 置顶状态。 |
+| `recvMsgOpt` | 会话级消息接收与通知策略。 |
+| `isPrivateChat`、`burnDuration` | 阅后即焚模式和时长。 |
+| `minSeq`、`maxSeq`、`msgDestructTime` | 消息序列与商业版销毁状态边界。 |
+
+`latestMsg` 是序列化消息字符串。解析失败时保留会话并显示降级摘要，不要因为一条未知消息类型删除整个会话。商业版扩展字段在公共环境中可能缺失，使用前判空。
+
+### 排序与展示
+
+会话列表常见排序先处理 `isPinned`，再使用 `latestMsgSendTime`、草稿时间或产品定义的稳定规则。不要使用当前数组下标作为持久顺序；任何新消息、置顶或草稿变化都可能改变位置。
+
+列表摘要应从 `latestMsg` 安全解析已知消息类型。遇到未知 contentType、自定义消息或解析失败时显示通用摘要，并保留未读数、会话目标和进入聊天页的能力。不要把原始 JSON 直接展示给用户或写入公开日志。
+
+### 未读与接收策略
+
+`unreadCount` 是单个会话快照，总未读数由独立 API 与事件维护。标记已读后，分别处理操作 Promise、会话变化和总未读事件；其他设备或服务端并发新消息可能让未读数再次增加。
+
+`recvMsgOpt` 只描述该会话的接收策略，还可能受账号级 `globalRecvMsgOpt` 影响。界面应展示服务端返回的最终会话状态，而不是仅根据用户刚点击的本地开关推断成功。
+
+## 按任务查找页面
+
+| 需求 | 页面 |
+| --- | --- |
+| 分页获取列表并同步新增、变化事件 | [获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list) |
+| 按用户或群组目标查询会话 | [按目标查询会话](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target) |
+| 按会话 ID 查询一个或多个会话 | [按会话 ID 查询](/sdk/uniapp/conversation/retrieving-conversations/get-conversations-by-id) |
+| 搜索本地会话 | [搜索会话](/sdk/uniapp/conversation/retrieving-conversations/search-conversations) |
+| 标记一个或全部会话已读 | [标记会话已读](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)、[标记全部会话已读](/sdk/uniapp/conversation/managing-conversations/mark-all-conversations-read) |
+| 管理草稿、置顶、备注和扩展 | 对应“管理会话”页面 |
+| 使用商业版会话分组 | [会话分组概览](/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups) |
+
+## 删除和清理
+
+隐藏会话、删除会话、删除会话及消息、清空会话消息和清除全部本地消息是不同操作：
+
+- 隐藏只移除列表入口，消息保留，新消息可能让会话重新出现。
+- 删除会话不应被描述为删除好友或退出群组。
+- 删除会话及消息会影响本地会话与消息记录，应在 UI 中二次确认。
+- 清空消息与服务端消息销毁策略也不是同一能力。
+
+选择操作前明确产品语义，Promise 失败时不要先行清除本地状态；完成后用事件或重新查询校准。
+
+## 状态更新
+
+建议数据流如下：
+
+1. 注册 `onNewConversation` 与 `onConversationChanged`，保存各自订阅句柄。
+2. 分页查询会话快照。
+3. 按 `conversationID` 幂等插入或替换事件项。
+4. 按 `isPinned`、时间和业务排序规则展示。
+5. App 恢复、同步完成或重新登录时重新查询，不仅依赖事件。
+
+会话未读数和消息已读是相关但不同的状态。清零会话未读见[标记会话已读](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)，总未读见[获取总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)。
+
+查询用于建立快照，事件用于合并增量，Promise 成功只说明当前操作完成。完整监听与句柄清理统一见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。
+
+切换账号时先停止旧 store 写入，释放旧订阅并清空会话、未读和草稿内存状态。不要让旧账号分页或事件异步结果写入新账号；商业版依赖插件还应比较 SDK session epoch。

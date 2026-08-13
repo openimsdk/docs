@@ -1,0 +1,27 @@
+---
+title: '保存会话草稿'
+description: '保存或清空指定会话的本地草稿文本。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversations/set-conversation-draft'
+---
+
+`setConversationDraft()` 保存会话草稿；传空字符串清除草稿。
+
+用户离开聊天页、切换会话或输入框内容变化时可以保存草稿。输入过程中先维护编辑器状态并对 SDK 写入做防抖；离开页面前立即提交一次最新文本，避免每次按键写库或旧请求后完成覆盖新草稿。
+
+```uts
+import { setConversationDraft } from '@/uni_modules/unix-openim-sdk'
+
+await setConversationDraft({ conversationID, draftText: editorText })
+```
+
+清空草稿时明确传入空字符串：
+
+```uts
+await setConversationDraft({ conversationID, draftText: '' })
+```
+
+## 调用后的状态变化
+
+Promise 成功表示草稿已经保存。SDK 通过 `onConversationChanged` 同步变化后的会话，按 `conversationID` 合并 `draftText` 和 `draftTextTime`。完整事件注册与清理见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。
+
+草稿属于当前设备的会话状态，不应假定同步到其他设备。退出账号时还要清理编辑器内存状态，避免把旧账号草稿带入新账号。

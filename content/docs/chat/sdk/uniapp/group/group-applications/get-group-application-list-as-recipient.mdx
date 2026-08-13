@@ -1,0 +1,76 @@
+---
+title: 'Get received group applications'
+description: 'OpenIM uni-app / uni-app x SDK guide for Get received group applications.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient'
+---
+
+`getGroupApplicationListAsRecipient()` queries applications that the current account can manage. This page owns the added, accepted, rejected, and deleted application events.
+
+## Parameters
+
+The parameter object can be omitted. For explicit pagination, `offset` and `count` are optional; use `0` for the first offset. Unlike the Wasm page, the Unix `OpenIMApplicationListParams` has no `handleResults` filter, so filter by `handleResult` after the query.
+
+Register events before loading the received snapshot.
+
+```uts
+import {
+  getGroupApplicationListAsRecipient,
+  off,
+  onGroupApplicationAccepted,
+  onGroupApplicationAdded,
+  onGroupApplicationDeleted,
+  onGroupApplicationRejected,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const addedSubscription = onGroupApplicationAdded((item) => upsertGroupApplication(item))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onGroupApplicationAccepted((item) => upsertGroupApplication(item)),
+  onGroupApplicationRejected((item) => upsertGroupApplication(item)),
+  onGroupApplicationDeleted((item) => removeGroupApplication(item)),
+]
+const result = await getGroupApplicationListAsRecipient({ offset: 0, count: 50 })
+replaceReceivedGroupApplications(result?.applications ?? [])
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+## Return result
+
+The Promise resolves directly to `OpenIMGroupApplicationListResult` or `null`; `applications` contains the current page. Do not convert `null` into an empty state. Empty `applications` means that the page has no records; `null` requires login/error handling. Reset offset after processing an application to avoid duplicates across changed pages.
+
+### Group application fields
+
+`OpenIMGroupApplicationItem` combines a group snapshot and applicant information:
+
+| Fields | Description |
+| --- | --- |
+| `groupID`, `groupName`, `groupFaceURL` | Target group ID, name, and avatar snapshot. |
+| `notification`, `introduction` | Announcement and introduction snapshot. |
+| `ownerUserID`, `creatorUserID` | Owner and creator user IDs. |
+| `groupType`, `status`, `memberCount` | Group type, state, and member-count snapshot. |
+| `userID`, `nickname`, `userFaceURL` | Applicant ID, nickname, and avatar snapshot. |
+| `handleResult` | Pending, accepted, or rejected processing state. |
+| `reqMsg`, `reqTime` | Application comment and time. |
+| `joinSource`, `inviterUserID` | Join source and inviter. |
+| `handleUserID`, `handledMsg`, `handledTime` | Processing user, comment, and time. |
+| `ex`, `attachedInfo` | Extension and attachment data; parse only a confirmed contract. |
+
+Use `groupID:userID` as the application key. Names and avatars are snapshots; query current group or user data when freshness matters.
+
+`handleResult`, `handledMsg`, and `handledTime` describe the server's current processing snapshot. Do not derive permission only from these fields: the owner or administrator role can change after the record was created. `reqMsg`, `ex`, and `attachedInfo` are application-controlled or service attachment data and must be rendered and logged under the product's privacy policy.
+
+## Listen for application changes
+
+Merge all four events idempotently by `groupID:userID`; a deletion event removes that key. Route received and sent application state according to the current account's role. Reset pagination after changes, and requery when owner/admin permission changes.
+
+Use the explicit accept or reject API instead of changing `handleResult` locally. Promise success, the application event, and later group/member updates are separate stages. Release every subscription on logout, account switch, or application-store destruction.
+
+When an application is accepted, update the joined-group list and member list through their own events or queries rather than inferring membership solely from this application record. Group-profile changes and applicant nickname changes also require their domain snapshots; an old application item is not a live profile cache.

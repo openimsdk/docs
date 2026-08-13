@@ -1,0 +1,68 @@
+---
+title: 'Group overview'
+description: 'OpenIM uni-app / uni-app x SDK guide for Group overview.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/group/overview-group'
+---
+
+The group domain uses `groupID` as its stable primary key and includes group profiles, members, applications, and permissions. Group name, avatar, announcement, owner, and member count are mutable snapshots.
+
+## Core data types
+
+| Type | Use case |
+| --- | --- |
+| `OpenIMGroupItem` | Joined-group lists, group profile pages, and group state. |
+| `OpenIMCreateGroupInfo` | Name, type, announcement, introduction, avatar, and extension submitted when creating a group. |
+| `OpenIMGroupMemberItem` | Member profile, role, join source, and mute-end time. |
+| `OpenIMGroupApplicationItem` | Join application, applicant, and processing state. |
+
+Common `OpenIMGroupItem` fields include `groupID`, `groupName`, `notification`, `introduction`, `faceURL`, `ownerUserID`, `memberCount`, `status`, `groupType`, `needVerification`, `lookMemberInfo`, `applyMemberFriend`, and `ex`. `attachedInfo` is an <span className="enterprise-field-badge">Enterprise</span> field; parse it only according to a confirmed contract.
+
+Use `groupID:userID` as the stable merge key for a member. A member's in-group `nickname` and `faceURL` are member snapshots and must not overwrite account-level profile data.
+
+## Find a task
+
+| Task | Page |
+| --- | --- |
+| Create, update, dismiss, or leave a group | [Create a group](/sdk/uniapp/group/create-group), [Update a group](/sdk/uniapp/group/update-group-profile), [Dismiss a group](/sdk/uniapp/group/dismiss-group), [Leave a group](/sdk/uniapp/group/quit-group) |
+| Page through joined groups or query selected profiles | [List joined groups by page](/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page), [Get specified groups](/sdk/uniapp/group/retrieving-groups/get-specified-groups-info) |
+| Query, search, and manage members | [List group members](/sdk/uniapp/group/retrieving-group-members/get-group-member-list), [Search group members](/sdk/uniapp/group/retrieving-group-members/search-group-members) |
+| Invite or remove members and transfer ownership | [Invite users](/sdk/uniapp/group/managing-group-members/invite-user-to-group), [Remove members](/sdk/uniapp/group/managing-group-members/kick-group-member), [Transfer ownership](/sdk/uniapp/group/managing-group-members/transfer-group-owner) |
+| Send, query, and process join applications | [Join a group](/sdk/uniapp/group/join-group), [Get received group applications](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |
+| Configure mute, verification, and member permissions | Use the corresponding group-settings and member-management pages. |
+
+## State updates
+
+This page owns the four group-profile and joined-list events. Subscribe before querying the joined-group snapshot.
+
+```uts
+import {
+  off,
+  onGroupDismissed,
+  onGroupInfoChanged,
+  onJoinedGroupAdded,
+  onJoinedGroupDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const infoSubscription = onGroupInfoChanged((group) => upsertGroup(group.groupID, group))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  infoSubscription,
+  onGroupDismissed((group) => removeGroup(group.groupID)),
+  onJoinedGroupAdded((group) => upsertGroup(group.groupID, group)),
+  onJoinedGroupDeleted((group) => removeGroup(group.groupID)),
+]
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+Merge every event idempotently by `groupID`. Dismissal, active leave, and removal by another member have different business causes, but each can require closing the current chat page.
+
+`onGroupInfoChanged` updates profile data, `onGroupDismissed` means the group was dismissed, and `onJoinedGroupAdded` / `onJoinedGroupDeleted` update the current account's joined-group list. Promise success, event arrival, and requery are three stages. Requery snapshots after App restoration, synchronization, or re-login.
+
+Treat roles, mute state, join policy, and commercial extensions as server-authoritative. Degrade when fields are absent instead of inventing default permission. Stop sending and clear the member store when the current user can no longer access the group. Release every owned handle on logout or group-store destruction.

@@ -1,0 +1,63 @@
+---
+title: 'User overview'
+description: 'Understand user profiles, presence, friendships, friend requests, and the blacklist.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/user/overview-user'
+---
+
+`unix-openim-sdk` identifies users by `userID`. When implementing profile cards, friend requests, contacts, or blacklists, distinguish an application's public user profile from the current user's friendship, friend-application, and blacklist state.
+
+Group member lists, in-group nicknames, group roles, and member management belong to the group domain. See [List group members](/sdk/uniapp/group/retrieving-group-members/get-group-member-list). Use `userID` as the cross-platform stable key; nicknames and avatars can change.
+
+## User types
+
+The SDK returns different user objects for different scenarios:
+
+| Type | Use case | Primary APIs |
+| --- | --- | --- |
+| `OpenIMUserInfo` | Current user's profile, settings page, avatar, and nickname | `getSelfUserInfo()`, `setSelfInfo()` |
+| `OpenIMPublicUserItem` | User lookup, friend candidates, and profiles for users who are not friends; public alias of `OpenIMUserInfo` | `getUsersInfo()` |
+| `OpenIMFriendUserItem` | Friend list, remarks, pinning, and relationship extension data | `getFriendListPage()`, `getSpecifiedFriendsInfo()` |
+| `OpenIMBlackUserItem` | Users on the current account's blacklist | `getBlackList()`, `addBlack()`, `removeBlack()` |
+| `OpenIMFriendApplicationItem` | Sent or received friend applications and their processing state | Friend-application query, accept, reject, and delete APIs |
+| `OpenIMUserStatusItem` | Aggregated online state and online platforms | `subscribeUsersStatus()`, `getUserStatus()` |
+
+The same `userID` can appear in public, friend, blacklist, and group-member data. Prefer `OpenIMFriendUserItem` for contacts, `OpenIMPublicUserItem` for a stranger's profile card, and `OpenIMGroupMemberItem` in group-member lists. Conversation-list and chat-page titles come from conversation data and should use `OpenIMConversationItem.showName`.
+
+Public `OpenIMUserInfo` fields include `userID`, `nickname`, `faceURL`, `ex`, and optional `createTime`. `attachedInfo` and `globalRecvMsgOpt` are <span className="enterprise-field-badge">Commercial fields</span>; check for absence and do not assume that a public server returns them.
+
+## Feature pages
+
+| Task | Recommended page |
+| --- | --- |
+| Query public profiles by `userID` for friend candidates or profile cards | [Get user profiles](/sdk/uniapp/user/profile/get-users-info) |
+| Page through, search, or query friendships by ID | [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page) |
+| Send or process friend applications | [Send a friend application](/sdk/uniapp/user/friend-applications/add-friend), [Get received friend applications](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient) |
+| Update friend information | [Update friend information](/sdk/uniapp/user/friends/update-friends) |
+| Delete a friendship | [Delete a friend](/sdk/uniapp/user/friends/delete-friend) |
+| View and maintain the blacklist | [Get the blacklist](/sdk/uniapp/user/blacklist/get-black-list) |
+| Read or update the current user's nickname, avatar, and extension data | [Update your profile](/sdk/uniapp/user/profile/set-self-info) |
+| Set account-level message reception | [Set global message reception](/sdk/uniapp/user/profile/set-global-message-reception) |
+| Understand the current contract boundary for friend-add permission | [Set friend request permissions](/sdk/uniapp/user/profile/set-friend-add-permission) |
+| Subscribe to and read online status | [Subscribe to online status](/sdk/uniapp/user/online-status/subscribe-users-status) |
+| List, search, or retrieve selected group-member profiles | [List group members](/sdk/uniapp/group/retrieving-group-members/get-group-member-list) |
+
+The application backend remains authoritative for account identity, verified identity, organization relationships, and business authorization. SDK profile fields are for chat presentation and cannot replace application login or authorization.
+
+## State updates
+
+Query the relevant snapshot when a page opens, then merge incremental events:
+
+- Current user profile changes: [Update your profile](/sdk/uniapp/user/profile/set-self-info).
+- Friend application changes: [Get received friend applications](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient).
+- Friendship and friend profile changes: [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page).
+- Blacklist changes: [Get the blacklist](/sdk/uniapp/user/blacklist/get-black-list).
+- Online status changes: [Subscribe to online status](/sdk/uniapp/user/online-status/subscribe-users-status).
+
+Merge all these lists idempotently by `userID`. Events are not a complete database recovery mechanism; requery the snapshots needed by the current UI after reconnect, re-login, account switch, or process restoration.

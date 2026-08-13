@@ -188,6 +188,26 @@ test('applies publication audits to iOS and Flutter active routes', () => {
   );
 });
 
+test('keeps a draft uni-app route out of both search indexes', () => {
+  const uniapp = route('/sdk/uniapp/overview', 'chat/sdk/uniapp');
+  const scope = getClientSdkSidebarApplicationScope({
+    routes: [uniapp],
+    sidebars: [{ platform: 'uniapp', config: { nodes: [uniapp.path] } }],
+  });
+  const result = buildSearchIndexes({
+    routes: [uniapp],
+    sourcePages: new Map([[uniapp.path, { body: 'English draft' }]]),
+    manualZhPages: new Map([[uniapp.path, { body: '中文草稿' }]]),
+    auditPages: new Map([
+      [uniapp.path, auditPage(uniapp.path, 'api-verified', 'deferred')],
+    ]),
+    clientSdkActivePaths: scope.activePaths,
+    managedClientSdkContexts: scope.managedContexts,
+  });
+
+  assert.deepEqual(result, { en: [], zh: [] });
+});
+
 test('fails closed when a native route tree is incomplete', () => {
   const legacy = route('/sdk/ios/open-channel/overview', 'chat/sdk/ios');
   const scope = getClientSdkSidebarApplicationScope({

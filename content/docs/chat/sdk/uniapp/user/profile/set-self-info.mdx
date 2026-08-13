@@ -1,0 +1,63 @@
+---
+title: 'Update your profile'
+description: 'Update selected profile fields and process onSelfInfoUpdated.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/user/profile/set-self-info'
+---
+
+`setSelfInfo()` updates the signed-in user's basic display profile. Pass only the fields that really need to change; do not use empty strings or `null` to mean “unchanged.”
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `nickname` | `string` or `null` | No | New nickname. |
+| `faceURL` | `string` or `null` | No | New avatar URL. |
+| `ex` | `string` or `null` | No | New extension string. It completely replaces the previous value. |
+| `globalRecvMsgOpt` <span className="enterprise-field-badge">Enterprise</span> | `OpenIMSetSelfInfoRecvMsgOpt` or `null` | No | Account-level message reception option; update it through the corresponding settings flow. |
+
+Pass at least one field that actually needs to change.
+
+```uts
+import { setSelfInfo } from '@/uni_modules/unix-openim-sdk'
+
+await setSelfInfo({
+  nickname: 'OpenIM User',
+  faceURL: 'https://cdn.example.com/avatar.png',
+  ex: mergedExtra,
+})
+```
+
+`ex` is a complete string; the SDK does not merge JSON automatically. If several application modules share it, read the current value first and merge each module's namespace before writing the complete replacement.
+
+`setSelfInfo()` also carries the account-level `globalRecvMsgOpt`, but do not save it together with ordinary profile data. See [Set global message reception](/sdk/uniapp/user/profile/set-global-message-reception). The current Private rc.3 interface has no setter for the policy governing how other users add this account. Do not infer or call a method that exists only in the Wasm page; see [Set friend request permissions](/sdk/uniapp/user/profile/set-friend-add-permission) for the exact contract boundary.
+
+Promise success means that the update request completed, not that the profile event has arrived. Reconcile the final profile through `onSelfInfoUpdated` or another `getSelfUserInfo()` query.
+
+## Listen for current-user profile changes
+
+This page is the complete owner for `onSelfInfoUpdated`. The event carries a complete updated `OpenIMUserInfo`; replace the current user snapshot by `userID`.
+
+```uts
+import {
+  off,
+  onSelfInfoUpdated,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const selfInfoSubscription = onSelfInfoUpdated((user) => {
+  replaceCurrentUser(user.userID, user)
+})
+
+function releaseSelfInfoSubscription() {
+  off(selfInfoSubscription)
+}
+```
+
+Do not update only the local state of the page that sent the request. If several pages need the current profile, let one application user store subscribe, or let each owner keep and release its own handle. Call `releaseSelfInfoSubscription()` on logout, account switch, or destruction of the user state layer.

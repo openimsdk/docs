@@ -1,0 +1,70 @@
+---
+title: '订阅用户在线状态'
+description: '订阅指定用户的在线状态，查询初始快照并合并状态事件。'
+sourcePath: '/sdk/uniapp/user/online-status/subscribe-users-status'
+---
+
+在线状态只表示用户是否连接 OpenIMServer，不表示用户正在查看 App、某个会话或某条消息。建议只订阅当前界面和业务确实需要的用户；每个账号最多订阅 3000 个用户，不要一次订阅整个用户目录。
+
+`subscribeUsersStatus()` 在 unix SDK 中用于建立订阅，Promise 成功只返回字符串结果，不直接返回状态数组。建立订阅后再调用 `getUserStatus()` 获取当前快照，后续变化通过 `onUserStatusChanged` 合并。
+
+```uts
+import {
+  getUserStatus,
+  subscribeUsersStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+const userIDs = uniqueUserIDs(['user_a', 'user_b'])
+
+await subscribeUsersStatus(userIDs)
+
+const snapshot = await getUserStatus(userIDs)
+snapshot?.statuses.forEach((status) => {
+  replaceUserStatus(status.userID, status)
+})
+```
+
+先去除空值和重复 `userID`。订阅成功、查询快照和后续事件是三个阶段，不能把 `subscribeUsersStatus()` 的字符串返回值当成在线状态对象。
+
+### 在线状态字段
+
+`getUserStatus()` 返回 `OpenIMUserStatusListResult | null`，其中 `statuses` 的元素是 `OpenIMUserStatusItem`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 状态所属用户 ID，也是状态缓存的合并标识。 |
+| `status` | `number` | 汇总在线状态；应使用插件导出的在线状态常量解释，不要自行发明数值。 |
+| `platformIDs` | `number[]` | 当前在线平台列表；为空时不要推断具体设备或最后活跃时间。 |
+
+一次平台离线不一定表示用户所有设备都离线。应用应同时查看汇总 `status` 与 `platformIDs`，并按服务端多端策略展示。
+
+## 监听在线状态变化
+
+本页是 `onUserStatusChanged` 的完整监听归属页。为缩小注册与快照查询之间的丢失窗口，推荐先注册事件，再建立订阅和查询快照：
+
+```uts
+import {
+  off,
+  onUserStatusChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const statusSubscription = onUserStatusChanged((result) => {
+  result.statuses.forEach((status) => {
+    replaceUserStatus(status.userID, status)
+  })
+})
+
+await subscribeUsersStatus(userIDs)
+
+const current = await getUserStatus(userIDs)
+current?.statuses.forEach((status) => {
+  replaceUserStatus(status.userID, status)
+})
+
+function releaseStatusListener() {
+  off(statusSubscription)
+}
+```
+
+初始快照与事件都按 `userID` 幂等合并。退出登录、切换账号或销毁在线状态层时调用 `releaseStatusListener()`；不再需要某些用户状态时，还要调用[取消用户在线状态订阅](/sdk/uniapp/user/online-status/unsubscribe-users-status)，避免长期占用订阅额度。

@@ -1,0 +1,34 @@
+---
+title: '上报群消息已读'
+description: '商业版发送群消息已读回执并处理 raw 回执事件。'
+sourcePath: '/sdk/uniapp/message/managing-read-status/send-group-read-receipts'
+---
+
+`sendGroupMessageReadReceipt()` 与 `onRecvGroupReadReceipt` 属于<span className="enterprise-field-badge">商业版</span>。
+
+```uts
+import {
+  off,
+  onRecvGroupReadReceipt,
+  sendGroupMessageReadReceipt,
+} from '@/uni_modules/unix-openim-sdk'
+
+const receiptSubscription = onRecvGroupReadReceipt((payload) => {
+  mergeValidatedGroupReadReceipt(payload)
+})
+
+await sendGroupMessageReadReceipt({
+  conversationID,
+  clientMsgIDs: visibleUnreadMessageIDs,
+})
+
+function removeGroupReadReceiptListener() {
+  off(receiptSubscription)
+}
+```
+
+同一批消息必须属于目标群会话。Promise 成功只表示服务端接受上报，不等于其他客户端界面已更新；会话未读数仍由 `markConversationMessageAsRead()` 独立维护。
+
+其他客户端通过 raw JSON 事件 `onRecvGroupReadReceipt` 接收群聊成员级已读变化。本页是该事件的完整监听归属页；先校验 JSON，再按 `conversationID + clientMsgID` 合并消息的已读计数、未读计数和成员信息。组件卸载、退出登录或切换账号时调用 `removeGroupReadReceiptListener()`。
+
+上报 Promise、群回执事件和[查询群消息已读成员](/zh/sdk/uniapp/message/managing-read-status/get-group-message-readers)得到的成员快照是三个独立阶段。

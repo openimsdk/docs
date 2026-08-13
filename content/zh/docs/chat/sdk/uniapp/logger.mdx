@@ -1,0 +1,151 @@
+---
+title: '日志与诊断'
+description: '配置 UTS 插件日志级别，使用 operationID 关联调用链路，并在用户同意后上传脱敏日志。'
+sourcePath: '/sdk/uniapp/logger'
+---
+
+`unix-openim-sdk` 的日志用于定位 Android、iOS、HarmonyOS 上的初始化、登录和业务 API 调用问题。开发与预发布环境可以输出更详细的 SDK 日志；生产环境应只保留必要的错误与追踪字段，避免记录 Token、消息正文、文件 URL、服务端凭据或其他用户隐私。
+
+日志链路通常包含 `OpenIMInitConfig` 中的日志配置、单次调用可选的 `operationID`、插件抛出的诊断信息、上传进度事件，以及应用自己的结构化日志。
+
+## 日志级别
+
+日志级别在 `initSDK()` 时通过 `OpenIMInitConfig.logLevel` 配置。从最详细到最简略依次为：
+
+| 常量 | 数值 | 说明 |
+| --- | --- | --- |
+| `OpenIMLogLevelVerbose` | `6` | 最详细的运行跟踪，只用于短期深度诊断。 |
+| `OpenIMLogLevelDebug` | `5` | 开发与联调信息。 |
+| `OpenIMLogLevelInfo` | `4` | 常规运行信息。 |
+| `OpenIMLogLevelWarn` | `3` | 警告信息。 |
+| `OpenIMLogLevelError` | `2` | 错误信息。 |
+| `OpenIMLogLevelFatal` | `1` | 严重错误。 |
+| `OpenIMLogLevelPanic` | `0` | 最严重级别。 |
+
+生产环境不建议长期使用 `Verbose` 或 `Debug`。更稳妥的方式是按环境、灰度开关或用户主动提交诊断信息时临时提高日志级别。
+
+### 日志级别建议
+
+| 场景 | 建议配置 | 说明 |
+| --- | --- | --- |
+| 本地开发 | `OpenIMLogLevelDebug`，`isLogStandardOutput: true` | 在 Logcat 或 Xcode 控制台查看 SDK 调用细节。 |
+| 联调或预发布 | 根据问题临时使用更详细级别 | 配合用户 ID、会话 ID、错误码和 OpenIMServer 日志定位。 |
+| 生产默认 | `OpenIMLogLevelWarn` 或 `OpenIMLogLevelError`，关闭不必要的标准输出 | 降低噪声和敏感信息泄露风险。 |
+| 用户诊断模式 | 临时提高级别，并说明收集范围 | 取得用户同意，遵守隐私、保留与删除策略。 |
+
+## 配置日志
+
+日志选项属于 SDK 初始化配置，不是 `login()` 参数。下面以 Android 为例：
+
+```uts
+import {
+  OpenIMLogLevelDebug,
+  OpenIMPlatformAndroid,
+  initSDK,
+  type OpenIMInitConfig,
+} from '@/uni_modules/unix-openim-sdk'
+
+const config : OpenIMInitConfig = {
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://im-api.example.com',
+  wsAddr: 'wss://im-ws.example.com',
+  logLevel: OpenIMLogLevelDebug,
+  isLogStandardOutput: true,
+  systemType: 'android',
+}
+
+await initSDK(config)
+```
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `logLevel` | `OpenIMLogLevel` | 是 | 控制 Core 运行日志的详细程度。 |
+| `isLogStandardOutput` | `boolean` | 是 | 是否把 SDK 日志写到平台标准输出；开发与短期诊断时使用。 |
+| `logFilePath` | `string` 或 `null` | 否 | 自定义日志路径；通常让插件使用平台默认目录，只有明确管理沙盒路径时才覆盖。 |
+
+`apiAddr`、`wsAddr`、平台和 `systemType` 仍是初始化必需配置，但不是日志字段。插件错误中的错误码与错误信息也不是初始化日志参数。
+
+## 使用 operationID 定位一次调用
+
+`operationID` 是单次 SDK 调用的可选链路标识。多数异步 API 把它作为最后一个参数；日常调用可以省略，由插件生成或交给 Core 处理。只有需要把一次具体调用与原生日志、OpenIMServer 日志精确对应时，才显式创建并传入。
+
+```uts
+import { getConversationListSplit } from '@/uni_modules/unix-openim-sdk'
+
+const operationID = createDiagnosticOperationID()
+
+try {
+  const result = await getConversationListSplit(
+    { offset: 0, count: 50 },
+    operationID,
+  )
+
+  appLogger.info('openim_api_success', {
+    operationID,
+    action: 'get_conversation_page',
+    count: result?.conversations.length ?? 0,
+  })
+} catch (error) {
+  appLogger.error('openim_api_failed', {
+    operationID,
+    action: 'get_conversation_page',
+    error: sanitizeOpenIMError(error),
+  })
+  throw error
+}
+```
+
+每次调用使用新的 `operationID`，不要让多个无关请求共享同一个值。它不是用户身份、权限凭据、会话 ID 或业务幂等键，不能替代 Token、`conversationID` 或 `clientMsgID`。一个业务流程包含多次 SDK 调用时，为每次调用生成独立 operationID，另用业务侧 trace ID 串联整个流程。
+
+## 记录业务上下文
+
+应用日志可以保留页面路由、业务动作、operationID、脱敏错误码和必要的目标标识，例如 `conversationID` 或 `clientMsgID`。不要记录：
+
+- 用户 Token、管理员 Token、secret 或商业业务凭据。
+- 完整消息正文、原始自定义消息 payload、私人文件 URL。
+- 不必要的用户资料、通讯录、群成员清单。
+- SDK 数据库内容和完整本机沙盒路径。
+
+日志中的目标标识也应按支持与隐私策略处理。公开 issue 或跨团队传递前再次脱敏。
+
+## 上传日志
+
+`uploadLogs()` 接收上传行数和扩展说明。上传前必须取得用户同意，并说明收集范围、用途和保留策略。
+
+```uts
+import { uploadLogs } from '@/uni_modules/unix-openim-sdk'
+
+const operationID = createDiagnosticOperationID()
+
+await uploadLogs(
+  {
+    line: 2000,
+    ex: JSON.stringify({ scene: 'login-timeout' }),
+  },
+  operationID,
+)
+```
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `line` | `number` | 是 | 本次上传的日志行数。应设置上限，避免无界上传。 |
+| `ex` | `string` | 是 | 脱敏后的诊断扩展信息，例如场景名称；不要放 Token、消息或凭据。 |
+
+Promise 成功表示日志上传请求已经完成，不代表问题已经提交给支持团队或已经得到处理。失败时限制重试次数，避免后台持续消耗流量与电量。
+
+## 观察上传进度
+
+`onUploadLogsProgress()` 返回独立订阅句柄。进度事件的完整业务归属在[消息概览](/sdk/uniapp/message/overview-message)；日志页面只说明诊断上传时的使用边界。拥有该监听的诊断 service 结束时，必须通过 `off(subscription)` 释放。
+
+上传进度用于界面展示，不代表服务端已经完成问题分析。不要把原始日志内容或 Token 塞入进度状态。
+
+## 相关页面
+
+- [安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)
+- [用户认证](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [发送第一条消息](/sdk/uniapp/getting-started/send-first-message)
+- [发送消息](/sdk/uniapp/message/sending-messages/send-message)

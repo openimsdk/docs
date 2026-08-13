@@ -1,0 +1,170 @@
+---
+title: '按宿主和平台接入'
+description: '区分 uni-app、uni-app x、Android、iOS 与 HarmonyOS 的调用、生命周期和原生构建边界。'
+sourcePath: '/sdk/uniapp/getting-started/environment-specific-implementation'
+---
+
+`unix-openim-sdk` 的业务函数在 uni-app 与 uni-app x 中保持一致，差异主要发生在语言类型、页面生命周期、文件路径和原生构建方式。所有宿主都从同一个插件根路径扁平导入，且共享宿主进程中唯一的 OpenIM Core。
+
+## 支持矩阵
+
+| 宿主 | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | API 21+ | iOS 14+ | 暂不宣称支持 |
+| uni-app x | API 21+ | iOS 14+ | 商业版 API 24 |
+| Web / H5 / 小程序 | 不支持 | 不支持 | 不支持 |
+
+接入和本地编译使用 HBuilderX/uni-app `5.23` 系列。公共与商业能力是否可用还取决于所安装的插件版本、原生制品和 OpenIMServer 部署，不能只根据宿主名称判断。
+
+## 使用统一插件入口
+
+uni-app 和 uni-app x 都从 `@/uni_modules/unix-openim-sdk` 导入。不要使用裸包名，也不要直接导入 `utssdk/app-android`、`app-ios` 或 HarmonyOS 实现。
+
+```uts
+import {
+  getLoginStatus,
+  off,
+  onConnectSuccess,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+Promise 成功直接返回业务值，不读取 `{ data }`；事件返回 `OpenIMSDKEventSubscription`，使用 `off(subscription)` 清理。
+
+## uni-app Vue 2 / Vue 3
+
+传统 uni-app 页面可以在 Vue 2 或 Vue 3 生命周期中调用插件。JavaScript 不提供 UTS 的完整静态类型检查，但 Promise 返回值和事件句柄语义相同。建议把 SDK 初始化、登录和全局监听放在应用级 service 中，避免页面反复初始化。
+
+```javascript
+import {
+  getLoginStatus,
+  off,
+  onConnectSuccess,
+} from '@/uni_modules/unix-openim-sdk'
+
+const connectSubscription = onConnectSuccess(() => {
+  console.log('OpenIM connected')
+})
+
+const status = await getLoginStatus()
+
+// 拥有监听的应用 service 销毁时执行。
+off(connectSubscription)
+```
+
+Vue 组件销毁只释放该组件或 service 拥有的订阅，不调用 `unInitSDK()`。若多个页面依赖同一事件，优先由 store 统一订阅并向页面分发状态。
+
+## uni-app x
+
+uni-app x 使用 UTS 类型。初始化参数、消息对象和事件 payload 应直接导入插件公开类型，不要复制一套会随 SDK 漂移的本地接口。
+
+```uts
+import {
+  getLoginStatus,
+  type OpenIMLoginStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+const status : OpenIMLoginStatus = await getLoginStatus()
+```
+
+UTS 的可空值需要显式处理。若返回类型是 `OpenIMUserInfo | null` 或结果包装中的数组可空，不要用不安全强制转换绕过合同。
+
+商业信令事件返回 raw JSON 字符串。先确认字符串非空，再通过经过校验的 UTS JSON 解析读取已知字段；不要把未经校验的 `UTSJSONObject` 强制转换成完整业务 DTO。
+
+## App 生命周期
+
+SDK Core 在 App 作用域只初始化一次。页面进入和退出只管理该页面拥有的订阅；用户切换账号时先退出旧账号、清理旧订阅与状态，再登录新账号；App 确定不再使用 SDK 时才反初始化。
+
+前后台、网络、Badge 与推送状态应由 App 生命周期统一上报，不要让多个页面重复调用。完整示例见[处理 App 生命周期与设备状态](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state)。
+
+## Android
+
+Android 最低 API 21。构建产物需要包含插件声明的 Maven/AAR 依赖和目标 ABI；标准基座没有这些原生制品，应使用包含插件的自定义基座或本地原生工程。
+
+发布前至少检查：
+
+- manifest merge 后的网络、通知和存储等权限符合产品需求。
+- 每个目标 ABI 只有一套 OpenIM Core native library。
+- release/R8 构建没有 duplicate class、duplicate JNI 或反射裁剪问题。
+- 真机可以访问 `apiAddr` / `wsAddr`，后台恢复符合系统限制。
+
+SDK 不会自动替业务申请相册、相机、麦克风或通知权限。普通 IM 功能按实际使用场景声明；AV Runtime 的媒体权限属于另一个插件边界。
+
+## iOS
+
+iOS 最低版本为 14。构建时需要正确链接、嵌入并签名插件 XCFramework；使用与插件版本匹配的 CocoaPods/Xcode 环境。
+
+发布前在真机检查 framework slice、embed/sign、隐私清单、权限说明和 App Store 构建。模拟器通过不能替代 device arm64 链接。若宿主还安装其他原生插件，应扫描重复 framework 和同名 module。
+
+SDK 日志和数据库位于应用沙盒中。不要把模拟器绝对路径写入业务配置，也不要直接移动或修改 Core 数据库。
+
+## HarmonyOS
+
+HarmonyOS 仅声明 uni-app x 商业版支持，最低 API 24，并要求与插件合同一致的商业 HAR。
+
+当前以下操作稳定返回 `platform-unsupported`：
+
+- `updateFcmToken`
+- `updateToken`
+- `translateText`
+- `translateMessage`
+
+十个不支持事件只返回 unsupported subscription，不会伪造回调，完整清单见[事件概览](/sdk/uniapp/events/overview-events)。平台不支持不等于商业版鉴权失败；业务应按稳定错误区分能力缺失、登录状态、网络和服务端错误。
+
+## 文件路径
+
+图片、语音、视频和文件消息使用本机可读的完整路径。`unifile://`、相册临时地址或页面沙盒虚拟路径应先通过 uni API 转换为原生 Core 可访问的本地路径。
+
+- 不要把 HTTP URL 当作本地路径传给 `by-file` / full-path 创建接口。
+- 确认临时文件在消息创建和上传完成前不会被系统清理。
+- iOS 与 Android 沙盒路径不同，不要把一个平台的绝对路径持久化后交给另一平台。
+- 文件访问、相册和媒体权限由宿主申请并向用户解释。
+
+对应消息页会分别说明 URL 创建与本地完整路径创建的区别。
+
+## 本地构建与自定义基座
+
+原生 UTS 插件必须进入原生编译。开发时可选择：
+
+1. 使用 HBuilderX 5.23 构建包含插件的自定义基座。
+2. 使用项目维护的 Android/iOS 本地原生工程完成编译、安装和自动化测试。
+
+本地流程应锁定 HBuilderX、DCloud 原生 SDK、JDK/Android SDK、Xcode/CocoaPods 和插件版本，避免“开发机能跑但发布包使用另一套依赖”。标准基座只能用于不含该原生插件的页面，不能据此判断 SDK 能力。
+
+### 共享 SDK service
+
+建议在业务代码中封装一个 App 级 SDK service，统一负责初始化状态、当前登录用户、全局订阅句柄和销毁顺序。页面只调用这个 service 的业务方法并订阅应用状态，不自行决定 Core 是否需要重新初始化。
+
+该 service 仍应暴露插件的真实 Promise 与错误语义：不要重新包装成 Wasm 的 `{ data }`，不要吞掉 `platform-unsupported`，也不要用 `offAll()` 清理并非自己拥有的监听。切换账号时先停止旧账号写入，再等待 `logout()`、释放旧句柄、清空状态，最后登录新账号。
+
+## 不适用范围
+
+本插件不支持 Web、H5 和小程序。它依赖 Android、iOS 或 HarmonyOS 原生 Core、本地数据库和原生网络生命周期，不能通过条件编译把同一导入直接运行在浏览器。
+
+若同一项目还有 H5 或小程序端，应在业务适配层选择相应 Web/Wasm/小程序 SDK，并分别管理初始化、登录、事件和存储，不要让两个 SDK 实例竞争同一 App 端登录状态。
+
+## 验证与排查
+
+- 在目标平台确认 `initSDK()` 成功，`login()` 后收到 `onConnectSuccess`。
+- 验证查询 API 直接返回业务值，事件句柄可以在异步使用后通过 `off()` 清理。
+- 真机验证网络断开恢复、前后台、被踢、Token 失效和重新登录。
+- 文件消息在 release 包中使用真实相册/文件路径测试，不只验证固定沙盒样例。
+- 商业 API 连接商业服务端；HarmonyOS 对不支持能力明确返回错误。
+- Android/iOS 最终安装包执行重复原生依赖、签名和 ABI/slice 扫描。
+
+## 常见问题
+
+| 现象 | 可能原因 | 处理方式 |
+| --- | --- | --- |
+| 标准基座提示原生插件不可用 | 基座未包含插件原生依赖 | 构建自定义基座或使用本地原生工程。 |
+| 真机无法连接、模拟器可以 | 服务地址使用 `localhost`、TLS 或局域网路由不通 | 从真机验证 API/WSS 地址、证书和反向代理。 |
+| 事件重复执行 | 页面或 `onShow` 重复注册，旧句柄未释放 | 把监听提升到稳定 service，并逐个 `off(subscription)`。 |
+| 文件创建失败 | 传入 `unifile://`、临时 URL 或 Core 无权读取的路径 | 转换为原生可读完整路径并保证文件生命周期。 |
+| HarmonyOS 某 API 始终失败 | 锁定 HAR 没有该能力 | 识别 `platform-unsupported`，关闭入口或采用替代流程。 |
+| iOS 模拟器成功、真机链接失败 | device slice、embed、签名或最低版本不匹配 | 用 iPhone device 构建检查 XCFramework 与签名。 |
+
+## 下一步
+
+- [开始之前](/sdk/uniapp/getting-started/before-you-start)
+- [安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)
+- [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [处理 App 生命周期与设备状态](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state)

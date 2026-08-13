@@ -1,0 +1,52 @@
+---
+title: 'Create an @ message'
+description: 'OpenIM uni-app / uni-app x SDK guide for Create an @ message.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/creating-messages/create-text-at-message'
+---
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | Yes | Message text; use stable `@userID` markers. |
+| `atUserIDList` | `string[]` | Yes | Mentioned users; obtain the special tag from `getAtAllTag()` for everyone. |
+| `atUsersInfo` | `OpenIMAtUsersInfoItem[]` or `null` | No | User IDs and group display names. |
+| `quoteMessage` | `OpenIMMessageItem` or `null` | No | Original quoted message. |
+
+```uts
+import { createTextAtMessage } from '@/uni_modules/unix-openim-sdk'
+
+const message = await createTextAtMessage({
+  text: '@user_a please review',
+  atUserIDList: ['user_a'],
+  atUsersInfo: [{ atUserID: 'user_a', groupNickname: 'Alex' }],
+})
+```
+
+The Promise creates `OpenIMMessageItem | null`. This message can only be sent to a group. Keep `atUserIDList` aligned with `atUsersInfo`; creation does not change conversation mention state or emit events.
+
+## Mention everyone
+
+Do not hard-code the everyone tag. Obtain the deployed value from commercial `getAtAllTag()` <span className="enterprise-field-badge">Commercial</span>, then place it in both the text and ID list:
+
+```uts
+import { getAtAllTag } from '@/uni_modules/unix-openim-sdk'
+
+const atAllResult = await getAtAllTag()
+const atAllTag = atAllResult?.tag
+if (atAllTag != null) {
+  const message = await createTextAtMessage({
+    text: `${atAllTag} please read the announcement`,
+    atUserIDList: [atAllTag],
+  })
+}
+```
+
+`getAtAllTag()` only reads the convention. Send the created message separately with the target group ID.

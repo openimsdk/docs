@@ -1,0 +1,91 @@
+---
+title: 'Get user profiles'
+description: 'Read public profiles for a list of user IDs.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/user/profile/get-users-info'
+---
+
+Use `getUsersInfo()` to query application users' public profiles by `userID`. It is suitable for friend candidates, stranger profile cards, and message-sender profiles.
+
+If the product searches by nickname, phone number, organization, email, or another application field, let a trusted backend perform the search and permission check first, then pass the returned `userID` values to `getUsersInfo()`. Administrator tokens and user-directory administration must remain on that backend.
+
+## Query public profiles
+
+Pass an array of OpenIMSDK user IDs. Deduplicate them and limit each batch; do not issue one request per row while a long list scrolls.
+
+```uts
+import {
+  getUsersInfo,
+  type OpenIMUserInfo,
+} from '@/uni_modules/unix-openim-sdk'
+
+const userIDList : Array<string> = uniqueUserIDs(['user_a', 'user_b'])
+const result = await getUsersInfo(userIDList)
+const users : Array<OpenIMUserInfo> = result?.users ?? []
+
+users.forEach((user) => {
+  cachePublicUser(user.userID, user)
+})
+```
+
+The Promise resolves directly to `OpenIMUserListResult` or `null`. Its `users` field contains the matched `OpenIMUserInfo[]`; `OpenIMPublicUserItem` is the public-profile alias for that shape. The result can be shorter than the request and does not have to preserve input order. Build a map by `userID` and retain placeholder state for users that do not exist, are inaccessible, or were not returned.
+
+Common fields are:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | OpenIMSDK user ID. |
+| `nickname` | `string` | Account-level public nickname. |
+| `faceURL` | `string` | Account-level public avatar URL. |
+| `createTime` | `number` or `null` (optional) | Time when the user record was created. |
+| `ex` | `string` | Account-level extension string whose format is defined by the application. |
+| `attachedInfo` <span className="enterprise-field-badge">Enterprise</span> | `string` or `null` (optional) | Parse only according to a confirmed commercial business contract. |
+| `globalRecvMsgOpt` <span className="enterprise-field-badge">Enterprise</span> | `number` or `null` (optional) | Account-level message reception option. A stranger profile card normally does not need to display it. |
+
+Neither `ex` nor `attachedInfo` is a trusted identity, authorization, or authentication credential. This query is also read-only for other accounts. Update only the signed-in user's profile with `setSelfInfo()`.
+
+## Results and profile refresh
+
+Use the returned `users` to update the current public-profile snapshot. Query again when opening a profile card, refreshing manually, reconnecting, or receiving a profile-change notification from the application backend. When a page displays several users, collect the visible `userID` values, deduplicate them, query one batch, and merge by `userID`.
+
+The SDK has no general change event for arbitrary users' public profiles. `onSelfInfoUpdated` carries only the signed-in user's profile and must not be written into another user's public-profile cache. See [Update your profile](/sdk/uniapp/user/profile/set-self-info) for current-account profile updates and reconciliation.
+
+## Search for users to add as friends
+
+The application backend normally returns candidate `userID` values first. The App then calls `getUsersInfo()` for public presentation and continues to the friend-application flow after the user selects a target.
+
+```uts
+async function searchUsersForFriendRequest(keyword : string) : Promise<Array<OpenIMUserInfo>> {
+  const userIDs = await searchUserIDsFromBusinessBackend(keyword)
+  if (userIDs.length == 0) {
+    return []
+  }
+
+  const result = await getUsersInfo(uniqueUserIDs(userIDs))
+  return result?.users ?? []
+}
+```
+
+If the product supports only exact user-ID lookup, validate that input and pass it directly. For fuzzy search or sensitive fields, the backend must enforce authorization, rate limits, redaction, and auditing.
+
+## Choose display data by context
+
+| Context | Preferred type |
+| --- | --- |
+| Application search or a stranger's profile card | `OpenIMPublicUserItem` / `OpenIMUserInfo` |
+| Friend list, contacts, or friend remarks | `OpenIMFriendUserItem` |
+| Group member list, in-group nickname, or group role | `OpenIMGroupMemberItem` |
+
+Friend remarks and in-group nicknames belong to friendship and group-member data. See [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page), [Get specified friend information](/sdk/uniapp/user/friends/get-specified-friends-info), and [List group members](/sdk/uniapp/group/retrieving-group-members/get-group-member-list).
+
+## Next steps
+
+- [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page)
+- [Get specified friend information](/sdk/uniapp/user/friends/get-specified-friends-info)
+- [Get received friend applications](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient)

@@ -1,0 +1,61 @@
+---
+title: 'Modify a message'
+description: 'OpenIM uni-app / uni-app x SDK guide for Modify a message.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/managing-messages/modify-a-message'
+---
+
+`modifyMessage()` is <span className="enterprise-field-badge">Commercial</span>. Unlike deletion, which changes current-account visibility, and revocation, which creates a revoked state for conversation members, modification replaces content and synchronizes it to other clients.
+
+## Modify message content
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Conversation containing the message. |
+| `message` | `OpenIMMessageItem` | Yes | Complete edited message; preserve the original `clientMsgID`. |
+
+```uts
+import { modifyMessage, off, onMessageEdited, onMessageModified } from '@/uni_modules/unix-openim-sdk'
+
+const modified = onMessageModified(refreshModifiedMessage)
+const edited = onMessageEdited(refreshModifiedMessage)
+const result = await modifyMessage({ conversationID, message: buildEditedMessage(message, editedText) })
+if (result?.message != null) replaceMessage(result.message)
+
+function removeMessageModifiedListeners() {
+  off(modified)
+  off(edited)
+}
+```
+
+This is not a partial patch. Copy the current message and change only the intended content, preserving its ID and other fields. The server enforces sender, time-window, and content-type rules.
+
+If the call fails, discard the optimistic edit instead of leaving content that exists only in local UI state. Redact message bodies from diagnostics and keep the previous server-confirmed object until the request succeeds.
+
+## Return result
+
+`result?.message` is the server-confirmed `OpenIMMessageItem | null`. Replace the matching local message, but do not assume every device has updated.
+
+Promise completion confirms the current request only. Other clients merge the incremental update later, and the event can race with the Promise on the initiating client. Use `clientMsgID` and the server-confirmed version rather than arrival order.
+
+## Listen for message modifications
+
+Commercial `onMessageModified` and `onMessageEdited` deliver raw JSON. A deployment may use either event. If both are registered, validate JSON and deduplicate by stable message ID/version. Do not log message bodies. Remove both subscriptions when the login scope ends, and use the server's final version to resolve multi-device edits.
+
+After validation, resolve the conversation from the message routing fields and replace the existing row by `clientMsgID`. If the raw payload does not expose a stable, contract-approved shape, re-query the message rather than casting it directly.
+
+## Related pages
+
+- [Delete saved messages](/sdk/uniapp/message/managing-messages/delete-saved-messages)
+- [Revoke a message](/sdk/uniapp/message/managing-messages/revoke-a-message)
+- [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [Send a message](/sdk/uniapp/message/sending-messages/send-message)
+- [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages)

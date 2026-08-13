@@ -1,0 +1,30 @@
+---
+title: '处理数据迁移事件'
+description: '商业版观察迁移开始、进度、失败与完成事件。'
+sourcePath: '/sdk/uniapp/events/handle-data-migration-events'
+---
+
+四个 migration 事件属于<span className="enterprise-field-badge">商业版</span>，Android 与 iOS 支持；HarmonyOS 当前全部返回 `platform-unsupported`。它们来自 Core/插件迁移桥，不等同于普通同步事件。
+
+```uts
+import {
+  off,
+  onMigrationFailed,
+  onMigrationFinished,
+  onMigrationProgress,
+  onMigrationStart,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const startSubscription = onMigrationStart(() => showMigrationUI())
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  startSubscription,
+  onMigrationProgress((payload) => handleValidatedMigrationProgress(payload)),
+  onMigrationFailed((payload) => handleValidatedMigrationFailure(payload)),
+  onMigrationFinished(() => finishMigrationUI()),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+进度和失败 payload 是 opaque 字符串。若为 JSON，先校验再读取；不要向用户或日志暴露内部路径、数据库信息和敏感内容。迁移期间避免并发反初始化或切换账号，完成/失败后重新查询必要快照。

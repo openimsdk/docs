@@ -1,0 +1,52 @@
+---
+title: '发起群通话'
+description: '商业版向群成员发起群组通话邀请。'
+sourcePath: '/sdk/uniapp/calling/managing-calls/start-group-call'
+---
+
+`signalingInviteInGroup()` <span className="enterprise-field-badge">商业版</span> 发起群聊通话，只邀请 `inviteeUserIDList` 明确列出的群成员，不会因为填写 `groupID` 自动邀请全群。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `invitation` | `OpenIMSignalingInvitationInfo` | 是 | 本次通话邀请。 |
+| `invitation.inviterUserID` | `string` | 是 | 发起人的用户 ID。 |
+| `invitation.inviteeUserIDList` | `string[]` | 是 | 被邀请的群成员用户 ID；不要包含发起人。 |
+| `invitation.groupID` | `string` | 是 | 群组 ID，群聊通话不能为空。 |
+| `invitation.roomID` | `string` | 是 | 本次通话的唯一房间标识，所有参与端必须一致。 |
+| `invitation.timeout` | `number` | 是 | 邀请等待时长，单位为秒。 |
+| `invitation.mediaType` | `string` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |
+| `invitation.sessionType` | `number` | 是 | 工作群会话传 `OpenIMSessionTypeWriteGroup`。 |
+| `invitation.platformID` | `number` | 是 | 当前客户端平台；Android/iOS 分别使用对应平台常量。 |
+| `invitation.customData` | `string` | 否 | 随邀请携带的业务扩展字符串。 |
+| `invitation.initiateTime` | `number` | 否 | 邀请发起时间，通常由信令链路维护。 |
+| `invitation.busyLineUserIDList` | `string[]` | 否 | 发起新邀请时通常不填写。 |
+| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |
+
+```uts
+import {
+  OpenIMPlatformAndroid,
+  OpenIMSessionTypeWriteGroup,
+  signalingInviteInGroup,
+} from '@/uni_modules/unix-openim-sdk'
+
+const roomCredentials = await signalingInviteInGroup({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: selectedGroupMemberIDs,
+    customData: JSON.stringify({ source: 'group-call' }),
+    groupID,
+    roomID: groupID,
+    mediaType: 'video',
+    timeout: 30,
+    sessionType: OpenIMSessionTypeWriteGroup,
+    platformID: OpenIMPlatformAndroid,
+  },
+  offlinePushInfo,
+})
+```
+
+示例沿用群组 ID 作为房间 ID；若业务自行生成 `roomID`，所有参与端必须使用同一个值。iOS 端将 `platformID` 改为 `OpenIMPlatformIOS`。发起前应排除当前用户、空值和重复成员，并确认目标仍在群内。
+
+Promise 成功后，`roomCredentials` 是 `OpenIMSignalingInviteResult | null`，字段含义见[发起单聊通话](/zh/sdk/uniapp/calling/managing-calls/start-single-call)。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请；成功也不代表其他成员已经接听，后续状态由[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)合并。

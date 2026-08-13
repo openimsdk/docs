@@ -1,0 +1,94 @@
+---
+title: '获取黑名单'
+description: '查询当前用户的黑名单快照，并处理加入与移除黑名单事件。'
+sourcePath: '/sdk/uniapp/user/blacklist/get-black-list'
+---
+
+OpenIMSDK 黑名单记录当前用户主动拉黑的用户。调用 `getBlackList()` 可以获取完整列表，用于构建黑名单设置页、展示资料卡关系状态和限制聊天入口。
+
+黑名单与群组管理是两类独立能力。禁言、移除群成员或调整群角色时，应使用群成员 API；`getBlackList()` 只读取当前用户维护的黑名单。
+
+## 获取黑名单
+
+完成初始化、登录并确认连接可用后调用 `getBlackList()`。Promise 直接返回 `OpenIMBlackListResult | null`；`blackUsers` 为空数组表示当前没有黑名单用户。
+
+```uts
+import { getBlackList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getBlackList()
+const blockedUsers = result?.blackUsers ?? []
+replaceBlockedUsers(blockedUsers)
+```
+
+资料卡、会话操作菜单和联系人列表通常只需要判断某个 `userID` 是否在黑名单中。建议用 `userID` 建立集合，昵称和头像仅用于展示。
+
+```uts
+const blockedUserIDs = new Set<string>()
+blockedUsers.forEach((user) => blockedUserIDs.add(user.userID))
+
+function isBlocked(userID : string) : boolean {
+  return blockedUserIDs.has(userID)
+}
+```
+
+商业版还提供 `getBlacks()` <span className="enterprise-field-badge">商业版</span>，其包装字段名是 `blacks`：
+
+```uts
+import { getBlacks } from '@/uni_modules/unix-openim-sdk'
+
+const commercialResult = await getBlacks()
+replaceBlockedUsers(commercialResult?.blacks ?? [])
+```
+
+两个入口不要混用返回字段。一般业务选择一个与所安装版本一致的入口，不需要同时查询两份快照。
+
+## 黑名单记录字段
+
+`blackUsers` 中的每一项都是 `OpenIMBlackUserItem`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 被当前用户拉黑的目标用户 ID，也是列表和事件合并标识。 |
+| `nickname` | `string` | 目标用户昵称，用于展示。 |
+| `faceURL` | `string` | 目标用户头像地址。 |
+| `ownerUserID` | `string` | 这条黑名单关系的所有者，通常是当前登录用户。 |
+| `operatorUserID` | `string` | 执行拉黑操作的用户 ID。 |
+| `createTime` | `number` | 黑名单关系创建时间。 |
+| `addSource` | `number` | 黑名单关系的添加来源值。 |
+| `ex` | `string` | 扩展字段，只解析业务已经约定的内容。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+若黑名单页还要展示公开资料或好友备注，应按 `userID` 合并，并明确区分 `OpenIMBlackUserItem`、`OpenIMFriendUserItem` 和 `OpenIMPublicUserItem` 的来源。
+
+## 调用结果与增量变化
+
+`getBlackList()` 成功后，用返回数组完整替换当前黑名单快照。该查询本身不会触发新增或删除事件；首次进入页面、重新登录或用户主动刷新时，应重新查询完整列表。
+
+本页是 `onBlackAdded` 和 `onBlackDeleted` 的完整监听归属页：
+
+```uts
+import {
+  off,
+  onBlackAdded,
+  onBlackDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const blacklistSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onBlackAdded((user) => {
+    upsertBlockedUser(user.userID, user)
+  }),
+  onBlackDeleted((user) => {
+    removeBlockedUser(user.userID)
+  }),
+]
+
+function releaseBlacklistSubscriptions() {
+  blacklistSubscriptions.forEach((subscription) => off(subscription))
+  blacklistSubscriptions.length = 0
+}
+```
+
+事件按 `userID` 合并。加入黑名单后，对方不能向当前用户发送消息，但当前用户仍可向对方发送；若产品要求双向限制，应由业务层额外控制。黑名单与好友关系仍是独立状态，客户端应分别查询，不能假定拉黑一定删除好友。
+
+退出登录、切换账号或销毁黑名单状态层时调用 `releaseBlacklistSubscriptions()`。

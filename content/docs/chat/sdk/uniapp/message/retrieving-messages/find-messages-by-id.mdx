@@ -1,0 +1,37 @@
+---
+title: 'Find messages by ID'
+description: 'OpenIM uni-app / uni-app x SDK guide for Find messages by ID.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/retrieving-messages/find-messages-by-id'
+---
+
+Keep both `conversationID` and `clientMsgID` when a search result, quoted message, or notification navigates to a message, then use `findMessageList()` to retrieve the locally synchronized record.
+
+## Parameters
+
+`findMessageList()` accepts an array of query groups:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `items[].conversationID` | `string` | Yes | Conversation that owns the requested messages. |
+| `items[].clientMsgIDList` | `string[]` | Yes | Client message IDs to find in that conversation. |
+
+```uts
+import { findMessageList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await findMessageList([
+  { conversationID, clientMsgIDList: [clientMsgID] },
+])
+
+const targetMessage = result?.findResultItems[0]?.messageList[0]
+```
+
+The Promise resolves to `OpenIMFindMessageResult | null`, containing `totalCount` and `findResultItems`. Each result item includes the `conversationID`, `conversationType`, conversation display snapshot, `messageCount`, and `messageList`.
+
+One call can query several conversations. Do not assume response items preserve input order; match by the result `conversationID` and each message's `clientMsgID`. A result can be missing when local data has not synchronized, the message was deleted, or the ID does not exist. This query does not emit message events. To retrieve records around a hit, see [Load message context](/sdk/uniapp/message/retrieving-messages/load-message-context).

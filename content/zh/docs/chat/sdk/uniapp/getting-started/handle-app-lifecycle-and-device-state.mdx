@@ -1,0 +1,48 @@
+---
+title: '处理 App 生命周期、角标与推送 Token'
+description: '把 App 前后台、网络、角标和 FCM Token 接入 OpenIM SDK。'
+sourcePath: '/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state'
+---
+
+生命周期上报应由应用级 service 统一负责，而不是每个聊天页面分别调用。前后台和网络变化使用认证页说明的 `setAppBackgroundStatus()` 与 `networkStatusChanged()`；本页说明应用角标和 FCM Token。
+
+## 设置应用未读角标
+
+```uts
+import { setAppBadge } from '@/uni_modules/unix-openim-sdk'
+
+await setAppBadge(totalUnreadCount)
+```
+
+`setAppBadge()` 把当前应用总未读数同步给 SDK/平台侧。业务仍应订阅总未读事件维护自己的 UI；Promise 成功不代表桌面角标在所有系统设置下都可见。传 `0` 清除角标。
+
+## 更新 FCM Token
+
+```uts
+import { updateFcmToken } from '@/uni_modules/unix-openim-sdk'
+
+await updateFcmToken({
+  fcmToken: deviceFcmToken,
+  expireTime: tokenExpireUnixSeconds,
+})
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `fcmToken` | `string` | 推送服务为当前设备签发的 Token。 |
+| `expireTime` | `number` | Token 到期 Unix 时间；按服务端协议使用秒级时间。 |
+
+只在取得或刷新有效设备 Token 后调用。不要把 FCM Token 写入公开日志，也不要用 IM Token 代替设备推送 Token。
+
+HarmonyOS 当前不实现 `updateFcmToken`，调用会返回 `platform-unsupported`。这属于平台能力缺失，不是商业版鉴权问题；Harmony 推送应由业务使用其平台方案接入。
+
+## 推荐时序
+
+1. App 启动并初始化 SDK。
+2. 注册账号与消息事件，登录当前用户。
+3. 推送服务返回设备 Token 后调用 `updateFcmToken()`。
+4. 总未读事件到达时更新应用状态并调用 `setAppBadge()`。
+5. App 前后台、网络变化时调用对应生命周期 API。
+6. 退出账号时清空业务角标与推送关联，再清理账号作用域监听。
+
+推送到达只表示系统通知链路工作；消息列表仍应通过 SDK 新消息事件和历史查询恢复，不能只依赖通知 payload。

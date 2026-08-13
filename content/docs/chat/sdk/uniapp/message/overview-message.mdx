@@ -1,0 +1,112 @@
+---
+title: 'Message overview'
+description: 'OpenIM uni-app / uni-app x SDK guide for Message overview.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/overview-message'
+---
+
+The uni-app / uni-app x plugin represents every message with `OpenIMMessageItem`. Sending has two phases: create an outgoing message object for the desired content, then send that object to a user or group. A create method does not send anything, and a successful send Promise does not prove that another client has received the message.
+
+Realtime delivery, history, search, and message management are all conversation-scoped. Merge send results, realtime events, and history idempotently with the composite key `conversationID:clientMsgID`: `conversationID` identifies the conversation and `clientMsgID` identifies the message.
+
+## Message processing flow
+
+| Phase | Main operation | Notes |
+| --- | --- | --- |
+| Create | Call the appropriate `create*Message()` method | Returns an `OpenIMMessageItem`; it does not write to the server or emit a new-message event. |
+| Send | Call `sendMessage()` or `sendMessageNotOss()` | For a single chat, set `recvID`; for a group chat, set `groupID`. Pass an empty string for the unused target. |
+| Receive | Subscribe to new-message events | Resolve the target conversation from the routing fields and merge by `clientMsgID`. |
+| Query | Load history, search, or find messages by ID | Queries return a snapshot and do not emit new-message events. |
+| Update | Delete, revoke, modify, pin, or report read status | Handle the Promise, related events, and any required reconciliation query separately. |
+
+Messages created from a readable native image, audio, video, or file path are uploaded by `sendMessage()`. If your application already uploaded the media and has a URL, use the corresponding `create*MessageByURL()` method and send it with `sendMessageNotOss()` to avoid uploading it again.
+
+## OpenIMMessageItem structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `clientMsgID` | `string` or `null` | Stable client ID used for deduplication, state updates, lookup, and pagination cursors. |
+| `serverMsgID` | `string` or `null` | Server message ID; an unsent or failed message may not have one. |
+| `sessionType` | `OpenIMSessionType` | Conversation type. |
+| `sendID`, `recvID`, `groupID` | `string` or `null` | Sender and single/group routing fields. |
+| `contentType` | `OpenIMMessageType` | Content type that determines which elem field to read. |
+| `createTime`, `sendTime` | `number` | Creation and send times. |
+| `seq` | `number` | Server sequence number. |
+| `senderPlatformID` | `OpenIMPlatform` | Sender platform. |
+| `senderNickname`, `senderFaceUrl` | `string` or `null` | Sender profile snapshot. |
+| `status` | `OpenIMMessageStatus` | Current send status. |
+| `isRead` | `boolean` | Current read-state snapshot. |
+| `offlinePush` | `OpenIMOfflinePush` or `null` | Offline-push settings used for the send. |
+| `content`, `attachedInfo` | `string` or `null` | SDK-serialized content and attached information. |
+| `ex` | `string` or `null` | Extension string synchronized with the message. |
+| `localEx` | `string` or `null` | Extension string stored only on this device. |
+
+Read message bodies from the elem that matches `contentType`: `textElem` for text; `pictureElem`, `soundElem`, `videoElem`, and `fileElem` for media; `atTextElem` and `quoteElem` for mentions and replies; `mergeElem` and `customElem` for merged and custom messages; `cardElem`, `locationElem`, and `faceElem` for cards, locations, and emoji; and `advancedTextElem`, `typingElem`, and `notificationElem` for advanced text, typing, and notifications. Do not infer the message type from display text or array position.
+
+`conversationID` identifies the containing conversation but is not an `OpenIMMessageItem` field. Obtain it from the active conversation, query condition, search result, or event context, then merge state by `conversationID:clientMsgID`.
+
+## Create messages with different content types
+
+| Content | Page | Notes |
+| --- | --- | --- |
+| Text and Markdown | [Create a text message](/sdk/uniapp/message/creating-messages/create-text-message), [Create a Markdown message](/sdk/uniapp/message/creating-messages/create-markdown-message) | Render Markdown safely on the receiver. |
+| Group mentions | [Create an @ message](/sdk/uniapp/message/creating-messages/create-text-at-message) | Can only be sent to a group. |
+| Images, audio, video, and files | [Create an image from a full path](/sdk/uniapp/message/creating-messages/create-image-message-from-full-path), [Create an image from a URL](/sdk/uniapp/message/creating-messages/create-image-message-by-url) | Other media types use the same local-path or pre-uploaded URL flow. |
+| Cards, locations, and emoji | [Create a card message](/sdk/uniapp/message/creating-messages/create-card-message), [Create a location message](/sdk/uniapp/message/creating-messages/create-location-message), [Create a face message](/sdk/uniapp/message/creating-messages/create-face-message) | Creation stores a content snapshot. |
+| Replies, forwarding, and merging | [Create a quote message](/sdk/uniapp/message/creating-messages/create-quote-message), [Create a forwarded message](/sdk/uniapp/message/creating-messages/create-forward-message), [Create a merged message](/sdk/uniapp/message/creating-messages/create-merger-message) | The returned object still must be sent explicitly. |
+| Custom business content | [Create a custom message](/sdk/uniapp/message/creating-messages/create-custom-message) | Receivers must validate the business schema. |
+
+Put device-only presentation state in `localEx`, not in business content that must synchronize to other users. See [Set a local message extension](/sdk/uniapp/message/managing-messages/set-message-local-ex).
+
+Progress events for message sends, file uploads, and log uploads belong to this page:
+
+```uts
+import {
+  off,
+  onSendMessageProgress,
+  onUploadFileProgress,
+  onUploadLogsProgress,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const sendProgressSubscription = onSendMessageProgress((event) => {
+  updateMessageProgress(event.clientMsgID, event.progress)
+})
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  sendProgressSubscription,
+  onUploadFileProgress((event) => updateCurrentUpload(event.progress)),
+  onUploadLogsProgress((event) => updateLogUpload(event.progress)),
+]
+
+function removeProgressListeners() {
+  subscriptions.forEach((subscription) => off(subscription))
+}
+```
+
+Progress may repeat, skip values, or arrive before or after the final Promise. Display it monotonically and use the API result as the source of truth. Call `removeProgressListeners()` when logging out, switching accounts, or disposing the progress state.
+
+A local media path must be readable by the native layer. Resolve `unifile://` to a real sandbox path; use the by-URL create method for network URLs.
+
+## Find a page by task
+
+| Task | Page |
+| --- | --- |
+| Send a normal or pre-uploaded media message | [Send a message](/sdk/uniapp/message/sending-messages/send-message), [Send pre-uploaded media](/sdk/uniapp/message/sending-messages/send-message-not-oss) |
+| Receive online, offline, and online-only messages | [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages) |
+| Load history or surrounding context | [Load older messages](/sdk/uniapp/message/retrieving-messages/load-older-messages), [Load message context](/sdk/uniapp/message/retrieving-messages/load-message-context) |
+| Find by ID or search local messages | [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id), [Search messages](/sdk/uniapp/message/searching-messages/search-messages) |
+| Delete, revoke, modify, or pin | [Delete saved messages](/sdk/uniapp/message/managing-messages/delete-saved-messages), [Revoke a message](/sdk/uniapp/message/managing-messages/revoke-a-message), [Modify a message](/sdk/uniapp/message/managing-messages/modify-a-message), [Pin a message](/sdk/uniapp/message/managing-messages/set-message-pinned) |
+| Group member-level read status | [Send group read receipts](/sdk/uniapp/message/managing-read-status/send-group-read-receipts), [Get group message readers](/sdk/uniapp/message/managing-read-status/get-group-message-readers) |
+| Typing status or speech recognition | [Update typing status](/sdk/uniapp/message/composing-messages/update-typing-status), [Transcribe audio](/sdk/uniapp/message/composing-messages/transcribe-audio) |
+
+## State synchronization boundaries
+
+The complete listeners for new messages, deletion, revocation, modification, pinning, group read status, and typing status live on their task pages. Message creation and pure query methods only establish snapshots from their Promise result and do not emit shared message events. For mutations, treat Promise completion, event delivery, and reconciliation queries as separate phases.
+
+Conversation unread counts, total unread counts, and group mention reminders are conversation state. Maintain them with [Mark a conversation as read](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read), [Maintain the total unread count](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count), and the events on [Retrieve the conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list).

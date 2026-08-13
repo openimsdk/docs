@@ -1,0 +1,160 @@
+---
+title: 'Send your first message'
+description: 'Create and send a text message in a uni-app or uni-app x App.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/send-first-message'
+---
+
+This page shows how to install and initialize `unix-openim-sdk` in a uni-app / uni-app x App, sign in, and send the first text message. Before you begin, complete the server, user, token, plugin, and native build preparation in [Before you start](/sdk/uniapp/getting-started/before-you-start).
+
+An OpenIMSDK message can target a user or a group. A one-to-one message uses the recipient's `recvID`; a group message uses the destination `groupID`.
+
+## Prepare a message target
+
+For a one-to-one test, prepare an existing recipient user. For a group test, prepare an existing `groupID` in which the current user is allowed to speak. A group message does not include a recipient user ID and does not target one individual member.
+
+| Scenario | Required target identifier |
+| --- | --- |
+| One-to-one conversation | An existing recipient user ID passed as `recvID`, while `groupID` is an empty string. |
+| Group conversation | An existing group ID passed as `groupID`, while `recvID` is an empty string. |
+
+### Verify the target
+
+The first message normally verifies the complete path between the client, OpenIMServer, and another client. Before sending it, confirm that:
+
+- The one-to-one recipient exists and server policy permits the current user to send to that recipient.
+- The destination `groupID` exists, the current user has joined it, and group state or mute policy does not prohibit sending.
+- Two independent test clients use different users; do not use same-account UI behavior as proof that another user received the message.
+
+## Get started
+
+Follow these steps to send the first text message.
+
+### Step 1: Install the UTS plugin
+
+Install `unix-openim-sdk` at `uni_modules/unix-openim-sdk`. Because the plugin has native dependencies, the standard base cannot load it. Build a custom base containing the plugin or use the project's local Android/iOS native build workflow.
+
+Business pages import functions and types from the flat plugin root:
+
+```uts
+import {
+  createTextMessage,
+  sendMessage,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+Do not create an SDK instance or import an Android, iOS, or HarmonyOS implementation directory directly.
+
+### Step 2: Initialize OpenIM SDK
+
+Call `initSDK()` once in the App scope. This example uses Android; iOS and HarmonyOS use their own platform constant and `systemType`.
+
+```uts
+import {
+  OpenIMLogLevelInfo,
+  OpenIMPlatformAndroid,
+  initSDK,
+  type OpenIMInitConfig,
+} from '@/uni_modules/unix-openim-sdk'
+
+const config : OpenIMInitConfig = {
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://im-api.example.com',
+  wsAddr: 'wss://im-ws.example.com',
+  logLevel: OpenIMLogLevelInfo,
+  isLogStandardOutput: true,
+  systemType: 'android',
+}
+
+const initialized = await initSDK(config)
+if (!initialized) {
+  throw new Error('OpenIM SDK initialization was not accepted')
+}
+```
+
+`apiAddr` and `wsAddr` must be reachable from the actual device, and `systemType` is required. See [Install, initialize, and inspect the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk) for all fields, iOS/HarmonyOS constants, version queries, and uninitialization.
+
+### Step 3: Connect to OpenIMServer
+
+Use the application endpoint prepared in [Before you start](/sdk/uniapp/getting-started/before-you-start) to load the current user's `userID` and token. Register connection and token events before login as described in [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session). This page keeps only the main first-message flow and does not redefine those complete listeners.
+
+```uts
+import { login } from '@/uni_modules/unix-openim-sdk'
+
+const session = await loadOpenIMSDKSession()
+await login(session.userID, session.token)
+```
+
+The `login()` Promise succeeding means that the sign-in request completed. Wait for `onConnectSuccess`, owned by the authentication page, before calling message APIs that depend on the connection. uni-app / uni-app x uses two positional arguments; it does not accept the Wasm object-style login parameters.
+
+### Step 4: Select the message target
+
+A one-to-one conversation needs only the recipient user ID. Put an existing, verified user ID in `recvID`:
+
+```uts
+const recvID = 'user_b'
+const groupID = ''
+```
+
+A group conversation uses only the OpenIMSDK group ID. Reuse a `groupID` already known to the application, or create a test group through an admin console, the application backend, or group APIs and keep the returned ID:
+
+```uts
+const recvID = ''
+const groupID = 'group_123'
+```
+
+A group can have initial members, but sending the group message does not include an individual recipient user ID.
+
+### Step 5: Create and send the message
+
+Sending an OpenIMSDK text message has two steps: create a local `OpenIMMessageItem`, then send it to the user or group with `sendMessage()`.
+
+```uts
+import {
+  createTextMessage,
+  sendMessage,
+  type OpenIMMessageItem,
+} from '@/uni_modules/unix-openim-sdk'
+
+const message = await createTextMessage('Hello, OpenIMSDK')
+if (message == null) {
+  throw new Error('Failed to create text message')
+}
+
+const sentMessage : OpenIMMessageItem = await sendMessage({
+  recvID,
+  groupID,
+  message,
+})
+
+appendOutgoingMessage(sentMessage)
+```
+
+`createTextMessage()` returns an unsent message object. It does not send a message or trigger a new-message event. `sendMessage()` returns the sent `OpenIMMessageItem` directly; there is no Wasm `{ data }` wrapper.
+
+The sender should replace its pending item with `sentMessage` by `clientMsgID`. Another logged-in client receives the message through a new-message event. See [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages) for complete listeners, batch and single callbacks, cleanup, and conversation routing; this page does not register those events again.
+
+## Verify the result
+
+Use two users on two independent clients and verify each stage:
+
+1. Client A's `sendMessage()` succeeds and returns a non-empty `clientMsgID`.
+2. Client A merges the returned item by `clientMsgID` rather than appending a duplicate.
+3. Client B receives the new-message event and can read the same business content.
+4. Both clients can later query the message from history.
+
+Promise success and remote event delivery are separate stages and must be verified independently. When troubleshooting, record redacted error codes, the current user ID, target user or group ID, and `clientMsgID` so they can be correlated with OpenIMServer logs. Do not record tokens or full private-message content.
+
+## Next steps
+
+- [Before you start](/sdk/uniapp/getting-started/before-you-start)
+- [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [Integrate by host and platform](/sdk/uniapp/getting-started/environment-specific-implementation)
+- [Send messages](/sdk/uniapp/message/sending-messages/send-message)
+- [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages)

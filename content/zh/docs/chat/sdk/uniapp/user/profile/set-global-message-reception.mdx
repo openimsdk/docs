@@ -1,0 +1,35 @@
+---
+title: '设置全局消息接收方式'
+description: '设置当前账号在全部会话中的默认消息接收与通知方式。'
+sourcePath: '/sdk/uniapp/user/profile/set-global-message-reception'
+---
+
+`globalRecvMsgOpt` <span className="enterprise-field-badge">商业版</span>字段是账号级默认策略，控制当前账号是否接收消息以及是否允许通知。它不属于昵称、头像等普通展示资料。
+
+当前插件通过 `setSelfInfo()` 更新该字段：
+
+```uts
+import {
+  setSelfInfo,
+  type OpenIMSetSelfInfoRecvMsgOpt,
+} from '@/uni_modules/unix-openim-sdk'
+
+const receiveWithoutNotification : OpenIMSetSelfInfoRecvMsgOpt = 2
+await setSelfInfo({
+  globalRecvMsgOpt: receiveWithoutNotification,
+})
+```
+
+`OpenIMSetSelfInfoRecvMsgOpt` 的合同允许以下数值：
+
+| 数值 | 含义 |
+| --- | --- |
+| `0` | 正常接收消息，并允许离线推送或通知。 |
+| `1` | 不接收消息。只有产品明确需要停收消息并确认服务端策略时使用。 |
+| `2` | 接收消息，但不触发离线推送或通知，即全天免打扰。 |
+
+只传 `globalRecvMsgOpt`，避免在切换接收策略时意外覆盖昵称、头像或 `ex`。当前插件没有为这一字段提供独立 setter。
+
+单个会话的 `recvMsgOpt` 是更细粒度的会话设置，见[设置会话消息接收方式](/sdk/uniapp/conversation/managing-conversations/set-message-receive-option)。同时存在账号级和会话级设置时，客户端应展示服务端返回的最终会话状态，不要只根据本地开关推断。
+
+Promise 成功表示设置请求完成，不等于 `onSelfInfoUpdated` 已经到达。事件监听和 `getSelfUserInfo()` 校准方式见[更新当前用户资料](/sdk/uniapp/user/profile/set-self-info)。公共版中该字段可能不存在，业务 UI 应按能力配置显示入口，不能把缺失值解释为某个确定策略。

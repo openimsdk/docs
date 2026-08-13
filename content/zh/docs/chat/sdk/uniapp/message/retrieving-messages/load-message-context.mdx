@@ -1,0 +1,32 @@
+---
+title: '加载消息上下文'
+description: '商业版围绕一条锚点消息读取前后文。'
+sourcePath: '/sdk/uniapp/message/retrieving-messages/load-message-context'
+---
+
+从搜索结果或引用消息跳入聊天上下文时，把已经取得的完整 `OpenIMMessageItem` 作为锚点。`fetchSurroundingMessages()` 属于<span className="enterprise-field-badge">商业版</span>。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `startMessage` | `OpenIMMessageItem` | 是 | 已经取得的锚点消息。 |
+| `viewType` | `number` | 是 | 上下文查看方向，使用服务端约定值。 |
+| `before` | `number` | 是 | 锚点之前最多读取的消息数量。 |
+| `after` | `number` | 是 | 锚点之后最多读取的消息数量。 |
+
+```uts
+import { fetchSurroundingMessages } from '@/uni_modules/unix-openim-sdk'
+
+const result = await fetchSurroundingMessages({
+  startMessage: targetMessage,
+  viewType: 0,
+  before: 20,
+  after: 20,
+})
+const surroundingMessages = result?.messages ?? []
+```
+
+Promise 成功后，`result?.messages` 是锚点前后取得的 `OpenIMMessageItem[]`，字段见[消息概览](/zh/sdk/uniapp/message/overview-message)。当前 uni-app / uni-app x 返回字段名是 `messages`，不是 Wasm 的 `messageList`。
+
+`before` 和 `after` 分别限制锚点前后的数量。返回结果可能少于请求总数，例如锚点靠近边界或部分消息已删除。结果与实时事件可能重复，应按 `conversationID:clientMsgID` 去重并保持时间顺序。不要使用只包含 ID 的伪消息作为锚点；需要先定位时见[按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)。

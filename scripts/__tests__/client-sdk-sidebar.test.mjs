@@ -12,7 +12,7 @@ import {
 const wasmSidebar = readJson('data/structure/wasm-sidebar.json');
 
 test('registers the supported client SDK platforms and their structure paths', () => {
-  assert.deepEqual(clientSdkPlatformIds, ['ios', 'flutter', 'wasm']);
+  assert.deepEqual(clientSdkPlatformIds, ['ios', 'flutter', 'wasm', 'uniapp']);
   assert.deepEqual(getClientSdkPlatform('ios'), {
     id: 'ios',
     contextKey: 'chat/sdk/ios',
@@ -28,6 +28,19 @@ test('registers the supported client SDK platforms and their structure paths', (
   });
   assert.equal(getClientSdkPlatform('flutter').contextKey, 'chat/sdk/flutter');
   assert.equal(getClientSdkPlatform('wasm').contextKey, 'chat/sdk/wasm');
+  assert.deepEqual(getClientSdkPlatform('uniapp'), {
+    id: 'uniapp',
+    contextKey: 'chat/sdk/uniapp',
+    routePrefix: '/sdk/uniapp',
+    manualRoot: 'content/zh/docs/chat/sdk/uniapp',
+    auditPath: 'data/structure/uniapp-content-audit.json',
+    labelsPath: 'data/structure/uniapp-navigation-labels.json',
+    sidebarPath: 'data/structure/uniapp-sidebar.json',
+    localizedOutputPath: 'src/generated/uniapp-sdk-zh-content.json',
+    sdkSourceKey: 'uniappSdk',
+    sdkTag: '0.2.0-rc.3',
+    sdkCommit: 'e71e3f68827f9f7af354526fecbaded25dc14de9',
+  });
   assert.throws(() => getClientSdkPlatform('android'), /Unknown client SDK platform: android/);
 });
 

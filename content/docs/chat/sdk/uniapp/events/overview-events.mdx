@@ -1,0 +1,122 @@
+---
+title: 'Events overview'
+description: 'OpenIM uni-app / uni-app x SDK guide for Events overview.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/events/overview-events'
+---
+
+`unix-openim-sdk` publishes connection, synchronization, user, friend, conversation, group, message, and commercial signaling events through flat `on...()` functions imported from `@/uni_modules/unix-openim-sdk`. You do not create SDK instances or native listener objects for separate domains.
+
+## Register and remove events
+
+Every `on...()` call synchronously returns an independent `OpenIMSDKEventSubscription` containing an `id` and `eventName`. Save that handle and pass it to `off(subscription)` when the page, state layer, or account scope that owns it ends.
+
+```uts
+import {
+  off,
+  onConnectSuccess,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const connectionSubscription : OpenIMSDKEventSubscription = onConnectSuccess(() => {
+  setConnectionState('connected')
+})
+
+// Run when the scope that owns this listener ends.
+off(connectionSubscription)
+```
+
+Do not use the obsolete pattern in which a listener registration returns a cancellation closure, and do not invoke `connectionSubscription()` as a function. One event can have several subscribers; `off()` removes only the handler represented by the supplied handle.
+
+`offAll(eventName)` removes every handler for one event name. Reserve it for complete App teardown, controlled test resets, or infrastructure that explicitly owns every listener for that event. Pages and feature modules must not use it as local cleanup because it also removes other consumers' listeners.
+
+Handlers should return quickly. Queue expensive queries, file work, and network requests, then revalidate the current login user or commercial session epoch before writing asynchronous results. Complete business handlers appear only on the canonical pages linked below; this overview does not duplicate each domain listener.
+
+## Choose when to register
+
+| Event scope | Recommended lifecycle | Corresponding page |
+| --- | --- | --- |
+| Connection and token | Register before `login()` and clean up when changing accounts | [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session) |
+| Users, friends, and blacklist | Register when initializing the contacts state layer | [User overview](/sdk/uniapp/user/overview-user) |
+| Conversation list | Register when initializing the conversation-list state layer | [Get the conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Conversation unread count | Register when initializing the application badge state layer | [Maintain the total unread count](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count) |
+| Group list | Register when initializing the group state layer | [Group overview](/sdk/uniapp/group/overview-group) |
+| Group members | Register when initializing the group-member state layer | [List group members](/sdk/uniapp/group/retrieving-group-members/get-group-member-list) |
+| Group applications | Register when initializing the group-application state layer | [Get received group applications](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |
+| Messages | Register when initializing the message state layer | [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages) |
+| Commercial signaling | Register when initializing calling functionality | [Call events](/sdk/uniapp/calling/managing-calls/handle-call-events) |
+| SDK session | Register when a commercial plugin depending on the one Core is initialized | [Update the token and observe the SDK session](/sdk/uniapp/getting-started/update-token-and-observe-sdk-session) |
+
+Do not register the same logic again on every component render, `onShow`, or list refresh. Duplicate registrations can insert messages more than once, repeatedly increment unread counts, or write asynchronous state from an old account into the current UI.
+
+Query APIs establish snapshots; events merge later changes. Use stable business identifiers: `clientMsgID` for messages, `conversationID` for conversations, `userID` for friends and blacklist, and `groupID:userID` for group members. Never deduplicate by array position or display name.
+
+## Listen for initial synchronization
+
+After login, SDK Core synchronizes OpenIMServer data. Use these events for global synchronization status and progress:
+
+| Event | Handler argument | Meaning |
+| --- | --- | --- |
+| `onSyncServerStart` | `reinstalled: boolean` | Synchronization begins. The boolean identifies whether the local database is synchronizing after reinstall or equivalent rebuild. |
+| `onSyncServerProgress` | `progress: number` | Synchronization progress changed. Use it for display; the contract does not promise every integer value. |
+| `onSyncServerFinish` | `reinstalled: boolean` | The current synchronization completed. Interfaces requiring complete data can requery their snapshots. |
+| `onSyncServerFailed` | `reinstalled: boolean` | The current synchronization failed. Record the synchronization context and wait for retry or connection recovery. |
+
+```uts
+import {
+  off,
+  onSyncServerFailed,
+  onSyncServerFinish,
+  onSyncServerProgress,
+  onSyncServerStart,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const syncSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onSyncServerStart((reinstalled) => {
+    setSyncState('syncing', 0, reinstalled)
+  }),
+  onSyncServerProgress((progress) => {
+    setSyncProgress(progress)
+  }),
+  onSyncServerFinish((reinstalled) => {
+    setSyncState('ready', 100, reinstalled)
+    refreshVisibleSnapshots()
+  }),
+  onSyncServerFailed((reinstalled) => {
+    setSyncState('failed', 0, reinstalled)
+  }),
+]
+
+function releaseSyncSubscriptions() {
+  syncSubscriptions.forEach((subscription) => off(subscription))
+  syncSubscriptions.length = 0
+}
+```
+
+The three boolean callback values represent the reinstall/synchronization context defined by the contract; they are not generic operation-success flags. The event name distinguishes completion from failure. Synchronization events describe Core's lifecycle rather than the Promise callback of one query, and they have no business-entity merge key. Isolate this state by logged-in user.
+
+This page is the canonical owner for the four synchronization events and for `off()` / `offAll()` control semantics. Call `releaseSyncSubscriptions()` on logout, account change, or SDK-scope destruction. Data can still change after synchronization finishes: requery snapshots needed by the current UI and continue merging domain events into the same state layer.
+
+## Events unsupported on HarmonyOS
+
+The locked commercial HarmonyOS HAR lacks the following ten events. Registration returns `platform-unsupported` and never fabricates a callback:
+
+- `onMigrationStart`
+- `onMigrationProgress`
+- `onMigrationFailed`
+- `onMigrationFinished`
+- `onRecvMessageExtensionsAdded`
+- `onRecvMessageExtensionsChanged`
+- `onRecvMessageExtensionsDeleted`
+- `onMessageKvInfoChanged`
+- `onStreamChange`
+- `onGroupApplicationBadgeCountChanged`
+
+Platform support and commercial ownership are separate dimensions. Handle `platform-unsupported` by disabling the feature or selecting a platform alternative. Do not retry forever or simulate an event that did not occur.

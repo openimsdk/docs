@@ -169,6 +169,37 @@ function validateManualPage({ platform, page, path, source, errors }) {
     ) {
       errors.push(`${path}: content invents a Flutter listener removal API`);
     }
+  } else if (platform.id === 'uniapp') {
+    const examples = extractUniAppCodeBlocks(source).join('\n');
+    if (
+      (page.sdkMethods?.length ?? 0) > 0 &&
+      !source.includes('```uts') &&
+      !source.includes('```javascript') &&
+      !source.includes('```js')
+    ) {
+      errors.push(`${path}: method page requires a UTS or JavaScript example`);
+    }
+    if (
+      /from\s+['"]unix-openim-sdk['"]/.test(examples) ||
+      /from\s+['"]@\/uni_modules\/unix-openim-sdk\/[^'"]+['"]/.test(examples)
+    ) {
+      errors.push(`${path}: examples must use the absolute uni_modules import`);
+    }
+    if (/\b(?:openimsdk|OpenIM)\.[A-Za-z_$][\w$]*\s*\(/.test(examples)) {
+      errors.push(`${path}: content must not create or call a WASM SDK instance`);
+    }
+    if (/\b(?:WsResponse\s*<|const\s*\{\s*data\s*\}\s*=)/.test(examples)) {
+      errors.push(`${path}: Promise results must not use a WsResponse.data wrapper`);
+    }
+    if (/\blogin\s*\(\s*\{/.test(examples)) {
+      errors.push(`${path}: login must not use an object-style login argument`);
+    }
+    if (/\binitSDK\s*\(/.test(examples) && !/\bsystemType\s*:/.test(examples)) {
+      errors.push(`${path}: initSDK examples must include systemType`);
+    }
+    if ((page.sdkEvents?.length ?? 0) > 0 && !hasSubscriptionCleanup(examples)) {
+      errors.push(`${path}: event examples must save and release a subscription handle`);
+    }
   }
 }
 
@@ -190,9 +221,25 @@ function extractDartCodeBlocks(source) {
   return [...source.matchAll(/```dart\n([\s\S]*?)\n```/g)].map((match) => match[1]);
 }
 
+function extractUniAppCodeBlocks(source) {
+  return [...source.matchAll(/```(?:uts|javascript|js)\n([\s\S]*?)\n```/g)].map(
+    (match) => match[1],
+  );
+}
+
+function hasSubscriptionCleanup(source) {
+  const assigned = source.match(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*on[A-Z]\w*\s*\(/);
+  if (assigned && new RegExp(`\\boff\\s*\\(\\s*${assigned[1]}\\s*\\)`).test(source)) {
+    return true;
+  }
+  return /\.forEach\s*\(\s*\(\s*([A-Za-z_$][\w$]*)\s*\)\s*=>\s*off\s*\(\s*\1\s*\)\s*\)/.test(
+    source,
+  );
+}
+
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['ios', 'flutter'];
+  const platformIds = requested.length > 0 ? requested : ['ios', 'flutter', 'uniapp'];
   let failed = false;
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);

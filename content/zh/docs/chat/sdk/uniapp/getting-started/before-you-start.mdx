@@ -1,0 +1,93 @@
+---
+title: '开始之前'
+description: '准备 OpenIMServer、用户登录信息、UTS 插件和目标平台原生运行环境，再开始认证或发送消息。'
+sourcePath: '/sdk/uniapp/getting-started/before-you-start'
+---
+
+在 uni-app / uni-app x App 中接入 `unix-openim-sdk` 前，需要先准备设备可访问的 OpenIMServer、可信的用户认证流程、UTS 插件和目标平台原生构建环境。这些条件同时适用于[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)和[发送第一条消息](/sdk/uniapp/getting-started/send-first-message)。Web、H5 和小程序不能使用本 UTS 原生插件。
+
+## 准备 OpenIMServer
+
+如果还没有可用的 OpenIMServer，先按 [Docker 部署指南](/docs/guides/quick-deployment/docker)完成部署，并确认实际 Android、iPhone 或 HarmonyOS 设备可以访问 `apiAddr` 与 `wsAddr`。
+
+初始化 SDK 需要以下两个服务地址：
+
+| 字段 | 说明 |
+| --- | --- |
+| `apiAddr` | OpenIMServer 的 HTTP API 地址，用于登录、同步和资源请求。生产 App 应使用设备可访问且证书有效的 HTTPS 地址。 |
+| `wsAddr` | OpenIMServer 的 WebSocket 地址，用于建立长连接和接收实时事件。生产 App 通常使用 WSS 地址。 |
+
+不要只验证服务在服务器本机或开发 Mac 上能够访问。真机不能使用开发机的 `localhost`；还应从实际设备核对局域网或公网路由、TLS 证书、反向代理和 WebSocket 升级。
+
+公共版客户端可以连接公共 OpenIMServer。若要使用信令、session、翻译或其他标记为商业版的能力，服务端也必须部署对应商业能力；不能用公共服务端的失败结果判断商业 API 的客户端实现。
+
+## 准备用户和 Token
+
+`userID` 标识 OpenIMSDK 用户，Token 用于认证当前用户。创建或绑定 OpenIMSDK 用户、签发 Token 和校验业务权限都应由可信后端完成，App 不能保存管理员 Token、secret 或其他服务端凭据。
+
+后端接入 OpenIMServer REST API 前，可先阅读[准备使用 Platform API](/platform-api/prepare-to-use-api)和[签发会话 Token](/platform-api/user/managing-session-tokens/issue-a-session-token)。如果产品已有账号体系，后端应把业务账号与 OpenIMSDK `userID` 建立稳定映射，并确保返回的 Token 与该 `userID` 对应。
+
+建议由业务后端提供登录信息接口，App 只取得 SDK 登录所需的最小数据：
+
+```uts
+type OpenIMSDKSession = {
+  userID : string
+  token : string
+}
+
+async function loadOpenIMSDKSession() : Promise<OpenIMSDKSession> {
+  const response = await uni.request({
+    url: `${businessApiURL}/openim/session`,
+    method: 'POST',
+  })
+
+  if (response.statusCode != 200) {
+    throw new Error('Failed to load OpenIM SDK session')
+  }
+
+  return parseTrustedSessionResponse(response.data)
+}
+```
+
+业务接口必须先验证当前业务账号，再返回与该账号对应的 OpenIMSDK 登录信息；不能接受客户端任意传入的 `userID` 后直接为其签发 Token。`apiAddr` 和 `wsAddr` 通常作为受控的 App 环境配置传给 `initSDK()`，不需要随每次用户登录响应改变。
+
+## 准备 UTS 插件与原生运行环境
+
+把插件安装在项目的 `uni_modules/unix-openim-sdk`。使用 HBuilderX/uni-app `5.23` 系列，并按目标平台准备原生环境：
+
+| 宿主 | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | 支持，API 21+ | 支持，iOS 14+ | 暂不宣称支持 |
+| uni-app x | 支持，API 21+ | 支持，iOS 14+ | 商业版支持，API 24 |
+| Web / H5 / 小程序 | 不支持 | 不支持 | 不支持 |
+
+- Android 需要匹配的 JDK、Android SDK 和插件声明的 AAR/Maven 依赖，并为目标设备包含正确 ABI。
+- iOS 需要匹配的 Xcode/CocoaPods，最终 App 必须正确链接、嵌入并签名插件 XCFramework。
+- HarmonyOS 仅声明 uni-app x 商业版支持，使用与插件合同一致的 HAR 和 API 24 工程。
+
+标准基座不包含这些原生依赖。开发阶段应构建包含插件的自定义基座，或使用项目提供的本地 Android/iOS 原生构建流程。不要把公共版和商业版的原生制品混装在同一个插件目录，也不要直接修改 SDK 的数据库或原生缓存文件。
+
+不同宿主的生命周期、类型与文件路径差异见[按宿主和平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)。
+
+## 选择平台标识
+
+`initSDK()` 的 `platformID` 使用插件导出的常量，不直接填写数字：Android 使用 `OpenIMPlatformAndroid`，iPhone 使用 `OpenIMPlatformIOS`，HarmonyOS 使用 `OpenIMPlatformHarmony`。
+
+初始化还必须提供 `systemType`，例如 `android`、`ios` 或 `harmony`。平台常量和 `systemType` 应与实际运行目标匹配；它们会参与服务端多端登录策略和原生运行诊断。
+
+## 发布前检查
+
+正式发布前，应在产品实际支持的平台和网络环境中验证：
+
+- `initSDK()` 成功，随后 `login()` 成功并收到 `onConnectSuccess`。
+- App 前后台、网络断开恢复、Token 失效和被踢下线符合产品状态机。
+- Android 安装包没有重复 class/JNI，并包含目标设备 ABI。
+- iOS 真机包可以完成 link/embed/sign，权限说明和隐私清单完整。
+- HarmonyOS 使用精确匹配合同的商业 HAR，并对平台不支持能力返回明确错误。
+- 两个不同账号能完成普通消息收发、历史查询和退出后的状态隔离。
+- 商业版连接对应商业服务端，完成所启用能力的真实链路测试。
+- 日志、截图和自动化证据不包含 Token、secret、完整私聊内容或不必要的本机绝对路径。
+
+## 继续接入
+
+准备完成后，先完成[安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)和[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。确认连接成功后，再按照[发送第一条消息](/sdk/uniapp/getting-started/send-first-message)准备单聊用户或群组目标并验证消息链路。

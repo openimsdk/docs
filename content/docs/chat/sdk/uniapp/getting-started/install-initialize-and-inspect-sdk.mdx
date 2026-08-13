@@ -1,0 +1,69 @@
+---
+title: 'Install, initialize, and inspect the SDK'
+description: 'Install the UTS plugin, initialize the only OpenIM Core, and inspect version and data paths.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk'
+---
+
+After installing `uni_modules/unix-openim-sdk`, initialize it once from an application service. The plugin exports flat functions; do not construct a second SDK instance.
+
+```uts
+import {
+  OpenIMLogLevelInfo,
+  OpenIMPlatformAndroid,
+  initSDK,
+  type OpenIMInitConfig,
+} from '@/uni_modules/unix-openim-sdk'
+
+const config : OpenIMInitConfig = {
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://im-api.example.com',
+  wsAddr: 'wss://im-ws.example.com',
+  logLevel: OpenIMLogLevelInfo,
+  isLogStandardOutput: true,
+  systemType: 'android',
+}
+
+const initialized = await initSDK(config)
+if (!initialized) throw new Error('OpenIM SDK initialization was not accepted')
+```
+
+Use `OpenIMPlatformIOS` with `systemType: 'ios'`, or `OpenIMPlatformHarmony` with `systemType: 'harmony'`. Reduce console logging in production and configure `logFilePath` according to your compliance policy.
+
+| `OpenIMInitConfig` field | Type | Description |
+| --- | --- | --- |
+| `platformID` | `OpenIMPlatform` | One of the exported platform constants. |
+| `apiAddr` | `string` | OpenIMServer HTTP API address. |
+| `wsAddr` | `string` | OpenIMServer WebSocket address. |
+| `dataDir` | `string` or `null` (optional) | Core data directory; normally use the platform default. |
+| `logFilePath` | `string` or `null` (optional) | Log path following the platform artifact contract. |
+| `logLevel` | `OpenIMLogLevel` | For example `OpenIMLogLevelError` or `OpenIMLogLevelInfo`. |
+| `isLogStandardOutput` | `boolean` | Whether SDK logs are emitted to the system console. |
+| `systemType` | `string` | Required system description; never omit it. |
+
+Do not initialize concurrent environments in one process. Sign out, clear application state, and uninitialize before changing service addresses.
+
+`getSdkVersion()` and `getOpenIMDataPath()` are synchronous local operations:
+
+```uts
+import { getOpenIMDataPath, getSdkVersion } from '@/uni_modules/unix-openim-sdk'
+
+const version = getSdkVersion()
+const dataPath = getOpenIMDataPath()
+```
+
+Use the data path only for diagnostics and storage policy. Never edit the SDK database or publish full sandbox paths in logs.
+
+```uts
+import { unInitSDK } from '@/uni_modules/unix-openim-sdk'
+
+unInitSDK()
+```
+
+`unInitSDK()` returns `void`. Stop new requests, sign out, and release subscriptions first. Page unload, App backgrounding, and AV Runtime disposal must not uninitialize the IM SDK.

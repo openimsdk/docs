@@ -1,0 +1,77 @@
+---
+title: '安装、初始化与 SDK 信息'
+description: '安装 UTS 插件，初始化唯一 OpenIM Core，并查询 SDK 版本和数据目录。'
+sourcePath: '/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk'
+---
+
+项目安装 `uni_modules/unix-openim-sdk` 后，在应用级 service 中初始化一次。插件导出扁平函数，不需要也不允许创建第二个 SDK 实例。
+
+## 初始化
+
+```uts
+import {
+  OpenIMLogLevelInfo,
+  OpenIMPlatformAndroid,
+  initSDK,
+  type OpenIMInitConfig,
+} from '@/uni_modules/unix-openim-sdk'
+
+const config : OpenIMInitConfig = {
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://im-api.example.com',
+  wsAddr: 'wss://im-ws.example.com',
+  logLevel: OpenIMLogLevelInfo,
+  isLogStandardOutput: true,
+  systemType: 'android',
+}
+
+const initialized = await initSDK(config)
+if (!initialized) {
+  throw new Error('OpenIM SDK initialization was not accepted')
+}
+```
+
+iOS 改用 `OpenIMPlatformIOS` 和 `systemType: 'ios'`；HarmonyOS 改用 `OpenIMPlatformHarmony` 和 `systemType: 'harmony'`。生产环境建议关闭标准输出或降低日志级别，并按合规要求配置 `logFilePath`。
+
+### `OpenIMInitConfig`
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `platformID` | `OpenIMPlatform` | 使用插件导出的平台常量。 |
+| `apiAddr` | `string` | OpenIMServer HTTP API 地址。 |
+| `wsAddr` | `string` | OpenIMServer WebSocket 地址。 |
+| `dataDir` | `string` 或 `null`（可选） | Core 数据目录；通常让插件使用平台默认值。 |
+| `logFilePath` | `string` 或 `null`（可选） | 日志目录或文件路径，按平台产物约定配置。 |
+| `logLevel` | `OpenIMLogLevel` | 使用 `OpenIMLogLevelError`、`OpenIMLogLevelInfo` 等常量。 |
+| `isLogStandardOutput` | `boolean` | 是否把 SDK 日志输出到系统控制台。 |
+| `systemType` | `string` | 必填的系统说明，初始化示例不得省略。 |
+
+同一进程不要用不同服务地址并发初始化。切换环境应先退出账号、清理业务状态并反初始化，再用新配置启动。
+
+## 查询版本与数据路径
+
+`getSdkVersion()` 和 `getOpenIMDataPath()` 是同步本地操作：
+
+```uts
+import {
+  getOpenIMDataPath,
+  getSdkVersion,
+} from '@/uni_modules/unix-openim-sdk'
+
+const version = getSdkVersion()
+const dataPath = getOpenIMDataPath()
+```
+
+数据路径仅用于诊断、备份策略和空间排查。不要直接打开、迁移或修改其中的数据库文件，也不要把完整沙盒路径作为公开日志字段。
+
+## 反初始化
+
+```uts
+import { unInitSDK } from '@/uni_modules/unix-openim-sdk'
+
+unInitSDK()
+```
+
+`unInitSDK()` 返回 `void`。调用前先停止新的业务请求、退出当前账号并释放全部订阅。普通页面卸载、AV Runtime 关闭或暂时进入后台都不应反初始化 IM SDK。
+
+初始化完成后，进入[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。

@@ -1,0 +1,57 @@
+---
+title: 'Audio and video calling overview'
+description: 'OpenIM uni-app / uni-app x SDK guide for Audio and video calling overview.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/calling/overview-calling'
+---
+
+Every capability in this section is <span className="enterprise-field-badge">Commercial</span> and requires OpenIMServer commercial signaling services. `unix-openim-sdk` provides the signaling APIs required to invite, accept, reject, cancel, hang up, query rooms, and synchronize call state. It coordinates participants, room information, and the signaling lifecycle; it does not capture camera frames, render remote media, or provide call UI.
+
+The application passes the returned `roomID`, `token`, and `liveURL` to its realtime media engine and remains responsible for device permissions, media tracks, weak-network behavior, and UI state. Signaling is not a complete WebRTC media SDK. For complete call and meeting UI, integrate `openim-av-runtime`; it reuses the login owned by this plugin and never initializes a second OpenIM Core.
+
+## Call flow
+
+1. Log in to IM and register signaling listeners. Call `signalingInvite()` for a one-to-one call or `signalingInviteInGroup()` for a group call.
+2. The invitee receives a raw JSON payload from `onReceiveNewInvitation`, validates it, maps it to `OpenIMSignalingInvitationInfo`, and presents incoming-call UI.
+3. The invitee requests media permission before calling `signalingAccept()`, or calls `signalingReject()` to decline.
+4. Both sides use the returned room ID, token, and live URL to join the media engine.
+5. Participant, stream, and custom-signal events update the local call state while the room is active.
+6. The inviter can cancel an unanswered invitation, and any participant can hang up an established call.
+
+## Core data
+
+| Type | Description |
+| --- | --- |
+| `OpenIMSignalingInvitationInfo` | Inviter, invitees, group, room, media type, timeout, and session type. |
+| `OpenIMSignalingInviteResult` | Room ID, token, live URL, and busy-user list returned by OpenIMServer. |
+| `OpenIMSignalingAcceptResult` | Room credentials returned when an invitation is accepted. |
+| `OpenIMSignalingGetTokenByRoomIDResult` | Refreshed token and live URL for a known room. |
+| `OpenIMSignalingGetRoomByGroupIDResult` | Room ID and invitation snapshot for a group call. |
+
+`customData` and custom signaling are suitable only for non-secret negotiation data. Never put long-lived credentials, administrator secrets, or private authorization state in them.
+
+## State and event ownership
+
+For invite, accept, reject, cancel, and hangup operations, handle the Promise result separately from signaling events. Promise success means OpenIMServer accepted or completed that request; events describe incremental state observed by the inviter, invitee, other devices, or room participants. They are not the same completion signal.
+
+Signaling events carry raw JSON strings and must be validated before they enter application state. The complete invitation and room event lifecycle belongs to [Handle call events](/sdk/uniapp/calling/managing-calls/handle-call-events). Custom signal events belong to [Send a custom signal](/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal). Room, token, and startup-invitation queries only return a snapshot from their Promise.
+
+Use `roomID` as the primary call key and combine it with user IDs for participant state. Re-login creates a new event scope; query a room only when a current snapshot is needed.
+
+## Find a task
+
+| Task | Page |
+| --- | --- |
+| Start a one-to-one or group call | [Start a one-to-one call](/sdk/uniapp/calling/managing-calls/start-single-call), [Start a group call](/sdk/uniapp/calling/managing-calls/start-group-call) |
+| Accept or reject an invitation | [Accept a call](/sdk/uniapp/calling/managing-calls/accept-call), [Reject a call](/sdk/uniapp/calling/managing-calls/reject-call) |
+| Cancel an invitation or end a call | [Cancel a call invitation](/sdk/uniapp/calling/managing-calls/cancel-call), [End a call](/sdk/uniapp/calling/managing-calls/hang-up-call) |
+| Restore a room or pending invitation | [Get a group call room](/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id), [Get a call room token](/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id), [Restore a pending invitation](/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation) |
+| Handle lifecycle and business negotiation | [Handle call events](/sdk/uniapp/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal) |
+
+Keep one active call or meeting per login/runtime. Never persist or log tokens, live URLs, or raw signaling payloads.

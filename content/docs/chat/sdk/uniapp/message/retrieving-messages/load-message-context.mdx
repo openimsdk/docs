@@ -1,0 +1,39 @@
+---
+title: 'Load message context'
+description: 'OpenIM uni-app / uni-app x SDK guide for Load message context.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/message/retrieving-messages/load-message-context'
+---
+
+When navigating from a search result or quoted message into chat context, use the complete `OpenIMMessageItem` you already obtained as the anchor. `fetchSurroundingMessages()` is <span className="enterprise-field-badge">Commercial</span>.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `startMessage` | `OpenIMMessageItem` | Yes | Complete anchor message. |
+| `viewType` | `number` | Yes | Context direction defined by the server contract. |
+| `before` | `number` | Yes | Maximum number of messages before the anchor. |
+| `after` | `number` | Yes | Maximum number of messages after the anchor. |
+
+```uts
+import { fetchSurroundingMessages } from '@/uni_modules/unix-openim-sdk'
+
+const result = await fetchSurroundingMessages({
+  startMessage: targetMessage,
+  viewType: 0,
+  before: 20,
+  after: 20,
+})
+const surroundingMessages = result?.messages ?? []
+```
+
+On success, `result?.messages` is the surrounding `OpenIMMessageItem[]`. The uni-app / uni-app x field is `messages`, not the Wasm `messageList` field.
+
+`before` and `after` limit each side of the anchor. The result can contain fewer messages near a boundary or after deletions. It can also overlap realtime events, so deduplicate by `conversationID:clientMsgID` and preserve chronological order. Do not construct a fake anchor containing only an ID; first use [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id) when necessary.

@@ -22,4 +22,15 @@ export const docs = defineDocs({
   },
 });
 
-export default defineConfig();
+export default defineConfig({
+  mdxOptions: {
+    rehypeCodeOptions: {
+      themes: { light: 'github-light', dark: 'github-dark' },
+      // UTS follows TypeScript syntax for the examples in this docset. Shiki
+      // does not ship a dedicated UTS grammar, so keep the public `uts` fence
+      // while highlighting it with the TypeScript grammar.
+      langs: ['typescript'],
+      langAlias: { uts: 'typescript' },
+    },
+  },
+});

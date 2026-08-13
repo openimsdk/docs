@@ -6,6 +6,7 @@ import {
   buildClientSdkSkeleton,
   isGeneratedClientSdkSkeleton,
   replaceClientSdkRouteRecords,
+  replaceClientSdkStructureRecords,
   resolveClientSdkRouteTitle,
   resolveClientSdkSkeletonRoutes,
 } from '../sync-client-sdk-route-skeletons.mjs';
@@ -91,6 +92,45 @@ test('uses each native SDK method name while preserving the shared WASM route su
     }),
     'getConversationGroupByConversationID',
   );
+});
+
+test('resolves uni-app native extension routes without inventing WASM source pages', () => {
+  const routes = readJson('src/generated/routes.json');
+  const sidebar = readJson('data/structure/uniapp-sidebar.json');
+  const resolved = resolveClientSdkSkeletonRoutes({ platformId: 'uniapp', sidebar, routes });
+
+  assert.equal(resolved.length, 167);
+  assert.equal(resolved[0].title, 'OpenIM SDK for uni-app / uni-app x');
+  assert.ok(
+    resolved.some(
+      (route) => route.path === '/sdk/uniapp/events/handle-data-migration-events',
+    ),
+  );
+});
+
+test('keeps structure metadata aligned when replacing a client SDK route tree', () => {
+  const originalRoutes = readJson('src/generated/routes.json');
+  const originalStructure = readJson('data/structure/chat-pages.json');
+  const sidebar = readJson('data/structure/uniapp-sidebar.json');
+  const routes = replaceClientSdkRouteRecords({
+    platformId: 'uniapp',
+    sidebar,
+    routes: originalRoutes,
+  });
+  const structure = replaceClientSdkStructureRecords({
+    platformId: 'uniapp',
+    routes,
+    structure: originalStructure,
+  });
+  const routePaths = routes
+    .filter((route) => route.contextKey === 'chat/sdk/uniapp')
+    .map((route) => route.path);
+  const structurePaths = structure
+    .filter((record) => record.context === 'chat/sdk/uniapp')
+    .map((record) => record.openimPath);
+
+  assert.deepEqual(structurePaths, routePaths);
+  assert.equal(structure.length, routes.length);
 });
 
 function getSidebarPathCount(sidebar) {

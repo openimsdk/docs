@@ -1,0 +1,52 @@
+---
+title: 'Update tokens and observe SDK sessions'
+description: 'Commercially update a login token and use synthetic session snapshots to prevent cross-account work.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/update-token-and-observe-sdk-session'
+---
+
+This is a <span className="enterprise-field-badge">Commercial</span> capability for hosts that share one OpenIM Core with dependent plugins such as AV Runtime. `onSDKSessionChanged` is synthesized by `unix-openim-sdk`; it is not a native OpenIM Core listener.
+
+```uts
+import { getSDKSessionSnapshot, type OpenIMSDKSessionSnapshot } from '@/uni_modules/unix-openim-sdk'
+
+const snapshot : OpenIMSDKSessionSnapshot = await getSDKSessionSnapshot()
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `loginStatus` | `OpenIMLoginStatus` | Current login state. |
+| `userID` | `string` or `null` | Current SDK user, or `null` when logged out. |
+| `sdkSessionEpoch` | `number` | Session generation, incremented after successful lifecycle or account changes. |
+| `sdkVersion` | `string` | Version of the connected Core. |
+
+The snapshot never contains an IM token, API address, or WebSocket address. Pin `userID` and `sdkSessionEpoch` before asynchronous work and compare another snapshot before committing the result.
+
+```uts
+import { off, onSDKSessionChanged } from '@/uni_modules/unix-openim-sdk'
+
+const sessionSubscription = onSDKSessionChanged((next) => {
+  cancelRequestsFromOlderEpoch(next.sdkSessionEpoch)
+  replaceActiveSdkUser(next.userID)
+})
+
+off(sessionSubscription)
+```
+
+Initialization, login, logout, uninitialization, forced logout, token invalidation/expiry, and user changes can advance the epoch. Handlers must be idempotent and must not log tokens or trigger competing logins.
+
+```uts
+import { updateToken } from '@/uni_modules/unix-openim-sdk'
+
+await updateToken({ token: freshToken })
+```
+
+Obtain the token from a trusted backend. `updateToken()` is available on Android and iOS; HarmonyOS returns `platform-unsupported`. Continue to use session and connection events after the Promise resolves.
+
+Dependent plugins should compare snapshots before and after initialization, cancel only their own work during disposal, and never call IM `logout()` or `unInitSDK()`. Dispose dependent plugins before switching users.

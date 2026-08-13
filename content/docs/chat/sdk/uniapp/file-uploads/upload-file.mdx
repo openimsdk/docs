@@ -1,0 +1,77 @@
+---
+title: 'Upload a file'
+description: 'OpenIM uni-app / uni-app x SDK guide for Upload a file.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/file-uploads/upload-file'
+---
+
+`uploadFile()` is an independent upload operation for avatars, group images, profile attachments, and other business files. It does not create a chat message. It uploads a native-readable local file and returns its URL/URI, UUID, size, and media metadata.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filepath` | `string` | Yes | Full local path readable by the native layer. |
+| `name` | `string` | Yes | Filename. |
+| `contentType` | `string` | Yes | MIME type. |
+| `uuid` | `string` | Yes | Stable task ID created by your application. |
+| `cancelID` | `string` or `null` | No | Stable ID used to cancel this upload. |
+| `cause` | `string` or `null` | No | Business purpose or reason for the upload. |
+
+Register the progress event before calling `uploadFile()` so a small file cannot complete before the listener exists.
+
+```uts
+import { off, onUploadFileProgress, uploadFile } from '@/uni_modules/unix-openim-sdk'
+
+const progressSubscription = onUploadFileProgress((event) => {
+  if (event == null) return
+  updateUploadProgress(event.progress)
+})
+
+const result = await uploadFile({
+  filepath: '/data/user/0/app/cache/report.pdf',
+  name: 'report.pdf',
+  contentType: 'application/pdf',
+  uuid: createStableUploadUUID(),
+  cancelID: 'upload-report-1',
+})
+
+function removeUploadListener() {
+  off(progressSubscription)
+}
+```
+
+Resolve `unifile://` to a platform sandbox path and never pass a network URL as `filepath`. Android and iOS temporary directories, grants, and lifetimes differ; do not move or delete the source while native code may still read it.
+
+The Promise resolves to `OpenIMUploadFileResult | null`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `url` | `string` or `null` | Uploaded remote URL. |
+| `uri` | `string` or `null` | Resource URI returned by the server. |
+| `uuid` | `string` or `null` | Upload task identifier. |
+| `size` | `number` or `null` | File size. |
+| `typ` | `number` or `null` | Resource type returned by the server. |
+| `mediaID` | `string` or `null` | Media resource ID. |
+
+Use `result?.url` in a profile update or when creating the appropriate message. Upload success does not update profile data or create/send a chat message; those are separate operations.
+
+## Listen for upload progress
+
+`onUploadFileProgress` returns an `OpenIMSDKEventSubscription`, and its event contains only `progress`. Unlike Wasm completion events, the current uni-app / uni-app x contract does not include a task ID. Do not correlate several concurrent uploads by array position; limit concurrency or track final state through each Promise. Call `removeUploadListener()` when the account or upload store is disposed.
+
+Commercial applications can cancel the matching task with `cancelUpload()` <span className="enterprise-field-badge">Commercial</span>:
+
+```uts
+import { cancelUpload } from '@/uni_modules/unix-openim-sdk'
+
+await cancelUpload({ cancelID: 'upload-report-1' })
+```
+
+Cancellation is asynchronous; the original upload Promise and error code define the final state. Do not delete a temporary file until the upload completes or cancellation is confirmed.

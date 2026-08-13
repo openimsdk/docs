@@ -1,0 +1,90 @@
+---
+title: '获取收到的好友申请'
+description: '分页查询当前用户收到的好友申请，并同步申请状态变化。'
+sourcePath: '/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+`getFriendApplicationListAsRecipient()` 查询其他用户发给当前账号的好友申请。uni-app / uni-app x 的 `OpenIMApplicationListParams` 只提供分页字段，不包含 Wasm 版本的 `handleResults` 筛选；需要只展示待处理申请时，在返回后根据 `handleResult` 过滤。
+
+## 参数说明
+
+参数对象可以省略；显式分页时使用：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` 或 `null` | 否 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` 或 `null` | 否 | 本次请求的申请数量。 |
+
+```uts
+import { getFriendApplicationListAsRecipient } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendApplicationListAsRecipient({
+  offset: 0,
+  count: 20,
+})
+
+const applications = result?.applications ?? []
+replaceReceivedApplications(applications)
+```
+
+Promise 成功后直接返回 `OpenIMFriendApplicationListResult | null`，其中 `applications` 是当前页 `OpenIMFriendApplicationItem[]`。查询本身不会触发申请事件。
+
+### 好友申请字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `fromUserID` | `string` | 申请发起人的用户 ID。 |
+| `fromNickname` | `string` | 申请发起人的昵称快照。 |
+| `fromFaceURL` | `string` | 申请发起人的头像快照。 |
+| `toUserID` | `string` | 申请接收人的用户 ID。 |
+| `toNickname` | `string` | 申请接收人的昵称快照。 |
+| `toFaceURL` | `string` | 申请接收人的头像快照。 |
+| `reqMsg` | `string` | 申请附言。 |
+| `handleResult` | `number` | 当前处理结果：`0` 待处理、`1` 已同意、`-1` 已拒绝。 |
+| `handlerUserID` | `string` | 执行处理的用户 ID；未处理时可能为空。 |
+| `handleMsg` | `string` | 处理时填写的说明。 |
+| `handleTime` | `number` | 处理时间；未处理时不应当作有效时间展示。 |
+| `createTime` | `number` | 申请记录创建时间。 |
+| `ex` | `string` | 申请记录扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+申请记录使用 `fromUserID:toUserID` 作为合并标识。昵称和头像是申请创建或同步时的快照；需要最新账号资料时，再按相应 `userID` 调用 `getUsersInfo()`。
+
+## 同步好友申请变化
+
+本页是 `onFriendApplicationAdded`、`onFriendApplicationAccepted`、`onFriendApplicationRejected` 和 `onFriendApplicationDeleted` 的完整监听归属页。推荐先注册事件，再查询快照：
+
+```uts
+import {
+  off,
+  onFriendApplicationAccepted,
+  onFriendApplicationAdded,
+  onFriendApplicationDeleted,
+  onFriendApplicationRejected,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const applicationSubscriptions : Array<OpenIMSDKEventSubscription> = [
+  onFriendApplicationAdded((item) => {
+    mergeFriendApplication(item.fromUserID, item.toUserID, item)
+  }),
+  onFriendApplicationAccepted((item) => {
+    mergeFriendApplication(item.fromUserID, item.toUserID, item)
+  }),
+  onFriendApplicationRejected((item) => {
+    mergeFriendApplication(item.fromUserID, item.toUserID, item)
+  }),
+  onFriendApplicationDeleted((item) => {
+    removeFriendApplication(item.fromUserID, item.toUserID)
+  }),
+]
+
+function releaseFriendApplicationSubscriptions() {
+  applicationSubscriptions.forEach((subscription) => off(subscription))
+  applicationSubscriptions.length = 0
+}
+```
+
+按当前用户是否为 `toUserID`，把事件分流到收到或发出的列表。分页期间收到变化时可以重置分页；申请被同意后，新好友关系由[分页获取好友列表](/sdk/uniapp/user/friends/get-friend-list-page)归属的 `onFriendAdded` 合并。
+
+收到申请后应调用接受或拒绝 API，不要只修改本地 `handleResult` 冒充服务端成功。退出登录、切换账号或销毁好友申请状态层时，调用 `releaseFriendApplicationSubscriptions()`。

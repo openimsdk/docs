@@ -1,0 +1,75 @@
+---
+title: 'Start a one-to-one call'
+description: 'OpenIM uni-app / uni-app x SDK guide for Start a one-to-one call.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/calling/managing-calls/start-single-call'
+---
+
+The <span className="enterprise-field-badge">Commercial</span> `signalingInvite()` operation starts a one-to-one audio or video call. `unix-openim-sdk` creates the signaling invitation; the application still joins its media engine with the returned room credentials.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `OpenIMSignalingInvitationInfo` | Yes | Invitation for this call. |
+| `invitation.inviterUserID` | `string` | Yes | Current logged-in user ID. |
+| `invitation.inviteeUserIDList` | `string[]` | Yes | Invitees; use one peer for a one-to-one call. |
+| `invitation.groupID` | `string` | Yes | Use an empty string for one-to-one calls. |
+| `invitation.roomID` | `string` | Yes | Unique room identifier shared by all call state. |
+| `invitation.timeout` | `number` | Yes | Invitation timeout in seconds. |
+| `invitation.mediaType` | `string` | Yes | Application convention such as `audio` or `video`. |
+| `invitation.sessionType` | `number` | Yes | Use `OpenIMSessionTypeSingle`. |
+| `invitation.platformID` | `number` | Yes | Current native platform constant. |
+| `invitation.customData` | `string` | No | Application extension data. |
+| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | No | Offline push title, description, and iOS settings. |
+
+```uts
+import {
+  OpenIMPlatformAndroid,
+  OpenIMSessionTypeSingle,
+  signalingInvite,
+} from '@/uni_modules/unix-openim-sdk'
+
+const roomCredentials = await signalingInvite({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: [peerUserID],
+    customData: JSON.stringify({ source: 'contact-card' }),
+    groupID: '',
+    roomID: createBusinessRoomID(),
+    timeout: 30,
+    mediaType: 'video',
+    sessionType: OpenIMSessionTypeSingle,
+    platformID: OpenIMPlatformAndroid,
+  },
+  offlinePushInfo: {
+    title: 'Video call',
+    desc: 'You have an incoming video call',
+    ex: '',
+    iOSPushSound: 'default',
+    iOSBadgeCount: true,
+  },
+})
+```
+
+Use `OpenIMPlatformIOS` on iOS. Generate a stable room ID for this call and keep it consistent across participants.
+
+## Result
+
+The Promise resolves to `OpenIMSignalingInviteResult | null`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `roomID` | `string` or `null` | Media room identifier. |
+| `token` | `string` or `null` | Short-lived room credential. |
+| `liveURL` | `string` or `null` | Media service connection address. |
+| `busyLineUserIDList` | `string[]` or `null` | Users who were busy when invited. |
+| `invitation` | `OpenIMSignalingInvitationInfo` or `null` | Server invitation snapshot. |
+
+Join the media engine only after obtaining a valid room ID and token. Promise success does not mean the peer accepted; merge later state through [call events](/sdk/uniapp/calling/managing-calls/handle-call-events). If the application cannot present outgoing call UI after the invite succeeds, actively cancel the invitation. Never log room credentials.

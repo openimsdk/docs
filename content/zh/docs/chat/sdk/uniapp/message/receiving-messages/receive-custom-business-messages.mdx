@@ -1,0 +1,40 @@
+---
+title: '接收自定义业务与消息扩展事件'
+description: '安全解析 raw JSON 字符串，并区分公共与商业版扩展事件。'
+sourcePath: '/sdk/uniapp/message/receiving-messages/receive-custom-business-messages'
+---
+
+这些事件返回 opaque 字符串。`onRecvCustomBusinessMessage` 属于公共接口；消息扩展新增、变化、删除和 KV 变化事件属于<span className="enterprise-field-badge">商业版</span>。
+
+```uts
+import {
+  off,
+  onMessageKvInfoChanged,
+  onRecvCustomBusinessMessage,
+  onRecvMessageExtensionsAdded,
+  onRecvMessageExtensionsChanged,
+  onRecvMessageExtensionsDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+function handleRawPayload(payload : string) {
+  try {
+    const value = JSON.parseObject<UTSJSONObject>(payload)
+    if (value != null) routeValidatedBusinessEvent(value)
+  } catch (_) {
+    console.error('Invalid custom message event')
+  }
+}
+
+const customSubscription = onRecvCustomBusinessMessage(handleRawPayload)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  customSubscription,
+  onRecvMessageExtensionsAdded(handleRawPayload),
+  onRecvMessageExtensionsChanged(handleRawPayload),
+  onRecvMessageExtensionsDeleted(handleRawPayload),
+  onMessageKvInfoChanged(handleRawPayload),
+]
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+校验版本、事件类型和必填字段后再更新 store；未知事件安全忽略。日志不输出完整 payload。HarmonyOS 当前不支持这四个商业扩展事件，会返回 unsupported subscription。

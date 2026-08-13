@@ -24,7 +24,7 @@ type ResourceLink = {
   title: string;
 };
 
-export type SdkOverviewPlatform = 'flutter' | 'ios' | 'wasm';
+export type SdkOverviewPlatform = 'flutter' | 'ios' | 'uniapp' | 'wasm';
 
 type OverviewCopy = {
   eyebrow: string;
@@ -303,6 +303,54 @@ const mobileCopy = {
       {
         title: '客户端 SDK 错误码',
         description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
+      },
+    ],
+  },
+  uniapp: {
+    eyebrow: 'unix-openim-sdk 0.2',
+    intro:
+      'OpenIM uni-app / uni-app x SDK 通过 UTS 原生插件为 Android、iOS 和商业版 HarmonyOS 应用提供用户、会话、群组、消息、实时事件与本地存储能力。先安装插件并完成原生工程配置，再初始化、登录并通过类型化 API 与事件订阅接入业务状态。',
+    mostPopular: '热门主题',
+    recommended: '推荐功能',
+    resources: '资源',
+    popular: createMobilePopularCards('uniapp'),
+    features: [
+      {
+        title: '用户认证',
+        description: '使用服务端签发的 Token 登录，并处理连接、Token 失效和被踢下线事件。',
+        href: '/sdk/uniapp/getting-started/authenticate-and-manage-session',
+      },
+      {
+        title: '插件与生命周期',
+        description: '安装 UTS 插件，初始化唯一 SDK Core，并正确处理 App 生命周期。',
+        href: '/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk',
+      },
+      {
+        title: '事件',
+        description: '保存每个订阅句柄，并通过 off(subscription) 精确释放监听。',
+        href: '/sdk/uniapp/events/overview-events',
+      },
+    ],
+    links: [
+      {
+        title: '发送第一条消息',
+        description: '完成插件安装、初始化、登录、创建消息并发送。',
+        href: '/sdk/uniapp/getting-started/send-first-message',
+      },
+      {
+        title: '平台与环境',
+        description: '核对 uni-app、uni-app x、Android、iOS 与 HarmonyOS 支持边界。',
+        href: '/sdk/uniapp/getting-started/environment-specific-implementation',
+      },
+      {
+        title: '日志与诊断',
+        description: '配置 SDK 日志，并保留脱敏的错误码与 operationID 用于诊断。',
+        href: '/sdk/uniapp/logger',
+      },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用错误码和 platform-unsupported 等平台错误。',
         href: '/sdk/error-codes',
       },
     ],

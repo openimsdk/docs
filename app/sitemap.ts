@@ -3,7 +3,10 @@ import { getAllRoutes } from '@/src/lib/routes';
 import { isSdkPlatformVisible } from '@/src/config/docs';
 import { siteConfig } from '@/src/config/site';
 import { toLocalizedPath } from '@/src/lib/i18n';
-import { getPublishedWasmLocales, isWasmRoute } from '@/src/lib/wasm-publication';
+import {
+  getPublishedClientSdkLocales,
+  isClientSdkRoute,
+} from '@/src/lib/client-sdk-publication';
 import { getGuidePagePaths } from '@/src/components/docs/guides-page';
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -22,8 +25,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     )
     .flatMap((route) => {
       const changeFrequency = 'monthly' as const;
-      const locales = isWasmRoute(route.path)
-        ? getPublishedWasmLocales(route.path)
+      const locales = isClientSdkRoute(route.path)
+        ? getPublishedClientSdkLocales(route.path)
         : (['en', 'zh'] as const);
       return locales.map((locale) => ({
         url: new URL(toLocalizedPath(route.path, locale), siteConfig.siteUrl).toString(),

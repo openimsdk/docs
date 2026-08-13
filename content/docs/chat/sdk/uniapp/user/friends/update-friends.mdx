@@ -1,0 +1,47 @@
+---
+title: 'Update friend details'
+description: 'Update friend remarks, pinned state, or extension values.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/user/friends/update-friends'
+---
+
+`updateFriends()` updates selected fields for one or more friendships.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `friendUserIDs` | `string[]` | Yes | Friend IDs to update. The same values are applied to every target. |
+| `remark` | `string` or `null` | No | New friend remark. |
+| `isPinned` | `boolean` or `null` | No | Whether to pin the friends. |
+| `ex` | `string` or `null` | No | New extension string; completely replaces the old value. |
+
+```uts
+import { updateFriends } from '@/uni_modules/unix-openim-sdk'
+
+await updateFriends({
+  friendUserIDs: ['user_a', 'user_b'],
+  remark: 'Project team',
+  isPinned: true,
+})
+```
+
+`friendUserIDs` must not be empty, and at least one update field must be present. If different friends need different values, call the operation separately. `ex` is a complete replacement string and is not merged as JSON by the SDK.
+
+Promise success means that the update request completed, not that the friend event arrived. Merge final state by `userID` from `onFriendInfoChanged` on [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page), or requery when reconciliation is needed.
+
+The commercial single-user alternative uses `pinned`:
+
+```uts
+import { updateFriend } from '@/uni_modules/unix-openim-sdk'
+
+await updateFriend({ userID: 'user_a', pinned: true, remark: 'Owner' })
+```
+
+`updateFriend()` addresses one `userID` and names the pin field `pinned`; `remark` and `ex` remain complete replacement values. Do not race `updateFriends()` and the <span className="enterprise-field-badge">Commercial</span> `updateFriend()` for the same user. Choose one entry and serialize changes through the friend store.

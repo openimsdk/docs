@@ -1,0 +1,88 @@
+---
+title: 'Get the conversation list'
+description: 'OpenIM uni-app / uni-app x SDK guide for Get the conversation list.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+Build the conversation-list snapshot with paginated `getConversationListSplit()`. Although the Private contract still exports `getAllConversationList()` for compatibility, real applications and public documentation use the paginated operation so a large local database is not loaded in one call.
+
+## Get conversations by page
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Pagination offset; use `0` for the first page. |
+| `count` | `number` | Yes | Number to read. Choose a reasonable limit for the page and device. |
+
+```uts
+import {
+  getConversationListSplit,
+  off,
+  onConversationChanged,
+  onNewConversation,
+} from '@/uni_modules/unix-openim-sdk'
+
+const newConversationSubscription = onNewConversation((result) => {
+  result.conversations.forEach((item) => {
+    upsertConversation(item.conversationID, item)
+  })
+})
+const changedSubscription = onConversationChanged((result) => {
+  result.conversations.forEach((item) => {
+    upsertConversation(item.conversationID, item)
+  })
+})
+
+const firstPage = await getConversationListSplit({ offset: 0, count: 100 })
+replaceConversationSnapshot(firstPage?.conversations ?? [])
+```
+
+The Promise resolves directly to `OpenIMConversationListResult` or `null`; read the page from `conversations`. Replace the current account snapshot with the first page and merge later pages by `conversationID`. Do not fabricate a successful empty list for `null`; use login state and redacted diagnostics to decide whether to preserve the old snapshot or show a loading error.
+
+Increase `offset` until a page contains fewer than `count` items. Conversation events received during paging can change sorting and page boundaries. Merge by primary key, then rebuild from offset 0 on refresh or synchronization completion. Do not permanently append pages while relying on stale offsets.
+
+### Conversation fields
+
+Common `OpenIMConversationItem` fields include:
+
+| Field | Description |
+| --- | --- |
+| `conversationID` | Stable key for list snapshots and events. |
+| `conversationType` | One-to-one, group, or notification conversation type. |
+| `userID` / `groupID` | Peer user or target group according to the conversation type. |
+| `showName` / `faceURL` | Display-name and avatar snapshots. |
+| `unreadCount` | Current unread count. |
+| `latestMsg` | Serialized latest message. Preserve the conversation and show a fallback summary if parsing fails. |
+| `latestMsgSendTime` | Send time of the latest message; can participate in normal ordering. |
+| `draftText` / `draftTextTime` | Local draft and its update time. |
+| `isPinned` | Pin state. Apply pin ordering before time ordering. |
+| `recvMsgOpt` | Conversation-level message reception option. |
+
+See [Conversation overview](/sdk/uniapp/conversation/overview-conversation) for complete fields and commercial extensions. Never update by array index because pin state, latest message, draft, and unread count can all reorder the list.
+
+### Sort the list
+
+Write page and event results into a map keyed by `conversationID`, then derive the visible array. A common policy puts pinned conversations first, orders each section by latest message or draft time, and uses a stable ID tiebreaker. Do not swap page-array items directly inside event handlers.
+
+If `latestMsg` cannot be parsed, keep the conversation and show an unknown-message summary. A later recognizable message or requery will update it naturally.
+
+## Keep the list synchronized
+
+This page is the complete owner for `onNewConversation` and `onConversationChanged`. Register events before the first query to minimize gaps during login synchronization. Both callbacks contain `OpenIMConversationListResult`; iterate every item even if one conversation usually changed.
+
+Promise success, event arrival, and requery are separate stages. Rebuild the snapshot after foreground restoration, synchronization completion, reconnect, or account switch. On logout or store destruction, release the two owned handles:
+
+```uts
+off(newConversationSubscription)
+off(changedSubscription)
+```
+
+When switching accounts, stop writes from old-account paging requests before querying the new account. A late old Promise must not merge its `conversationID` list into the new account. Use an application account generation or the commercial `sdkSessionEpoch` to revalidate before completion.

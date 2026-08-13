@@ -1,0 +1,172 @@
+---
+title: 'Integrate by host and platform'
+description: 'Understand the runtime and build boundaries for uni-app, uni-app x, Android, iOS, and HarmonyOS.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/getting-started/environment-specific-implementation'
+---
+
+`unix-openim-sdk` exposes the same business functions to uni-app and uni-app x. The differences are primarily language typing, page lifecycle, file paths, and native build packaging. Every supported host imports from the same plugin root and shares the one OpenIM Core in the host process.
+
+## Support matrix
+
+| Host | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | API 21+ | iOS 14+ | Not currently declared supported |
+| uni-app x | API 21+ | iOS 14+ | Commercial edition, API 24 |
+| Web / H5 / Mini Program | Not supported | Not supported | Not supported |
+
+Use the HBuilderX/uni-app `5.23` series. Availability of public and commercial capabilities also depends on the plugin version, native artifacts, and OpenIMServer deployment; the host name alone does not determine capability support.
+
+## Use the shared plugin entry
+
+Both uni-app and uni-app x import from `@/uni_modules/unix-openim-sdk`. Do not use a bare package name or import platform implementation directories directly.
+
+```uts
+import {
+  getLoginStatus,
+  off,
+  onConnectSuccess,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+Promises resolve directly to business values instead of `{ data }`. Event registration returns an `OpenIMSDKEventSubscription`; release it with `off(subscription)`.
+
+## uni-app Vue 2 / Vue 3
+
+A traditional uni-app page can call the plugin from either Vue 2 or Vue 3 lifecycle code. JavaScript does not provide the full static checks available in UTS, but Promise results and subscription handles have the same runtime semantics. Keep SDK initialization, login, and global listeners in an App-level service so navigation does not repeatedly initialize Core.
+
+```javascript
+import {
+  getLoginStatus,
+  off,
+  onConnectSuccess,
+} from '@/uni_modules/unix-openim-sdk'
+
+const connectSubscription = onConnectSuccess(() => {
+  console.log('OpenIM connected')
+})
+
+const status = await getLoginStatus()
+
+// Run when the application service that owns the listener is destroyed.
+off(connectSubscription)
+```
+
+Destroying a Vue component releases only subscriptions owned by that component or service; it must not call `unInitSDK()`. If several pages need one event, subscribe once in a store or application service and distribute application state to the pages.
+
+## uni-app x
+
+uni-app x uses UTS types. Import initialization parameters, message objects, and event payload types from the public plugin contract instead of copying local interfaces that can drift from the SDK.
+
+```uts
+import {
+  getLoginStatus,
+  type OpenIMLoginStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+const status : OpenIMLoginStatus = await getLoginStatus()
+```
+
+Handle nullable UTS results explicitly. Do not bypass `null` in an exported result type with an unsafe cast. Commercial signaling events return raw JSON strings; validate the outer payload and known fields before converting a `UTSJSONObject` into an application domain object.
+
+## App lifecycle
+
+Initialize SDK Core once in the App scope. Page entry and exit manage only subscriptions owned by that page. To switch accounts, log out the old account and release its subscriptions and state before logging in the new account. Call `unInitSDK()` only when the App will no longer use OpenIM.
+
+Foreground/background, network, badge, and push state should be reported by one App-lifecycle owner instead of several pages. See [Handle App lifecycle and device state](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state).
+
+## Android
+
+Android requires API 21 or newer. The build output must contain the plugin's Maven/AAR dependencies and every target ABI. The standard base does not contain these native artifacts, so use a custom base containing the plugin or a local native Android project.
+
+Before release, verify at least the following:
+
+- Manifest permissions match the product's network, notification, and storage requirements.
+- Each target ABI contains exactly one OpenIM Core native library.
+- The release/R8 build has no duplicate classes, duplicate JNI libraries, or reflection stripping failures.
+- A physical device can reach `apiAddr` and `wsAddr`, and background recovery follows Android system constraints.
+
+The SDK does not request photo-library, camera, microphone, or notification permission for the application. Declare and explain permissions required by the IM features you actually use. AV Runtime media permissions belong to a separate plugin boundary.
+
+## iOS
+
+iOS requires version 14 or newer. Link, embed, and sign the plugin XCFrameworks with compatible CocoaPods and Xcode versions.
+
+Before release, validate framework slices, embedding, signing, privacy manifests, usage descriptions, and the App Store build on a physical device. A simulator build does not prove that device arm64 links correctly. If the host installs other native plugins, scan for duplicate frameworks and module names.
+
+SDK logs and the database live in the application sandbox. Do not persist simulator absolute paths in business configuration, and do not move or modify the Core database directly.
+
+## HarmonyOS
+
+HarmonyOS support is declared only for uni-app x with the <span className="enterprise-field-badge">Commercial</span> edition, API 24 or newer, and the HAR matching the plugin contract.
+
+The following operations return `platform-unsupported`:
+
+- `updateFcmToken`
+- `updateToken`
+- `translateText`
+- `translateMessage`
+
+Ten unsupported events return unsupported subscriptions and never fabricate callbacks; see [Events overview](/sdk/uniapp/events/overview-events). Platform unsupported is distinct from commercial authentication failure. Application logic should distinguish capability absence, login state, network failure, and server rejection by their stable errors.
+
+## File paths
+
+Image, sound, video, and file-message operations using local files require a full path readable by native Core. Convert `unifile://`, picker temporary URLs, and virtual sandbox paths through uni APIs before passing them to the SDK.
+
+- Do not pass an HTTP URL to a by-file or full-path message-creation operation.
+- Keep a temporary file alive until message creation and upload have completed.
+- Android and iOS sandbox paths are different; do not persist an absolute path on one platform and reuse it on another.
+- The host application requests and explains file, photo-library, and media permissions.
+
+Each message-creation page distinguishes URL-based creation from creation using a native full path.
+
+## Local builds and custom bases
+
+A native UTS plugin must participate in native compilation. During development, either build a custom base containing the plugin with HBuilderX 5.23, or use a project-maintained Android/iOS native project for compilation, installation, and automated tests.
+
+The local workflow should lock HBuilderX, the DCloud native SDK, JDK/Android SDK, Xcode/CocoaPods, and plugin versions. This prevents a locally working build from later being packaged with a different dependency set. The standard base can run pages without this native plugin, but it cannot be used to judge the plugin's capabilities.
+
+### Shared SDK service
+
+Use one App-level SDK service to own initialization status, the current logged-in user, global subscription handles, and teardown order. Pages call its business methods and observe application state instead of deciding whether Core should be initialized again.
+
+The service must preserve the plugin's actual Promise and error semantics. Do not wrap results into the Wasm `{ data }` shape, swallow `platform-unsupported`, or use `offAll()` to remove listeners owned elsewhere. To switch accounts, stop writes for the old account, await `logout()`, release its handles, clear account state, and then login the new account.
+
+## Unsupported targets
+
+The plugin does not support Web, H5, or Mini Programs. It depends on native Android, iOS, or HarmonyOS Core, a local database, and native network lifecycle; conditional compilation cannot make the same import run in a browser.
+
+If the product also has H5 or Mini Program targets, select the corresponding Web/Wasm or Mini Program SDK in an application adapter and manage initialization, login, events, and storage separately. Do not allow two SDKs to compete for the same App-side login state.
+
+## Verification and troubleshooting
+
+- Confirm on the target platform that `initSDK()` succeeds and `onConnectSuccess` arrives after `login()`.
+- Verify that query APIs return business values directly and subscription handles remain valid for asynchronous cleanup through `off()`.
+- Test network recovery, foreground/background transitions, forced logout, token invalidation, and reauthentication on a physical device.
+- Test file messages with real picker or photo-library paths in a release build, not only with a fixed sandbox fixture.
+- Connect commercial APIs to commercial services; verify that HarmonyOS reports unsupported capabilities explicitly.
+- Scan final Android/iOS packages for duplicate native dependencies, signing issues, and ABI/framework slice problems.
+
+## Common problems
+
+| Symptom | Likely cause | Resolution |
+| --- | --- | --- |
+| The standard base reports that the native plugin is unavailable | The base does not contain the plugin's native dependencies | Build a custom base or use the local native project. |
+| A simulator connects but a physical device cannot | The service URL uses `localhost`, or TLS/LAN routing is unavailable | Verify API/WSS addresses, certificates, and reverse proxy from the physical device. |
+| An event runs more than once | A page or `onShow` registered it again without releasing the old handle | Move registration to a stable service and call `off(subscription)` for every owned handle. |
+| File-message creation fails | The input is `unifile://`, a temporary URL, or a path Core cannot read | Convert it to a native-readable full path and preserve the file lifetime. |
+| A HarmonyOS API always fails | The locked HAR does not expose that capability | Handle `platform-unsupported` and disable the feature or use an alternative flow. |
+| iOS works in the simulator but device linking fails | Device slice, embedding, signing, or deployment target is wrong | Build for an iPhone and inspect the XCFramework slices and signing. |
+
+## Next steps
+
+- [Before you start](/sdk/uniapp/getting-started/before-you-start)
+- [Install, initialize, and inspect the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)
+- [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [Handle App lifecycle and device state](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state)

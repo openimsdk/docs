@@ -1,0 +1,26 @@
+---
+title: '按群查询通话房间'
+description: '商业版查询群当前关联的 roomID 与邀请。'
+sourcePath: '/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id'
+---
+
+`signalingGetRoomByGroupID()` 的参数是群组 ID，不是自定义 `roomID`：
+
+```uts
+import { signalingGetRoomByGroupID } from '@/uni_modules/unix-openim-sdk'
+
+const room = await signalingGetRoomByGroupID({ groupID })
+```
+
+## 返回结果
+
+Promise 成功后，结果是 `OpenIMSignalingGetRoomByGroupIDResult | null` 快照：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `roomID` | `string` 或 `null` | 当前群通话的房间 ID。 |
+| `invitation` | `OpenIMSignalingInvitationInfo` 或 `null` | 当前房间对应的原始邀请信息。 |
+
+当前 uni-app / uni-app x 合同不像 Wasm 结果那样包含参与者资料；成员快照应由媒体引擎或业务状态提供，不要伪造 `participant` 字段。
+
+空结果或空 `roomID` 表示没有可加入房间。查询结果可能在返回后过期，真正加入前继续处理信令事件并通过 `signalingGetTokenByRoomID()` 获取有效 Token。若业务为群通话使用自定义房间 ID，仍需用 `groupID` 调用本方法，再按返回或已保存的 `roomID` 合并通话状态。

@@ -1,0 +1,85 @@
+---
+title: '会话分组概览'
+description: '商业版会话分组模型、raw 事件解析和生命周期。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组属于<span className="enterprise-field-badge">商业版</span>，用于把会话组织为自定义组，并维护名称、顺序、隐藏状态、未读数和成员会话 ID。
+
+## 分组类型
+
+创建分组时使用 `OpenIMConversationGroupType`，查询分组时使用 `OpenIMConversationGroupQueryType`。二者属于不同操作的合同类型，不应把 UI tab 下标直接当作 SDK 类型值。
+
+同一个会话可以属于多个自定义分组。分组只组织会话入口，不复制或移动会话消息；删除分组或移除成员也不会删除会话本身。
+
+## 分组数据
+
+`OpenIMConversationGroupItem` 的字段均可选：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationGroupID` | `string` 或 `null` | 分组稳定标识；非空后才能作为缓存主键。 |
+| `name` | `string` 或 `null` | 分组名称。 |
+| `order` | `number` 或 `null` | 分组排序值。 |
+| `ex` | `string` 或 `null` | 业务扩展字符串，只按已约定格式解析。 |
+| `conversationGroupType` | `number` 或 `null` | 分组类型。 |
+| `hidden` | `boolean` 或 `null` | 当前分组是否隐藏。 |
+| `unreadCount` | `number` 或 `null` | 分组维度的未读数快照。 |
+| `conversationIDs` | `string[]` 或 `null` | 当前返回携带的成员会话 ID；可能不是完整分页结果。 |
+
+读取非空 `conversationGroupID` 后再建立索引；名称、顺序和隐藏状态可以变化，不能用作主键。需要完整成员、会话资料和总数时，调用[查询分组及会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)。
+
+## 可用操作
+
+| 需求 | 页面 |
+| --- | --- |
+| 创建分组并可选加入初始会话 | [创建会话分组](/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group) |
+| 查询分组列表 | [查询会话分组](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups) |
+| 查询分组资料、成员与总数 | [查询分组及会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) |
+| 查询一个会话所属的全部分组 | [查询会话所属分组](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-by-conversation-id) |
+| 加入或移出分组 | [把会话加入分组](/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups)、[把会话移出分组](/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups) |
+| 更新名称、扩展和隐藏状态 | [更新会话分组](/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group) |
+| 调整分组顺序 | [设置会话分组顺序](/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order) |
+| 删除分组 | [删除会话分组](/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group) |
+
+页面首次进入时查询快照，状态变更操作的 Promise 成功后继续等待事件或重新查询。raw 事件没有冻结字段时，不要用本地猜测替代查询结果。
+
+## 监听分组变化
+
+五个分组事件返回 opaque JSON 字符串，不是类型化对象：
+
+```uts
+import {
+  off,
+  onConversationGroupAdded,
+  onConversationGroupChanged,
+  onConversationGroupDeleted,
+  onConversationGroupMemberAdded,
+  onConversationGroupMemberDeleted,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+function refreshFromRawGroupEvent(payload : string) {
+  try {
+    const value = JSON.parseObject<UTSJSONObject>(payload)
+    if (value != null) refreshConversationGroups()
+  } catch (_) {
+    console.error('Invalid conversation group event payload')
+  }
+}
+
+const addedSubscription = onConversationGroupAdded(refreshFromRawGroupEvent)
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onConversationGroupChanged(refreshFromRawGroupEvent),
+  onConversationGroupDeleted(refreshFromRawGroupEvent),
+  onConversationGroupMemberAdded(refreshFromRawGroupEvent),
+  onConversationGroupMemberDeleted(refreshFromRawGroupEvent),
+]
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+`onConversationGroupAdded`、`onConversationGroupChanged` 和 `onConversationGroupDeleted` 对应分组本身变化；成员新增与删除事件对应会话成员关系。raw payload 没有公开冻结为 DTO，因此这里只验证它是有效 JSON，然后重新查询相关快照。
+
+校验 JSON 后仍不要依赖未冻结字段。事件处理器应快速返回，并以当前登录用户隔离刷新任务；切换账号或 dispose 时先停止旧状态写入，再逐个释放句柄。日志不要输出完整 payload，因为 `ex` 或其他字段可能包含业务数据。

@@ -1,0 +1,56 @@
+---
+title: '更新当前用户资料'
+description: '更新当前登录用户的昵称、头像和扩展资料，并同步资料变化事件。'
+sourcePath: '/sdk/uniapp/user/profile/set-self-info'
+---
+
+`setSelfInfo()` 更新当前登录用户的基础展示资料。只传本次确实需要更新的字段；不要用空字符串或 `null` 代替“保持不变”。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `nickname` | `string` 或 `null` | 否 | 新昵称。 |
+| `faceURL` | `string` 或 `null` | 否 | 新头像地址。 |
+| `ex` | `string` 或 `null` | 否 | 新扩展字符串，会完整覆盖旧值。 |
+| `globalRecvMsgOpt` <span className="enterprise-field-badge">商业版</span> | `OpenIMSetSelfInfoRecvMsgOpt` 或 `null` | 否 | 账号级消息接收方式；应在对应设置流程中单独更新。 |
+
+至少传入一个实际要更新的字段。
+
+```uts
+import { setSelfInfo } from '@/uni_modules/unix-openim-sdk'
+
+await setSelfInfo({
+  nickname: 'OpenIM User',
+  faceURL: 'https://cdn.example.com/avatar.png',
+  ex: mergedExtra,
+})
+```
+
+`ex` 是完整字符串，SDK 不会自动合并 JSON。多个业务模块共用时，应先读取当前值，在应用层合并各自命名空间后再完整写回。
+
+`setSelfInfo()` 也承载账号级 `globalRecvMsgOpt`，但不应与普通资料一起保存。消息接收策略见[设置全局消息接收方式](/sdk/uniapp/user/profile/set-global-message-reception)。当前 Private rc.3 接口没有修改“其他用户添加当前账号时的权限”的 setter，不要从 Wasm 页面推断或调用不存在的方法；合同边界见[设置加好友权限](/sdk/uniapp/user/profile/set-friend-add-permission)。
+
+Promise 成功表示设置请求完成，不等同于资料事件已到达。最终资料通过 `onSelfInfoUpdated` 或重新调用 `getSelfUserInfo()` 校准。
+
+## 监听当前用户资料变化
+
+本页是 `onSelfInfoUpdated` 的完整监听归属页。事件携带更新后的完整 `OpenIMUserInfo`，应按 `userID` 替换当前用户快照：
+
+```uts
+import {
+  off,
+  onSelfInfoUpdated,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const selfInfoSubscription = onSelfInfoUpdated((user) => {
+  replaceCurrentUser(user.userID, user)
+})
+
+function releaseSelfInfoSubscription() {
+  off(selfInfoSubscription)
+}
+```
+
+不要只修改发起请求的页面局部状态。多个页面都需要当前用户资料时，由应用级用户 store 统一订阅，或让每个拥有者保存并释放自己的句柄。退出登录、切换账号或销毁用户状态层时调用 `releaseSelfInfoSubscription()`。

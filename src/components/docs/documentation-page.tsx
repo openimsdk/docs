@@ -293,6 +293,7 @@ function getSdkOverviewPlatform(path: string): SdkOverviewPlatform | undefined {
   const overviewPaths: Record<string, SdkOverviewPlatform> = {
     '/sdk/flutter/overview': 'flutter',
     '/sdk/ios/overview': 'ios',
+    '/sdk/uniapp/overview': 'uniapp',
     '/sdk/wasm/overview': 'wasm',
   };
 

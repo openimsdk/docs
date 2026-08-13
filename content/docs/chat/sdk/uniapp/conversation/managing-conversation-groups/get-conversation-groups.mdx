@@ -1,0 +1,46 @@
+---
+title: 'Get conversation groups'
+description: 'OpenIM uni-app / uni-app x SDK guide for Get conversation groups.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups'
+---
+
+`getConversationGroups()` <span className="enterprise-field-badge">Commercial</span> queries groups by `conversationGroupType`.
+
+`conversationGroupType` is a required `OpenIMConversationGroupQueryType`. Use the contract value for normal custom groups when rendering the normal grouping UI, or the contract value that queries all types when the product needs a complete snapshot. Do not mix a creation type, UI tab index, or local enum with the query type.
+
+```uts
+import { getConversationGroups } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getConversationGroups({ conversationGroupType: 0 })
+const groups = result?.conversationGroups ?? []
+```
+
+## Return result
+
+The Promise resolves directly to `OpenIMGetConversationGroupsResult` or `null`. Read the snapshot from `conversationGroups`, deduplicate valid IDs, and sort by `order`.
+
+### Conversation-group fields
+
+Every `OpenIMConversationGroupItem` field can be absent:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationGroupID` | `string` or `null` | Stable group ID and merge key for group events. Validate it before caching. |
+| `name` | `string` or `null` | Display name. |
+| `order` | `number` or `null` | Server/Core sort value. |
+| `conversationGroupType` | `number` or `null` | Group type. |
+| `conversationIDs` | `string[]` or `null` | Conversation IDs included in this snapshot, not complete conversation objects. |
+| `hidden` | `boolean` or `null` | Whether the group is hidden. |
+| `unreadCount` | `number` or `null` | Aggregate unread-count snapshot. |
+| `ex` | `string` or `null` | Application extension string; parse only a confirmed format. |
+
+The item stores conversation IDs rather than complete conversation details. Use [Get a group with its conversations](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) when member conversation objects, pages, and the total count are needed.
+
+This operation only establishes a snapshot and does not trigger a group event. Merge later incremental events and query again to reconcile after reconnect, account change, or an event gap. See [Conversation groups overview](/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups) for the event list.
