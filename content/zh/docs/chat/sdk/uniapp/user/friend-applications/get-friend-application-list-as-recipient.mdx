@@ -1,0 +1,34 @@
+---
+title: '查询收到的好友申请'
+description: '分页读取收到的申请，并处理申请新增、接受、拒绝和删除事件。'
+sourcePath: '/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+`getFriendApplicationListAsRecipient()` 读取其他用户发给当前账号的申请。本页归属四个好友申请事件，应用应先注册事件，再查询快照。
+
+```uts
+import {
+  getFriendApplicationListAsRecipient,
+  off,
+  onFriendApplicationAccepted,
+  onFriendApplicationAdded,
+  onFriendApplicationDeleted,
+  onFriendApplicationRejected,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const addedSubscription = onFriendApplicationAdded((item) => upsertApplication(item))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  addedSubscription,
+  onFriendApplicationAccepted((item) => upsertApplication(item)),
+  onFriendApplicationRejected((item) => upsertApplication(item)),
+  onFriendApplicationDeleted((item) => removeApplication(item)),
+]
+
+const page = await getFriendApplicationListAsRecipient({ offset: 0, count: 50 })
+replaceReceivedApplications(page?.applications ?? [])
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+参数可省略；显式分页时 `offset` 从 0 开始。按申请双方标识与创建时间建立稳定 key，事件和查询结果幂等合并。收到申请后使用接受或拒绝 API处理，不直接修改本地状态冒充服务端成功。

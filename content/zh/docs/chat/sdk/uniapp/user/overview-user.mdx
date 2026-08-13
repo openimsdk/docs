@@ -1,0 +1,25 @@
+---
+title: '用户概览'
+description: '理解 OpenIM 用户资料、在线状态、好友申请与黑名单的模型和同步边界。'
+sourcePath: '/sdk/uniapp/user/overview-user'
+---
+
+用户领域包含当前账号资料、其他用户公开资料、在线状态、好友关系、好友申请和黑名单。`userID` 是跨端稳定标识；昵称和头像可以变化，不能用作数据主键。
+
+## 核心模型
+
+`OpenIMUserInfo` 的公共字段包括 `userID`、`nickname`、`faceURL`、`ex` 和可选 `createTime`。`attachedInfo` 与 `globalRecvMsgOpt` 是商业版扩展字段，读取前应判空，不要假定公共服务端一定返回。
+
+好友数据使用 `OpenIMFriendUserItem`，在用户资料之外包含备注、置顶、扩展字段和关系时间。黑名单使用 `OpenIMBlackUserItem`。好友申请使用 `OpenIMFriendApplicationItem`，申请状态由接受、拒绝和删除事件增量更新。
+
+## 快照与事件
+
+页面首次进入时先调用对应查询 API 建立快照，再订阅该领域事件并按 `userID` 幂等合并。不要只依赖事件恢复完整列表；断线、重新登录和 App 被系统回收后，应重新查询。
+
+- 当前资料：[查询自己的资料](/sdk/uniapp/user/profile/get-self-user-info)与[修改自己的资料](/sdk/uniapp/user/profile/set-self-info)
+- 在线状态：[订阅用户在线状态](/sdk/uniapp/user/online-status/subscribe-users-status)
+- 好友：[分页查询好友](/sdk/uniapp/user/friends/get-friend-list-page)
+- 好友申请：[查询收到的好友申请](/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient)
+- 黑名单：[查询黑名单](/sdk/uniapp/user/blacklist/get-black-list)
+
+业务后端仍是账号身份、实名信息和权限的权威来源。SDK 用户资料适合聊天展示，不应替代业务账号认证。

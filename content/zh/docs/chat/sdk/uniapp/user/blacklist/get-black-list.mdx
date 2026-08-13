@@ -1,0 +1,36 @@
+---
+title: '查询黑名单'
+description: '查询黑名单快照，并处理加入与移除黑名单事件。'
+sourcePath: '/sdk/uniapp/user/blacklist/get-black-list'
+---
+
+公共入口 `getBlackList()` 返回 `OpenIMBlackListResult | null`。本页同时归属 `onBlackAdded` 与 `onBlackDeleted`。
+
+```uts
+import {
+  getBlackList,
+  off,
+  onBlackAdded,
+  onBlackDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const blackAddedSubscription = onBlackAdded((user) => upsertBlackUser(user))
+const blackDeletedSubscription = onBlackDeleted((user) => removeBlackUser(user.userID))
+
+const result = await getBlackList()
+replaceBlackList(result?.blackUsers ?? [])
+
+off(blackAddedSubscription)
+off(blackDeletedSubscription)
+```
+
+商业版还提供 `getBlacks()` <span className="enterprise-field-badge">商业版</span>，返回包装字段名为 `blacks`：
+
+```uts
+import { getBlacks } from '@/uni_modules/unix-openim-sdk'
+
+const commercialResult = await getBlacks()
+replaceBlackList(commercialResult?.blacks ?? [])
+```
+
+两个入口不要混用返回字段。黑名单与好友关系是独立状态；加入黑名单是否自动影响好友关系取决于服务端策略，客户端应分别查询。

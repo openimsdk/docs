@@ -1,0 +1,31 @@
+---
+title: '订阅用户在线状态'
+description: '订阅指定用户在线状态，并用 onUserStatusChanged 合并增量。'
+sourcePath: '/sdk/uniapp/user/online-status/subscribe-users-status'
+---
+
+`subscribeUsersStatus()` 为指定用户建立状态订阅；`getUserStatus()` 可立即查询这些用户的当前状态。`onUserStatusChanged` 是本页的完整事件归属。
+
+```uts
+import {
+  getUserStatus,
+  off,
+  onUserStatusChanged,
+  subscribeUsersStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+const statusSubscription = onUserStatusChanged((result) => {
+  result.statuses.forEach((status) => replaceUserStatus(status.userID, status))
+})
+
+const userIDs = ['user_a', 'user_b']
+await subscribeUsersStatus(userIDs)
+const snapshot = await getUserStatus(userIDs)
+snapshot?.statuses.forEach((status) => replaceUserStatus(status.userID, status))
+
+off(statusSubscription)
+```
+
+先注册事件，再订阅和查询快照，可缩小快照与事件之间的丢失窗口。状态项可能包含多平台在线明细；业务应按 `userID` 和平台更新，不把一次离线事件等同于用户所有设备都离线。
+
+只订阅当前界面或业务确实需要的用户，并在不再需要时调用[取消用户在线状态订阅](/sdk/uniapp/user/online-status/unsubscribe-users-status)。

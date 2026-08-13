@@ -1,0 +1,38 @@
+---
+title: 'List received friend requests'
+description: 'Read received requests and process add, accept, reject, and delete events.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'draft'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+Register all request events before loading the snapshot.
+
+```uts
+import {
+  getFriendApplicationListAsRecipient,
+  off,
+  onFriendApplicationAccepted,
+  onFriendApplicationAdded,
+  onFriendApplicationDeleted,
+  onFriendApplicationRejected,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  onFriendApplicationAdded((item) => upsertApplication(item)),
+  onFriendApplicationAccepted((item) => upsertApplication(item)),
+  onFriendApplicationRejected((item) => upsertApplication(item)),
+  onFriendApplicationDeleted((item) => removeApplication(item)),
+]
+const page = await getFriendApplicationListAsRecipient({ offset: 0, count: 50 })
+replaceReceivedApplications(page?.applications ?? [])
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+Use a stable key based on both users and creation time. Handle a request with the accept or reject API; never mutate local state to imitate server success.

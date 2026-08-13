@@ -1,0 +1,36 @@
+---
+title: 'List friends'
+description: 'Load friends by page or snapshot and process friend changes.'
+product: 'sdk'
+context: 'chat/sdk/uniapp'
+template: 'guide'
+status: 'draft'
+lastUpdated: '2026-08-13'
+version: 'v4'
+platform: 'uniapp'
+sourcePath: '/sdk/uniapp/user/friends/get-friend-list-page'
+---
+
+Use `getFriendListPage()` for pagination or `getFriendList()` for a complete small snapshot. Register events before querying.
+
+```uts
+import {
+  getFriendListPage,
+  off,
+  onFriendAdded,
+  onFriendDeleted,
+  onFriendInfoChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  onFriendAdded((friend) => upsertFriend(friend.userID, friend)),
+  onFriendDeleted((friend) => removeFriend(friend.userID)),
+  onFriendInfoChanged((friend) => upsertFriend(friend.userID, friend)),
+]
+const page = await getFriendListPage({ offset: 0, count: 100 })
+replaceFriendSnapshot(page?.friends ?? [])
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+Start `offset` at 0, continue until fewer than `count` items return, and deduplicate by `userID`. `getFriendList(filterBlack)` optionally filters blacklist entries but does not merge the two relationship types. Reload after login, reconnection, or state loss.

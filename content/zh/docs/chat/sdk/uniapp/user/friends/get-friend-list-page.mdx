@@ -1,0 +1,34 @@
+---
+title: '查询好友列表'
+description: '分页或一次性查询好友，并处理好友新增、删除与资料变化事件。'
+sourcePath: '/sdk/uniapp/user/friends/get-friend-list-page'
+---
+
+`getFriendListPage()` 按偏移量分页读取好友；数据量较小或需要完整快照时，可用 `getFriendList()`。本页同时归属好友新增、删除和资料变化事件。
+
+```uts
+import {
+  getFriendListPage,
+  off,
+  onFriendAdded,
+  onFriendDeleted,
+  onFriendInfoChanged,
+  type OpenIMSDKEventSubscription,
+} from '@/uni_modules/unix-openim-sdk'
+
+const friendAddedSubscription = onFriendAdded((friend) => upsertFriend(friend.userID, friend))
+const subscriptions : Array<OpenIMSDKEventSubscription> = [
+  friendAddedSubscription,
+  onFriendDeleted((friend) => removeFriend(friend.userID)),
+  onFriendInfoChanged((friend) => upsertFriend(friend.userID, friend)),
+]
+
+const page = await getFriendListPage({ offset: 0, count: 100 })
+replaceFriendSnapshot(page?.friends ?? [])
+
+subscriptions.forEach((subscription) => off(subscription))
+```
+
+`offset` 从 `0` 开始，`count` 是本页期望数量。继续分页直到返回数量小于 `count`，并按 `userID` 去重。`getFriendList(filterBlack)` 的 `filterBlack` 控制是否过滤黑名单用户；不要把黑名单和好友关系当作同一状态。
+
+事件与查询可能包含同一好友，应用必须幂等合并。重新登录、断线恢复或应用状态丢失后，重新查询快照。

@@ -1,0 +1,30 @@
+---
+title: '修改自己的资料'
+description: '更新当前用户资料并处理 onSelfInfoUpdated 事件。'
+sourcePath: '/sdk/uniapp/user/profile/set-self-info'
+---
+
+`setSelfInfo()` 按提供的可选字段更新当前账号资料。不要用空字符串替代“保持不变”；只传本次确实要修改的字段。
+
+```uts
+import {
+  off,
+  onSelfInfoUpdated,
+  setSelfInfo,
+} from '@/uni_modules/unix-openim-sdk'
+
+const selfInfoSubscription = onSelfInfoUpdated((user) => {
+  replaceCurrentUser(user.userID, user)
+})
+
+await setSelfInfo({
+  nickname: 'OpenIM User',
+  faceURL: 'https://cdn.example.com/avatar.png',
+})
+
+off(selfInfoSubscription)
+```
+
+`OpenIMSetSelfInfoParams` 支持 `nickname`、`faceURL`、`ex`，以及商业版使用的 `globalRecvMsgOpt`。Promise 成功表示服务端接受修改；界面最终状态以 `onSelfInfoUpdated` 或重新查询的资料为准。
+
+事件返回完整 `OpenIMUserInfo`。按 `userID` 替换缓存，不要只修改发起请求的页面局部状态。多个页面需要该事件时，各自保存订阅句柄并释放，或由应用级用户 store 统一订阅。
