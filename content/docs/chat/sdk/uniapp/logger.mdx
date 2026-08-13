@@ -11,15 +11,148 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/logger'
 ---
 
-Configure `logLevel`, `isLogStandardOutput`, and optional `logFilePath` during initialization. Use the lowest production level that supports diagnosis and redact tokens, private content, and commercial credentials.
+`unix-openim-sdk` logs diagnose initialization, login, and business API calls on Android, iOS, and HarmonyOS. Development and staging builds can emit detailed SDK logs. Production should retain only necessary errors and tracing fields and must avoid tokens, message bodies, file URLs, server credentials, and other private data.
+
+A diagnostic flow combines logging options in `OpenIMInitConfig`, an optional `operationID` for one call, the plugin error, upload-progress events, and the application's structured logs.
+
+## Log levels
+
+Configure logging through `OpenIMInitConfig.logLevel` when calling `initSDK()`. From most to least verbose, the exported levels are:
+
+| Constant | Value | Description |
+| --- | --- | --- |
+| `OpenIMLogLevelVerbose` | `6` | Most detailed runtime tracing; use only for short, deep diagnostics. |
+| `OpenIMLogLevelDebug` | `5` | Development and integration details. |
+| `OpenIMLogLevelInfo` | `4` | Normal runtime information. |
+| `OpenIMLogLevelWarn` | `3` | Warnings. |
+| `OpenIMLogLevelError` | `2` | Errors. |
+| `OpenIMLogLevelFatal` | `1` | Fatal errors. |
+| `OpenIMLogLevelPanic` | `0` | Most severe level. |
+
+Do not leave `Verbose` or `Debug` enabled in production. Prefer an environment setting, staged feature flag, or explicit user-initiated diagnostic flow that raises verbosity only temporarily.
+
+### Recommended log levels
+
+| Scenario | Recommended configuration | Description |
+| --- | --- | --- |
+| Local development | `OpenIMLogLevelDebug`, `isLogStandardOutput: true` | Inspect SDK calls in Logcat or the Xcode console. |
+| Integration or staging | Temporarily use more detail when needed | Correlate user IDs, conversation IDs, error codes, and OpenIMServer logs. |
+| Production default | `OpenIMLogLevelWarn` or `OpenIMLogLevelError`, with unnecessary standard output disabled | Reduce noise and sensitive-data exposure while retaining actionable errors. |
+| User diagnostic mode | Temporarily raise verbosity and explain the collection scope | Obtain consent and follow privacy, retention, and deletion requirements. |
+
+## Configure logging
+
+Logging options belong to SDK initialization, not `login()`. This Android example uses the corresponding platform identity and required `systemType`:
+
+```uts
+import {
+  OpenIMLogLevelDebug,
+  OpenIMPlatformAndroid,
+  initSDK,
+  type OpenIMInitConfig,
+} from '@/uni_modules/unix-openim-sdk'
+
+const config : OpenIMInitConfig = {
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://im-api.example.com',
+  wsAddr: 'wss://im-ws.example.com',
+  logLevel: OpenIMLogLevelDebug,
+  isLogStandardOutput: true,
+  systemType: 'android',
+}
+
+await initSDK(config)
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `logLevel` | `OpenIMLogLevel` | Yes | Controls the verbosity of SDK Core runtime logs. |
+| `isLogStandardOutput` | `boolean` | Yes | Writes SDK logs to the platform standard output. Enable it for development and temporary diagnostics. |
+| `logFilePath` | `string` or `null` | No | Custom log path. Normally use the plugin's platform default unless the application deliberately manages a sandbox path. |
+
+`apiAddr`, `wsAddr`, platform ID, and `systemType` are still required initialization settings, but they are not logging fields. Error codes and messages in plugin failures are also not logging configuration parameters.
+
+## Trace one call with operationID
+
+`operationID` is an optional correlation identifier for one SDK call. Most asynchronous APIs accept it as the last parameter. Ordinary calls can omit it and let the plugin generate or delegate the value. Create and pass one explicitly only when a specific call must be correlated precisely with native and OpenIMServer logs.
+
+```uts
+import { getConversationListSplit } from '@/uni_modules/unix-openim-sdk'
+
+const operationID = createDiagnosticOperationID()
+
+try {
+  const result = await getConversationListSplit(
+    { offset: 0, count: 50 },
+    operationID,
+  )
+
+  appLogger.info('openim_api_success', {
+    operationID,
+    action: 'get_conversation_page',
+    count: result?.conversations.length ?? 0,
+  })
+} catch (error) {
+  appLogger.error('openim_api_failed', {
+    operationID,
+    action: 'get_conversation_page',
+    error: sanitizeOpenIMError(error),
+  })
+  throw error
+}
+```
+
+Use a new `operationID` for every call. It is not a user identity, permission credential, conversation ID, or business idempotency key and cannot replace a token, `conversationID`, or `clientMsgID`. If one business flow contains several SDK calls, give every call its own operationID and use an application trace ID to correlate the whole flow.
+
+## Record business context
+
+Application logs can contain the route, business action, operationID, redacted error code, and necessary target identifiers such as `conversationID` or `clientMsgID`. Do not log:
+
+- User or administrator tokens, secrets, or commercial business credentials.
+- Complete message bodies, raw custom-message payloads, or private file URLs.
+- Unnecessary user profiles, contact lists, or group-member lists.
+- SDK database contents or complete local sandbox paths.
+
+Apply support and privacy policy to target identifiers as well, and redact them again before publishing an issue or sharing logs across teams.
+
+## Upload logs
+
+`uploadLogs()` receives a line count and an extension description. Obtain user consent first and explain what is collected, why it is needed, and how long it is retained.
 
 ```uts
 import { uploadLogs } from '@/uni_modules/unix-openim-sdk'
 
-const operationID = `diagnostic-${Date.now()}`
-await uploadLogs({ line: 2000, ex: JSON.stringify({ scene: 'login-timeout' }) }, operationID)
+const operationID = createDiagnosticOperationID()
+
+await uploadLogs(
+  {
+    line: 2000,
+    ex: JSON.stringify({ scene: 'login-timeout' }),
+  },
+  operationID,
+)
 ```
 
-`operationID` is an optional diagnostic correlation value, not a user ID, idempotency key, or credential. Upload progress belongs to `onUploadLogsProgress`; completion does not itself open a support case.
+### Parameters
 
-Obtain user consent, limit line count/retries, keep `ex` redacted, disable verbose production output, and never upload the entire local database as a shortcut.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `line` | `number` | Yes | Number of log lines to upload. Apply a limit instead of an unbounded upload. |
+| `ex` | `string` | Yes | Redacted diagnostic context, such as a scenario name. Never include tokens, message content, or credentials. |
+
+Promise success means that the log-upload request completed. It does not create a support case or mean that the problem has been analyzed. Limit retries on failure to avoid sustained background data and battery usage.
+
+## Observe upload progress
+
+`onUploadLogsProgress()` returns an independent subscription handle. The canonical business owner for this event is [Message overview](/sdk/uniapp/message/overview-message); this page only defines how diagnostic UI uses the progress. The diagnostic service that owns the listener must release it with `off(subscription)`.
+
+Upload progress is display state, not proof that support analysis has completed. Never place raw log content or a token in progress state.
+
+## Related pages
+
+- [Install, initialize, and inspect the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)
+- [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [Send your first message](/sdk/uniapp/getting-started/send-first-message)
+- [Send a message](/sdk/uniapp/message/sending-messages/send-message)

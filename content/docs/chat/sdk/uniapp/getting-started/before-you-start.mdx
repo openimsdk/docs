@@ -11,39 +11,90 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/getting-started/before-you-start'
 ---
 
-Choose a uni-app or uni-app x App target and prepare an OpenIMServer, users, and native build environment compatible with `unix-openim-sdk 0.2.0-rc.3`. Web, H5, and mini-app targets cannot use this native UTS plugin.
+Before integrating `unix-openim-sdk` into a uni-app / uni-app x App, prepare an OpenIMServer reachable from the device, a trusted user-authentication flow, the UTS plugin, and a native build environment for every target platform. These prerequisites apply to both [authenticating and managing a session](/sdk/uniapp/getting-started/authenticate-and-manage-session) and [sending your first message](/sdk/uniapp/getting-started/send-first-message). Web, H5, and Mini Program targets cannot use this native UTS plugin.
 
-## Prepare the service and account
+## Prepare OpenIMServer
 
-| Value | Source | Requirement |
-| --- | --- | --- |
-| `apiAddr` | OpenIMServer HTTP API | Complete address reachable from the device |
-| `wsAddr` | OpenIMServer WebSocket | Complete address that accepts a persistent connection |
-| `userID` | Your backend account mapping | Existing server user matching the token |
-| Token | Trusted application backend | Grants access only to the current user |
+If you do not yet have an OpenIMServer deployment, follow the [Docker deployment guide](/docs/guides/quick-deployment/docker). Then verify that the actual Android, iPhone, or HarmonyOS device can reach `apiAddr` and `wsAddr`.
 
-Your backend must authenticate its own account before returning the mapped OpenIM user and token. Never place an administrator token or server secret in the App. Public clients connect to a public OpenIMServer deployment; signaling, session, and other commercial features require the corresponding commercial services.
+SDK initialization needs the following service addresses:
 
-On physical devices, do not use the development computer's `localhost`. Verify network reachability, TLS certificates, reverse-proxy rules, and WebSocket upgrades from the actual device.
+| Field | Description |
+| --- | --- |
+| `apiAddr` | OpenIMServer HTTP API address used for sign-in, synchronization, and resource requests. A production App should use a device-reachable HTTPS address with a valid certificate. |
+| `wsAddr` | OpenIMServer WebSocket address used to establish the persistent connection and receive realtime events. A production App normally uses WSS. |
 
-## Prepare the plugin and toolchain
+Do not verify the services only from the server or development Mac. A physical device cannot use the development computer's `localhost`; test LAN or public routing, TLS certificates, reverse-proxy rules, and WebSocket upgrades from the actual device.
 
-Install the plugin at `uni_modules/unix-openim-sdk`, use the HBuilderX/uni-app `5.23` series, and prepare:
+A public client can connect to a public OpenIMServer. Signaling, session, translation, and other capabilities marked <span className="enterprise-field-badge">Commercial</span> also require the matching commercial server capabilities. Do not use a public server's rejection to judge whether the commercial client API is implemented correctly.
 
-- Android: API 21+, a compatible JDK and Android SDK, declared AAR/Maven dependencies, and target ABIs.
-- iOS: iOS 14+, compatible Xcode/CocoaPods, and correctly linked and embedded XCFrameworks.
-- HarmonyOS: uni-app x commercial edition only, API 24, with the HAR matching the plugin contract.
+## Prepare the user and token
 
-The standard base does not contain these native dependencies. Build a custom base or use the project's local Android/iOS native workflow. Do not mix public and commercial native artifacts in one plugin directory.
+`userID` identifies an OpenIMSDK user, while the token authenticates that user. A trusted backend must create or bind OpenIMSDK users, issue tokens, and enforce application permissions. Never store an administrator token, secret, or other server credential in the App.
 
-Use exported platform constants instead of numeric literals: `OpenIMPlatformAndroid`, `OpenIMPlatformIOS`, or `OpenIMPlatformHarmony`. The required `systemType` is a descriptive string such as `android`, `ios`, or `harmony`.
+Before integrating your backend with the OpenIMServer REST API, see [Prepare to use the Platform API](/platform-api/prepare-to-use-api) and [Issue a session token](/platform-api/user/managing-session-tokens/issue-a-session-token). If your product already has an account system, maintain a stable mapping between each application account and its OpenIMSDK `userID`, and ensure that the returned token belongs to that user.
+
+We recommend exposing a session endpoint from your application backend so that the App receives only the minimum data required to sign in:
+
+```uts
+type OpenIMSDKSession = {
+  userID : string
+  token : string
+}
+
+async function loadOpenIMSDKSession() : Promise<OpenIMSDKSession> {
+  const response = await uni.request({
+    url: `${businessApiURL}/openim/session`,
+    method: 'POST',
+  })
+
+  if (response.statusCode != 200) {
+    throw new Error('Failed to load OpenIM SDK session')
+  }
+
+  return parseTrustedSessionResponse(response.data)
+}
+```
+
+The application endpoint must authenticate the current application account before returning its OpenIMSDK sign-in details. It must not accept an arbitrary `userID` from the client and issue a token for that user without verification. `apiAddr` and `wsAddr` are normally controlled App-environment settings passed to `initSDK()`, rather than values changed in every user session response.
+
+## Prepare the UTS plugin and native runtime
+
+Install the plugin at `uni_modules/unix-openim-sdk`, use the HBuilderX/uni-app `5.23` series, and prepare the native environment for each target:
+
+| Host | Android | iOS | HarmonyOS |
+| --- | --- | --- | --- |
+| uni-app Vue 2 / Vue 3 | Supported, API 21+ | Supported, iOS 14+ | Not currently declared supported |
+| uni-app x | Supported, API 21+ | Supported, iOS 14+ | Commercial edition, API 24 |
+| Web / H5 / Mini Program | Not supported | Not supported | Not supported |
+
+- Android needs a compatible JDK and Android SDK, the plugin's declared AAR/Maven dependencies, and the ABI used by each target device.
+- iOS needs compatible Xcode/CocoaPods. The final App must link, embed, and sign the plugin XCFrameworks correctly.
+- HarmonyOS support is declared only for uni-app x with the commercial edition, the HAR matching the plugin contract, and an API 24 project.
+
+The standard base does not contain these native dependencies. Build a custom base or use the project's local Android/iOS native workflow. Do not mix public and commercial native artifacts in one plugin directory, and do not read or modify the SDK database or native cache directly.
+
+See [Integrate by host and platform](/sdk/uniapp/getting-started/environment-specific-implementation) for lifecycle, type, and file-path differences.
+
+## Choose the platform identity
+
+Pass an exported constant to `initSDK().platformID` instead of a numeric literal: `OpenIMPlatformAndroid` for Android, `OpenIMPlatformIOS` for iPhone, or `OpenIMPlatformHarmony` for HarmonyOS.
+
+Initialization also requires a matching descriptive `systemType`, such as `android`, `ios`, or `harmony`. The platform constant and `systemType` participate in server-side multi-device policy and native runtime diagnostics, so they must identify the runtime that is actually executing the SDK.
 
 ## Release checklist
 
-- Verify initialization, login, normal message send/receive, and logout on target devices.
-- Test foreground/background transitions, network recovery, token invalidation, and forced logout.
-- Scan Android for duplicate classes/JNI and ABIs; validate iOS signing, embedding, privacy manifests, and device linking.
-- Test commercial signaling against commercial services, not a public server.
-- Keep tokens, secrets, and full private-message content out of logs, screenshots, and automation evidence.
+Before releasing, test the environments and networks your product actually supports:
 
-Continue with [Install, initialize, and inspect the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk).
+- `initSDK()` succeeds, `login()` succeeds, and `onConnectSuccess` is received.
+- Foreground/background transitions, network interruption and recovery, token invalidation, and forced logout follow the product state machine.
+- Android contains the required ABIs and has no duplicate classes or JNI libraries.
+- The iOS device package links, embeds, and signs successfully, with complete usage descriptions and privacy manifests.
+- HarmonyOS uses the exact commercial HAR required by the contract and reports platform-unsupported capabilities explicitly.
+- Two different accounts can send and receive normal messages, query history, and keep state isolated after logout.
+- Commercial APIs are tested against the corresponding commercial services.
+- Logs, screenshots, and automation evidence contain no tokens, secrets, full private-message content, or unnecessary local absolute paths.
+
+## Continue the integration
+
+After preparing these prerequisites, complete [installation, initialization, and SDK inspection](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk), then [authenticate and manage the session](/sdk/uniapp/getting-started/authenticate-and-manage-session). Once the connection succeeds, [send your first message](/sdk/uniapp/getting-started/send-first-message) to a prepared user or group and verify the complete messaging flow.

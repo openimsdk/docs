@@ -11,7 +11,46 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/getting-started/authenticate-and-manage-session'
 ---
 
-After `initSDK()`, register account and connection events before calling `login(userID, token)`. Login Promise completion does not imply that the persistent connection is ready; wait for `onConnectSuccess` before network-dependent queries and sends.
+`unix-openim-sdk` uses `login()` to establish the current user's session. Before authentication, complete the server, account, plugin, and native runtime preparation in [Before you start](/sdk/uniapp/getting-started/before-you-start), then [install and initialize the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk).
+
+Use this order for a complete sign-in flow:
+
+1. Initialize the one OpenIM Core in the App scope.
+2. Subscribe to connection, token, and forced-offline events before login so no transition is missed.
+3. Obtain a matching `userID` and OpenIMSDK token from a trusted backend.
+4. Call `login(userID, token)`, await the Promise, and then wait for `onConnectSuccess` before treating the connection as ready.
+5. Query user, friend, conversation, group, and message data only after the connection is ready.
+6. For active sign-out or account switching, call `logout()`, then release old-account subscriptions and clear application state.
+
+## Initialize the SDK
+
+After installing the plugin, call `initSDK()` once from an application-level service. See [Install, initialize, and inspect the SDK](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk) for configuration fields, platform constants, the required `systemType`, version inspection, and uninitialization.
+
+`unix-openim-sdk` exports flat functions. Business code does not create an SDK instance, and separate pages must not initialize Core repeatedly with different service addresses. The OpenIMServer environment is set by `initSDK()`; the current user identity is established by `login()`.
+
+### Initialization boundary
+
+`initSDK()` receives `OpenIMInitConfig`, including the platform ID, HTTP and WebSocket addresses, logging options, and required `systemType`. These are App/deployment settings rather than user fields. Account switching reuses the existing initialization and must not move those settings into an object passed to `login()`.
+
+### Understand the UTS plugin
+
+`unix-openim-sdk` is a native UTS plugin, not a JavaScript singleton factory. It owns one OpenIM Core internally, and both uni-app and uni-app x access it through flat exports from `@/uni_modules/unix-openim-sdk`. Because the standard base does not contain its native dependencies, both development and release packages must be native builds that include the plugin.
+
+## Load sign-in details for the current user
+
+Call the application backend session endpoint to obtain the current user's `userID` and token:
+
+```uts
+const session = await loadOpenIMSDKSession()
+const userID = session.userID
+const token = session.token
+```
+
+`userID` is only an OpenIMSDK user identifier; it is not a credential. The token must come from a trusted backend and belong to that `userID`. The App does not create users or issue tokens, and it must not store administrator tokens or server secrets.
+
+## Register connection events before login
+
+Register connection events before calling `login()`. This captures failures caused by networking, service addresses, tokens, or server state during the login flow and lets the UI represent each connection state.
 
 ```uts
 import {
@@ -19,60 +58,169 @@ import {
   onConnectFailed,
   onConnectSuccess,
   onConnecting,
-  onKickedOffline,
-  onUserTokenExpired,
-  onUserTokenInvalid,
   type OpenIMSDKEventSubscription,
 } from '@/uni_modules/unix-openim-sdk'
 
-const subscriptions : Array<OpenIMSDKEventSubscription> = [
-  onConnectSuccess(() => console.log('OpenIM connected')),
-  onConnecting(() => console.log('OpenIM connecting')),
-  onConnectFailed((error) => console.error(error.errCode, error.errMsg)),
-  onKickedOffline(() => clearCurrentAccount()),
-  onUserTokenExpired(() => requestFreshToken()),
-  onUserTokenInvalid((error) => console.error(error.errCode, error.errMsg)),
-]
+const sessionSubscriptions : Array<OpenIMSDKEventSubscription> = []
 
-function releaseSessionSubscriptions() {
-  subscriptions.forEach((subscription) => off(subscription))
-  subscriptions.length = 0
-}
+sessionSubscriptions.push(onConnecting(() => {
+  setConnectionState('connecting')
+}))
+
+sessionSubscriptions.push(onConnectSuccess(() => {
+  setConnectionState('connected')
+}))
+
+sessionSubscriptions.push(onConnectFailed((errCode, errMsg) => {
+  setConnectionState('failed')
+  console.error('OpenIM SDK connection failed', errCode, errMsg)
+}))
 ```
 
-When `onKickedOffline` arrives, Core is already transitioning offline. Clear references to the old account and start reauthentication; do not race it with `logout()`.
+The `onConnectFailed` handler receives two arguments, `errCode` and `errMsg`, rather than one error object. Every `on...()` call returns its own `OpenIMSDKEventSubscription`; the return value is not a cancellation function and must not be invoked directly.
+
+## Login the current user
 
 ```uts
 import { login } from '@/uni_modules/unix-openim-sdk'
 
-await login(userID, token)
-```
-
-The required call shape is `login(userID, token)`, not an object parameter. Obtain a token matching `userID` from a trusted backend; the optional diagnostic argument is intentionally omitted from normal examples.
-
-```uts
-import { OpenIMLoginStatusLogged, getLoginStatus, getLoginUserID } from '@/uni_modules/unix-openim-sdk'
-
-const status = await getLoginStatus()
-if (status == OpenIMLoginStatusLogged) {
-  const currentUserID = await getLoginUserID()
-  restoreAccountState(currentUserID)
+try {
+  await login(userID, token)
+} catch (error) {
+  console.error('OpenIM SDK login failed', userID, error)
+  throw error
 }
 ```
 
-Login state and network connectivity are different: a briefly disconnected account may remain logged in.
+### Parameters
 
-Report application lifecycle and network transitions once from an application service:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `string` | Yes | Current OpenIMSDK user ID matching the token. It is not a nickname, phone number, or temporary session ID. |
+| `token` | `string` | Yes | OpenIMSDK token for the current user, returned by a trusted backend. Do not issue it in the client. |
+
+The `login()` Promise succeeding means that the login request has completed. `onConnectSuccess` means that the SDK's persistent connection is ready. These are separate stages; do not call connection-dependent message, conversation, group, or user APIs merely because the Promise resolved.
+
+If the user taps login more than once, reuse the in-flight login request and Promise instead of starting concurrent `login()` calls. Platform ID, HTTP address, and WebSocket address belong to initialization and are not repeated in an object-style login call.
+
+## Handle API results
+
+Asynchronous plugin APIs resolve directly to business values rather than the Wasm `{ data }` response wrapper. A failure rejects the Promise with a plugin error. Log only redacted error codes, method names, and user identifiers needed to correlate the failure with native logs.
 
 ```uts
-import { networkStatusChanged, setAppBackgroundStatus } from '@/uni_modules/unix-openim-sdk'
+import { getSelfUserInfo } from '@/uni_modules/unix-openim-sdk'
 
-await setAppBackgroundStatus(true)
-await setAppBackgroundStatus(false)
-await networkStatusChanged()
+try {
+  const currentUser = await getSelfUserInfo()
+  if (currentUser != null) {
+    useCurrentUser(currentUser)
+  }
+} catch (error) {
+  console.error('getSelfUserInfo failed', error)
+}
 ```
 
-To sign out, wait for `logout()`, release account-scoped subscriptions, and clear state. Finish this sequence before logging in another account.
+A query result establishes a snapshot at call time. If a mutation returns no business object that can refresh the UI, follow that API page's event or requery guidance. Promise success, event arrival, and snapshot reconciliation are three separate stages.
+
+## Inspect the current login state
+
+`getLoginStatus()` and `getLoginUserID()` take no business parameters:
+
+```uts
+import {
+  OpenIMLoginStatusLogged,
+  getLoginStatus,
+  getLoginUserID,
+} from '@/uni_modules/unix-openim-sdk'
+
+const loginStatus = await getLoginStatus()
+if (loginStatus == OpenIMLoginStatusLogged) {
+  const currentUserID = await getLoginUserID()
+  restoreSessionFor(currentUserID)
+}
+```
+
+The login-status constants are:
+
+| Status | Description |
+| --- | --- |
+| `OpenIMLoginStatusLogout` | Core is not logged in. |
+| `OpenIMLoginStatusLogging` | Login is in progress; do not start another login concurrently. |
+| `OpenIMLoginStatusLogged` | Core is logged in. Use connection events separately to determine current network readiness. |
+
+`getLoginUserID()` returns the user ID currently logged into Core. It is useful for checking that the application account and SDK account match, but it does not replace application authentication. Neither query triggers a connection event.
+
+Do not overwrite the current session by logging in with another user. Await `logout()` for the old account, clear old subscriptions and state, and then call `login()` for the new account.
+
+## Report App runtime state
+
+Report Android, iOS, and HarmonyOS foreground/background and network state once from App-level lifecycle code. Pass `true` to `setAppBackgroundStatus()` when entering the background and `false` when returning to the foreground. Call `networkStatusChanged()` when network availability or type changes.
+
+```uts
+import {
+  networkStatusChanged,
+  setAppBackgroundStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+async function reportAppBackground() {
+  await setAppBackgroundStatus(true)
+}
+
+async function reportAppForeground() {
+  await setAppBackgroundStatus(false)
+}
+
+async function reportNetworkAvailable() {
+  await networkStatusChanged()
+}
+```
+
+These operations only report runtime changes. They do not establish a new session and cannot replace `login()` or token refresh. Ordinary page entry and exit must not repeat these App-level calls. See [Handle App lifecycle and device state](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state) for uni-app / uni-app x lifecycle wiring, badges, and FCM tokens.
+
+## Handle the token lifecycle
+
+OpenIMSDK tokens are issued by a trusted backend. The public flow fetches a fresh token and reauthenticates when a token expires or becomes invalid. The commercial edition can also hot-update the token with `updateToken()`; see [Update the token and observe the SDK session](/sdk/uniapp/getting-started/update-token-and-observe-sdk-session).
+
+```uts
+import {
+  onUserTokenExpired,
+  onUserTokenInvalid,
+} from '@/uni_modules/unix-openim-sdk'
+
+sessionSubscriptions.push(onUserTokenExpired(() => {
+  requestFreshTokenAndRelogin()
+}))
+
+sessionSubscriptions.push(onUserTokenInvalid((errCode, errMsg) => {
+  console.warn('OpenIM SDK token is invalid', errCode, errMsg)
+  redirectToSignIn()
+}))
+```
+
+Like `onConnectFailed`, `onUserTokenInvalid` receives `(errCode, errMsg)`. Use these values for diagnostics and user-facing state only; never use them to bypass reauthentication, and never store the token in logs or event state.
+
+### Token model
+
+The client passes the current user's OpenIMSDK token to `login()`. Issuance, expiration, refresh, revocation, and multi-device policies belong to the application backend and OpenIMServer configuration. Implement short-lived or one-time application sessions in the backend, then reauthenticate the App in response to token lifecycle events.
+
+## Handle forced logout
+
+Subscribe to the forced-offline event. It usually means that the same account signed in on another client or that server policy requires the current client to end its session.
+
+```uts
+import { onKickedOffline } from '@/uni_modules/unix-openim-sdk'
+
+sessionSubscriptions.push(onKickedOffline(() => {
+  clearCurrentAccount()
+  showSignedInElsewhereDialog()
+}))
+```
+
+When `onKickedOffline` arrives, SDK Core is already transitioning offline. Do not race that transition with a concurrent `logout()`. Clear the application's current user, conversation, message-view, and page state, then offer reauthentication according to product policy.
+
+## Logout actively
+
+Call `logout()` when the user actively signs out or switches accounts, then clear the current user's conversation list, message views, unread state, and application state. Forced offline is not an active logout and does not run this sequence.
 
 ```uts
 import { logout } from '@/uni_modules/unix-openim-sdk'
@@ -81,3 +229,29 @@ await logout()
 releaseSessionSubscriptions()
 clearCurrentAccount()
 ```
+
+Promise success means that the SDK session has logged out. When switching accounts, wait for old-account logout, clear old state and subscriptions, register the new account's listeners, and only then call `login()`. Do not run two accounts' login/logout flows concurrently.
+
+### Disconnecting only WebSocket
+
+The plugin does not expose a public operation that disconnects WebSocket while preserving the login session. Report foreground/background and network changes through the App-lifecycle APIs. Use `logout()` when the user session must end.
+
+## Release session listeners
+
+This page is the complete owner for connection, token, and forced-offline listeners. On logout, account switch, or destruction of the application service that owns them, pass every handle to `off(subscription)`:
+
+```uts
+function releaseSessionSubscriptions() {
+  sessionSubscriptions.forEach((subscription) => off(subscription))
+  sessionSubscriptions.length = 0
+}
+```
+
+Connection events have no business-entity merge key. Isolate their state by the current Core and logged-in user. Business pages establish snapshots through queries and then merge incremental state through each domain's event owner.
+
+## Next steps
+
+- [Before you start](/sdk/uniapp/getting-started/before-you-start)
+- [Send your first message](/sdk/uniapp/getting-started/send-first-message)
+- [Events overview](/sdk/uniapp/events/overview-events)
+- [Logger](/sdk/uniapp/logger)
