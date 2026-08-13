@@ -29,6 +29,13 @@ export type PageCommercialInfo = {
   events: string[];
 };
 
+export const enterpriseBadgeMarkupPatternSource =
+  '<span className="enterprise-field-badge">(?:商业版(?:字段)?|Enterprise|Commercial(?: field)?)<\\/span>';
+
+export function isEnterpriseBadgeMarkup(value: string): boolean {
+  return new RegExp(`^${enterpriseBadgeMarkupPatternSource}$`).test(value);
+}
+
 const methods = ownership.methods as OwnershipEntry[];
 const events = ownership.events as OwnershipEntry[];
 const commercialMethodNames = new Set(

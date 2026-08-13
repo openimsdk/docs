@@ -4,7 +4,10 @@ import { CodeBlock, CodeTabs, type CodeTab } from '@/src/components/docs/code-bl
 import { createHeadingIdGenerator } from '@/src/lib/heading-ids';
 import type { Locale } from '@/src/lib/i18n';
 import { t, toLocalizedPath } from '@/src/lib/i18n';
-import { matchCommercialSymbol } from '@/src/lib/client-sdk-commercial';
+import {
+  enterpriseBadgeMarkupPatternSource,
+  matchCommercialSymbol,
+} from '@/src/lib/client-sdk-commercial';
 
 type MarkdownBlock =
   | { type: 'blockquote'; lines: string[] }
@@ -300,8 +303,12 @@ function parseCodeTabTitle(meta: string | undefined, language: string) {
 
 function renderInlineMarkdown(value: string, options: InlineRenderOptions): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const pattern =
-    /!\[([^\]]*)]\(([^)]+)\)|\[([^\]]+)]\(([^)]+)\)|`([^`]+)`|\*\*([^*]+)\*\*|(<span className="enterprise-field-badge">(?:商业版|Enterprise)<\/span>)/g;
+  const pattern = new RegExp(
+    '!\\[([^\\]]*)]\\(([^)]+)\\)|\\[([^\\]]+)]\\(([^)]+)\\)|`([^`]+)`|\\*\\*([^*]+)\\*\\*|(' +
+      enterpriseBadgeMarkupPatternSource +
+      ')',
+    'g',
+  );
   let cursor = 0;
   const badgeLabel = t(options.locale).article.commercialBadge;
 

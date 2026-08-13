@@ -2,9 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  enterpriseBadgeMarkupPatternSource,
   getPageCommercialInfo,
   getPageCommercialNames,
+  isEnterpriseBadgeMarkup,
 } from '../../src/lib/client-sdk-commercial.ts';
+
+test('recognizes every commercial badge label used by client SDK content', () => {
+  for (const label of ['商业版', '商业版字段', 'Enterprise', 'Commercial', 'Commercial field']) {
+    const markup = `<span className="enterprise-field-badge">${label}</span>`;
+    assert.equal(isEnterpriseBadgeMarkup(markup), true, label);
+    assert.match(markup, new RegExp(`^${enterpriseBadgeMarkupPatternSource}$`));
+  }
+
+  assert.equal(
+    isEnterpriseBadgeMarkup('<span className="enterprise-field-badge">Unknown</span>'),
+    false,
+  );
+});
 
 test('derives uni-app commercial pages from the Private documentation ownership manifest', () => {
   assert.equal(
