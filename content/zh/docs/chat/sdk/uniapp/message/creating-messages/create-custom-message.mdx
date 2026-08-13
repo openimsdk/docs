@@ -4,18 +4,30 @@ description: '创建业务自定义消息或带实体范围的高级文本。'
 sourcePath: '/sdk/uniapp/message/creating-messages/create-custom-message'
 ---
 
-`createCustomMessage()` 用于双方已约定 schema 的业务载荷：
+`createCustomMessage()` 适合订单、任务、邀请或投票等双方已约定 schema 的业务消息。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `data` | `string` | 是 | 业务载荷的完整字符串，通常保存序列化后的 JSON。 |
+| `extension` | `string` | 是 | 业务扩展信息的完整字符串。 |
+| `descriptionText` | `string` | 是 | 消息类型说明或不支持该类型时的降级展示文本。 |
 
 ```uts
 import { createCustomMessage } from '@/uni_modules/unix-openim-sdk'
 
 const message = await createCustomMessage({
-  data: JSON.stringify({ orderID: 'order_123' }),
-  extension: '',
-  descriptionText: '订单卡片',
+  data: JSON.stringify({ type: 'task', taskID: 'task_42' }),
+  extension: JSON.stringify({ schemaVersion: 1 }),
+  descriptionText: '任务卡片',
 })
 ```
 
-`data`、`extension`、`descriptionText` 都会发给接收方，不能包含秘密。接收端先验证内容类型和 JSON 字段，再映射业务模型。
+`data` 是业务载荷，`extension` 是扩展信息，`descriptionText` 用于类型说明或降级展示。三者都会发给接收方，不能包含秘密；接收端应校验协议版本、大小和字段，再映射业务模型，不要执行不可信内容。
+
+当前 uni-app / uni-app x 合同没有 Wasm 商业扩展中的 `searchText` 参数，不要传入该字段。Promise 成功只返回待发送的 `OpenIMMessageItem | null`；发送与自定义业务事件是不同链路。
+
+## 高级文本消息
 
 `createAdvancedTextMessage()` 使用 `OpenIMCreateAdvancedTextMessageParams` 创建带文本实体/样式范围的消息。范围必须对应原始文本索引，越界数据应在调用前拒绝。两种入口都只创建消息，不发送。

@@ -4,22 +4,129 @@ description: '按关键词、发送者、类型和时间范围搜索消息。'
 sourcePath: '/sdk/uniapp/message/searching-messages/search-messages'
 ---
 
-`searchLocalMessages()` 在 SDK 本地数据中搜索。
+`searchLocalMessages()` 搜索当前用户本地已经同步的消息。群消息搜索的目标参数是群聊对应的 `conversationID`，不是发送消息时使用的 `groupID`；如果只保存了群 ID，先按[获取会话 ID](/zh/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id)取得群会话 ID。
+
+搜索范围来自 SDK 本地数据库。跨用户审计、服务端全量检索、复杂权限过滤或全局排序应由后端搜索服务承担，再把命中的 `conversationID` 和 `clientMsgID` 返回客户端定位。
+
+## 创建搜索查询
+
+`keywordList` 接收一个或多个关键词。搜索框通常只代表一次输入，应先去除首尾空格并过滤空值。
 
 ```uts
-import { searchLocalMessages } from '@/uni_modules/unix-openim-sdk'
+import {
+  OpenIMMessageTypeAtText,
+  OpenIMMessageTypeText,
+  searchLocalMessages,
+  type OpenIMMessageItem,
+  type OpenIMSearchMessageResult,
+} from '@/uni_modules/unix-openim-sdk'
 
 const result = await searchLocalMessages({
   conversationID,
-  keywordList: ['发布'],
+  keywordList: [keyword.trim()],
   keywordListMatchType: 0,
   senderUserIDList: [],
-  messageTypeList: [],
+  messageTypeList: [OpenIMMessageTypeText, OpenIMMessageTypeAtText],
   searchTimePosition: 0,
   searchTimePeriod: 0,
   pageIndex: 1,
-  count: 50,
+  count: 20,
 })
 ```
 
-匹配类型、时间单位和页码使用合同/服务端约定。搜索只覆盖已同步到本地且可索引的内容；不要承诺服务器全量历史。结果按会话与消息 ID 去重。
+## 高级搜索
+
+可以使用发送者、消息类型和时间窗口缩小范围。当前 `OpenIMSearchLocalMessagesParams` 除 `conversationID` 外的筛选与分页字段均为必填；不限制某个数组条件时传空数组，不限制时间时按服务端约定传 `0`。
+
+```uts
+const result = await searchLocalMessages({
+  conversationID,
+  keywordList: ['release'],
+  keywordListMatchType: 0,
+  senderUserIDList: [senderUserID],
+  messageTypeList: [OpenIMMessageTypeText],
+  searchTimePosition,
+  searchTimePeriod,
+  pageIndex: 1,
+  count: 20,
+})
+```
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string \| null` | 否 | 要搜索的会话 ID；省略时搜索当前本地可见范围。 |
+| `keywordList` | `string[]` | 是 | 关键词列表。 |
+| `keywordListMatchType` | `number` | 是 | 多关键词匹配方式，使用 SDK 数字约定。 |
+| `senderUserIDList` | `string[]` | 是 | 只搜索这些用户发送的消息；不限制时传空数组。 |
+| `messageTypeList` | `OpenIMMessageType[]` | 是 | 只搜索指定类型；不限制时传空数组。 |
+| `searchTimePosition` | `number` | 是 | 搜索结束位置，Unix 时间戳，单位为秒。 |
+| `searchTimePeriod` | `number` | 是 | 从结束位置向前搜索的时间范围，单位为秒。 |
+| `pageIndex` | `number` | 是 | 搜索结果页码，第一页传 `1`。 |
+| `count` | `number` | 是 | 每页返回数量。 |
+
+如果搜索入口允许图片、文件或自定义消息，把相应 `OpenIMMessageType` 常量加入 `messageTypeList`。匹配类型、时间单位和页码必须服从合同及服务端约定。
+
+## 处理分页结果
+
+Promise 成功后，结果是 `OpenIMSearchMessageResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `totalCount` | `number` | 当前条件下匹配的消息总数。 |
+| `searchResultItems` | `OpenIMSearchMessageResultItem[]` | 按会话分组的搜索结果。 |
+
+每个结果项包含：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `string` | 结果所属会话 ID。 |
+| `conversationType` | `OpenIMSessionType` | 会话类型。 |
+| `showName`、`faceURL` | `string` | 会话展示名称与头像快照。 |
+| `latestMsgSendTime` | `number \| null` | 当前结果会话的最新消息时间。 |
+| `messageCount` | `number` | 当前结果项的匹配消息数量。 |
+| `messageList` | `OpenIMMessageItem[]` | 匹配消息。 |
+
+可以把分组结果转换为业务搜索行，但必须保留会话 ID 和消息 ID：
+
+```uts
+type SearchMessageRow = {
+  conversationID : string
+  clientMsgID : string
+  message : OpenIMMessageItem
+}
+
+function toSearchRows(result : OpenIMSearchMessageResult) : Array<SearchMessageRow> {
+  const rows : Array<SearchMessageRow> = []
+  result.searchResultItems.forEach((item) => {
+    item.messageList.forEach((message) => {
+      const clientMsgID = message.clientMsgID
+      if (clientMsgID != null) {
+        rows.push({
+          conversationID: item.conversationID,
+          clientMsgID,
+          message,
+        })
+      }
+    })
+  })
+  return rows
+}
+```
+
+分页时保持相同的会话、关键词和筛选条件，只递增 `pageIndex`。用户修改任一条件时，把页码重置为 `1` 并清空旧结果。同一搜索页按 `conversationID:clientMsgID` 去重，不要按结果位置保存选中项。查询不会触发消息事件。
+
+## 处理搜索结果变化
+
+命中的消息可能在页面打开后被撤回或删除，搜索范围也可能因新消息同步而变化。统一事件处理器见[接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)、[批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)和[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)；本页只负责查询和分页，不重复注册消息事件。
+
+跳转时使用结果中的 `conversationID` 和 `clientMsgID` 定位。需要展示前后聊天记录时，把命中的完整 `OpenIMMessageItem` 作为起点读取[消息上下文](/zh/sdk/uniapp/message/retrieving-messages/load-message-context)，不要用 `findMessageList()` 拼接附近记录。
+
+需要显示当前时刻的结果时，可以用相同条件重新执行当前页搜索。搜索 Promise、消息事件增量和重新查询是三条独立路径；重新登录后必须清除旧账号搜索状态，并由新事件作用域继续同步。
+
+## 相关页面
+
+- [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)
+- [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)

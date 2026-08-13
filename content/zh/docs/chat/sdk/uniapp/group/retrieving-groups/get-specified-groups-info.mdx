@@ -4,13 +4,19 @@ description: '按 groupID 列表批量查询群资料。'
 sourcePath: '/sdk/uniapp/group/retrieving-groups/get-specified-groups-info'
 ---
 
-`getSpecifiedGroupsInfo()` 批量查询群资料。
+群组查询只建立调用时的快照，不会触发群组事件。公开群发现、跨业务目录和复杂权限过滤应由业务后端提供；SDK 查询面向已知群组和当前账号已加入的群组。
+
+`getSpecifiedGroupsInfo()` 接收群组 ID 数组：
 
 ```uts
 import { getSpecifiedGroupsInfo } from '@/uni_modules/unix-openim-sdk'
 
-const result = await getSpecifiedGroupsInfo(['group_a', 'group_b'])
+const result = await getSpecifiedGroupsInfo(groupIDs)
 const groups = result?.groups ?? []
 ```
 
-结果不保证与输入顺序一致，按 `groupID` 映射。未返回群可能不存在、已解散或当前无权访问。大量 ID 分批查询。
+读取单个群组时仍传数组，并检查 `groups[0]` 是否存在。群组没有 URL 或 slug 字段，业务路由应先解析为稳定的 `groupID`。
+
+Promise 成功后，`result?.groups` 是匹配的 `OpenIMGroupItem[]`，字段含义见[分页获取已加入群组](/zh/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)。结果不保证与输入 ID 按位置一一对应，应按 `groupID` 合并；未返回群可能不存在、已解散或当前无权访问。大量 ID 应分批查询。
+
+后续变化按 `groupID` 合并，完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。

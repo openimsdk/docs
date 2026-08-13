@@ -4,21 +4,72 @@ description: '商业版向一个用户发起音频或视频邀请。'
 sourcePath: '/sdk/uniapp/calling/managing-calls/start-single-call'
 ---
 
-`signalingInvite()` <span className="enterprise-field-badge">商业版</span> 使用 invitation 和可选离线推送信息。
+`signalingInvite()` <span className="enterprise-field-badge">商业版</span> 发起单聊通话。`unix-openim-sdk` 负责通话信令，应用仍需使用返回的房间凭据接入实时音视频媒体引擎。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `invitation` | `OpenIMSignalingInvitationInfo` | 是 | 本次通话邀请。 |
+| `invitation.inviterUserID` | `string` | 是 | 当前登录用户 ID。 |
+| `invitation.inviteeUserIDList` | `string[]` | 是 | 被邀请用户列表；单聊只填写对方一个用户。 |
+| `invitation.groupID` | `string` | 是 | 单聊固定传空字符串。 |
+| `invitation.roomID` | `string` | 是 | 本次通话的唯一房间标识，后续状态按它合并。 |
+| `invitation.timeout` | `number` | 是 | 邀请等待时长，单位为秒。 |
+| `invitation.mediaType` | `string` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |
+| `invitation.sessionType` | `number` | 是 | 单聊传 `OpenIMSessionTypeSingle`。 |
+| `invitation.platformID` | `number` | 是 | 当前客户端平台；Android/iOS 分别使用对应平台常量。 |
+| `invitation.customData` | `string` | 否 | 随邀请携带的业务扩展字符串。 |
+| `invitation.initiateTime` | `number` | 否 | 邀请发起时间，通常由信令链路维护。 |
+| `invitation.busyLineUserIDList` | `string[]` | 否 | 忙线用户列表；发起新邀请时通常不填写。 |
+| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |
+| `offlinePushInfo.title` | `string` | 否 | 推送标题。 |
+| `offlinePushInfo.desc` | `string` | 否 | 推送正文。 |
+| `offlinePushInfo.ex` | `string` | 否 | 推送扩展字符串。 |
+| `offlinePushInfo.iOSPushSound` | `string` | 否 | iOS 推送声音。 |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | 否 | 是否更新 iOS 角标。 |
 
 ```uts
-import { signalingInvite } from '@/uni_modules/unix-openim-sdk'
+import {
+  OpenIMPlatformAndroid,
+  OpenIMSessionTypeSingle,
+  signalingInvite,
+} from '@/uni_modules/unix-openim-sdk'
 
-const result = await signalingInvite({
+const roomCredentials = await signalingInvite({
   invitation: {
-    inviterUserID: selfUserID,
+    inviterUserID: currentUserID,
     inviteeUserIDList: [peerUserID],
+    customData: JSON.stringify({ source: 'contact-card' }),
+    groupID: '',
+    roomID: createBusinessRoomID(),
     mediaType: 'video',
     timeout: 30,
-    sessionType: 1,
+    sessionType: OpenIMSessionTypeSingle,
+    platformID: OpenIMPlatformAndroid,
   },
-  offlinePushInfo: { title: '视频通话', desc: '收到新的通话邀请' },
+  offlinePushInfo: {
+    title: '视频通话',
+    desc: '你收到一个视频通话邀请',
+    ex: '',
+    iOSPushSound: 'default',
+    iOSBadgeCount: true,
+  },
 })
 ```
 
-返回值可能含 `roomID`、`token`、`liveURL` 和忙线用户列表，全部按可选字段处理。邀请成功后若页面展示失败，应主动取消。不要在日志中打印 token 或 liveURL。
+iOS 端将 `platformID` 改为 `OpenIMPlatformIOS`。房间 ID 应由业务生成并在本次通话各参与端保持一致。
+
+## 返回结果
+
+Promise 成功后，`roomCredentials` 是 `OpenIMSignalingInviteResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `roomID` | `string \| null` | 本次通话的媒体房间 ID。 |
+| `token` | `string \| null` | 加入媒体房间使用的短期凭据，只应保存在内存中。 |
+| `liveURL` | `string \| null` | 媒体服务返回的房间连接地址。 |
+| `busyLineUserIDList` | `string[] \| null` | 因忙线未能进入邀请流程的用户 ID。 |
+| `invitation` | `OpenIMSignalingInvitationInfo \| null` | 服务端返回的邀请快照。 |
+
+取得有效的 `token` 和 `roomID` 后再连接媒体房间。Promise 成功只表示信令请求完成并取得房间凭据，不表示对方已经接听；后续状态见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。邀请成功后若页面展示失败，应主动取消。不要在日志中打印 token 或 liveURL。

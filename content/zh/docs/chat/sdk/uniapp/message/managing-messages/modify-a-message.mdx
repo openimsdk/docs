@@ -4,7 +4,16 @@ description: '商业版修改消息，并处理 modified/edited raw 事件。'
 sourcePath: '/sdk/uniapp/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessage()`、`onMessageModified` 和 `onMessageEdited` 属于<span className="enterprise-field-badge">商业版</span>。两个事件都是 raw 字符串。
+`modifyMessage()` <span className="enterprise-field-badge">商业版</span> 用于修改一条已存在消息的内容。它和[批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)、[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)不同：删除影响当前账号可见性，撤回让会话成员看到撤回态，修改则替换消息内容并同步给其他客户端。
+
+## 修改消息内容
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 消息所属的会话 ID。 |
+| `message` | `OpenIMMessageItem` | 是 | 修改后的完整消息对象；必须保留原 `clientMsgID`。 |
 
 ```uts
 import {
@@ -17,9 +26,32 @@ import {
 const modifiedSubscription = onMessageModified((payload) => refreshModifiedMessage(payload))
 const editedSubscription = onMessageEdited((payload) => refreshModifiedMessage(payload))
 
-const result = await modifyMessage(modifyParams)
-off(modifiedSubscription)
-off(editedSubscription)
+const result = await modifyMessage({
+  conversationID,
+  message: buildEditedMessage(message, editedText),
+})
+if (result?.message != null) replaceMessage(result.message)
+
+function removeMessageModifiedListeners() {
+  off(modifiedSubscription)
+  off(editedSubscription)
+}
 ```
 
-`modifyParams` 按 `OpenIMModifyMessageParams` 构造。raw 事件先校验 JSON，再按稳定消息 ID查询或更新；不要记录完整正文。多端编辑按服务端最终版本解决冲突。
+该方法不是局部更新。应从当前消息复制并只修改目标内容，保留 `clientMsgID` 和其他消息字段。允许修改的发送者、时间窗口和消息类型由 OpenIMServer 校验；失败时不要只在本地保留编辑结果。
+
+## 返回结果
+
+Promise 成功后，`result?.message` 是服务端确认的修改后 `OpenIMMessageItem | null`。调用端可先用返回值替换当前列表中的同 `clientMsgID` 消息；这不代表所有端界面已经更新。
+
+## 监听消息修改
+
+`onMessageModified` 和 `onMessageEdited` 都属于<span className="enterprise-field-badge">商业版</span>，参数是 raw JSON 字符串。部署可能按版本使用其中一种，若同时监听必须按稳定消息 ID 和版本去重。先验证 JSON，再查询或替换消息；不要记录完整正文。组件卸载、退出登录或切换账号时调用 `removeMessageModifiedListeners()`，多端编辑按服务端最终版本解决冲突。
+
+## 相关页面
+
+- [批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)
+- [撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)
+- [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)
+- [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)

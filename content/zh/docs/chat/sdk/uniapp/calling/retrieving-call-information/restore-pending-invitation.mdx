@@ -4,7 +4,7 @@ description: '商业版在 SDK 启动后查询可能遗漏的当前邀请。'
 sourcePath: '/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation'
 ---
 
-事件监听建立后调用一次 `signalingGetInvitationInfoStartApp()`，恢复初始化前到达的邀请。
+事件监听建立后调用一次 `signalingGetInvitationInfoStartApp()`，返回应用启动或恢复时需要处理的邀请快照：
 
 ```uts
 import { signalingGetInvitationInfoStartApp } from '@/uni_modules/unix-openim-sdk'
@@ -13,4 +13,10 @@ const result = await signalingGetInvitationInfoStartApp()
 if (result?.invitation != null) recoverInvitation(result.invitation)
 ```
 
-可选参数 `userID` 只用于明确查询用户。无邀请时合法返回 `null`，不是错误。恢复结果与实时邀请可能重复，按 room/session 标识去重；每次 runtime 初始化只查询一次。
+可选参数 `{ userID }` 只用于明确查询用户；通常由当前登录态决定，不需要传入。
+
+## 返回结果
+
+Promise 成功后，结果是 `OpenIMSignalingGetInvitationInfoStartAppResult | null`，其中 `invitation` 为 `OpenIMSignalingInvitationInfo | null`。无邀请时合法返回 `null` 或 `invitation: null`，不是错误。
+
+该查询只取得当前快照，不会触发通话事件。只在 invitation 非空且 `roomID` 有效时恢复来电界面；恢复结果与实时邀请可能重复，应按 `roomID` 和本地 session 标识去重。每次 runtime 初始化只查询一次，随后仍需监听取消、超时、接受和挂断，完整处理见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。

@@ -4,10 +4,32 @@ description: '上传本地文件、观察进度，并在商业版取消上传。
 sourcePath: '/sdk/uniapp/file-uploads/upload-file'
 ---
 
-`uploadFile()` 上传原生层可读的本地文件，返回 URL/URI、UUID、大小和媒体信息。
+`uploadFile()` 是独立上传能力，可用于头像、群头像、资料附件或其他业务文件，不从属于消息，也不会自动创建消息。它上传原生层可读的本地文件，并返回 URL/URI、UUID、大小和媒体信息。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `filepath` | `string` | 是 | 原生层可读取的本地完整路径。 |
+| `name` | `string` | 是 | 文件名。 |
+| `contentType` | `string` | 是 | MIME 类型。 |
+| `uuid` | `string` | 是 | 业务为本次上传生成的稳定任务 ID。 |
+| `cancelID` | `string \| null` | 否 | 用于取消本次上传的稳定 ID。 |
+| `cause` | `string \| null` | 否 | 业务侧记录的上传用途或原因。 |
+
+如果界面需要显示进度，应在调用 `uploadFile()` 前注册进度事件，避免较小文件在监听建立前完成上传。
 
 ```uts
-import { uploadFile } from '@/uni_modules/unix-openim-sdk'
+import {
+  off,
+  onUploadFileProgress,
+  uploadFile,
+} from '@/uni_modules/unix-openim-sdk'
+
+const progressSubscription = onUploadFileProgress((event) => {
+  if (event == null) return
+  updateUploadProgress(event.progress)
+})
 
 const result = await uploadFile({
   filepath: '/data/user/0/app/cache/report.pdf',
@@ -16,9 +38,32 @@ const result = await uploadFile({
   uuid: createStableUploadUUID(),
   cancelID: 'upload-report-1',
 })
+
+function removeUploadListener() {
+  off(progressSubscription)
+}
 ```
 
-路径必须是原生可读的完整路径。`unifile://` 先转换；不要把网络 URL 作为 `filepath`。上传进度由[消息概览](/sdk/uniapp/message/overview-message)归属的 `onUploadFileProgress` 提供。
+路径必须是原生可读的完整路径。`unifile://` 先转换为平台沙盒路径；不要把网络 URL 作为 `filepath`。Android 和 iOS 的临时目录、文件授权与生命周期不同，上传完成前不要移动或删除原文件。
+
+## 返回结果
+
+Promise 成功后，结果是 `OpenIMUploadFileResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `url` | `string \| null` | 上传后的远端资源 URL。 |
+| `uri` | `string \| null` | 服务端返回的资源 URI。 |
+| `uuid` | `string \| null` | 本次上传的任务标识。 |
+| `size` | `number \| null` | 文件大小。 |
+| `typ` | `number \| null` | 服务端返回的资源类型。 |
+| `mediaID` | `string \| null` | 媒体资源 ID。 |
+
+使用 `result?.url` 写入头像、群资料或创建对应消息对象。Promise 成功只表示上传请求成功，不表示资料已经更新，也不表示聊天消息已经创建或发送；后续业务写入必须单独完成。
+
+## 监听上传进度
+
+`onUploadFileProgress` 返回 `OpenIMSDKEventSubscription`，事件只包含 `progress`。当前 uni-app / uni-app x 合同不像 Wasm 完成事件那样携带任务 ID，因此不要依赖数组位置关联并行任务；需要精确展示多个并行上传时，应由业务层限制并发或按各自 Promise 状态管理。账号退出或上传状态层销毁时调用 `removeUploadListener()`。
 
 商业版可以通过 `cancelUpload()` <span className="enterprise-field-badge">商业版</span> 取消同一 `cancelID`：
 

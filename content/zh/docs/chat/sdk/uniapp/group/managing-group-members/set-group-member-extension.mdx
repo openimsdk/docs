@@ -4,12 +4,23 @@ description: '通过 setGroupMemberInfo 更新成员 ex。'
 sourcePath: '/sdk/uniapp/group/managing-group-members/set-group-member-extension'
 ---
 
-成员 `ex` 是整段业务扩展字符串。
+`ex` 是完整字符串，SDK 不会自动合并 JSON。写入前应保留其他业务模块的命名空间。
 
 ```uts
 import { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'
 
-await setGroupMemberInfo({ groupID, userID: 'user_b', ex: JSON.stringify({ title: 'PM' }) })
+const previous = JSON.parse(member.ex || '{}')
+
+await setGroupMemberInfo({
+  groupID,
+  userID: targetUserID,
+  ex: JSON.stringify({
+    ...previous,
+    title: 'maintainer',
+  }),
+})
 ```
 
-修改前合并已有值，不覆盖其他模块字段。扩展对有权查看成员资料的用户可见，不存秘密。
+扩展字段对有权查看成员资料的用户可见，不要存放 Token 等秘密。
+
+Promise 成功后，通过 `onGroupMemberInfoChanged` 按 `groupID:userID` 合并；完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。

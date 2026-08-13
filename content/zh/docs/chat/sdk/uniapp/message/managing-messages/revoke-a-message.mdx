@@ -4,7 +4,11 @@ description: '撤回指定消息，并处理消息撤回事件。'
 sourcePath: '/sdk/uniapp/message/managing-messages/revoke-a-message'
 ---
 
-`revokeMessage()` 使用会话和客户端消息 ID。
+如果界面需要让其他会话成员看到“消息已撤回”，使用 `revokeMessage()`，不要用普通删除替代。删除只影响当前账号侧可见性，见[批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)。修改已发送消息内容见[修改消息](/zh/sdk/uniapp/message/managing-messages/modify-a-message)。
+
+## 撤回一条消息
+
+`revokeMessage()` 接收消息所在的 `conversationID` 和目标 `clientMsgID`：
 
 ```uts
 import {
@@ -13,9 +17,35 @@ import {
   revokeMessage,
 } from '@/uni_modules/unix-openim-sdk'
 
-const revokedSubscription = onNewRecvMessageRevoked((info) => mergeRevokedInfo(info))
+const revokedSubscription = onNewRecvMessageRevoked((info) => {
+  if (info == null) return
+  markMessageRevoked(info.clientMsgID, info)
+})
 await revokeMessage({ conversationID, clientMsgID })
-off(revokedSubscription)
+
+function removeRevokeListener() {
+  off(revokedSubscription)
+}
 ```
 
-服务端校验发送者、时限与权限。撤回后保留消息占位和撤回信息，不简单删除数组项。事件可能先于 Promise 到达，处理需幂等。
+Promise 成功后，调用端可以先把当前列表中的同 `clientMsgID` 消息更新为撤回态。在线客户端随后通过 `onNewRecvMessageRevoked` 收到撤回信息，接收端应更新对应气泡，而不是直接从列表中删除。
+
+允许撤回的发送者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留撤回展示。Promise 成功代表当前请求已完成，不代表所有端界面已经更新。
+
+## 返回结果
+
+`revokeMessage()` 成功直接返回字符串结果，不返回被撤回消息对象。调用端继续使用请求中的 `clientMsgID` 更新本地气泡，并以撤回事件校准其他客户端状态。
+
+## 监听撤回事件
+
+本页是 `onNewRecvMessageRevoked` 的完整监听示例归属页。事件参数是 `OpenIMMessageRevokedItem | null`，使用 `clientMsgID` 合并；`isAdminRevoke` 表示是否由管理员撤回，可用于选择系统提示文案。事件可能先于 Promise 到达，处理必须幂等。
+
+组件卸载、退出登录或切换账号时调用 `removeRevokeListener()`；重新登录后的撤回变化由消息事件同步。
+
+## 相关页面
+
+- [批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)
+- [修改消息](/zh/sdk/uniapp/message/managing-messages/modify-a-message)
+- [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)
+- [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)

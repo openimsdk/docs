@@ -4,17 +4,46 @@ description: '商业版通话邀请、房间凭据、事件和 AV Runtime 的职
 sourcePath: '/sdk/uniapp/calling/overview-calling'
 ---
 
-本节全部能力属于<span className="enterprise-field-badge">商业版</span>，要求商业版 OpenIMServer 信令服务。`unix-openim-sdk` 负责邀请、接受、拒绝、取消、挂断、房间凭据和信令事件；它不提供通话 UI、摄像头或音频渲染。
+本节全部能力属于<span className="enterprise-field-badge">商业版</span>，要求商业版 OpenIMServer 信令服务。`unix-openim-sdk` 提供发起邀请、接受、拒绝、取消、挂断、查询房间和同步通话状态所需的信令 API。它负责协调参与者、房间信息和通话生命周期，不负责采集摄像头画面、播放远端媒体流或渲染通话界面。
 
-需要完整通话与会议 UI 时，另行集成 `openim-av-runtime`。AV Runtime 复用本插件的唯一登录态，通过类型化 Host RPC调用这些信令 API，不初始化第二套 OpenIM Core。
+应用需要把返回的 `roomID`、`token` 和 `liveURL` 交给所选的实时音视频媒体引擎，并自行处理设备权限、媒体轨道、弱网策略和界面状态。信令 API 不是一套完整的 WebRTC 媒体 SDK。需要完整通话与会议 UI 时，可另行集成 `openim-av-runtime`；AV Runtime 复用本插件的唯一登录态，不初始化第二套 OpenIM Core。
 
-典型流程：
+## 通话流程
 
-1. 应用登录 IM，并注册全部信令事件。
-2. 主叫构造 `OpenIMSignalingInvitationInfo` 后调用邀请。
-3. 被叫收到 raw 邀请事件，校验 JSON 并展示来电。
-4. 被叫申请媒体权限后再接受；拒绝则直接发送 reject。
-5. 双方使用返回的 room/token/liveURL 建立媒体连接。
-6. 取消、超时、挂断和多设备事件驱动统一 session 状态机。
+1. 应用登录 IM 并注册全部信令事件，调用 `signalingInvite()` 发起单聊通话，或调用 `signalingInviteInGroup()` 发起群聊通话。
+2. 被邀请方从 `onReceiveNewInvitation` 获取 raw JSON 邀请，校验并映射为 `OpenIMSignalingInvitationInfo` 后展示来电。
+3. 接受方先申请媒体权限，再调用 `signalingAccept()`；拒绝则调用 `signalingReject()`。
+4. 双方使用返回的 `roomID`、`token` 和 `liveURL` 接入媒体引擎。
+5. 通话过程中根据参与者、媒体流和自定义信令事件更新本地状态。
+6. 发起方可以取消尚未接通的邀请；任一参与者都可以挂断已经建立的通话。
+
+## 核心数据
+
+| 数据 | 说明 |
+| --- | --- |
+| `OpenIMSignalingInvitationInfo` | 邀请人、被邀请人、群组、房间、媒体类型、超时时间和会话类型。 |
+| `OpenIMSignalingInviteResult` | OpenIMServer 返回的 `roomID`、`token`、`liveURL` 和忙线用户列表。 |
+| `OpenIMSignalingAcceptResult`、`OpenIMSignalingGetTokenByRoomIDResult` | 接受邀请或重新获取 Token 时返回的媒体房间凭据。 |
+| `OpenIMSignalingGetRoomByGroupIDResult` | 按群组查询到的 `roomID` 和原始邀请快照。 |
+
+`customData` 和自定义信令只适合传递业务可公开的协商信息。不要在其中写入长期凭据、管理员密钥或其他敏感数据。
+
+## 状态更新与事件归属
+
+发起、接受、拒绝、取消和挂断等写操作需要分别处理 API 的 Promise 结果与通话事件。Promise 成功表示 OpenIMServer 已接受或完成当前信令请求；事件反映邀请方、被邀请方、其他设备或房间参与者看到的增量状态，两者不是同一个完成信号。
+
+信令事件参数是 raw JSON 字符串，必须先校验再进入应用状态。邀请生命周期、成员进出房间、挂断和媒体流变化的完整监听统一见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)；自定义信令事件见[发送自定义信令](/zh/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal)。查询房间、重新获取 Token 和恢复待处理邀请只通过 Promise 返回调用时的快照。
+
+概览页不注册事件处理器。通话状态以 `roomID` 为主键，参与者状态还要结合用户 ID；重新登录后的通话变化由事件同步，需要显示当前房间快照时再查询房间信息。
+
+## 按任务查找页面
+
+| 任务 | 页面 |
+| --- | --- |
+| 发起单聊或群聊通话 | [发起单聊通话](/zh/sdk/uniapp/calling/managing-calls/start-single-call)、[发起群聊通话](/zh/sdk/uniapp/calling/managing-calls/start-group-call) |
+| 接受或拒绝邀请 | [接受通话](/zh/sdk/uniapp/calling/managing-calls/accept-call)、[拒绝通话](/zh/sdk/uniapp/calling/managing-calls/reject-call) |
+| 取消邀请或挂断通话 | [取消通话邀请](/zh/sdk/uniapp/calling/managing-calls/cancel-call)、[挂断通话](/zh/sdk/uniapp/calling/managing-calls/hang-up-call) |
+| 恢复房间或待处理邀请 | [查询群组通话房间](/zh/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id)、[获取通话房间 Token](/zh/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id)、[恢复待处理的通话邀请](/zh/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation) |
+| 处理通话事件和业务协商 | [通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)、[发送自定义信令](/zh/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal) |
 
 同一账号/运行时只维护一个活动通话或会议。Token、liveURL 和 raw 信令 payload 不写日志或持久化。

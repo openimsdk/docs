@@ -4,14 +4,23 @@ description: '商业版接受邀请并取得房间凭据。'
 sourcePath: '/sdk/uniapp/calling/managing-calls/accept-call'
 ---
 
-收到邀请后，先校验当前 session、请求麦克风/摄像头权限，再调用 `signalingAccept()`。
+从 `onReceiveNewInvitation` 取得原始 `OpenIMSignalingInvitationInfo` 后，先校验当前 session，并请求麦克风或摄像头权限，再调用 `signalingAccept()`：
 
 ```uts
 import { signalingAccept } from '@/uni_modules/unix-openim-sdk'
 
-const result = await signalingAccept({ invitation })
+const roomCredentials = await signalingAccept({ invitation })
 ```
 
-返回的 `token`、`roomID`、`liveURL` 均可选且敏感，只保存在内存中。权限失败时不得发送 accept；应按产品策略拒绝或提示用户。
+`invitation` 必须保留收到的原始 `roomID`、邀请人、被邀请人和会话类型，不能重新构造。权限失败时不得发送 accept，应按产品策略拒绝或提示用户。
 
-Promise 成功与对方接受事件、媒体真正连接是不同阶段。
+Promise 成功后，`roomCredentials` 是 `OpenIMSignalingAcceptResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `roomID` | `string \| null` | 本次通话的媒体房间 ID。 |
+| `token` | `string \| null` | 加入媒体房间使用的短期凭据。 |
+| `liveURL` | `string \| null` | 媒体服务返回的连接地址。 |
+| `invitation` | `OpenIMSignalingInvitationInfo \| null` | 服务端返回的邀请快照。 |
+
+这些字段均为可选值且敏感，只保存在内存中。取得有效的 `token` 和 `roomID` 后再连接媒体房间；Promise 成功、对方收到接受事件和媒体真正连接是不同阶段。后续状态由[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)继续合并。

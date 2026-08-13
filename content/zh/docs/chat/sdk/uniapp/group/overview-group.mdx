@@ -6,6 +6,34 @@ sourcePath: '/sdk/uniapp/group/overview-group'
 
 群组领域以 `groupID` 为稳定主键，包含群资料、成员、申请和权限。群名、头像、公告、群主和成员数都是可变快照。
 
+## 核心数据类型
+
+| 类型 | 用途 |
+| --- | --- |
+| `OpenIMGroupItem` | 已加入群组列表、群资料页和群状态。 |
+| `OpenIMCreateGroupInfo` | 创建群时提交的群名、类型、公告、简介、头像和扩展字段。 |
+| `OpenIMGroupMemberItem` | 群成员资料、角色、入群来源和禁言结束时间。 |
+| `OpenIMGroupApplicationItem` | 入群申请及其申请人与处理状态。 |
+
+`OpenIMGroupItem` 常用字段包括 `groupID`、`groupName`、`notification`、`introduction`、`faceURL`、`ownerUserID`、`memberCount`、`status`、`groupType`、`needVerification`、`lookMemberInfo`、`applyMemberFriend` 和 `ex`。`attachedInfo` 是<span className="enterprise-field-badge">商业版字段</span>，只按已确认协议解析。
+
+成员对象使用 `groupID:userID` 作为稳定合并标识。群内 `nickname` 和 `faceURL` 属于成员快照，不应被写回为用户账号级资料。
+
+## 按任务查找页面
+
+| 需求 | 页面 |
+| --- | --- |
+| 创建、更新、解散或退出群组 | [创建群组](/sdk/uniapp/group/create-group)、[更新群资料](/sdk/uniapp/group/update-group-profile)、[解散群组](/sdk/uniapp/group/dismiss-group)、[退出群组](/sdk/uniapp/group/quit-group) |
+| 分页查询已加入群组或指定群资料 | [分页查询已加入群组](/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)、[查询指定群资料](/sdk/uniapp/group/retrieving-groups/get-specified-groups-info) |
+| 查询、搜索和管理群成员 | [查询群成员列表](/sdk/uniapp/group/retrieving-group-members/get-group-member-list)、[搜索群成员](/sdk/uniapp/group/retrieving-group-members/search-group-members) |
+| 邀请或移除成员、转让群主 | [邀请用户入群](/sdk/uniapp/group/managing-group-members/invite-user-to-group)、[移除群成员](/sdk/uniapp/group/managing-group-members/kick-group-member)、[转让群主](/sdk/uniapp/group/managing-group-members/transfer-group-owner) |
+| 发送、查询和处理入群申请 | [申请加入群组](/sdk/uniapp/group/join-group)、[查询收到的入群申请](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |
+| 设置群禁言、验证和成员权限 | 对应群设置与成员管理页面 |
+
+## 状态更新
+
+本页归属群资料与已加入群列表的四个事件：
+
 ```uts
 import {
   off,
@@ -29,4 +57,6 @@ subscriptions.forEach((subscription) => off(subscription))
 
 先订阅事件，再查询已加入群组快照。按 `groupID` 幂等合并；群解散、退出和被移出群的事件语义不同，但都可能要求关闭当前聊天页。
 
-`OpenIMGroupItem` 的 `attachedInfo` 以及 `displayIsRead`、禁言例外等扩展能力可能依赖商业版。字段缺失时降级，不伪造默认权限。
+`onGroupInfoChanged` 更新资料，`onGroupDismissed` 表示群已解散，`onJoinedGroupAdded` / `onJoinedGroupDeleted` 更新当前账号的已加入群列表。Promise 成功、事件到达和重新查询是三个阶段；App 恢复、同步完成或重新登录后重新查询快照。
+
+群解散、当前用户退出和被移出群的业务原因不同，但都可能要求关闭聊天页、停止发送并清理成员 store。字段缺失时降级，不伪造默认权限。退出账号或销毁群组 store 时逐个 `off(subscription)`。

@@ -6,6 +6,10 @@ sourcePath: '/sdk/uniapp/group/group-applications/get-group-application-list-as-
 
 `getGroupApplicationListAsRecipient()` 查询当前账号有权处理的入群申请。本页归属新增、接受、拒绝和删除事件。
 
+## 参数说明
+
+参数对象可以省略；显式分页时使用可选的 `offset` 和 `count`。`offset` 首页为 `0`，`count` 是本次读取数量。unix SDK 的参数不包含 Wasm 页面中的 `handleResults` 筛选，需要在返回后按 `handleResult` 过滤。
+
 ```uts
 import {
   getGroupApplicationListAsRecipient,
@@ -30,4 +34,37 @@ replaceReceivedGroupApplications(result?.applications ?? [])
 subscriptions.forEach((subscription) => off(subscription))
 ```
 
-事件与查询幂等合并。处理权限与申请状态由服务端校验；管理员变更后重新查询。
+## 返回结果
+
+Promise 成功直接返回 `OpenIMGroupApplicationListResult | null`，从 `applications` 读取当前页。
+
+返回 `null` 时不要伪造成“没有申请”的空状态；结合登录状态和错误诊断决定保留旧快照或展示加载失败。空 `applications` 才表示当前页没有记录。分页加载期间若处理了申请，应重置 offset 并重新查询，避免同一记录跨页重复。
+
+### 入群申请字段
+
+`OpenIMGroupApplicationItem` 同时包含群快照和申请人信息：
+
+| 字段 | 说明 |
+| --- | --- |
+| `groupID`、`groupName`、`groupFaceURL` | 目标群 ID、名称和头像快照。 |
+| `notification`、`introduction` | 群公告和简介快照。 |
+| `ownerUserID`、`creatorUserID` | 群主和创建人用户 ID。 |
+| `groupType`、`status`、`memberCount` | 群类型、状态和成员数快照。 |
+| `userID`、`nickname`、`userFaceURL` | 申请人 ID、昵称和头像快照。 |
+| `handleResult` | 当前处理结果：待处理、已同意或已拒绝。 |
+| `reqMsg`、`reqTime` | 申请说明和申请时间。 |
+| `joinSource`、`inviterUserID` | 入群来源和邀请人。 |
+| `handleUserID`、`handledMsg`、`handledTime` | 处理人、处理说明和处理时间。 |
+| `ex`、`attachedInfo` | 扩展与附加信息，只按已确认协议解析。 |
+
+使用 `groupID:userID` 作为申请合并标识。昵称、头像和群名都是申请同步时的快照；需要最新资料时重新查询群或用户。
+
+## 监听申请变化
+
+本页是 `onGroupApplicationAdded`、`onGroupApplicationAccepted`、`onGroupApplicationRejected` 和 `onGroupApplicationDeleted` 的完整归属页。查询和事件按 `groupID:userID` 幂等合并，删除事件移除对应记录。
+
+处理权限和申请状态由服务端校验，不要只修改本地 `handleResult` 冒充成功。管理员或群主身份变化后重新查询；分页期间收到事件时可重置分页。退出登录、切换账号或销毁申请 store 时逐个释放句柄。
+
+按当前用户是否拥有处理权限，把收到的申请与自己发出的申请分开存储。事件中的群资料和申请人资料都是快照；群资料变化或用户改名时，不依赖旧申请记录刷新其他页面。
+
+接受或拒绝操作的 Promise 成功后仍等待相应事件，或重新查询本页确认最终 `handleResult`。申请被同意后，群列表和成员列表分别由自己的事件与查询更新；不要仅从申请项推断当前用户已经加入群。

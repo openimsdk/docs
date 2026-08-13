@@ -4,7 +4,14 @@ description: '修改群组全员禁言状态。'
 sourcePath: '/sdk/uniapp/group/change-group-mute'
 ---
 
-`changeGroupMute()` 修改群组全员禁言。
+`changeGroupMute()` 控制群组整体禁言。群主和管理员可以按 OpenIMServer 权限执行该操作。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string` | 是 | 要修改的群 ID。 |
+| `isMute` | `boolean` | 是 | `true` 开启全员禁言，`false` 关闭。 |
 
 ```uts
 import { changeGroupMute } from '@/uni_modules/unix-openim-sdk'
@@ -12,4 +19,12 @@ import { changeGroupMute } from '@/uni_modules/unix-openim-sdk'
 await changeGroupMute({ groupID, isMute: true })
 ```
 
-权限和群状态由服务端校验。Promise 成功后通过群资料事件或重新查询更新 UI。商业版群资料可能包含禁言例外用户列表；公共客户端应把缺失字段视为无扩展信息，而非自行推断。
+只有群主或具备服务端权限的管理员可以操作，最终权限和群状态由服务端校验。不要仅根据本地角色显示结果；服务端仍可能因群状态、角色变化或并发操作拒绝。群主和管理员通常仍可发送消息，因此群组禁言不表示所有用户都无法发言。
+
+Wasm 文档中的 `muteBypassUserIDs` 商业扩展没有进入当前 uni-app / uni-app x 合同，请勿向 `changeGroupMute()` 传入该字段。商业服务端即使支持例外用户，也应以当前插件公开的类型和后续群资料为准。
+
+## 返回结果
+
+Promise 成功直接返回字符串结果，表示服务端完成本次群禁言设置，不等于所有成员界面已经更新。群资料随后可能通过 `onGroupInfoChanged` 到达，应按 `groupID` 合并；完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。需要立即校准时重新查询群资料。
+
+全员禁言与单个成员禁言是不同能力。商业版群资料可能包含禁言例外用户列表；公共客户端把缺失扩展视为“没有可用扩展数据”，不能自行推断例外权限。

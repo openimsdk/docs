@@ -4,18 +4,40 @@ description: '按会话和 clientMsgID 游标读取历史消息。'
 sourcePath: '/sdk/uniapp/message/retrieving-messages/load-older-messages'
 ---
 
-公共入口 `getAdvancedHistoryMessageList()` 读取历史：
+聊天页面进入会话时使用公共入口 `getAdvancedHistoryMessageList()` 建立第一页快照；继续加载更早消息时，把当前最早一条消息的 `clientMsgID` 作为下一页游标。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 要读取历史消息的会话 ID。 |
+| `startClientMsgID` | `string` | 是 | 分页锚点消息 ID；第一页传空字符串。 |
+| `count` | `number` | 是 | 本次读取的消息数量。 |
+| `lastMinSeq` | `number \| null` | 否 | 上一页返回的最小序号，用于连续分页。 |
 
 ```uts
 import { getAdvancedHistoryMessageList } from '@/uni_modules/unix-openim-sdk'
 
 const page = await getAdvancedHistoryMessageList({
   conversationID,
-  startClientMsgID: '',
-  count: 50,
+  startClientMsgID: oldestMessage?.clientMsgID ?? '',
+  count: 30,
+  lastMinSeq,
 })
 ```
 
-第一页用空 `startClientMsgID`，后续使用当前最早边界消息的 ID。读取结果中的结束标记与消息列表，按 `clientMsgID` 去重。
+## 返回结果
 
-商业版 `getHistoryMessageList()` <span className="enterprise-field-badge">商业版</span> 额外支持 `isReverse`、`viewType` 和 `lastMinSeq`。不要把它等同于已删除的单独 reverse-history 页面；方向通过参数表达。
+Promise 成功后，结果是 `OpenIMAdvancedHistoryMessageListResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `messageList` | `OpenIMMessageItem[]` | 当前页消息。 |
+| `lastMinSeq` | `number` | 继续读取时传回的最小序号。 |
+| `isEnd` | `boolean` | 是否到达当前加载方向的历史边界。 |
+| `errCode` | `number` | 历史读取结果状态码。 |
+| `errMsg` | `string` | 与状态码对应的说明。 |
+
+只有 `errCode` 表示成功时才合并 `messageList`；Promise 被拒绝时仍按通用错误处理。按 `conversationID` 限定列表，并以 `clientMsgID` 去重；查询不会触发新消息事件。
+
+商业版 `getHistoryMessageList()` <span className="enterprise-field-badge">商业版</span> 额外要求 `isReverse`，并支持可选 `viewType` 和 `lastMinSeq`。不要把它等同于已删除的单独 reverse-history 页面；方向通过参数表达。

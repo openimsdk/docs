@@ -4,9 +4,60 @@ description: '理解消息创建、发送、接收、历史、状态和进度事
 sourcePath: '/sdk/uniapp/message/overview-message'
 ---
 
-OpenIM 消息以 `clientMsgID` 作为客户端稳定标识，服务端消息还包含 `serverMsgID`、会话路由、发送者、时间、内容类型与具体 elem。应用应使用 `conversationID:clientMsgID` 组合键幂等合并发送结果、实时事件和历史列表。
+uni-app / uni-app x 插件使用 `OpenIMMessageItem` 表示一条消息。发送消息分为两个阶段：先根据内容创建待发送对象，再把该对象发送到单聊用户或群组。创建方法不会发送消息；发送方法的 Promise 成功也不代表其他客户端已经收到消息。
 
-创建消息只生成 `OpenIMMessageItem`，不会发送；随后调用 `sendMessage()` 指定 `recvID` 或 `groupID`。接收方通过消息事件获得增量，首次进入和翻页通过历史 API建立快照。
+接收新消息、读取历史、搜索和管理消息都以会话为范围。应用应使用 `conversationID:clientMsgID` 组合键幂等合并发送结果、实时事件和历史列表；`conversationID` 确定所属会话，`clientMsgID` 定位具体消息。
+
+## 消息处理流程
+
+| 阶段 | 主要操作 | 说明 |
+| --- | --- | --- |
+| 创建 | 调用对应的 `create*Message()` | 返回待发送的 `OpenIMMessageItem`，不会写入服务端或触发新消息事件。 |
+| 发送 | 调用 `sendMessage()` 或 `sendMessageNotOss()` | 单聊填写 `recvID`，群聊填写 `groupID`；另一个目标字段传空字符串。 |
+| 接收 | 监听新消息事件 | 根据消息路由字段确定目标会话，再按 `clientMsgID` 幂等合并。 |
+| 查询 | 读取历史、搜索或按 ID 定位消息 | 查询返回调用时的快照，不触发新消息事件。 |
+| 更新 | 删除、撤回、修改、置顶或上报已读 | 分别处理 Promise 结果、相关事件和必要的重新查询。 |
+
+从原生完整路径创建的图片、音频、视频和文件消息，通过 `sendMessage()` 进入 SDK 上传与发送流程。媒体资源已经由业务上传服务取得 URL 时，先用对应的 `create*MessageByURL()` 创建消息，再通过 `sendMessageNotOss()` 发送，避免重复上传。
+
+## OpenIMMessageItem 返回结构
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `clientMsgID` | `string \| null` | 客户端稳定 ID，用于列表去重、状态更新、查询和分页游标。 |
+| `serverMsgID` | `string \| null` | 服务端消息 ID；待发送或失败消息可能没有有效值。 |
+| `sessionType` | `OpenIMSessionType` | 消息所属会话类型。 |
+| `sendID`、`recvID`、`groupID` | `string \| null` | 发送者及单聊/群聊路由字段。 |
+| `contentType` | `OpenIMMessageType` | 消息内容类型，决定读取哪个 elem。 |
+| `createTime`、`sendTime` | `number` | 创建和发送时间。 |
+| `seq` | `number` | 服务端消息序号。 |
+| `senderPlatformID` | `OpenIMPlatform` | 发送端平台。 |
+| `senderNickname`、`senderFaceUrl` | `string \| null` | 发送者资料快照。 |
+| `status` | `OpenIMMessageStatus` | 当前发送状态。 |
+| `isRead` | `boolean` | 当前已读状态快照。 |
+| `offlinePush` | `OpenIMOfflinePush \| null` | 发送时的离线推送配置。 |
+| `content`、`attachedInfo` | `string \| null` | SDK 序列化内容和附加信息。 |
+| `ex` | `string \| null` | 随消息同步的扩展字符串。 |
+| `localEx` | `string \| null` | 只保存在当前设备的扩展字符串。 |
+
+消息正文位于与 `contentType` 对应的字段中：文本使用 `textElem`，图片/音频/视频/文件使用 `pictureElem`、`soundElem`、`videoElem`、`fileElem`，@ 与回复使用 `atTextElem`、`quoteElem`，合并与自定义消息使用 `mergeElem`、`customElem`，名片/位置/表情使用 `cardElem`、`locationElem`、`faceElem`，高级文本、输入状态和通知分别使用 `advancedTextElem`、`typingElem`、`notificationElem`。不要通过展示文本或数组位置判断消息类型。
+
+`conversationID` 用于确定所属会话，但不是 `OpenIMMessageItem` 字段。它来自当前会话、查询条件、搜索结果或事件上下文；消息状态通常按 `conversationID:clientMsgID` 合并。
+
+## 创建不同内容的消息
+
+| 内容 | 页面 | 注意事项 |
+| --- | --- | --- |
+| 文本与 Markdown | [创建文本消息](/zh/sdk/uniapp/message/creating-messages/create-text-message)、[创建 Markdown 消息](/zh/sdk/uniapp/message/creating-messages/create-markdown-message) | Markdown 内容需要由接收端安全渲染。 |
+| 群聊 @ 消息 | [创建 @ 消息](/zh/sdk/uniapp/message/creating-messages/create-text-at-message) | 只能发送到群聊。 |
+| 图片、音频、视频和文件 | [使用完整路径创建图片消息](/zh/sdk/uniapp/message/creating-messages/create-image-message-from-full-path)、[使用 URL 创建图片消息](/zh/sdk/uniapp/message/creating-messages/create-image-message-by-url) | 其他媒体类型采用相同的本地路径或已上传 URL 流程。 |
+| 名片、位置与表情 | [创建名片消息](/zh/sdk/uniapp/message/creating-messages/create-card-message)、[创建位置消息](/zh/sdk/uniapp/message/creating-messages/create-location-message)、[创建表情消息](/zh/sdk/uniapp/message/creating-messages/create-face-message) | 创建时保存内容快照。 |
+| 回复、转发与合并 | [创建回复消息](/zh/sdk/uniapp/message/creating-messages/create-quote-message)、[创建转发消息](/zh/sdk/uniapp/message/creating-messages/create-forward-message)、[创建合并消息](/zh/sdk/uniapp/message/creating-messages/create-merger-message) | 创建结果仍需显式发送。 |
+| 自定义业务内容 | [创建自定义消息](/zh/sdk/uniapp/message/creating-messages/create-custom-message) | 接收端必须校验业务 schema。 |
+
+只影响当前客户端展示的状态应写入 `localEx`，不要放入需要同步给其他用户的业务内容，见[设置消息本地扩展](/zh/sdk/uniapp/message/managing-messages/set-message-local-ex)。
+
+## 进度事件
 
 本页归属发送、文件上传和日志上传进度事件：
 
@@ -28,9 +79,29 @@ const subscriptions : Array<OpenIMSDKEventSubscription> = [
   onUploadLogsProgress((event) => updateLogUpload(event.progress)),
 ]
 
-subscriptions.forEach((subscription) => off(subscription))
+function removeProgressListeners() {
+  subscriptions.forEach((subscription) => off(subscription))
+}
 ```
 
-进度可能重复、跳跃或在最终 Promise 前后到达；只做单调展示，最终成功/失败以 API 结果为准。
+进度可能重复、跳跃或在最终 Promise 前后到达；只做单调展示，最终成功/失败以 API 结果为准。退出登录、切换账号或销毁进度状态层时调用 `removeProgressListeners()`。
 
 文件消息的本地完整路径必须能被原生层读取。`unifile://` 先转为真实沙盒路径；网络 URL 使用对应 by-URL 创建入口。
+
+## 按任务查找页面
+
+| 任务 | 页面 |
+| --- | --- |
+| 发送普通消息或已上传媒体 | [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)、[发送已上传的媒体消息](/zh/sdk/uniapp/message/sending-messages/send-message-not-oss) |
+| 接收在线、离线和只在线消息 | [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages) |
+| 加载历史或读取消息上下文 | [加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)、[读取消息上下文](/zh/sdk/uniapp/message/retrieving-messages/load-message-context) |
+| 按 ID 定位或搜索本地消息 | [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)、[搜索消息](/zh/sdk/uniapp/message/searching-messages/search-messages) |
+| 删除、撤回、修改或置顶 | [批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)、[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)、[修改消息](/zh/sdk/uniapp/message/managing-messages/modify-a-message)、[置顶消息](/zh/sdk/uniapp/message/managing-messages/set-message-pinned) |
+| 群聊成员级已读 | [上报群消息已读](/zh/sdk/uniapp/message/managing-read-status/send-group-read-receipts)、[查询群消息已读成员](/zh/sdk/uniapp/message/managing-read-status/get-group-message-readers) |
+| 输入状态或语音识别 | [上报输入状态](/zh/sdk/uniapp/message/composing-messages/update-typing-status)、[识别音频文字](/zh/sdk/uniapp/message/composing-messages/transcribe-audio) |
+
+## 状态同步边界
+
+新消息、删除、撤回、修改、置顶、群已读和输入状态的完整监听分别保留在对应任务页。创建消息对象和纯查询操作只使用 Promise 返回值建立快照，不会触发共享消息事件。会改变状态的操作应分别处理 Promise 成功、事件到达和重新查询校准，不能将三个阶段视为同一结果。
+
+会话未读数、总未读数和群聊 @ 提醒属于会话状态，分别由[标记会话已读](/zh/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)、[维护总未读数](/zh/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)和[获取会话列表](/zh/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)中的事件处理器维护。

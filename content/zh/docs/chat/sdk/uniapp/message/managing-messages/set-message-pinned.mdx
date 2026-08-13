@@ -6,6 +6,14 @@ sourcePath: '/sdk/uniapp/message/managing-messages/set-message-pinned'
 
 `setConversationPinnedMsg()` 与 `onChangedPinnedMsg` 属于<span className="enterprise-field-badge">商业版</span>。
 
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 消息所在的会话 ID。 |
+| `clientMsgID` | `string` | 是 | 要置顶或取消置顶的消息 ID。 |
+| `pinned` | `boolean` | 是 | `true` 表示置顶，`false` 表示取消置顶。 |
+
 ```uts
 import {
   off,
@@ -16,8 +24,17 @@ import {
 const pinnedSubscription = onChangedPinnedMsg((payload) => {
   refreshPinnedMessagesAfterValidJson(payload)
 })
-await setConversationPinnedMsg(pinParams)
-off(pinnedSubscription)
+await setConversationPinnedMsg({
+  conversationID,
+  clientMsgID: message.clientMsgID,
+  pinned: true,
+})
+
+function removePinnedListener() {
+  off(pinnedSubscription)
+}
 ```
 
-参数使用 `OpenIMSetConversationPinnedMsgParams`。事件是 raw 字符串，校验后重新查询置顶列表；不要把未验证 payload 强转为消息对象。
+权限、消息类型和数量限制由 OpenIMServer 校验。Promise 成功表示置顶请求已完成，不表示变化事件已经到达。
+
+本页唯一归属 `onChangedPinnedMsg`。事件是 raw JSON 字符串，应先校验，再按 `conversationID` 替换置顶集合并按消息 `clientMsgID` 去重；不要把未验证 payload 强转为消息对象。组件卸载、退出登录或切换账号时调用 `removePinnedListener()`。

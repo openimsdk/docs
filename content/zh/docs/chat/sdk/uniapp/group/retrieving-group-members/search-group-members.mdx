@@ -4,17 +4,29 @@ description: '按用户 ID 或群昵称搜索群成员。'
 sourcePath: '/sdk/uniapp/group/retrieving-group-members/search-group-members'
 ---
 
-`searchGroupMembers()` 在指定群内搜索。
+`searchGroupMembers()` 适合在指定群组中搜索成员或获取 @ 候选人。当前接口只使用 `keywordList` 的第一个关键词。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string` | 是 | 目标群组 ID。 |
+| `keywordList` | `string[]` | 是 | 搜索关键词数组。 |
+| `isSearchUserID` | `boolean` | 是 | 是否匹配用户 ID。 |
+| `isSearchMemberNickname` | `boolean` | 是 | 是否匹配群内昵称。 |
 
 ```uts
 import { searchGroupMembers } from '@/uni_modules/unix-openim-sdk'
 
 const result = await searchGroupMembers({
   groupID,
-  keywordList: ['Alice'],
+  keywordList: [keyword.trim()],
   isSearchUserID: true,
   isSearchMemberNickname: true,
 })
+const members = result?.members ?? []
 ```
 
-空关键词由 UI 拦截。结果按 `groupID:userID` 去重；它不是全局用户搜索。
+uni-app / uni-app x 接口没有 Wasm 版的 `offset` 和 `count` 参数，返回当前匹配结果。空关键词应由 UI 拦截，关键词变化时替换搜索快照。
+
+Promise 成功后，`result?.members` 是匹配的 `OpenIMGroupMemberItem[]`，字段含义见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。结果按 `groupID:userID` 去重，只用于当前关键词下的成员快照，不应替换完整成员列表；它也不是全局用户搜索。

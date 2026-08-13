@@ -4,12 +4,21 @@ description: '把群主权限转让给指定成员。'
 sourcePath: '/sdk/uniapp/group/managing-group-members/transfer-group-owner'
 ---
 
-`transferGroupOwner()` 是不可轻易撤销的高风险操作。
+只有当前群主可以调用 `transferGroupOwner()`。`groupID` 是目标群组 ID，`newOwnerUserID` 是新群主的用户 ID；目标用户必须是该群组中的有效成员。
 
 ```uts
 import { transferGroupOwner } from '@/uni_modules/unix-openim-sdk'
 
-await transferGroupOwner({ groupID, newOwnerUserID: 'user_b' })
+await transferGroupOwner({
+  groupID,
+  newOwnerUserID: targetUserID,
+})
 ```
 
-目标必须是有效群成员。UI 二次确认并说明当前群主角色会变化；成功后重新查询群资料和双方成员角色。
+## 调用后的状态变化
+
+Promise 成功表示 OpenIMServer 已完成群主转让：原群主变为普通成员，新群主获得群主角色。成员角色变化通过 `onGroupMemberInfoChanged` 增量同步，事件参数是单个 `OpenIMGroupMemberItem`；一次转让可能涉及原群主和新群主两条成员记录，均按 `groupID:userID` 合并。
+
+完整监听和清理代码见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。不要只依赖事件数量判断转让结果；需要确认当前角色时，应重新调用 `getSpecifiedGroupMembersInfo()` 获取相关成员快照。
+
+群主需要退出群组时，必须先完成转让，再调用 `quitGroup()`。如果群组不再需要，群主也可以选择 `dismissGroup()`，但解散会影响所有成员，不能替代普通转让。UI 应提供二次确认并说明角色变化。

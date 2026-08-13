@@ -4,12 +4,28 @@ description: '把业务生成的消息插入单聊本地历史。'
 sourcePath: '/sdk/uniapp/message/managing-messages/insert-local-single-message'
 ---
 
-`insertSingleMessageToLocalStorage()` 只写当前设备本地数据库，不发送给对方。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `message` | `OpenIMMessageItem` | 是 | 要写入本地数据库的完整消息对象。 |
+| `recvID` | `string` | 是 | 单聊接收方的用户 ID。 |
+| `sendID` | `string` | 是 | 消息发送方的用户 ID。 |
 
 ```uts
-import { insertSingleMessageToLocalStorage } from '@/uni_modules/unix-openim-sdk'
+import {
+  createTextMessage,
+  insertSingleMessageToLocalStorage,
+} from '@/uni_modules/unix-openim-sdk'
 
-await insertSingleMessageToLocalStorage(insertParams)
+const message = await createTextMessage('本地提示')
+if (message != null) {
+  await insertSingleMessageToLocalStorage({
+    message,
+    recvID: targetUserID,
+    sendID: currentUserID,
+  })
+}
 ```
 
-`insertParams` 使用真实 `OpenIMInsertSingleMessageParams`，包含消息、发送方和接收方。适合系统迁移或本地提示，不用于伪造已发送消息。确保 ID 不与现有消息冲突。
+Promise 成功只表示当前设备本地数据库已写入，不发送消息，也不触发新消息事件。`createTextMessage()` 只是准备参数，其正文归属[创建文本消息](/zh/sdk/uniapp/message/creating-messages/create-text-message)页面。该能力适合系统迁移或本地提示，不用于伪造已发送消息，并应确保消息 ID 不与现有记录冲突。

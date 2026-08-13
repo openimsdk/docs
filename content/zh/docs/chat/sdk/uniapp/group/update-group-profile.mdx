@@ -4,19 +4,32 @@ description: '通过 setGroupInfo 更新群名、公告、介绍、头像和策�
 sourcePath: '/sdk/uniapp/group/update-group-profile'
 ---
 
-`setGroupInfo()` 只更新提供的可选字段。
+群名称、群简介和群头像都属于面向成员展示的基础资料，可以由同一个资料编辑表单提交。`setGroupInfo()` 只更新本次提供的可选字段。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string` | 是 | 要更新的群组 ID。 |
+| `groupName` | `string \| null` | 否 | 新群名称。 |
+| `introduction` | `string \| null` | 否 | 新群简介。 |
+| `faceURL` | `string \| null` | 否 | 新群头像地址。 |
+
+除 `groupID` 外，至少传入一个实际要修改的资料字段。未传字段保持原值。
 
 ```uts
 import { setGroupInfo } from '@/uni_modules/unix-openim-sdk'
 
 await setGroupInfo({
   groupID,
-  groupName: '新的群名',
-  introduction: '项目协作群',
-  faceURL: 'https://cdn.example.com/group.png',
+  groupName: groupName.trim(),
+  introduction: introduction.trim(),
+  faceURL,
 })
 ```
 
-群主和管理员权限由服务端校验。Promise 成功后通过 `onGroupInfoChanged` 或重新查询刷新，不直接覆盖未提交字段。
+不要把公告、入群验证或成员权限字段混入普通资料保存操作，否则用户编辑群名称时可能意外覆盖其他设置。群主和管理员权限由服务端校验。
+
+Promise 成功表示 OpenIMServer 已完成请求。群资料变化通过 `onGroupInfoChanged` 按 `groupID` 合并；完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。需要立即校准时调用 `getSpecifiedGroupsInfo()`，不要直接覆盖未提交字段。
 
 `displayIsRead` <span className="enterprise-field-badge">商业版</span> 是字段级扩展；公共服务端不支持时不要发送。

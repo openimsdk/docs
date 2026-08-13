@@ -4,16 +4,29 @@ description: '按群 ID 或群名称搜索本地群组。'
 sourcePath: '/sdk/uniapp/group/retrieving-groups/search-groups'
 ---
 
-`searchGroups()` 搜索当前可见的群资料。
+`searchGroups()` 只搜索当前用户已加入且已经同步到本地的群组。当前接口只使用 `keywordList` 的第一个关键词。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `keywordList` | `string[]` | 是 | 搜索关键词数组；传一个去除首尾空格的非空关键词。 |
+| `isSearchGroupID` | `boolean` | 是 | 是否匹配 `groupID`。 |
+| `isSearchGroupName` | `boolean` | 是 | 是否匹配群名称。 |
 
 ```uts
 import { searchGroups } from '@/uni_modules/unix-openim-sdk'
 
 const result = await searchGroups({
-  keywordList: ['项目'],
+  keywordList: [keyword.trim()],
   isSearchGroupID: true,
   isSearchGroupName: true,
 })
+const groups = result?.groups ?? []
 ```
 
-空关键词由 UI 拦截。结果按 `groupID` 去重；该 API不是全站群发现接口，是否仅搜索已加入群由 Core 与服务端数据范围决定。
+## 返回结果
+
+Promise 成功后，`result?.groups` 是匹配的 `OpenIMGroupItem[]`，字段含义见[分页获取已加入群组](/zh/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)。空关键词应由 UI 拦截；结果按 `groupID` 去重，只建立当前关键词下的快照，不应覆盖完整的已加入群组列表。
+
+公开群发现、复杂分类和权限过滤不属于该方法，应由业务后端实现。

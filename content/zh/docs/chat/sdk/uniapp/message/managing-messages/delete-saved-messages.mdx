@@ -4,7 +4,15 @@ description: '商业版批量删除消息，并处理 onMsgDeleted。'
 sourcePath: '/sdk/uniapp/message/managing-messages/delete-saved-messages'
 ---
 
-`deleteMessages()` <span className="enterprise-field-badge">商业版</span> 批量删除明确指定的消息。本页归属公共 `onMsgDeleted` 事件。
+`deleteMessages()` <span className="enterprise-field-badge">商业版</span> 批量删除当前账号在同一会话中明确指定的消息。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 要删除消息所在的会话 ID。 |
+| `clientMsgIDs` | `string[]` | 是 | 要删除的消息 ID；同一批 ID 必须属于同一会话。 |
+| `IsSync` | `boolean` | 是 | 是否把删除动作同步到当前账号的其他客户端；字段名首字母为大写。 |
 
 ```uts
 import {
@@ -14,11 +22,21 @@ import {
 } from '@/uni_modules/unix-openim-sdk'
 
 const deletedSubscription = onMsgDeleted((message) => {
-  removeMessageByID(message.clientMsgID)
+  if (message == null) return
+  removeMessage(resolveConversationID(message), message.clientMsgID)
 })
 
-await deleteMessages(deleteParams)
-off(deletedSubscription)
+await deleteMessages({
+  conversationID,
+  clientMsgIDs: selectedMessageIDs,
+  IsSync: true,
+})
+
+function removeMessageDeletedListener() {
+  off(deletedSubscription)
+}
 ```
 
-`deleteParams` 使用锁定的 `OpenIMDeleteMessagesParams`，不要只传本地数组。事件和请求结果幂等合并；是否影响其他设备由商业服务语义决定。
+`IsSync: false` 删除当前设备及当前账号服务端记录；`true` 还请求把删除动作同步到其他客户端。它不会删除其他会话成员的副本，也不会产生撤回提示。
+
+Promise 成功表示删除请求已经完成；同步开启时，这不代表其他客户端已经收到事件或完成界面更新。公共事件 `onMsgDeleted` 是本页归属事件，参数是 `OpenIMMessageItem | null`；结合消息路由确定会话后按 `clientMsgID` 幂等移除。组件卸载、退出登录或切换账号时调用 `removeMessageDeletedListener()`；需要校准时重新查询对应会话的历史消息。

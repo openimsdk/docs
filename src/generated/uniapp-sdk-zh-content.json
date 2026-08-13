@@ -611,8 +611,8 @@
       "title": "开始之前"
     },
     "/sdk/uniapp/getting-started/environment-specific-implementation": {
-      "body": "`unix-openim-sdk` 的业务函数在 uni-app 与 uni-app x 中保持一致，差异主要发生在语言类型、页面生命周期和原生构建方式。所有平台都从同一个插件根路径扁平导入。\n\n## 支持矩阵\n\n| 宿主 | Android | iOS | HarmonyOS |\n| --- | --- | --- | --- |\n| uni-app Vue 2 / Vue 3 | API 21+ | iOS 14+ | 暂不宣称支持 |\n| uni-app x | API 21+ | iOS 14+ | 商业版 API 24 |\n| H5 / Web / 小程序 | 不支持 | 不支持 | 不支持 |\n\n## uni-app\n\n传统 uni-app 页面可在 Vue 2 或 Vue 3 生命周期中调用插件。JavaScript 不提供 UTS 的静态类型检查，但 Promise 返回值和事件句柄语义相同。建议把 SDK 生命周期放在应用级 service 中，避免页面反复初始化。\n\n```javascript\nimport {\n  getLoginStatus,\n  off,\n  onConnectSuccess,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst connectSubscription = onConnectSuccess(() => {\n  console.log('OpenIM connected')\n})\n\nconst status = await getLoginStatus()\n\n// 应用 service 销毁时执行。\noff(connectSubscription)\n```\n\n## uni-app x\n\nuni-app x 使用 UTS 类型。对初始化参数、消息对象和事件 payload，应直接导入插件公开类型，不要自行复制一份可能漂移的接口。\n\n```uts\nimport {\n  getLoginStatus,\n  type OpenIMLoginStatus,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst status : OpenIMLoginStatus = await getLoginStatus()\n```\n\n解析商业信令的 raw JSON 时，先校验字符串和字段存在性，再把值映射到应用自己的 UTS 类型；不要把未经校验的 `UTSJSONObject` 强制转换成业务 DTO。\n\n## Android 与 iOS\n\nAndroid 和 iOS 都支持公共与商业接口，但插件必须进入自定义基座或本地原生工程。权限、通知和后台能力由宿主 App 声明；SDK 不会自动替业务申请通知、相册、摄像头或麦克风权限。\n\n文件消息使用本机可读的完整路径。`unifile://` 应先通过 uni API 转为可访问的本地路径；不要把临时 URL、网络 URL 或只在页面沙盒中有效的虚拟路径直接传给原生 Core。\n\n## HarmonyOS\n\nHarmonyOS 仅声明 uni-app x 商业版支持。当前以下操作会稳定返回 `platform-unsupported`：`updateFcmToken`、`updateToken`、`translateText`、`translateMessage`。十个缺失事件也只返回 unsupported subscription，不会伪造成功事件；具体清单见[事件概览](/sdk/uniapp/events/overview-events)。\n\n平台不支持不等于商业版鉴权失败。业务应按错误码区分能力缺失、登录状态、网络和服务端错误，不要对 unsupported 无限重试。\n\n## 生命周期归属\n\nSDK Core 在应用作用域内只初始化一次。页面进入和退出只管理该页面拥有的订阅，不调用 `unInitSDK()`。用户切换账号时先退出旧账号、清理旧订阅与状态，再登录新账号；App 确定不再使用 SDK 时才反初始化。",
-      "description": "区分 uni-app、uni-app x、Android、iOS 与 HarmonyOS 的运行和构建边界。",
+      "body": "`unix-openim-sdk` 的业务函数在 uni-app 与 uni-app x 中保持一致，差异主要发生在语言类型、页面生命周期、文件路径和原生构建方式。所有宿主都从同一个插件根路径扁平导入，且共享宿主进程中唯一的 OpenIM Core。\n\n## 支持矩阵\n\n| 宿主 | Android | iOS | HarmonyOS |\n| --- | --- | --- | --- |\n| uni-app Vue 2 / Vue 3 | API 21+ | iOS 14+ | 暂不宣称支持 |\n| uni-app x | API 21+ | iOS 14+ | 商业版 API 24 |\n| Web / H5 / 小程序 | 不支持 | 不支持 | 不支持 |\n\n接入和本地编译使用 HBuilderX/uni-app `5.23` 系列。公共与商业能力是否可用还取决于所安装的插件版本、原生制品和 OpenIMServer 部署，不能只根据宿主名称判断。\n\n## 使用统一插件入口\n\nuni-app 和 uni-app x 都从 `@/uni_modules/unix-openim-sdk` 导入。不要使用裸包名，也不要直接导入 `utssdk/app-android`、`app-ios` 或 HarmonyOS 实现。\n\n```uts\nimport {\n  getLoginStatus,\n  off,\n  onConnectSuccess,\n} from '@/uni_modules/unix-openim-sdk'\n```\n\nPromise 成功直接返回业务值，不读取 `{ data }`；事件返回 `OpenIMSDKEventSubscription`，使用 `off(subscription)` 清理。\n\n## uni-app Vue 2 / Vue 3\n\n传统 uni-app 页面可以在 Vue 2 或 Vue 3 生命周期中调用插件。JavaScript 不提供 UTS 的完整静态类型检查，但 Promise 返回值和事件句柄语义相同。建议把 SDK 初始化、登录和全局监听放在应用级 service 中，避免页面反复初始化。\n\n```javascript\nimport {\n  getLoginStatus,\n  off,\n  onConnectSuccess,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst connectSubscription = onConnectSuccess(() => {\n  console.log('OpenIM connected')\n})\n\nconst status = await getLoginStatus()\n\n// 拥有监听的应用 service 销毁时执行。\noff(connectSubscription)\n```\n\nVue 组件销毁只释放该组件或 service 拥有的订阅，不调用 `unInitSDK()`。若多个页面依赖同一事件，优先由 store 统一订阅并向页面分发状态。\n\n## uni-app x\n\nuni-app x 使用 UTS 类型。初始化参数、消息对象和事件 payload 应直接导入插件公开类型，不要复制一套会随 SDK 漂移的本地接口。\n\n```uts\nimport {\n  getLoginStatus,\n  type OpenIMLoginStatus,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst status : OpenIMLoginStatus = await getLoginStatus()\n```\n\nUTS 的可空值需要显式处理。若返回类型是 `OpenIMUserInfo | null` 或结果包装中的数组可空，不要用不安全强制转换绕过合同。\n\n商业信令事件返回 raw JSON 字符串。先确认字符串非空，再通过经过校验的 UTS JSON 解析读取已知字段；不要把未经校验的 `UTSJSONObject` 强制转换成完整业务 DTO。\n\n## App 生命周期\n\nSDK Core 在 App 作用域只初始化一次。页面进入和退出只管理该页面拥有的订阅；用户切换账号时先退出旧账号、清理旧订阅与状态，再登录新账号；App 确定不再使用 SDK 时才反初始化。\n\n前后台、网络、Badge 与推送状态应由 App 生命周期统一上报，不要让多个页面重复调用。完整示例见[处理 App 生命周期与设备状态](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state)。\n\n## Android\n\nAndroid 最低 API 21。构建产物需要包含插件声明的 Maven/AAR 依赖和目标 ABI；标准基座没有这些原生制品，应使用包含插件的自定义基座或本地原生工程。\n\n发布前至少检查：\n\n- manifest merge 后的网络、通知和存储等权限符合产品需求。\n- 每个目标 ABI 只有一套 OpenIM Core native library。\n- release/R8 构建没有 duplicate class、duplicate JNI 或反射裁剪问题。\n- 真机可以访问 `apiAddr` / `wsAddr`，后台恢复符合系统限制。\n\nSDK 不会自动替业务申请相册、相机、麦克风或通知权限。普通 IM 功能按实际使用场景声明；AV Runtime 的媒体权限属于另一个插件边界。\n\n## iOS\n\niOS 最低版本为 14。构建时需要正确链接、嵌入并签名插件 XCFramework；使用与插件版本匹配的 CocoaPods/Xcode 环境。\n\n发布前在真机检查 framework slice、embed/sign、隐私清单、权限说明和 App Store 构建。模拟器通过不能替代 device arm64 链接。若宿主还安装其他原生插件，应扫描重复 framework 和同名 module。\n\nSDK 日志和数据库位于应用沙盒中。不要把模拟器绝对路径写入业务配置，也不要直接移动或修改 Core 数据库。\n\n## HarmonyOS\n\nHarmonyOS 仅声明 uni-app x 商业版支持，最低 API 24，并要求与插件合同一致的商业 HAR。\n\n当前以下操作稳定返回 `platform-unsupported`：\n\n- `updateFcmToken`\n- `updateToken`\n- `translateText`\n- `translateMessage`\n\n十个不支持事件只返回 unsupported subscription，不会伪造回调，完整清单见[事件概览](/sdk/uniapp/events/overview-events)。平台不支持不等于商业版鉴权失败；业务应按稳定错误区分能力缺失、登录状态、网络和服务端错误。\n\n## 文件路径\n\n图片、语音、视频和文件消息使用本机可读的完整路径。`unifile://`、相册临时地址或页面沙盒虚拟路径应先通过 uni API 转换为原生 Core 可访问的本地路径。\n\n- 不要把 HTTP URL 当作本地路径传给 `by-file` / full-path 创建接口。\n- 确认临时文件在消息创建和上传完成前不会被系统清理。\n- iOS 与 Android 沙盒路径不同，不要把一个平台的绝对路径持久化后交给另一平台。\n- 文件访问、相册和媒体权限由宿主申请并向用户解释。\n\n对应消息页会分别说明 URL 创建与本地完整路径创建的区别。\n\n## 本地构建与自定义基座\n\n原生 UTS 插件必须进入原生编译。开发时可选择：\n\n1. 使用 HBuilderX 5.23 构建包含插件的自定义基座。\n2. 使用项目维护的 Android/iOS 本地原生工程完成编译、安装和自动化测试。\n\n本地流程应锁定 HBuilderX、DCloud 原生 SDK、JDK/Android SDK、Xcode/CocoaPods 和插件版本，避免“开发机能跑但发布包使用另一套依赖”。标准基座只能用于不含该原生插件的页面，不能据此判断 SDK 能力。\n\n### 共享 SDK service\n\n建议在业务代码中封装一个 App 级 SDK service，统一负责初始化状态、当前登录用户、全局订阅句柄和销毁顺序。页面只调用这个 service 的业务方法并订阅应用状态，不自行决定 Core 是否需要重新初始化。\n\n该 service 仍应暴露插件的真实 Promise 与错误语义：不要重新包装成 Wasm 的 `{ data }`，不要吞掉 `platform-unsupported`，也不要用 `offAll()` 清理并非自己拥有的监听。切换账号时先停止旧账号写入，再等待 `logout()`、释放旧句柄、清空状态，最后登录新账号。\n\n## 不适用范围\n\n本插件不支持 Web、H5 和小程序。它依赖 Android、iOS 或 HarmonyOS 原生 Core、本地数据库和原生网络生命周期，不能通过条件编译把同一导入直接运行在浏览器。\n\n若同一项目还有 H5 或小程序端，应在业务适配层选择相应 Web/Wasm/小程序 SDK，并分别管理初始化、登录、事件和存储，不要让两个 SDK 实例竞争同一 App 端登录状态。\n\n## 验证与排查\n\n- 在目标平台确认 `initSDK()` 成功，`login()` 后收到 `onConnectSuccess`。\n- 验证查询 API 直接返回业务值，事件句柄可以在异步使用后通过 `off()` 清理。\n- 真机验证网络断开恢复、前后台、被踢、Token 失效和重新登录。\n- 文件消息在 release 包中使用真实相册/文件路径测试，不只验证固定沙盒样例。\n- 商业 API 连接商业服务端；HarmonyOS 对不支持能力明确返回错误。\n- Android/iOS 最终安装包执行重复原生依赖、签名和 ABI/slice 扫描。\n\n## 常见问题\n\n| 现象 | 可能原因 | 处理方式 |\n| --- | --- | --- |\n| 标准基座提示原生插件不可用 | 基座未包含插件原生依赖 | 构建自定义基座或使用本地原生工程。 |\n| 真机无法连接、模拟器可以 | 服务地址使用 `localhost`、TLS 或局域网路由不通 | 从真机验证 API/WSS 地址、证书和反向代理。 |\n| 事件重复执行 | 页面或 `onShow` 重复注册，旧句柄未释放 | 把监听提升到稳定 service，并逐个 `off(subscription)`。 |\n| 文件创建失败 | 传入 `unifile://`、临时 URL 或 Core 无权读取的路径 | 转换为原生可读完整路径并保证文件生命周期。 |\n| HarmonyOS 某 API 始终失败 | 锁定 HAR 没有该能力 | 识别 `platform-unsupported`，关闭入口或采用替代流程。 |\n| iOS 模拟器成功、真机链接失败 | device slice、embed、签名或最低版本不匹配 | 用 iPhone device 构建检查 XCFramework 与签名。 |\n\n## 下一步\n\n- [开始之前](/sdk/uniapp/getting-started/before-you-start)\n- [安装、初始化与 SDK 信息](/sdk/uniapp/getting-started/install-initialize-and-inspect-sdk)\n- [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)\n- [处理 App 生命周期与设备状态](/sdk/uniapp/getting-started/handle-app-lifecycle-and-device-state)",
+      "description": "区分 uni-app、uni-app x、Android、iOS 与 HarmonyOS 的调用、生命周期和原生构建边界。",
       "headings": [
         {
           "depth": 2,
@@ -621,8 +621,13 @@
         },
         {
           "depth": 2,
-          "title": "uni-app",
-          "url": "#uni-app"
+          "title": "使用统一插件入口",
+          "url": "#使用统一插件入口"
+        },
+        {
+          "depth": 2,
+          "title": "uni-app Vue 2 / Vue 3",
+          "url": "#uni-app-vue-2-vue-3"
         },
         {
           "depth": 2,
@@ -631,8 +636,18 @@
         },
         {
           "depth": 2,
-          "title": "Android 与 iOS",
-          "url": "#android-与-ios"
+          "title": "App 生命周期",
+          "url": "#app-生命周期"
+        },
+        {
+          "depth": 2,
+          "title": "Android",
+          "url": "#android"
+        },
+        {
+          "depth": 2,
+          "title": "iOS",
+          "url": "#ios"
         },
         {
           "depth": 2,
@@ -641,8 +656,38 @@
         },
         {
           "depth": 2,
-          "title": "生命周期归属",
-          "url": "#生命周期归属"
+          "title": "文件路径",
+          "url": "#文件路径"
+        },
+        {
+          "depth": 2,
+          "title": "本地构建与自定义基座",
+          "url": "#本地构建与自定义基座"
+        },
+        {
+          "depth": 3,
+          "title": "共享 SDK service",
+          "url": "#共享-sdk-service"
+        },
+        {
+          "depth": 2,
+          "title": "不适用范围",
+          "url": "#不适用范围"
+        },
+        {
+          "depth": 2,
+          "title": "验证与排查",
+          "url": "#验证与排查"
+        },
+        {
+          "depth": 2,
+          "title": "常见问题",
+          "url": "#常见问题"
+        },
+        {
+          "depth": 2,
+          "title": "下一步",
+          "url": "#下一步"
         }
       ],
       "sourcePath": "/sdk/uniapp/getting-started/environment-specific-implementation",
@@ -1196,22 +1241,58 @@
       "title": "移出黑名单"
     },
     "/sdk/uniapp/conversation/overview-conversation": {
-      "body": "会话是单聊、群聊或其他消息流的本地索引。`conversationID` 是稳定主键；单聊同时有 `userID`，群聊同时有 `groupID`。界面标题、头像和最新消息都是可变快照，不能替代主键。\n\n`OpenIMConversationItem` 包含 `conversationType`、`showName`、`faceURL`、`unreadCount`、`latestMsg`、草稿、置顶、接收选项和消息序列边界。`latestMsg` 是序列化消息字符串，解析失败时保留会话并显示降级摘要，不要删除该项。\n\n## 建议数据流\n\n1. 注册 `onNewConversation` 与 `onConversationChanged`。\n2. 查询完整或分页会话快照。\n3. 按 `conversationID` 幂等插入或替换事件项。\n4. 按 `isPinned`、时间和业务排序规则展示。\n5. App 恢复或重新登录时重新查询，不仅依赖事件。\n\n会话未读数和消息已读是相关但不同的状态。清零会话未读见[标记会话已读](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)，总未读见[获取总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)。\n\n商业版会话分组用于把会话组织到自定义、置顶或标记等组中，详见[会话分组概览](/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups)。",
+      "body": "会话是单聊、群聊或其他消息流的本地索引。`conversationID` 是稳定主键；单聊同时有 `userID`，群聊同时有 `groupID`。界面标题、头像和最新消息都是可变快照，不能替代主键。\n\n## 会话标识\n\n`conversationID` 是列表、事件、未读数和消息查询之间的稳定关联键。按目标查询时，单聊使用对端 `userID` 和单聊类型，群聊使用 `groupID` 和对应群会话类型；不要只按 `userID` 或 `groupID` 覆盖其他类型的会话。\n\n会话项中的 `showName` 和 `faceURL` 是当前展示快照。好友备注、群名称或头像变化后它们可能改变；业务不应把展示名称作为缓存主键。\n\n## 会话数据\n\n`OpenIMConversationItem` 主要包含：\n\n| 数据 | 用途 |\n| --- | --- |\n| `conversationType`、`userID`、`groupID` | 判断会话类型和目标。 |\n| `showName`、`faceURL` | 展示标题与头像。 |\n| `unreadCount` | 当前会话未读数。 |\n| `latestMsg`、`latestMsgSendTime` | 最新消息摘要与排序时间。 |\n| `draftText`、`draftTextTime` | 当前设备保存的草稿。 |\n| `isPinned` | 置顶状态。 |\n| `recvMsgOpt` | 会话级消息接收与通知策略。 |\n| `isPrivateChat`、`burnDuration` | 阅后即焚模式和时长。 |\n| `minSeq`、`maxSeq`、`msgDestructTime` | 消息序列与商业版销毁状态边界。 |\n\n`latestMsg` 是序列化消息字符串。解析失败时保留会话并显示降级摘要，不要因为一条未知消息类型删除整个会话。商业版扩展字段在公共环境中可能缺失，使用前判空。\n\n### 排序与展示\n\n会话列表常见排序先处理 `isPinned`，再使用 `latestMsgSendTime`、草稿时间或产品定义的稳定规则。不要使用当前数组下标作为持久顺序；任何新消息、置顶或草稿变化都可能改变位置。\n\n列表摘要应从 `latestMsg` 安全解析已知消息类型。遇到未知 contentType、自定义消息或解析失败时显示通用摘要，并保留未读数、会话目标和进入聊天页的能力。不要把原始 JSON 直接展示给用户或写入公开日志。\n\n### 未读与接收策略\n\n`unreadCount` 是单个会话快照，总未读数由独立 API 与事件维护。标记已读后，分别处理操作 Promise、会话变化和总未读事件；其他设备或服务端并发新消息可能让未读数再次增加。\n\n`recvMsgOpt` 只描述该会话的接收策略，还可能受账号级 `globalRecvMsgOpt` 影响。界面应展示服务端返回的最终会话状态，而不是仅根据用户刚点击的本地开关推断成功。\n\n## 按任务查找页面\n\n| 需求 | 页面 |\n| --- | --- |\n| 分页获取列表并同步新增、变化事件 | [获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list) |\n| 按用户或群组目标查询会话 | [按目标查询会话](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target) |\n| 按会话 ID 查询一个或多个会话 | [按会话 ID 查询](/sdk/uniapp/conversation/retrieving-conversations/get-conversations-by-id) |\n| 搜索本地会话 | [搜索会话](/sdk/uniapp/conversation/retrieving-conversations/search-conversations) |\n| 标记一个或全部会话已读 | [标记会话已读](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)、[标记全部会话已读](/sdk/uniapp/conversation/managing-conversations/mark-all-conversations-read) |\n| 管理草稿、置顶、备注和扩展 | 对应“管理会话”页面 |\n| 使用商业版会话分组 | [会话分组概览](/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups) |\n\n## 删除和清理\n\n隐藏会话、删除会话、删除会话及消息、清空会话消息和清除全部本地消息是不同操作：\n\n- 隐藏只移除列表入口，消息保留，新消息可能让会话重新出现。\n- 删除会话不应被描述为删除好友或退出群组。\n- 删除会话及消息会影响本地会话与消息记录，应在 UI 中二次确认。\n- 清空消息与服务端消息销毁策略也不是同一能力。\n\n选择操作前明确产品语义，Promise 失败时不要先行清除本地状态；完成后用事件或重新查询校准。\n\n## 状态更新\n\n建议数据流如下：\n\n1. 注册 `onNewConversation` 与 `onConversationChanged`，保存各自订阅句柄。\n2. 分页查询会话快照。\n3. 按 `conversationID` 幂等插入或替换事件项。\n4. 按 `isPinned`、时间和业务排序规则展示。\n5. App 恢复、同步完成或重新登录时重新查询，不仅依赖事件。\n\n会话未读数和消息已读是相关但不同的状态。清零会话未读见[标记会话已读](/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)，总未读见[获取总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)。\n\n查询用于建立快照，事件用于合并增量，Promise 成功只说明当前操作完成。完整监听与句柄清理统一见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。\n\n切换账号时先停止旧 store 写入，释放旧订阅并清空会话、未读和草稿内存状态。不要让旧账号分页或事件异步结果写入新账号；商业版依赖插件还应比较 SDK session epoch。",
       "description": "理解会话快照、增量事件、未读数、草稿和会话分组。",
       "headings": [
         {
           "depth": 2,
-          "title": "建议数据流",
-          "url": "#建议数据流"
+          "title": "会话标识",
+          "url": "#会话标识"
+        },
+        {
+          "depth": 2,
+          "title": "会话数据",
+          "url": "#会话数据"
+        },
+        {
+          "depth": 3,
+          "title": "排序与展示",
+          "url": "#排序与展示"
+        },
+        {
+          "depth": 3,
+          "title": "未读与接收策略",
+          "url": "#未读与接收策略"
+        },
+        {
+          "depth": 2,
+          "title": "按任务查找页面",
+          "url": "#按任务查找页面"
+        },
+        {
+          "depth": 2,
+          "title": "删除和清理",
+          "url": "#删除和清理"
+        },
+        {
+          "depth": 2,
+          "title": "状态更新",
+          "url": "#状态更新"
         }
       ],
       "sourcePath": "/sdk/uniapp/conversation/overview-conversation",
       "title": "会话概览"
     },
     "/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target": {
-      "body": "`getOneConversation()` 使用目标 ID 和 `OpenIMSessionType` 查询单个会话，返回 `OpenIMConversationItem | null`。\n\n```uts\nimport {\n  OpenIMSessionTypeSingle,\n  getOneConversation,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst conversation = await getOneConversation({\n  sourceID: 'user_b',\n  sessionType: OpenIMSessionTypeSingle,\n})\n```\n\n单聊的 `sourceID` 是对方 `userID`，群聊是 `groupID`。使用插件导出的会话类型常量，不直接写数字。`null` 可能表示本地尚无该会话；发送首条消息或收到消息后，会话可由事件创建。\n\n返回值按 `conversationID` 合并到 store，不要用 `sourceID` 直接覆盖其他会话类型。",
+      "body": "`getOneConversation()` 使用目标 ID 和 `OpenIMSessionType` 查询单个会话，返回 `OpenIMConversationItem | null`。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `sourceID` | `string` | 是 | 会话目标 ID：单聊为对方 `userID`，群聊为 `groupID`。 |\n| `sessionType` | `OpenIMSessionType` | 是 | 会话类型，使用插件导出的 `OpenIMSessionTypeSingle`、群聊等常量。 |\n\n```uts\nimport {\n  OpenIMSessionTypeSingle,\n  getOneConversation,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst conversation = await getOneConversation({\n  sourceID: 'user_b',\n  sessionType: OpenIMSessionTypeSingle,\n})\n```\n\n同一个字符串在不同 `sessionType` 下可能表示不同目标，必须同时传入正确类型。不要直接写数字，也不要把 `conversationID` 当成 `sourceID` 传入；已经知道会话 ID 时使用按会话 ID 查询 API。\n\nPromise 成功直接返回 `OpenIMConversationItem | null`。`null` 可能表示本地尚无该会话；发送首条消息或收到消息后，会话可由事件创建。查询本身不会创建会话，也不会触发会话事件。\n\n返回值按 `conversationID` 合并到 store，不要用 `sourceID` 直接覆盖其他会话类型。",
       "description": "按目标 ID 和会话类型查询一个会话。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target",
       "title": "按目标查询会话"
     },
@@ -1230,9 +1311,35 @@
       "title": "批量查询会话"
     },
     "/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list": {
-      "body": "`getAllConversationList()` 返回完整本地会话快照；列表较大时使用 `getConversationListSplit()` 分页。本页归属 `onNewConversation` 和 `onConversationChanged`。\n\n```uts\nimport {\n  getConversationListSplit,\n  off,\n  onConversationChanged,\n  onNewConversation,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst newConversationSubscription = onNewConversation((result) => {\n  result.conversations.forEach((item) => upsertConversation(item.conversationID, item))\n})\nconst changedSubscription = onConversationChanged((result) => {\n  result.conversations.forEach((item) => upsertConversation(item.conversationID, item))\n})\n\nconst firstPage = await getConversationListSplit({ offset: 0, count: 100 })\nreplaceConversationSnapshot(firstPage?.conversations ?? [])\n\noff(newConversationSubscription)\noff(changedSubscription)\n```\n\n分页时继续增加 `offset`，直到返回数量少于 `count`。查询与事件可能包含相同会话，必须按 `conversationID` 幂等合并。事件 payload 是列表，即使通常只变化一项也要遍历全部项目。\n\n不要根据本地数组位置更新；置顶、最新消息和未读变化都会改变排序。",
+      "body": "会话列表应使用 `getConversationListSplit()` 分页建立本地快照。虽然 Private 合同仍导出非分页 `getAllConversationList()` 作为兼容能力，面向真实应用和公开文档的推荐流程统一使用分页，避免会话较多时一次加载全部本地记录。\n\n## 分页获取会话\n\n### 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |\n| `count` | `number` | 是 | 本次读取数量；根据页面和设备性能设置合理上限。 |\n\n```uts\nimport {\n  getConversationListSplit,\n  off,\n  onConversationChanged,\n  onNewConversation,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst newConversationSubscription = onNewConversation((result) => {\n  result.conversations.forEach((item) => upsertConversation(item.conversationID, item))\n})\nconst changedSubscription = onConversationChanged((result) => {\n  result.conversations.forEach((item) => upsertConversation(item.conversationID, item))\n})\n\nconst firstPage = await getConversationListSplit({ offset: 0, count: 100 })\nreplaceConversationSnapshot(firstPage?.conversations ?? [])\n\noff(newConversationSubscription)\noff(changedSubscription)\n```\n\nPromise 成功直接返回 `OpenIMConversationListResult | null`，从 `conversations` 读取当前页。第一页用于替换当前账号快照；后续页按 `conversationID` 合并。返回 `null` 时不要伪造成功的空列表，应结合登录状态和错误诊断决定保留旧快照还是展示加载失败。\n\n分页时继续增加 `offset`，直到返回数量少于 `count`。在前一页加载期间收到会话事件后，列表排序和分页边界可能变化；应让 store 按主键合并，并在刷新或同步完成时从 offset 0 重新建立快照。不要只把后续页追加到数组后永久依赖旧 offset。\n\n### 会话字段\n\n`OpenIMConversationItem` 中常用字段如下：\n\n| 字段 | 说明 |\n| --- | --- |\n| `conversationID` | 会话稳定主键，列表与事件都按该字段合并。 |\n| `conversationType` | 单聊、群聊或通知会话类型。 |\n| `userID` / `groupID` | 单聊对端用户或群聊群组 ID，根据会话类型使用。 |\n| `showName` / `faceURL` | 当前会话展示名称与头像快照。 |\n| `unreadCount` | 当前会话未读数。 |\n| `latestMsg` | 最新消息序列化字符串；解析失败时保留会话并展示降级摘要。 |\n| `latestMsgSendTime` | 最新消息发送时间，可参与普通会话排序。 |\n| `draftText` / `draftTextTime` | 本地草稿内容和更新时间。 |\n| `isPinned` | 是否置顶。排序时先应用置顶规则，再处理时间。 |\n| `recvMsgOpt` | 会话级消息接收选项。 |\n\n完整字段及商业扩展见[会话概览](/sdk/uniapp/conversation/overview-conversation)。不要根据本地数组位置更新；置顶、最新消息、草稿和未读变化都会改变排序。\n\n### 列表排序\n\n推荐先把分页与事件结果写入以 `conversationID` 为键的映射，再计算展示数组。通常先显示置顶会话，组内按最新消息或草稿时间排序，并为时间相同项提供稳定的 ID 次序。不要直接在事件回调中对页面数组做局部交换。\n\n`latestMsg` 解析失败不影响会话存在。保留该项并显示未知消息摘要；收到后续可识别消息或重新查询时自然更新。\n\n## 保持列表同步\n\n本页是 `onNewConversation` 和 `onConversationChanged` 的完整监听归属页。应先注册事件，再查询第一页，缩小登录同步期间的丢失窗口。两种事件都携带 `OpenIMConversationListResult`，即使通常只变化一个会话，也要遍历全部 `conversations`。\n\nPromise 成功、事件到达和重新查询是不同阶段。App 前台恢复、同步完成、断线重连或切换账号后重新查询快照；退出登录或销毁会话 store 时分别 `off(newConversationSubscription)` 和 `off(changedSubscription)`。\n\n切换账号时，在启动新账号查询前停止旧账号分页请求的状态写入。即使旧 Promise 迟到，也不能把旧 `conversationID` 列表合入新账号；可使用应用账号世代或商业版 `sdkSessionEpoch` 做完成前校验。",
       "description": "查询完整或分页会话快照，并处理新增与变化事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "分页获取会话",
+          "url": "#分页获取会话"
+        },
+        {
+          "depth": 3,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 3,
+          "title": "会话字段",
+          "url": "#会话字段"
+        },
+        {
+          "depth": 3,
+          "title": "列表排序",
+          "url": "#列表排序"
+        },
+        {
+          "depth": 2,
+          "title": "保持列表同步",
+          "url": "#保持列表同步"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list",
       "title": "查询会话列表"
     },
@@ -1272,14 +1379,20 @@
       "title": "设置会话扩展字段"
     },
     "/sdk/uniapp/conversation/managing-conversations/set-conversation-draft": {
-      "body": "`setConversationDraft()` 保存会话草稿；传空字符串清除草稿。\n\n```uts\nimport { setConversationDraft } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversationDraft({ conversationID, draftText: editorText })\n```\n\n草稿属于当前设备的会话状态，不应假定会同步到其他设备。输入框频繁变化时做防抖并串行写入，避免旧请求后完成覆盖新草稿。\n\n会话项中的 `draftText` 和 `draftTextTime` 用于恢复与排序提示。退出账号时不要把旧账号草稿带入新账号状态。",
+      "body": "`setConversationDraft()` 保存会话草稿；传空字符串清除草稿。\n\n用户离开聊天页、切换会话或输入框内容变化时可以保存草稿。输入过程中先维护编辑器状态并对 SDK 写入做防抖；离开页面前立即提交一次最新文本，避免每次按键写库或旧请求后完成覆盖新草稿。\n\n```uts\nimport { setConversationDraft } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversationDraft({ conversationID, draftText: editorText })\n```\n\n清空草稿时明确传入空字符串：\n\n```uts\nawait setConversationDraft({ conversationID, draftText: '' })\n```\n\n## 调用后的状态变化\n\nPromise 成功表示草稿已经保存。SDK 通过 `onConversationChanged` 同步变化后的会话，按 `conversationID` 合并 `draftText` 和 `draftTextTime`。完整事件注册与清理见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。\n\n草稿属于当前设备的会话状态，不应假定同步到其他设备。退出账号时还要清理编辑器内存状态，避免把旧账号草稿带入新账号。",
       "description": "保存或清空指定会话的本地草稿文本。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "调用后的状态变化",
+          "url": "#调用后的状态变化"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/set-conversation-draft",
       "title": "保存会话草稿"
     },
     "/sdk/uniapp/conversation/managing-conversations/set-message-receive-option": {
-      "body": "`recvMsgOpt` 控制单个会话的消息接收策略，通过 `setConversation()` 更新。\n\n```uts\nimport { setConversation } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversation({ conversationID, recvMsgOpt: 1 })\n```\n\n具体数值含义使用插件导出的接收选项常量或服务端约定，不在业务代码中散落裸数字。该设置与账号全局接收策略不同，最终有效行为可能同时受两者影响。\n\n更新后以会话变化事件或重新查询确认，不要仅修改当前页面开关。",
+      "body": "`recvMsgOpt` 控制单个会话的消息接收策略，通过 `setConversation()` 更新。\n\n```uts\nimport { setConversation } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversation({ conversationID, recvMsgOpt: 1 })\n```\n\n常用值为 `0`（正常接收并允许通知）和 `2`（接收消息但不通知）。合同类型还允许 `1` 表示不接收消息，但只有产品和服务端明确支持该策略时使用；业务应集中定义含义，不在页面中散落裸数字。\n\n该设置只作用于指定会话。账号级默认策略由 `globalRecvMsgOpt` 设置，见[设置全局消息接收方式](/sdk/uniapp/user/profile/set-global-message-reception)。最终有效行为可能同时受账号级和会话级策略影响。\n\nPromise 成功、`onConversationChanged` 到达和重新查询是三个阶段。更新后按 `conversationID` 合并事件或重新查询确认，不要仅修改当前页面开关。",
       "description": "通过 setConversation 修改单个会话的 recvMsgOpt。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/set-message-receive-option",
@@ -1293,14 +1406,14 @@
       "title": "清除群聊提及状态"
     },
     "/sdk/uniapp/conversation/managing-conversations/mark-conversation-read": {
-      "body": "`markConversationMessageAsRead()` 把指定会话标为已读。本页同时归属单聊已读回执 `onRecvC2CReadReceipt`。\n\n```uts\nimport {\n  markConversationMessageAsRead,\n  off,\n  onRecvC2CReadReceipt,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst receiptSubscription = onRecvC2CReadReceipt((result) => {\n  result.receipts.forEach((receipt) => mergeReadReceipt(receipt))\n})\n\nawait markConversationMessageAsRead(conversationID)\noff(receiptSubscription)\n```\n\n商业版还提供 `resetConversationUnread()` <span className=\"enterprise-field-badge\">商业版</span>，可把多个会话的未读数重置为指定值：\n\n```uts\nimport { resetConversationUnread } from '@/uni_modules/unix-openim-sdk'\n\nawait resetConversationUnread({ conversationIDs: [conversationID], num: 0 })\n```\n\n本地会话未读清零与对端收到已读回执不是同一步。Promise、会话变化和回执事件分别处理。",
+      "body": "`markConversationMessageAsRead()` 把指定会话标为已读。本页同时归属单聊已读回执 `onRecvC2CReadReceipt`。\n\n用户打开会话并阅读完当前可见消息后再调用。不要在只预览通知、后台收到消息或尚未展示聊天页时提前标记已读。\n\n```uts\nimport {\n  markConversationMessageAsRead,\n  off,\n  onRecvC2CReadReceipt,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst receiptSubscription = onRecvC2CReadReceipt((result) => {\n  result.receipts.forEach((receipt) => mergeReadReceipt(receipt))\n})\n\nawait markConversationMessageAsRead(conversationID)\noff(receiptSubscription)\n```\n\n商业版还提供 `resetConversationUnread()` <span className=\"enterprise-field-badge\">商业版</span>，可把多个会话的未读数重置为指定值：\n\n```uts\nimport { resetConversationUnread } from '@/uni_modules/unix-openim-sdk'\n\nawait resetConversationUnread({ conversationIDs: [conversationID], num: 0 })\n```\n\n本地会话未读清零与对端收到已读回执不是同一步。Promise、会话变化和回执事件分别处理。\n\nPromise 成功后，通过 `onConversationChanged` 取得最新会话并按 `conversationID` 合并未读数；需要立即校准时重新查询该会话。单聊回执中的 `receipts` 应先定位对端用户对应的单聊，再按每项消息 ID 列表更新已读状态。\n\n群聊中调用本 API 只清理当前账号的会话未读数。需要上报群成员级已读状态时，另见[上报群消息已读](/sdk/uniapp/message/managing-read-status/send-group-read-receipts)。组件卸载、退出登录或切换账号时释放 `receiptSubscription`。",
       "description": "清理会话未读数，并处理单聊已读回执事件。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/mark-conversation-read",
       "title": "标记会话已读"
     },
     "/sdk/uniapp/conversation/managing-conversations/mark-all-conversations-read": {
-      "body": "`markAllConversationMessageAsRead()` 标记当前账号的全部会话已读。\n\n```uts\nimport { markAllConversationMessageAsRead } from '@/uni_modules/unix-openim-sdk'\n\nawait markAllConversationMessageAsRead()\n```\n\n这是范围较大的状态变更，UI 应二次确认。完成后不要只把角标设为 0；以会话变化和总未读事件刷新 store，处理服务端或其他设备并发产生的新未读消息。\n\n该调用不会删除消息，也不会修改单个会话的消息接收选项。",
+      "body": "`markAllConversationMessageAsRead()` 标记当前账号的全部会话已读。\n\n```uts\nimport { markAllConversationMessageAsRead } from '@/uni_modules/unix-openim-sdk'\n\nawait markAllConversationMessageAsRead()\n```\n\n这是范围较大的状态变更，UI 应二次确认。Promise 成功表示 SDK 已完成本次找到的全部未读会话处理，不等于相关会话事件已经到达，也不保证其他客户端界面已同步完成。\n\n完成后不要只把角标设为 0；通过 `onConversationChanged` 按 `conversationID` 合并各会话状态，并通过 `onTotalUnreadMessageCountChanged` 更新总未读数。完整监听分别见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)和[获取会话总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)。必要时重新查询两份快照，处理服务端或其他设备并发产生的新未读消息。\n\n该调用不会删除消息，也不会修改单个会话的消息接收选项。",
       "description": "清零当前账号的全部会话未读数。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/mark-all-conversations-read",
@@ -1321,28 +1434,34 @@
       "title": "设置私聊模式"
     },
     "/sdk/uniapp/conversation/managing-conversations/set-burn-duration": {
-      "body": "`burnDuration` <span className=\"enterprise-field-badge\">商业版</span> 表示阅后即焚时长，通过 `setConversation()` 更新。\n\n```uts\nimport { setConversation } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversation({ conversationID, burnDuration: 30 })\n```\n\n时长单位和允许范围以商业版服务端协议为准。不要在客户端自行倒计时后直接删除服务端消息；界面应结合消息状态和服务端事件呈现。\n\n关闭能力时使用产品约定的关闭值，并重新查询会话确认。",
+      "body": "`burnDuration` <span className=\"enterprise-field-badge\">商业版</span> 表示阅后即焚时长，通过 `setConversation()` 更新。\n\n```uts\nimport { setConversation } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversation({ conversationID, burnDuration: 30 })\n```\n\n`burnDuration` 的单位为秒，只描述阅后即焚模式的时长。启用或关闭模式还需要设置 `isPrivateChat`，见[开启或关闭阅后即焚](/sdk/uniapp/conversation/managing-conversations/set-private-chat)。\n\n不要把 `burnDuration` 与服务端消息定期删除周期 `msgDestructTime` 混用，也不要在客户端自行倒计时后直接删除服务端消息；界面应结合消息状态和服务端行为呈现。\n\nPromise 成功表示设置请求完成。通过 `onConversationChanged` 按 `conversationID` 合并最新 `burnDuration`，或重新查询会话确认。关闭能力时按产品协议设置私聊模式和时长，不用本地开关伪造服务端状态。",
       "description": "商业版设置会话的 burnDuration。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/set-burn-duration",
       "title": "设置阅后即焚时长"
     },
     "/sdk/uniapp/conversation/managing-conversations/set-message-destruct": {
-      "body": "`OpenIMConversationItem` 包含 `isMsgDestruct` 与 `msgDestructTime` <span className=\"enterprise-field-badge\">商业版</span> 状态，但当前 `OpenIMSetConversationParams` 没有这两个写入字段。\n\n因此本插件版本只能读取并展示服务端返回的销毁状态，不能通过相近字段或 `ex` 模拟 setter。需要修改时使用已确认的商业版业务接口，并在完成后重新查询会话。\n\n客户端倒计时只负责展示，消息是否真正销毁必须以 Core/服务端状态为准。",
+      "body": "`OpenIMConversationItem` 包含 `isMsgDestruct` 与 `msgDestructTime` <span className=\"enterprise-field-badge\">商业版</span> 状态，但当前 `OpenIMSetConversationParams` 没有这两个写入字段。\n\n服务端消息定期删除由这两个字段共同描述：`isMsgDestruct` 是开关，`msgDestructTime` 是删除周期。它不是阅后即焚；阅后即焚使用 `isPrivateChat` 和 `burnDuration`。\n\n因此本插件版本只能读取并展示服务端返回的销毁状态，不能照搬 Wasm 的 `setConversation({ isMsgDestruct, msgDestructTime })`，也不能通过相近字段或 `ex` 模拟 setter。需要修改时使用已经确认并鉴权的商业业务接口，并在完成后重新查询会话。\n\n达到删除周期后，服务端策略清理的是服务端保存的消息，不代表当前设备或其他已经同步过消息的客户端会立即删除本地副本。客户端卸载重装、清除数据或在新设备同步时，已被服务端清理的消息可能无法再次拉取。\n\n客户端倒计时只负责展示，消息是否真正销毁必须以 Core/服务端状态为准。该页保留与 Wasm 相同的业务边界，但明确记录当前 unix 源码合同没有写入能力，避免发布不存在的 API。",
       "description": "说明商业版会话消息销毁字段的当前写入边界。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/set-message-destruct",
       "title": "设置消息销毁"
     },
     "/sdk/uniapp/conversation/managing-conversations/hide-a-conversation": {
-      "body": "`hideConversation()` 从会话列表隐藏指定会话。\n\n```uts\nimport { hideConversation } from '@/uni_modules/unix-openim-sdk'\n\nawait hideConversation(conversationID)\n```\n\n隐藏不会删除历史消息；后续收到新消息时，会话可能重新出现在列表中。需要永久清理会话及消息时选择对应删除 API，并在 UI 中明确差异。\n\n完成后通过会话事件或重新查询移除本地项，不只操作页面数组。",
+      "body": "`hideConversation()` 从会话列表隐藏指定会话。\n\n```uts\nimport { hideConversation } from '@/uni_modules/unix-openim-sdk'\n\nawait hideConversation(conversationID)\n```\n\n该操作只影响当前登录用户的会话入口，不会删除单聊关系、退出群组或影响其他用户。隐藏不会删除本地或服务端历史消息；后续收到新消息或完成重新同步时，会话可能重新出现在列表中。需要清理会话及消息时选择对应删除 API，并在 UI 中明确差异。\n\n## 调用后的状态变化\n\nPromise 成功表示本次隐藏请求已经完成。调用端可以按 `conversationID` 从当前会话列表移除对应项，但仍需合并 `onConversationChanged`，或重新查询会话列表校准。完整监听见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。\n\n不要把隐藏操作描述为删除聊天关系，也不要只操作页面数组而跳过 store；同一会话再次出现时，按 `conversationID` 恢复或更新原状态。",
       "description": "从当前会话列表隐藏一个会话而不删除消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "调用后的状态变化",
+          "url": "#调用后的状态变化"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/hide-a-conversation",
       "title": "隐藏会话"
     },
     "/sdk/uniapp/conversation/managing-conversations/hide-all-conversations": {
-      "body": "`hideAllConversations()` 隐藏当前账号的全部会话。\n\n```uts\nimport { hideAllConversations } from '@/uni_modules/unix-openim-sdk'\n\nawait hideAllConversations()\n```\n\n这是范围操作，调用前应二次确认。它不会删除历史消息，后续消息可能重新创建可见会话。完成后重新查询会话快照，避免本地状态与 Core 不一致。",
+      "body": "`hideAllConversations()` 重置当前账号全部会话的列表状态、未读数、最新消息摘要和草稿，使这些会话不再出现在分页会话列表中。\n\n```uts\nimport { hideAllConversations } from '@/uni_modules/unix-openim-sdk'\n\nawait hideAllConversations()\n```\n\n这是范围操作，调用前应二次确认。Promise 成功只表示本地会话状态已完成重置；它不会删除本地或服务端消息、群组、好友关系，也不会修改其他客户端的会话。\n\n后续收到新消息或重新建立有效状态时，相应会话仍可能再次出现。完成后重新查询[会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)和[会话总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)，不要把 Promise 成功当成远端事件或永久删除。",
       "description": "隐藏当前账号的全部会话但保留消息。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversations/hide-all-conversations",
@@ -1370,30 +1489,84 @@
       "title": "清空会话消息"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups": {
-      "body": "会话分组属于<span className=\"enterprise-field-badge\">商业版</span>，用于把会话组织为自定义组，并维护名称、顺序、隐藏状态、未读数和成员会话 ID。\n\n`OpenIMConversationGroupItem` 的字段均可选。读取 `conversationGroupID` 后再作为主键；`conversationIDs` 可能为 `null`，完整成员应以分页查询为准。\n\n五个分组事件返回 opaque JSON 字符串，不是类型化对象：\n\n```uts\nimport {\n  off,\n  onConversationGroupAdded,\n  onConversationGroupChanged,\n  onConversationGroupDeleted,\n  onConversationGroupMemberAdded,\n  onConversationGroupMemberDeleted,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nfunction refreshFromRawGroupEvent(payload : string) {\n  try {\n    const value = JSON.parseObject<UTSJSONObject>(payload)\n    if (value != null) refreshConversationGroups()\n  } catch (_) {\n    console.error('Invalid conversation group event payload')\n  }\n}\n\nconst addedSubscription = onConversationGroupAdded(refreshFromRawGroupEvent)\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  addedSubscription,\n  onConversationGroupChanged(refreshFromRawGroupEvent),\n  onConversationGroupDeleted(refreshFromRawGroupEvent),\n  onConversationGroupMemberAdded(refreshFromRawGroupEvent),\n  onConversationGroupMemberDeleted(refreshFromRawGroupEvent),\n]\n\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n校验 JSON 后仍建议重新查询快照，不依赖未冻结的 raw 字段。日志不要输出完整 payload，因为扩展字段可能包含业务数据。",
+      "body": "会话分组属于<span className=\"enterprise-field-badge\">商业版</span>，用于把会话组织为自定义组，并维护名称、顺序、隐藏状态、未读数和成员会话 ID。\n\n## 分组类型\n\n创建分组时使用 `OpenIMConversationGroupType`，查询分组时使用 `OpenIMConversationGroupQueryType`。二者属于不同操作的合同类型，不应把 UI tab 下标直接当作 SDK 类型值。\n\n同一个会话可以属于多个自定义分组。分组只组织会话入口，不复制或移动会话消息；删除分组或移除成员也不会删除会话本身。\n\n## 分组数据\n\n`OpenIMConversationGroupItem` 的字段均可选：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `conversationGroupID` | `string \\| null` | 分组稳定标识；非空后才能作为缓存主键。 |\n| `name` | `string \\| null` | 分组名称。 |\n| `order` | `number \\| null` | 分组排序值。 |\n| `ex` | `string \\| null` | 业务扩展字符串，只按已约定格式解析。 |\n| `conversationGroupType` | `number \\| null` | 分组类型。 |\n| `hidden` | `boolean \\| null` | 当前分组是否隐藏。 |\n| `unreadCount` | `number \\| null` | 分组维度的未读数快照。 |\n| `conversationIDs` | `string[] \\| null` | 当前返回携带的成员会话 ID；可能不是完整分页结果。 |\n\n读取非空 `conversationGroupID` 后再建立索引；名称、顺序和隐藏状态可以变化，不能用作主键。需要完整成员、会话资料和总数时，调用[查询分组及会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)。\n\n## 可用操作\n\n| 需求 | 页面 |\n| --- | --- |\n| 创建分组并可选加入初始会话 | [创建会话分组](/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group) |\n| 查询分组列表 | [查询会话分组](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups) |\n| 查询分组资料、成员与总数 | [查询分组及会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) |\n| 查询一个会话所属的全部分组 | [查询会话所属分组](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-by-conversation-id) |\n| 加入或移出分组 | [把会话加入分组](/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups)、[把会话移出分组](/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups) |\n| 更新名称、扩展和隐藏状态 | [更新会话分组](/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group) |\n| 调整分组顺序 | [设置会话分组顺序](/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order) |\n| 删除分组 | [删除会话分组](/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group) |\n\n页面首次进入时查询快照，状态变更操作的 Promise 成功后继续等待事件或重新查询。raw 事件没有冻结字段时，不要用本地猜测替代查询结果。\n\n## 监听分组变化\n\n五个分组事件返回 opaque JSON 字符串，不是类型化对象：\n\n```uts\nimport {\n  off,\n  onConversationGroupAdded,\n  onConversationGroupChanged,\n  onConversationGroupDeleted,\n  onConversationGroupMemberAdded,\n  onConversationGroupMemberDeleted,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nfunction refreshFromRawGroupEvent(payload : string) {\n  try {\n    const value = JSON.parseObject<UTSJSONObject>(payload)\n    if (value != null) refreshConversationGroups()\n  } catch (_) {\n    console.error('Invalid conversation group event payload')\n  }\n}\n\nconst addedSubscription = onConversationGroupAdded(refreshFromRawGroupEvent)\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  addedSubscription,\n  onConversationGroupChanged(refreshFromRawGroupEvent),\n  onConversationGroupDeleted(refreshFromRawGroupEvent),\n  onConversationGroupMemberAdded(refreshFromRawGroupEvent),\n  onConversationGroupMemberDeleted(refreshFromRawGroupEvent),\n]\n\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n`onConversationGroupAdded`、`onConversationGroupChanged` 和 `onConversationGroupDeleted` 对应分组本身变化；成员新增与删除事件对应会话成员关系。raw payload 没有公开冻结为 DTO，因此这里只验证它是有效 JSON，然后重新查询相关快照。\n\n校验 JSON 后仍不要依赖未冻结字段。事件处理器应快速返回，并以当前登录用户隔离刷新任务；切换账号或 dispose 时先停止旧状态写入，再逐个释放句柄。日志不要输出完整 payload，因为 `ex` 或其他字段可能包含业务数据。",
       "description": "商业版会话分组模型、raw 事件解析和生命周期。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "分组类型",
+          "url": "#分组类型"
+        },
+        {
+          "depth": 2,
+          "title": "分组数据",
+          "url": "#分组数据"
+        },
+        {
+          "depth": 2,
+          "title": "可用操作",
+          "url": "#可用操作"
+        },
+        {
+          "depth": 2,
+          "title": "监听分组变化",
+          "url": "#监听分组变化"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups",
       "title": "会话分组概览"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group": {
-      "body": "`createConversationGroup()` <span className=\"enterprise-field-badge\">商业版</span> 创建分组，并可把一个会话作为初始成员。\n\n```uts\nimport { createConversationGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await createConversationGroup({\n  name: '重要会话',\n  order: 100,\n  conversationGroupType: 0,\n  conversationID: conversationID,\n  ex: '',\n})\n\nconst group = result?.conversationGroup\n```\n\n分组类型使用插件导出的合同值。`conversationID` 可省略；`ex` 是整段业务扩展。返回分组可能为 `null`，最终列表以分组事件或重新查询为准。",
+      "body": "`createConversationGroup()` <span className=\"enterprise-field-badge\">商业版</span> 创建分组，并可把一个会话作为初始成员。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `name` | `string` | 是 | 分组名称。提交前按产品规则校验空值和长度。 |\n| `order` | `number` | 是 | 分组排序值；排序方向应在业务中保持一致。 |\n| `conversationGroupType` | `OpenIMConversationGroupType` | 是 | 分组类型，使用插件合同允许的值。 |\n| `conversationID` | `string \\| null` | 否 | 创建时加入分组的初始会话 ID。 |\n| `ex` | `string \\| null` | 否 | 分组扩展字符串，完整覆盖，不会自动合并 JSON。 |\n\n```uts\nimport { createConversationGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await createConversationGroup({\n  name: '重要会话',\n  order: 100,\n  conversationGroupType: 0,\n  conversationID: conversationID,\n  ex: '',\n})\n\nconst group = result?.conversationGroup\n```\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMCreateConversationGroupResult | null`。非空结果的 `conversationGroup` 是新分组快照，也可能为 `null`；先校验非空 `conversationGroupID` 再加入本地索引。\n\nPromise 成功和 `onConversationGroupAdded` 到达是两个阶段。最终列表以 raw 事件触发后的重新查询为准；若指定了初始 `conversationID`，成员关系也应以查询结果校准。",
       "description": "商业版创建自定义会话分组。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group",
       "title": "创建会话分组"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups": {
-      "body": "`getConversationGroups()` <span className=\"enterprise-field-badge\">商业版</span> 按 `conversationGroupType` 查询分组。\n\n```uts\nimport { getConversationGroups } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getConversationGroups({ conversationGroupType: 0 })\nconst groups = result?.conversationGroups ?? []\n```\n\n按非空 `conversationGroupID` 去重并排序。分组项中的 `conversationIDs` 可能只是当前快照；需要成员和总数时使用[查询分组及会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)。",
+      "body": "`getConversationGroups()` <span className=\"enterprise-field-badge\">商业版</span> 按 `conversationGroupType` 查询分组。\n\n`conversationGroupType` 是必填的 `OpenIMConversationGroupQueryType`。使用合同允许的查询值，不把分组创建类型、展示 tab 下标或本地枚举直接混用。\n\n```uts\nimport { getConversationGroups } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getConversationGroups({ conversationGroupType: 0 })\nconst groups = result?.conversationGroups ?? []\n```\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMGetConversationGroupsResult | null`，从 `conversationGroups` 读取分组快照。按非空 `conversationGroupID` 去重并使用 `order` 排序。\n\n### 会话分组字段\n\n`OpenIMConversationGroupItem` 的字段均可空，包括 `conversationGroupID`、`name`、`order`、`ex`、`conversationGroupType`、`hidden`、`unreadCount` 和 `conversationIDs`。先校验 ID 再缓存；`conversationIDs` 可能只是当前快照，需要成员、分页和总数时使用[查询分组及会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)。",
       "description": "商业版按分组查询类型读取会话分组快照。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        },
+        {
+          "depth": 3,
+          "title": "会话分组字段",
+          "url": "#会话分组字段"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups",
       "title": "查询会话分组"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations": {
-      "body": "`getConversationGroupInfoWithConversations()` <span className=\"enterprise-field-badge\">商业版</span> 返回分组资料、会话总数和一页会话。\n\n```uts\nimport { getConversationGroupInfoWithConversations } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getConversationGroupInfoWithConversations({\n  conversationGroupID: groupID,\n  pagination: { pageNumber: 1, showNumber: 100 },\n})\n```\n\n`pageNumber` 从服务端约定的第一页开始，本合同示例使用 1；`showNumber` 是页大小。返回字段 `ConversationTotal` 首字母大写，应按真实字段名读取。会话按 `conversationID` 去重，分组为 `null` 时不要继续分页。",
+      "body": "`getConversationGroupInfoWithConversations()` <span className=\"enterprise-field-badge\">商业版</span> 返回分组资料、会话总数和一页会话。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationGroupID` | `string` | 是 | 要查询的会话分组 ID。 |\n| `pagination.pageNumber` | `number` | 是 | 页码；本合同示例从 `1` 开始。 |\n| `pagination.showNumber` | `number` | 是 | 每页会话数量。 |\n\n```uts\nimport { getConversationGroupInfoWithConversations } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getConversationGroupInfoWithConversations({\n  conversationGroupID: groupID,\n  pagination: { pageNumber: 1, showNumber: 100 },\n})\n```\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMGetConversationGroupInfoWithConversationsResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `conversationGroup` | `OpenIMConversationGroupItem \\| null` | 当前分组资料；为 `null` 时不要继续分页。 |\n| `ConversationTotal` | `number \\| null`（可选） | 分组内会话总数；字段名首字母大写，必须按合同读取。 |\n| `conversations` | `OpenIMConversationItem[]` | 当前页会话。 |\n\n分页期间成员可能变化。按 `conversationID` 去重，第一页或成员事件到达时重新建立分页快照；不要用当前数组长度替代 `ConversationTotal`。",
       "description": "商业版分页读取一个会话分组及其成员会话。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations",
       "title": "查询分组及会话"
     },
@@ -1405,58 +1578,141 @@
       "title": "查询会话所属分组"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group": {
-      "body": "`updateConversationGroup()` <span className=\"enterprise-field-badge\">商业版</span> 只更新提供的字段。\n\n```uts\nimport { updateConversationGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await updateConversationGroup({\n  conversationGroupID: groupID,\n  name: '重点跟进',\n  hidden: false,\n})\n```\n\n`name`、`ex` 和 `hidden` 都可选。`ex` 是整段替换，先合并已有业务字段。返回 `conversationGroup` 可能为空，最终状态以事件或重新查询为准。",
+      "body": "`updateConversationGroup()` <span className=\"enterprise-field-badge\">商业版</span> 只更新提供的字段。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationGroupID` | `string` | 是 | 要更新的分组 ID。 |\n| `name` | `string \\| null` | 否 | 新分组名称。 |\n| `ex` | `string \\| null` | 否 | 新扩展字符串，会完整覆盖旧值。 |\n| `hidden` | `boolean \\| null` | 否 | 是否在业务界面隐藏该分组。 |\n\n```uts\nimport { updateConversationGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await updateConversationGroup({\n  conversationGroupID: groupID,\n  name: '重点跟进',\n  hidden: false,\n})\n```\n\n除 `conversationGroupID` 外，至少提供一个实际更新字段。`ex` 是整段替换，多个模块共用时先读取并合并已有业务字段。\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMUpdateConversationGroupResult | null`，其中 `conversationGroup` 是更新后的分组快照或 `null`。只有非空且带有效 ID 时才立即合并；最终状态通过 `onConversationGroupChanged` 或重新查询校准。",
       "description": "商业版更新分组名称、扩展字段或隐藏状态。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group",
       "title": "更新会话分组"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order": {
-      "body": "`setConversationGroupOrder()` <span className=\"enterprise-field-badge\">商业版</span> 批量提交分组 ID 与顺序值。\n\n```uts\nimport { setConversationGroupOrder } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversationGroupOrder({\n  conversationGroupOrders: [\n    { conversationGroupID: 'group_a', order: 100 },\n    { conversationGroupID: 'group_b', order: 200 },\n  ],\n})\n```\n\n拖拽结束后一次提交完整受影响集合，避免每次移动都发请求。成功后重新查询分组排序；并发编辑时以服务端最终值为准。",
+      "body": "`setConversationGroupOrder()` <span className=\"enterprise-field-badge\">商业版</span> 批量提交分组 ID 与顺序值。\n\n## 参数说明\n\n`conversationGroupOrders` 是非空数组，每项包含：\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationGroupID` | `string` | 是 | 要调整的分组 ID。 |\n| `order` | `number` | 是 | 新排序值；同一批次应避免重复值或不稳定规则。 |\n\n```uts\nimport { setConversationGroupOrder } from '@/uni_modules/unix-openim-sdk'\n\nawait setConversationGroupOrder({\n  conversationGroupOrders: [\n    { conversationGroupID: 'group_a', order: 100 },\n    { conversationGroupID: 'group_b', order: 200 },\n  ],\n})\n```\n\n拖拽结束后一次提交完整受影响集合，避免每次移动都发请求。提交前按 `conversationGroupID` 去重，并用稳定算法计算所有受影响分组的值。\n\n## 返回结果\n\nPromise 成功直接返回字符串结果，表示排序更新请求完成。重新查询分组或等待分组变更事件确认最终排序；并发编辑时以服务端最终 `order` 为准，不只保留本地拖拽顺序。",
       "description": "商业版批量更新会话分组排序值。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order",
       "title": "设置会话分组顺序"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups": {
-      "body": "`addConversationsToGroups()` <span className=\"enterprise-field-badge\">商业版</span> 使用会话 ID 与分组 ID 的集合更新成员关系。\n\n```uts\nimport { addConversationsToGroups } from '@/uni_modules/unix-openim-sdk'\n\nawait addConversationsToGroups({\n  conversationIDs: [conversationID],\n  conversationGroupIDs: ['group_a'],\n})\n```\n\n两个数组都不能为空，并应先去重。Promise 成功后通过成员新增事件或重新查询确认；不要在失败时保留仅本地的成员关系。",
+      "body": "`addConversationsToGroups()` <span className=\"enterprise-field-badge\">商业版</span> 使用会话 ID 与分组 ID 的集合更新成员关系。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationIDs` | `string[]` | 是 | 要加入分组的会话 ID 列表。 |\n| `conversationGroupIDs` | `string[]` | 是 | 目标会话分组 ID 列表。每个会话会加入每个目标分组。 |\n\n```uts\nimport { addConversationsToGroups } from '@/uni_modules/unix-openim-sdk'\n\nawait addConversationsToGroups({\n  conversationIDs: [conversationID],\n  conversationGroupIDs: ['group_a'],\n})\n```\n\n两个数组都不能为空，并应先去除空值和重复项。一个会话可以属于多个分组；该操作不会改变会话消息或删除其他分组关系。\n\n## 返回结果\n\nPromise 成功直接返回 Core 的字符串结果，表示成员更新请求已经完成，不等于分组成员事件已经到达。通过 `onConversationGroupMemberAdded` 或重新查询分组确认最终关系；不要在失败时保留仅本地的成员关系。完整 raw 事件处理见[会话分组概览](/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups)。",
       "description": "商业版把多个会话加入一个或多个分组。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups",
       "title": "把会话加入分组"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups": {
-      "body": "`removeConversationsFromGroups()` <span className=\"enterprise-field-badge\">商业版</span> 使用与加入相同的成员参数。\n\n```uts\nimport { removeConversationsFromGroups } from '@/uni_modules/unix-openim-sdk'\n\nawait removeConversationsFromGroups({\n  conversationIDs: [conversationID],\n  conversationGroupIDs: ['group_a'],\n})\n```\n\n移出分组不会删除会话或消息。成功后处理成员删除事件或重新查询分组；重复移除按服务端状态处理，不做无限重试。",
+      "body": "`removeConversationsFromGroups()` <span className=\"enterprise-field-badge\">商业版</span> 使用与加入相同的成员参数。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationIDs` | `string[]` | 是 | 要移出分组的会话 ID 列表。 |\n| `conversationGroupIDs` | `string[]` | 是 | 要移出的目标分组 ID 列表。 |\n\n```uts\nimport { removeConversationsFromGroups } from '@/uni_modules/unix-openim-sdk'\n\nawait removeConversationsFromGroups({\n  conversationIDs: [conversationID],\n  conversationGroupIDs: ['group_a'],\n})\n```\n\n两个数组都不能为空，并应先去重。移出分组不会删除会话、消息或该会话在其他分组中的成员关系。\n\n## 返回结果\n\nPromise 成功直接返回字符串结果，表示请求完成，不等于本地分组快照已经更新。随后处理 `onConversationGroupMemberDeleted` 或重新查询分组。重复移除按服务端最终状态处理，不做无限重试，也不在失败时伪造本地成功。",
       "description": "商业版从一个或多个分组移除多个会话。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups",
       "title": "把会话移出分组"
     },
     "/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group": {
-      "body": "`deleteConversationGroup()` <span className=\"enterprise-field-badge\">商业版</span> 删除一个分组。\n\n```uts\nimport { deleteConversationGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait deleteConversationGroup({ conversationGroupID: groupID })\n```\n\n删除分组不会删除其中的会话或消息。UI 应二次确认；成功后以分组删除事件或重新查询清理本地分组与成员索引。",
+      "body": "`deleteConversationGroup()` <span className=\"enterprise-field-badge\">商业版</span> 删除一个分组。\n\n参数对象只包含必填的 `conversationGroupID`。删除前应确认该 ID 来自当前账号的分组快照，而不是名称或数组下标。\n\n```uts\nimport { deleteConversationGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait deleteConversationGroup({ conversationGroupID: groupID })\n```\n\n## 返回结果\n\nPromise 成功直接返回字符串结果，表示删除请求已完成。删除分组不会删除其中的会话或消息，也不会删除会话本身。\n\nUI 应二次确认；成功后通过 `onConversationGroupDeleted` 或重新查询，按 `conversationGroupID` 清理本地分组与成员索引。Promise 失败时不要先行隐藏分组；若事件与本地快照不一致，以重新查询为准。",
       "description": "商业版删除指定会话分组。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group",
       "title": "删除会话分组"
     },
     "/sdk/uniapp/group/overview-group": {
-      "body": "群组领域以 `groupID` 为稳定主键，包含群资料、成员、申请和权限。群名、头像、公告、群主和成员数都是可变快照。\n\n```uts\nimport {\n  off,\n  onGroupDismissed,\n  onGroupInfoChanged,\n  onJoinedGroupAdded,\n  onJoinedGroupDeleted,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst infoSubscription = onGroupInfoChanged((group) => upsertGroup(group.groupID, group))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  infoSubscription,\n  onGroupDismissed((group) => removeGroup(group.groupID)),\n  onJoinedGroupAdded((group) => upsertGroup(group.groupID, group)),\n  onJoinedGroupDeleted((group) => removeGroup(group.groupID)),\n]\n\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n先订阅事件，再查询已加入群组快照。按 `groupID` 幂等合并；群解散、退出和被移出群的事件语义不同，但都可能要求关闭当前聊天页。\n\n`OpenIMGroupItem` 的 `attachedInfo` 以及 `displayIsRead`、禁言例外等扩展能力可能依赖商业版。字段缺失时降级，不伪造默认权限。",
+      "body": "群组领域以 `groupID` 为稳定主键，包含群资料、成员、申请和权限。群名、头像、公告、群主和成员数都是可变快照。\n\n## 核心数据类型\n\n| 类型 | 用途 |\n| --- | --- |\n| `OpenIMGroupItem` | 已加入群组列表、群资料页和群状态。 |\n| `OpenIMCreateGroupInfo` | 创建群时提交的群名、类型、公告、简介、头像和扩展字段。 |\n| `OpenIMGroupMemberItem` | 群成员资料、角色、入群来源和禁言结束时间。 |\n| `OpenIMGroupApplicationItem` | 入群申请及其申请人与处理状态。 |\n\n`OpenIMGroupItem` 常用字段包括 `groupID`、`groupName`、`notification`、`introduction`、`faceURL`、`ownerUserID`、`memberCount`、`status`、`groupType`、`needVerification`、`lookMemberInfo`、`applyMemberFriend` 和 `ex`。`attachedInfo` 是<span className=\"enterprise-field-badge\">商业版字段</span>，只按已确认协议解析。\n\n成员对象使用 `groupID:userID` 作为稳定合并标识。群内 `nickname` 和 `faceURL` 属于成员快照，不应被写回为用户账号级资料。\n\n## 按任务查找页面\n\n| 需求 | 页面 |\n| --- | --- |\n| 创建、更新、解散或退出群组 | [创建群组](/sdk/uniapp/group/create-group)、[更新群资料](/sdk/uniapp/group/update-group-profile)、[解散群组](/sdk/uniapp/group/dismiss-group)、[退出群组](/sdk/uniapp/group/quit-group) |\n| 分页查询已加入群组或指定群资料 | [分页查询已加入群组](/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)、[查询指定群资料](/sdk/uniapp/group/retrieving-groups/get-specified-groups-info) |\n| 查询、搜索和管理群成员 | [查询群成员列表](/sdk/uniapp/group/retrieving-group-members/get-group-member-list)、[搜索群成员](/sdk/uniapp/group/retrieving-group-members/search-group-members) |\n| 邀请或移除成员、转让群主 | [邀请用户入群](/sdk/uniapp/group/managing-group-members/invite-user-to-group)、[移除群成员](/sdk/uniapp/group/managing-group-members/kick-group-member)、[转让群主](/sdk/uniapp/group/managing-group-members/transfer-group-owner) |\n| 发送、查询和处理入群申请 | [申请加入群组](/sdk/uniapp/group/join-group)、[查询收到的入群申请](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |\n| 设置群禁言、验证和成员权限 | 对应群设置与成员管理页面 |\n\n## 状态更新\n\n本页归属群资料与已加入群列表的四个事件：\n\n```uts\nimport {\n  off,\n  onGroupDismissed,\n  onGroupInfoChanged,\n  onJoinedGroupAdded,\n  onJoinedGroupDeleted,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst infoSubscription = onGroupInfoChanged((group) => upsertGroup(group.groupID, group))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  infoSubscription,\n  onGroupDismissed((group) => removeGroup(group.groupID)),\n  onJoinedGroupAdded((group) => upsertGroup(group.groupID, group)),\n  onJoinedGroupDeleted((group) => removeGroup(group.groupID)),\n]\n\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n先订阅事件，再查询已加入群组快照。按 `groupID` 幂等合并；群解散、退出和被移出群的事件语义不同，但都可能要求关闭当前聊天页。\n\n`onGroupInfoChanged` 更新资料，`onGroupDismissed` 表示群已解散，`onJoinedGroupAdded` / `onJoinedGroupDeleted` 更新当前账号的已加入群列表。Promise 成功、事件到达和重新查询是三个阶段；App 恢复、同步完成或重新登录后重新查询快照。\n\n群解散、当前用户退出和被移出群的业务原因不同，但都可能要求关闭聊天页、停止发送并清理成员 store。字段缺失时降级，不伪造默认权限。退出账号或销毁群组 store 时逐个 `off(subscription)`。",
       "description": "理解群资料、成员、申请、权限和群组事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "核心数据类型",
+          "url": "#核心数据类型"
+        },
+        {
+          "depth": 2,
+          "title": "按任务查找页面",
+          "url": "#按任务查找页面"
+        },
+        {
+          "depth": 2,
+          "title": "状态更新",
+          "url": "#状态更新"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/overview-group",
       "title": "群组概览"
     },
     "/sdk/uniapp/group/create-group": {
-      "body": "`createGroup()` 接收群资料、初始成员和可选管理员，返回 `OpenIMGroupItem | null`。\n\n```uts\nimport { createGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst group = await createGroup({\n  groupInfo: { groupName: '项目群', groupType: 2 },\n  memberUserIDs: ['user_b', 'user_c'],\n  adminUserIDs: ['user_b'],\n})\n```\n\n群类型、验证方式和其他 `OpenIMCreateGroupInfo` 字段使用插件合同值。成员与管理员先去重，管理员必须符合服务端规则。返回为空时不要创建仅本地群；以 Promise、群新增事件和重新查询共同确认。",
+      "body": "`createGroup()` 接收群资料、初始成员和可选管理员，返回 `OpenIMGroupItem | null`。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupInfo.groupName` | `string` | 是 | 群名称。 |\n| `groupInfo.groupType` | `2` | 是 | 当前合同支持的群类型固定为 `2`。 |\n| `groupInfo.notification` | `string \\| null` | 否 | 初始群公告。 |\n| `groupInfo.introduction` | `string \\| null` | 否 | 群简介。 |\n| `groupInfo.faceURL` | `string \\| null` | 否 | 群头像 URL。 |\n| `groupInfo.ex` | `string \\| null` | 否 | 群扩展字符串，完整写入。 |\n| `memberUserIDs` | `string[]` | 是 | 初始普通成员用户 ID。 |\n| `adminUserIDs` | `string[] \\| null` | 否 | 初始管理员用户 ID。 |\n\n```uts\nimport { createGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst group = await createGroup({\n  groupInfo: { groupName: '项目群', groupType: 2 },\n  memberUserIDs: ['user_b', 'user_c'],\n  adminUserIDs: ['user_b'],\n})\n```\n\n成员与管理员列表应先去除空值和重复 ID。管理员必须同时符合服务端的成员与权限规则；不要把当前用户或同一用户重复放入冲突角色列表。`ex` 不会自动合并 JSON。\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMGroupItem | null`。非空结果可以按 `groupID` 合入群组 store；返回 `null` 时不要创建仅本地群。\n\nPromise 成功只表示创建请求完成。群列表最终通过 `onJoinedGroupAdded`、指定群查询或已加入群列表校准；初始成员与管理员则通过群成员查询确认。",
       "description": "创建群资料并设置初始成员与管理员。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/create-group",
       "title": "创建群组"
     },
     "/sdk/uniapp/group/update-group-profile": {
-      "body": "`setGroupInfo()` 只更新提供的可选字段。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({\n  groupID,\n  groupName: '新的群名',\n  introduction: '项目协作群',\n  faceURL: 'https://cdn.example.com/group.png',\n})\n```\n\n群主和管理员权限由服务端校验。Promise 成功后通过 `onGroupInfoChanged` 或重新查询刷新，不直接覆盖未提交字段。\n\n`displayIsRead` <span className=\"enterprise-field-badge\">商业版</span> 是字段级扩展；公共服务端不支持时不要发送。",
+      "body": "群名称、群简介和群头像都属于面向成员展示的基础资料，可以由同一个资料编辑表单提交。`setGroupInfo()` 只更新本次提供的可选字段。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 要更新的群组 ID。 |\n| `groupName` | `string \\| null` | 否 | 新群名称。 |\n| `introduction` | `string \\| null` | 否 | 新群简介。 |\n| `faceURL` | `string \\| null` | 否 | 新群头像地址。 |\n\n除 `groupID` 外，至少传入一个实际要修改的资料字段。未传字段保持原值。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({\n  groupID,\n  groupName: groupName.trim(),\n  introduction: introduction.trim(),\n  faceURL,\n})\n```\n\n不要把公告、入群验证或成员权限字段混入普通资料保存操作，否则用户编辑群名称时可能意外覆盖其他设置。群主和管理员权限由服务端校验。\n\nPromise 成功表示 OpenIMServer 已完成请求。群资料变化通过 `onGroupInfoChanged` 按 `groupID` 合并；完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。需要立即校准时调用 `getSpecifiedGroupsInfo()`，不要直接覆盖未提交字段。\n\n`displayIsRead` <span className=\"enterprise-field-badge\">商业版</span> 是字段级扩展；公共服务端不支持时不要发送。",
       "description": "通过 setGroupInfo 更新群名、公告、介绍、头像和策略字段。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/update-group-profile",
       "title": "更新群资料"
     },
@@ -1468,63 +1724,80 @@
       "title": "设置群公告"
     },
     "/sdk/uniapp/group/set-group-extension": {
-      "body": "群组业务扩展使用 `setGroupInfo()` 的 `ex` 字符串。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, ex: JSON.stringify({ department: 'R&D' }) })\n```\n\n`ex` 是整段替换。先读取并校验已有 JSON，再合并本模块字段；解析失败时不要覆盖原值。扩展数据对有权读取群资料的成员可见，不存放秘密。",
+      "body": "群组业务扩展使用 `setGroupInfo()` 的 `ex` 字符串。`ex` 是完整字符串，SDK 不会按 JSON 字段自动合并。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nconst previous = JSON.parse(group.ex || '{}')\n\nawait setGroupInfo({\n  groupID,\n  ex: JSON.stringify({\n    ...previous,\n    projectID: 'project-42',\n  }),\n})\n```\n\n多个模块共用时，应划分稳定命名空间，并在写入前保留其他模块的数据。解析失败时不要覆盖原值；扩展数据对有权读取群资料的成员可见，不要存放秘密。\n\nPromise 成功后，通过 `onGroupInfoChanged` 按 `groupID` 合并最新群资料；完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。",
       "description": "通过 setGroupInfo 更新群组 ex。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/set-group-extension",
       "title": "设置群扩展字段"
     },
     "/sdk/uniapp/group/set-group-join-verification": {
-      "body": "通过 `setGroupInfo()` 的 `needVerification` 更新入群验证策略。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, needVerification: 1 })\n```\n\n使用 `OpenIMGroupNeedVerification` 对应常量，不散落裸数字。策略只影响后续申请；已有申请和成员不会自动重新处理。最终值以群资料事件为准。",
+      "body": "通过 `setGroupInfo()` 的 `needVerification` 更新申请和邀请用户加入群组时的验证策略。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, needVerification: 1 })\n```\n\n| `needVerification` | 含义 |\n| --- | --- |\n| `0` | 用户申请需要审核；群成员邀请可直接入群。 |\n| `1` | 申请和普通成员邀请都需要审核；群主或管理员邀请除外。 |\n| `2` | 申请或邀请均可直接入群。 |\n\n`OpenIMGroupNeedVerification` 的类型范围是 `0 | 1 | 2`。客户端应根据该策略展示申请提示，但最终是否允许加入仍由 OpenIMServer 判断。策略只影响后续申请；已有申请和成员不会自动重新处理。\n\nPromise 成功后，通过 `onGroupInfoChanged` 合并最新群资料，完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。",
       "description": "设置群成员加入时的验证策略。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/set-group-join-verification",
       "title": "设置入群验证"
     },
     "/sdk/uniapp/group/set-group-member-profile-access": {
-      "body": "通过 `setGroupInfo()` 的 `lookMemberInfo` 设置群成员资料可见策略。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, lookMemberInfo: 1 })\n```\n\n使用 `OpenIMGroupOption` 合法值。该策略不替代业务后端的隐私与权限校验；客户端隐藏 UI 也不能视为安全边界。",
+      "body": "`lookMemberInfo` 控制群成员能否通过群组查看其他成员资料。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, lookMemberInfo: 1 })\n```\n\n| `lookMemberInfo` | 含义 |\n| --- | --- |\n| `0` | 允许成员查看其他成员资料。 |\n| `1` | 不允许成员查看其他成员资料。 |\n\n`OpenIMGroupOption` 的类型范围是 `0 | 1`。不要把这组值当作常见的布尔型 `0 = false、1 = true`。\n\n该设置与“是否允许通过群组添加好友”相互独立，也不替代业务后端的隐私与权限校验。Promise 成功后，通过 `onGroupInfoChanged` 合并最新群资料，完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。",
       "description": "控制群成员是否可以查看其他成员资料。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/set-group-member-profile-access",
       "title": "设置群成员资料可见性"
     },
     "/sdk/uniapp/group/set-group-member-friend-permission": {
-      "body": "通过 `setGroupInfo()` 的 `applyMemberFriend` 更新群成员加好友策略。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, applyMemberFriend: 1 })\n```\n\n使用 `OpenIMGroupOption` 合法值。该字段由服务端执行，UI 只负责展示；策略变化后以群资料事件刷新。",
+      "body": "通过 `setGroupInfo()` 的 `applyMemberFriend` 控制群成员能否通过群组向其他成员发送好友申请。\n\n```uts\nimport { setGroupInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupInfo({ groupID, applyMemberFriend: 1 })\n```\n\n| `applyMemberFriend` | 含义 |\n| --- | --- |\n| `0` | 允许通过群成员关系发起好友申请。 |\n| `1` | 不允许通过群成员关系发起好友申请。 |\n\n`OpenIMGroupOption` 的类型范围是 `0 | 1`。该字段只控制从群成员关系发起好友申请的入口，不等同于隐藏成员资料。设置由服务端执行，客户端 UI 不是安全边界。\n\nPromise 成功表示设置请求完成。最新状态通过 `onGroupInfoChanged` 按 `groupID` 合并，完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。",
       "description": "控制群成员之间是否可以发起好友申请。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/set-group-member-friend-permission",
       "title": "设置群成员加好友权限"
     },
     "/sdk/uniapp/group/change-group-mute": {
-      "body": "`changeGroupMute()` 修改群组全员禁言。\n\n```uts\nimport { changeGroupMute } from '@/uni_modules/unix-openim-sdk'\n\nawait changeGroupMute({ groupID, isMute: true })\n```\n\n权限和群状态由服务端校验。Promise 成功后通过群资料事件或重新查询更新 UI。商业版群资料可能包含禁言例外用户列表；公共客户端应把缺失字段视为无扩展信息，而非自行推断。",
+      "body": "`changeGroupMute()` 控制群组整体禁言。群主和管理员可以按 OpenIMServer 权限执行该操作。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 要修改的群 ID。 |\n| `isMute` | `boolean` | 是 | `true` 开启全员禁言，`false` 关闭。 |\n\n```uts\nimport { changeGroupMute } from '@/uni_modules/unix-openim-sdk'\n\nawait changeGroupMute({ groupID, isMute: true })\n```\n\n只有群主或具备服务端权限的管理员可以操作，最终权限和群状态由服务端校验。不要仅根据本地角色显示结果；服务端仍可能因群状态、角色变化或并发操作拒绝。群主和管理员通常仍可发送消息，因此群组禁言不表示所有用户都无法发言。\n\nWasm 文档中的 `muteBypassUserIDs` 商业扩展没有进入当前 uni-app / uni-app x 合同，请勿向 `changeGroupMute()` 传入该字段。商业服务端即使支持例外用户，也应以当前插件公开的类型和后续群资料为准。\n\n## 返回结果\n\nPromise 成功直接返回字符串结果，表示服务端完成本次群禁言设置，不等于所有成员界面已经更新。群资料随后可能通过 `onGroupInfoChanged` 到达，应按 `groupID` 合并；完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。需要立即校准时重新查询群资料。\n\n全员禁言与单个成员禁言是不同能力。商业版群资料可能包含禁言例外用户列表；公共客户端把缺失扩展视为“没有可用扩展数据”，不能自行推断例外权限。",
       "description": "修改群组全员禁言状态。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/change-group-mute",
       "title": "开启或关闭全员禁言"
     },
     "/sdk/uniapp/group/join-group": {
-      "body": "`joinGroup()` 提交入群申请。\n\n```uts\nimport { joinGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait joinGroup({\n  groupID,\n  reqMsg: '申请加入项目群',\n  joinSource: 2,\n  ex: '',\n})\n```\n\n`joinSource` 使用产品与服务端约定值。Promise 成功不等于已入群：免验证群可能直接加入，需要验证时等待管理员处理。申请文案和 `ex` 不包含敏感信息。",
+      "body": "`joinGroup()` 提交入群申请。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 要申请加入的群 ID。 |\n| `reqMsg` | `string` | 是 | 申请说明，可能向群主或管理员展示。 |\n| `joinSource` | `number` | 是 | 入群来源值，使用产品与服务端约定。 |\n| `ex` | `string \\| null` | 否 | 申请扩展字符串，只按已确认协议填写。 |\n\n```uts\nimport { joinGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait joinGroup({\n  groupID,\n  reqMsg: '申请加入项目群',\n  joinSource: 2,\n  ex: '',\n})\n```\n\n申请文案和 `ex` 可能进入申请记录，不包含 Token、内部风控信息或不必要的个人数据。提交前确认群存在，且当前用户尚未加入。\n\nPromise 成功不等于已入群：免验证群可能直接加入，需要验证时等待管理员处理。通过申请事件、`onJoinedGroupAdded` 或重新查询群列表判断最终结果，不在本地先行创建群成员状态。",
       "description": "向指定群发送加入申请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/join-group",
       "title": "申请加入群组"
     },
     "/sdk/uniapp/group/quit-group": {
-      "body": "`quitGroup()` 让当前用户退出群组。\n\n```uts\nimport { quitGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait quitGroup(groupID)\n```\n\n群主通常不能直接退出，需先转让群主或解散群。UI 应二次确认；成功后关闭群聊页，并以已加入群删除事件或重新查询清理状态。",
+      "body": "`quitGroup()` 让当前用户退出群组。\n\n```uts\nimport { quitGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait quitGroup(groupID)\n```\n\n群主通常不能直接退出，需先转让群主或解散群。UI 应二次确认；成功后关闭群聊页，并以已加入群删除事件或重新查询清理状态。\n\nPromise 成功表示退出请求完成，不等于群列表和成员事件已经到达。当前用户退出后，按 `groupID` 清理群聊天入口、成员分页和发送权限；其他成员仍保留群组。\n\n群主转让与退出应串行执行：先确认新群主事件或重新查询结果，再调用退出。失败时保留聊天与群状态，不要仅因用户点击确认就删除本地数据。",
       "description": "当前用户主动退出指定群。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/quit-group",
       "title": "退出群组"
     },
     "/sdk/uniapp/group/dismiss-group": {
-      "body": "`dismissGroup()` 解散群组。\n\n```uts\nimport { dismissGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait dismissGroup(groupID)\n```\n\n这是不可逆的高风险操作，只允许有权限的群主执行。成功后所有成员会收到群解散/已加入群删除相关事件；关闭聊天与管理页面，不再发送群消息。",
+      "body": "`dismissGroup()` 解散群组。\n\n```uts\nimport { dismissGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait dismissGroup(groupID)\n```\n\n这是不可逆的高风险操作，只允许有权限的群主执行。成功后所有成员会收到群解散/已加入群删除相关事件；关闭聊天与管理页面，不再发送群消息。\n\nPromise 成功表示解散请求完成，不代表每个客户端都已处理事件。当前客户端继续等待 `onGroupDismissed` / `onJoinedGroupDeleted` 或重新查询，按 `groupID` 移除群、成员和聊天入口。\n\n提交前展示群名和成员影响范围，并防止重复点击。Promise 失败时保留当前群状态；权限和群状态最终由服务端校验，不能只依赖本地 `ownerUserID`。",
       "description": "群主解散指定群组。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/dismiss-group",
       "title": "解散群组"
     },
     "/sdk/uniapp/group/retrieving-groups/get-specified-groups-info": {
-      "body": "`getSpecifiedGroupsInfo()` 批量查询群资料。\n\n```uts\nimport { getSpecifiedGroupsInfo } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getSpecifiedGroupsInfo(['group_a', 'group_b'])\nconst groups = result?.groups ?? []\n```\n\n结果不保证与输入顺序一致，按 `groupID` 映射。未返回群可能不存在、已解散或当前无权访问。大量 ID 分批查询。",
+      "body": "群组查询只建立调用时的快照，不会触发群组事件。公开群发现、跨业务目录和复杂权限过滤应由业务后端提供；SDK 查询面向已知群组和当前账号已加入的群组。\n\n`getSpecifiedGroupsInfo()` 接收群组 ID 数组：\n\n```uts\nimport { getSpecifiedGroupsInfo } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getSpecifiedGroupsInfo(groupIDs)\nconst groups = result?.groups ?? []\n```\n\n读取单个群组时仍传数组，并检查 `groups[0]` 是否存在。群组没有 URL 或 slug 字段，业务路由应先解析为稳定的 `groupID`。\n\nPromise 成功后，`result?.groups` 是匹配的 `OpenIMGroupItem[]`，字段含义见[分页获取已加入群组](/zh/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)。结果不保证与输入 ID 按位置一一对应，应按 `groupID` 合并；未返回群可能不存在、已解散或当前无权访问。大量 ID 应分批查询。\n\n后续变化按 `groupID` 合并，完整监听见[群组概览](/zh/sdk/uniapp/group/overview-group)。",
       "description": "按 groupID 列表批量查询群资料。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/retrieving-groups/get-specified-groups-info",
@@ -1538,9 +1811,25 @@
       "title": "查询已加入群组"
     },
     "/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page": {
-      "body": "`getJoinedGroupListPage()` 适合群数量较大的账号。\n\n```uts\nimport { getJoinedGroupListPage } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getJoinedGroupListPage({ offset: 0, count: 100 })\nappendGroups(result?.groups ?? [])\n```\n\n`offset` 从 0 开始，直到返回数量小于 `count`。分页期间群事件可能改变列表，应按 `groupID` 去重，而不是依赖页内位置。\n\n`displayIsRead` 和部分禁言扩展字段<span className=\"enterprise-field-badge\">商业版</span>，缺失时按可选值处理。",
+      "body": "`getJoinedGroupListPage()` 适合群数量较大的账号。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |\n| `count` | `number` | 是 | 本次读取的群数量。 |\n\n```uts\nimport { getJoinedGroupListPage } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getJoinedGroupListPage({ offset: 0, count: 100 })\nappendGroups(result?.groups ?? [])\n```\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMGroupListResult | null`，从 `groups` 读取当前页 `OpenIMGroupItem[]`。`offset` 从 0 开始，直到返回数量小于 `count`。\n\n### 群资料字段\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `groupID` | `string` | 群稳定标识。 |\n| `groupName` | `string` | 群名称。 |\n| `notification` | `string` | 群公告。 |\n| `introduction` | `string` | 群简介。 |\n| `faceURL` | `string` | 群头像地址。 |\n| `ownerUserID` | `string` | 当前群主用户 ID。 |\n| `creatorUserID` | `string` | 群创建人用户 ID。 |\n| `createTime` | `number` | 群创建时间。 |\n| `memberCount` | `number` | 当前成员数快照。 |\n| `status` | `number` | 群状态。 |\n| `groupType` | `number` | 群类型。 |\n| `needVerification` | `number` | 入群验证策略。 |\n| `lookMemberInfo` | `number` | 普通成员查看成员资料的策略。 |\n| `applyMemberFriend` | `number` | 群成员之间申请好友的策略。 |\n| `notificationUpdateTime` | `number` | 群公告更新时间。 |\n| `notificationUserID` | `string` | 最近更新群公告的用户 ID。 |\n| `ex` | `string` | 群扩展字符串。 |\n| `attachedInfo` <span className=\"enterprise-field-badge\">商业版字段</span> | `string` | 商业附加信息，只按已确认协议解析。 |\n\n`memberCount` 和权限字段都是查询时快照，不能替代成员分页或服务端权限校验。完整模型与事件见[群组概览](/sdk/uniapp/group/overview-group)。\n\n分页期间群事件可能改变列表，应先把结果写入以 `groupID` 为键的映射，再计算排序；不要依赖页内位置。App 恢复、同步完成或群新增/删除事件到达后，可从 offset 0 重建快照。\n\n第一页应替换当前账号快照，后续页按 `groupID` 合并。切换账号时停止旧分页结果写入并清空群 store，避免把旧账号群列表追加到新账号。",
       "description": "按 offset 和 count 分页读取已加入群组。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        },
+        {
+          "depth": 3,
+          "title": "群资料字段",
+          "url": "#群资料字段"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page",
       "title": "分页查询已加入群组"
     },
@@ -1552,23 +1841,66 @@
       "title": "检查是否已加入群组"
     },
     "/sdk/uniapp/group/retrieving-groups/search-groups": {
-      "body": "`searchGroups()` 搜索当前可见的群资料。\n\n```uts\nimport { searchGroups } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await searchGroups({\n  keywordList: ['项目'],\n  isSearchGroupID: true,\n  isSearchGroupName: true,\n})\n```\n\n空关键词由 UI 拦截。结果按 `groupID` 去重；该 API不是全站群发现接口，是否仅搜索已加入群由 Core 与服务端数据范围决定。",
+      "body": "`searchGroups()` 只搜索当前用户已加入且已经同步到本地的群组。当前接口只使用 `keywordList` 的第一个关键词。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `keywordList` | `string[]` | 是 | 搜索关键词数组；传一个去除首尾空格的非空关键词。 |\n| `isSearchGroupID` | `boolean` | 是 | 是否匹配 `groupID`。 |\n| `isSearchGroupName` | `boolean` | 是 | 是否匹配群名称。 |\n\n```uts\nimport { searchGroups } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await searchGroups({\n  keywordList: [keyword.trim()],\n  isSearchGroupID: true,\n  isSearchGroupName: true,\n})\nconst groups = result?.groups ?? []\n```\n\n## 返回结果\n\nPromise 成功后，`result?.groups` 是匹配的 `OpenIMGroupItem[]`，字段含义见[分页获取已加入群组](/zh/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)。空关键词应由 UI 拦截；结果按 `groupID` 去重，只建立当前关键词下的快照，不应覆盖完整的已加入群组列表。\n\n公开群发现、复杂分类和权限过滤不属于该方法，应由业务后端实现。",
       "description": "按群 ID 或群名称搜索本地群组。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/retrieving-groups/search-groups",
       "title": "搜索已加入群组"
     },
     "/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient": {
-      "body": "`getGroupApplicationListAsRecipient()` 查询当前账号有权处理的入群申请。本页归属新增、接受、拒绝和删除事件。\n\n```uts\nimport {\n  getGroupApplicationListAsRecipient,\n  off,\n  onGroupApplicationAccepted,\n  onGroupApplicationAdded,\n  onGroupApplicationDeleted,\n  onGroupApplicationRejected,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst addedSubscription = onGroupApplicationAdded((item) => upsertGroupApplication(item))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  addedSubscription,\n  onGroupApplicationAccepted((item) => upsertGroupApplication(item)),\n  onGroupApplicationRejected((item) => upsertGroupApplication(item)),\n  onGroupApplicationDeleted((item) => removeGroupApplication(item)),\n]\n\nconst result = await getGroupApplicationListAsRecipient({ offset: 0, count: 50 })\nreplaceReceivedGroupApplications(result?.applications ?? [])\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n事件与查询幂等合并。处理权限与申请状态由服务端校验；管理员变更后重新查询。",
+      "body": "`getGroupApplicationListAsRecipient()` 查询当前账号有权处理的入群申请。本页归属新增、接受、拒绝和删除事件。\n\n## 参数说明\n\n参数对象可以省略；显式分页时使用可选的 `offset` 和 `count`。`offset` 首页为 `0`，`count` 是本次读取数量。unix SDK 的参数不包含 Wasm 页面中的 `handleResults` 筛选，需要在返回后按 `handleResult` 过滤。\n\n```uts\nimport {\n  getGroupApplicationListAsRecipient,\n  off,\n  onGroupApplicationAccepted,\n  onGroupApplicationAdded,\n  onGroupApplicationDeleted,\n  onGroupApplicationRejected,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst addedSubscription = onGroupApplicationAdded((item) => upsertGroupApplication(item))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  addedSubscription,\n  onGroupApplicationAccepted((item) => upsertGroupApplication(item)),\n  onGroupApplicationRejected((item) => upsertGroupApplication(item)),\n  onGroupApplicationDeleted((item) => removeGroupApplication(item)),\n]\n\nconst result = await getGroupApplicationListAsRecipient({ offset: 0, count: 50 })\nreplaceReceivedGroupApplications(result?.applications ?? [])\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n## 返回结果\n\nPromise 成功直接返回 `OpenIMGroupApplicationListResult | null`，从 `applications` 读取当前页。\n\n返回 `null` 时不要伪造成“没有申请”的空状态；结合登录状态和错误诊断决定保留旧快照或展示加载失败。空 `applications` 才表示当前页没有记录。分页加载期间若处理了申请，应重置 offset 并重新查询，避免同一记录跨页重复。\n\n### 入群申请字段\n\n`OpenIMGroupApplicationItem` 同时包含群快照和申请人信息：\n\n| 字段 | 说明 |\n| --- | --- |\n| `groupID`、`groupName`、`groupFaceURL` | 目标群 ID、名称和头像快照。 |\n| `notification`、`introduction` | 群公告和简介快照。 |\n| `ownerUserID`、`creatorUserID` | 群主和创建人用户 ID。 |\n| `groupType`、`status`、`memberCount` | 群类型、状态和成员数快照。 |\n| `userID`、`nickname`、`userFaceURL` | 申请人 ID、昵称和头像快照。 |\n| `handleResult` | 当前处理结果：待处理、已同意或已拒绝。 |\n| `reqMsg`、`reqTime` | 申请说明和申请时间。 |\n| `joinSource`、`inviterUserID` | 入群来源和邀请人。 |\n| `handleUserID`、`handledMsg`、`handledTime` | 处理人、处理说明和处理时间。 |\n| `ex`、`attachedInfo` | 扩展与附加信息，只按已确认协议解析。 |\n\n使用 `groupID:userID` 作为申请合并标识。昵称、头像和群名都是申请同步时的快照；需要最新资料时重新查询群或用户。\n\n## 监听申请变化\n\n本页是 `onGroupApplicationAdded`、`onGroupApplicationAccepted`、`onGroupApplicationRejected` 和 `onGroupApplicationDeleted` 的完整归属页。查询和事件按 `groupID:userID` 幂等合并，删除事件移除对应记录。\n\n处理权限和申请状态由服务端校验，不要只修改本地 `handleResult` 冒充成功。管理员或群主身份变化后重新查询；分页期间收到事件时可重置分页。退出登录、切换账号或销毁申请 store 时逐个释放句柄。\n\n按当前用户是否拥有处理权限，把收到的申请与自己发出的申请分开存储。事件中的群资料和申请人资料都是快照；群资料变化或用户改名时，不依赖旧申请记录刷新其他页面。\n\n接受或拒绝操作的 Promise 成功后仍等待相应事件，或重新查询本页确认最终 `handleResult`。申请被同意后，群列表和成员列表分别由自己的事件与查询更新；不要仅从申请项推断当前用户已经加入群。",
       "description": "分页查询待管理的入群申请，并处理申请事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        },
+        {
+          "depth": 3,
+          "title": "入群申请字段",
+          "url": "#入群申请字段"
+        },
+        {
+          "depth": 2,
+          "title": "监听申请变化",
+          "url": "#监听申请变化"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient",
       "title": "查询收到的入群申请"
     },
     "/sdk/uniapp/group/group-applications/get-group-application-list-as-applicant": {
-      "body": "`getGroupApplicationListAsApplicant()` 返回 `OpenIMGroupApplicationListResult | null`。\n\n```uts\nimport { getGroupApplicationListAsApplicant } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getGroupApplicationListAsApplicant({ offset: 0, count: 50 })\nrenderSentGroupApplications(result?.applications ?? [])\n```\n\n参数可省略。按群、申请人和时间字段建立稳定 key；断线恢复后重新查询状态。",
+      "body": "`getGroupApplicationListAsApplicant()` 返回 `OpenIMGroupApplicationListResult | null`。\n\n## 参数说明\n\n参数可省略；显式分页时使用：\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `offset` | `number \\| null` | 否 | 分页偏移量，首页传 `0`。 |\n| `count` | `number \\| null` | 否 | 本次读取数量。 |\n\n```uts\nimport { getGroupApplicationListAsApplicant } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getGroupApplicationListAsApplicant({ offset: 0, count: 50 })\nrenderSentGroupApplications(result?.applications ?? [])\n```\n\n## 返回结果\n\nPromise 成功后，从 `applications` 读取当前账号发出的 `OpenIMGroupApplicationItem[]`。字段含义见[查询收到的入群申请](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient)。查询本身不会触发申请事件。\n\n按 `groupID:userID` 建立稳定 key；事件按当前账号在申请中的角色分流到收到或发出的列表。分页期间状态变化时重置分页，断线恢复、重新登录或事件可能遗漏时重新查询。",
       "description": "分页查询当前账号发出的入群申请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/group-applications/get-group-application-list-as-applicant",
       "title": "查询发出的入群申请"
     },
@@ -1587,37 +1919,77 @@
       "title": "观察群申请角标变化"
     },
     "/sdk/uniapp/group/group-applications/accept-group-application": {
-      "body": "`acceptGroupApplication()` 由有权限的群成员处理申请。\n\n```uts\nimport { acceptGroupApplication } from '@/uni_modules/unix-openim-sdk'\n\nawait acceptGroupApplication({ groupID, fromUserID: 'user_b', handleMsg: '已通过' })\n```\n\n成功后分别刷新申请列表和群成员列表。UI 在请求期间锁定该申请，避免接受与拒绝并发。",
+      "body": "`acceptGroupApplication()` 由有权限的群成员处理申请。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 申请目标群 ID。 |\n| `fromUserID` | `string` | 是 | 申请人的用户 ID。 |\n| `handleMsg` | `string` | 是 | 处理说明；可能向申请人展示，不写内部风控信息。 |\n\n```uts\nimport { acceptGroupApplication } from '@/uni_modules/unix-openim-sdk'\n\nawait acceptGroupApplication({ groupID, fromUserID: 'user_b', handleMsg: '已通过' })\n```\n\nPromise 成功表示接受请求已经完成，不等于申请事件和成员事件都已到达。成功后分别刷新申请列表和群成员列表，或等待 `onGroupApplicationAccepted` 与 `onGroupMemberAdded` 按各自主键合并。\n\nUI 在请求期间锁定该申请，避免接受与拒绝并发。处理权限、申请状态、群人数和重复成员由服务端校验；失败时保留原申请并重新查询，不只改本地 `handleResult`。",
       "description": "接受指定用户加入指定群。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/group-applications/accept-group-application",
       "title": "接受入群申请"
     },
     "/sdk/uniapp/group/group-applications/refuse-group-application": {
-      "body": "`refuseGroupApplication()` 使用与接受相同的定位字段。\n\n```uts\nimport { refuseGroupApplication } from '@/uni_modules/unix-openim-sdk'\n\nawait refuseGroupApplication({ groupID, fromUserID: 'user_b', handleMsg: '暂不通过' })\n```\n\n处理说明可能对申请人可见，不写内部风控信息。最终状态以申请事件或重新查询为准。",
+      "body": "`refuseGroupApplication()` 使用与接受相同的定位字段。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 申请目标群 ID。 |\n| `fromUserID` | `string` | 是 | 申请人的用户 ID。 |\n| `handleMsg` | `string` | 是 | 拒绝说明；可能向申请人展示。 |\n\n```uts\nimport { refuseGroupApplication } from '@/uni_modules/unix-openim-sdk'\n\nawait refuseGroupApplication({ groupID, fromUserID: 'user_b', handleMsg: '暂不通过' })\n```\n\n处理说明可能对申请人可见，不写内部风控信息、内部账号或敏感审核依据。UI 在请求期间锁定该申请，避免接受与拒绝并发。\n\nPromise 成功表示拒绝请求完成，不等于 `onGroupApplicationRejected` 已经到达。最终状态以申请事件或重新查询为准；失败时不要仅在本地隐藏申请。",
       "description": "拒绝指定用户加入指定群。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/group-applications/refuse-group-application",
       "title": "拒绝入群申请"
     },
     "/sdk/uniapp/group/group-applications/delete-group-requests": {
-      "body": "`deleteGroupRequests()` <span className=\"enterprise-field-badge\">商业版</span> 删除明确指定的申请记录。\n\n```uts\nimport { deleteGroupRequests } from '@/uni_modules/unix-openim-sdk'\n\nawait deleteGroupRequests({\n  groupRequests: [{ groupID, fromUserID: 'user_b' }],\n})\n```\n\n使用 `OpenIMSimpleGroupRequest` 的真实字段定位目标。删除记录不会移除已加入成员。完成后重新查询申请列表与数量。",
+      "body": "`deleteGroupRequests()` <span className=\"enterprise-field-badge\">商业版</span> 删除明确指定的申请记录。\n\n## 参数说明\n\n`groupRequests` 是非空数组，每项 `OpenIMSimpleGroupRequest` 包含：\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 申请目标群 ID。 |\n| `fromUserID` | `string` | 是 | 申请人的用户 ID。 |\n\n```uts\nimport { deleteGroupRequests } from '@/uni_modules/unix-openim-sdk'\n\nawait deleteGroupRequests({\n  groupRequests: [{ groupID, fromUserID: 'user_b' }],\n})\n```\n\n使用 `groupID:fromUserID` 精确定位，提交前去重。删除申请记录不等于拒绝申请，也不会移除已经加入的成员；移除成员应使用群成员 API。\n\nPromise 成功表示删除请求完成，随后可能收到申请删除事件。完整监听见[查询收到的入群申请](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient)。批量失败时不要假定每一项都已删除；重新查询申请列表与数量。",
       "description": "商业版批量删除指定入群申请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/group-applications/delete-group-requests",
       "title": "删除入群申请记录"
     },
     "/sdk/uniapp/group/retrieving-group-members/get-group-member-list": {
-      "body": "`getGroupMemberList()` 按过滤条件分页读取成员。本页归属三个成员事件。\n\n```uts\nimport {\n  getGroupMemberList,\n  off,\n  onGroupMemberAdded,\n  onGroupMemberDeleted,\n  onGroupMemberInfoChanged,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst addedSubscription = onGroupMemberAdded((member) => upsertMember(member))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  addedSubscription,\n  onGroupMemberDeleted((member) => removeMember(member.groupID, member.userID)),\n  onGroupMemberInfoChanged((member) => upsertMember(member)),\n]\n\nconst result = await getGroupMemberList({ groupID, filter: 0, offset: 0, count: 100 })\nreplaceMembers(result?.members ?? [])\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n`filter` 使用服务端定义的成员过滤值。按 `groupID:userID` 去重；分页与事件并发时不要按数组位置更新。",
+      "body": "`getGroupMemberList()` 按过滤条件分页读取成员。本页归属三个成员事件。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 目标群 ID。 |\n| `filter` | `number` | 是 | 服务端定义的成员过滤值；不要用 UI 下标替代。 |\n| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |\n| `count` | `number` | 是 | 本次读取成员数量。 |\n\n```uts\nimport {\n  getGroupMemberList,\n  off,\n  onGroupMemberAdded,\n  onGroupMemberDeleted,\n  onGroupMemberInfoChanged,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst addedSubscription = onGroupMemberAdded((member) => upsertMember(member))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  addedSubscription,\n  onGroupMemberDeleted((member) => removeMember(member.groupID, member.userID)),\n  onGroupMemberInfoChanged((member) => upsertMember(member)),\n]\n\nconst result = await getGroupMemberList({ groupID, filter: 0, offset: 0, count: 100 })\nreplaceMembers(result?.members ?? [])\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\nPromise 成功直接返回 `OpenIMGroupMemberListResult | null`，从 `members` 读取当前页。\n\n### 群成员字段\n\n| 字段 | 说明 |\n| --- | --- |\n| `groupID`、`userID` | 成员稳定标识，组合为 `groupID:userID`。 |\n| `nickname`、`faceURL` | 群内成员展示资料。 |\n| `roleLevel` | 群主、管理员或普通成员角色值。 |\n| `joinTime`、`joinSource`、`inviterUserID` | 入群时间、来源和邀请人。 |\n| `muteEndTime` | 禁言结束时间；结合当前时间判断是否仍在禁言。 |\n| `operatorUserID` | 最近相关操作人。 |\n| `ex`、`attachedInfo` | 扩展信息，只按业务约定解析。 |\n\n群内昵称与用户账号昵称可以不同。成员列表使用成员对象展示，不要用 `getUsersInfo()` 返回的账号资料覆盖 `nickname`。角色和禁言状态也只属于该群，不能跨群复用。\n\n分页时继续增加 offset，直到返回数量少于 count。成员加入、退出、被移除或角色变化会改变分页边界；事件到达时按主键合并，并在需要完整顺序时从 offset 0 重新查询。\n\n## 监听成员变化\n\n本页是 `onGroupMemberAdded`、`onGroupMemberDeleted` 和 `onGroupMemberInfoChanged` 的完整监听归属页。按 `groupID:userID` 新增、删除或替换；分页与事件并发时不要按数组位置更新。\n\n成员变化可能影响权限、成员数和当前聊天页。删除事件若指向当前用户，应停止发送并刷新群列表；角色或禁言变化应重新计算可用操作。退出登录、切换账号或销毁成员 store 时逐个释放订阅句柄。\n\n查询 Promise 成功只建立当前页快照，不触发成员事件。邀请、移除和资料修改操作则分别等待 Promise、成员事件或重新查询，不能把本地对象修改当作服务端确认。",
       "description": "分页查询群成员，并处理成员新增、删除和资料变化事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 3,
+          "title": "群成员字段",
+          "url": "#群成员字段"
+        },
+        {
+          "depth": 2,
+          "title": "监听成员变化",
+          "url": "#监听成员变化"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/retrieving-group-members/get-group-member-list",
       "title": "查询群成员列表"
     },
     "/sdk/uniapp/group/retrieving-group-members/get-specified-group-members-info": {
-      "body": "`getSpecifiedGroupMembersInfo()` 批量查询群内用户。\n\n```uts\nimport { getSpecifiedGroupMembersInfo } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getSpecifiedGroupMembersInfo({\n  groupID,\n  userIDList: ['user_a', 'user_b'],\n})\n```\n\n结果可能少于输入，按 `userID` 建立映射。未返回用户可能不在群内或不可访问；不要使用普通用户资料替代群昵称、角色和禁言状态。",
+      "body": "`getSpecifiedGroupMembersInfo()` 批量查询指定用户在目标群组中的成员资料。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 目标群组 ID。 |\n| `userIDList` | `string[]` | 是 | 要查询的成员用户 ID。 |\n\n```uts\nimport { getSpecifiedGroupMembersInfo } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getSpecifiedGroupMembersInfo({\n  groupID,\n  userIDList,\n})\nconst members = result?.members ?? []\n```\n\nPromise 成功后，`result?.members` 是匹配的 `OpenIMGroupMemberItem[]`，字段含义见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。返回数组不保证与输入 ID 按位置一一对应；结果也可能少于输入，未返回用户可能不在群内或不可访问。\n\n同一用户在不同群中的昵称、角色和禁言状态可能不同，应按 `groupID:userID` 缓存，不要使用普通用户资料替代群成员资料。查询不会触发成员事件；后续增量见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "按用户 ID 列表批量读取指定群成员。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/retrieving-group-members/get-specified-group-members-info",
       "title": "查询指定群成员资料"
     },
@@ -1629,65 +2001,95 @@
       "title": "筛选群内用户"
     },
     "/sdk/uniapp/group/retrieving-group-members/search-group-members": {
-      "body": "`searchGroupMembers()` 在指定群内搜索。\n\n```uts\nimport { searchGroupMembers } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await searchGroupMembers({\n  groupID,\n  keywordList: ['Alice'],\n  isSearchUserID: true,\n  isSearchMemberNickname: true,\n})\n```\n\n空关键词由 UI 拦截。结果按 `groupID:userID` 去重；它不是全局用户搜索。",
+      "body": "`searchGroupMembers()` 适合在指定群组中搜索成员或获取 @ 候选人。当前接口只使用 `keywordList` 的第一个关键词。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 目标群组 ID。 |\n| `keywordList` | `string[]` | 是 | 搜索关键词数组。 |\n| `isSearchUserID` | `boolean` | 是 | 是否匹配用户 ID。 |\n| `isSearchMemberNickname` | `boolean` | 是 | 是否匹配群内昵称。 |\n\n```uts\nimport { searchGroupMembers } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await searchGroupMembers({\n  groupID,\n  keywordList: [keyword.trim()],\n  isSearchUserID: true,\n  isSearchMemberNickname: true,\n})\nconst members = result?.members ?? []\n```\n\nuni-app / uni-app x 接口没有 Wasm 版的 `offset` 和 `count` 参数，返回当前匹配结果。空关键词应由 UI 拦截，关键词变化时替换搜索快照。\n\nPromise 成功后，`result?.members` 是匹配的 `OpenIMGroupMemberItem[]`，字段含义见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。结果按 `groupID:userID` 去重，只用于当前关键词下的成员快照，不应替换完整成员列表；它也不是全局用户搜索。",
       "description": "按用户 ID 或群昵称搜索群成员。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/retrieving-group-members/search-group-members",
       "title": "搜索群成员"
     },
     "/sdk/uniapp/group/managing-group-members/invite-user-to-group": {
-      "body": "`inviteUserToGroup()` 提交用户列表和邀请原因。\n\n```uts\nimport { inviteUserToGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait inviteUserToGroup({\n  groupID,\n  reason: '加入项目讨论',\n  userIDList: ['user_b', 'user_c'],\n})\n```\n\n用户列表先去重。Promise 成功后以成员新增事件或重新查询确认；邀请原因可能对目标用户可见，不含敏感信息。",
+      "body": "群主和管理员可以在 OpenIMServer 授予的权限范围内管理群成员。客户端可以根据成员资料中的 `roleLevel` 控制操作入口，但服务端仍负责最终权限校验。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 目标群组 ID。 |\n| `reason` | `string` | 是 | 邀请说明；没有说明时传空字符串。 |\n| `userIDList` | `string[]` | 是 | 要邀请的用户 ID。 |\n\n```uts\nimport { inviteUserToGroup } from '@/uni_modules/unix-openim-sdk'\n\nawait inviteUserToGroup({\n  groupID,\n  reason: '邀请加入项目讨论组',\n  userIDList: ['user-002', 'user-003'],\n})\n```\n\n提交前应先对 `userIDList` 去重。邀请原因可能对目标用户可见，不要写入 Token 等敏感信息。\n\nPromise 成功表示服务端接受了邀请请求，不代表所有用户已经出现在成员列表。需要审核时可能先产生申请事件；成员真正加入后再按 `onGroupMemberAdded` 合并。成员事件的完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "邀请一个或多个用户加入指定群。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/invite-user-to-group",
       "title": "邀请用户入群"
     },
     "/sdk/uniapp/group/managing-group-members/kick-group-member": {
-      "body": "`kickGroupMember()` 使用 `OpenIMGroupInviteParams` 相同结构定位成员和填写原因。\n\n```uts\nimport { kickGroupMember } from '@/uni_modules/unix-openim-sdk'\n\nawait kickGroupMember({ groupID, reason: '成员调整', userIDList: ['user_b'] })\n```\n\n这是管理操作，调用前确认权限和目标。不能移除群主；管理员规则由服务端执行。成功后以成员删除事件刷新列表。",
+      "body": "有权限的群主或管理员可以调用 `kickGroupMember()`。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 要移除成员的群组 ID。 |\n| `reason` | `string` | 是 | 移除原因；没有补充说明时传空字符串。 |\n| `userIDList` | `string[]` | 是 | 要移除的成员用户 ID 列表。 |\n\n```uts\nimport { kickGroupMember } from '@/uni_modules/unix-openim-sdk'\n\nawait kickGroupMember({\n  groupID,\n  reason: '已离开项目',\n  userIDList: [targetUserID],\n})\n```\n\n不能用该方法移除群主；应先转让群主身份。服务端会校验管理员能否操作目标成员。\n\nPromise 成功表示移除请求已经完成。`onGroupMemberDeleted` 随后可能到达，应按 `groupID:userID` 移除成员；完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "把一个或多个成员移出指定群。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/kick-group-member",
       "title": "移除群成员"
     },
     "/sdk/uniapp/group/managing-group-members/set-group-member-nickname": {
-      "body": "`setGroupMemberInfo()` 是成员资料统一更新入口。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({ groupID, userID: 'user_b', nickname: '项目负责人' })\n```\n\n群昵称不同于用户全局昵称。只传本次字段，最终资料以 `onGroupMemberInfoChanged` 为准。",
+      "body": "群内昵称只影响指定群组中的成员资料，不会修改用户的账号昵称。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({\n  groupID,\n  userID: targetUserID,\n  nickname: '项目负责人',\n})\n```\n\n`groupID` 和 `userID` 共同定位目标成员。当前用户是否可以修改本人或其他成员的群内昵称，由 OpenIMServer 根据群角色和策略校验。\n\nPromise 成功表示服务端完成请求；随后可能收到 `onGroupMemberInfoChanged`，应按 `groupID:userID` 合并。完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "更新成员在指定群内的昵称。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/set-group-member-nickname",
       "title": "设置群成员昵称"
     },
     "/sdk/uniapp/group/managing-group-members/set-group-member-role-level": {
-      "body": "通过 `roleLevel` 更新群主、管理员或普通成员角色。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({ groupID, userID: 'user_b', roleLevel: 60 })\n```\n\n使用 `OpenIMGroupMemberRoleLevel` 合法常量（20、60、100 对应具体角色以合同定义为准）。高风险角色变更需二次确认；服务端校验操作者权限。",
+      "body": "通过 `roleLevel` 将普通群成员设置为管理员，或取消其管理员身份。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({\n  groupID,\n  userID: targetUserID,\n  roleLevel: 60,\n})\n```\n\n| `roleLevel` | 含义 |\n| --- | --- |\n| `20` | 普通群成员。 |\n| `60` | 群管理员。 |\n| `100` | 群主，只用于识别当前角色。 |\n\n传入 `60` 可设置管理员，传入 `20` 可取消管理员身份。`OpenIMGroupMemberRoleLevel` 的类型范围是 `20 | 60 | 100`，但不能通过写入 `100` 完成群主变更；请使用[转让群主](/zh/sdk/uniapp/group/managing-group-members/transfer-group-owner)。高风险角色变更应在 UI 中二次确认，最终权限由服务端校验。\n\nPromise 成功后，通过 `onGroupMemberInfoChanged` 按 `groupID:userID` 合并，完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "通过 setGroupMemberInfo 更新成员角色等级。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/set-group-member-role-level",
       "title": "设置群成员角色"
     },
     "/sdk/uniapp/group/managing-group-members/set-group-member-avatar": {
-      "body": "通过 `faceURL` 更新群成员资料中的头像。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({ groupID, userID: 'user_b', faceURL: avatarURL })\n```\n\n先把本地图片上传到业务可访问的 HTTPS 地址。不要传 `unifile://` 或本地沙盒路径作为远端头像 URL。",
+      "body": "`faceURL` 是群成员资料中的头像地址，只作用于指定群组。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({\n  groupID,\n  userID: targetUserID,\n  faceURL: avatarURL,\n})\n```\n\n群内头像与用户账号头像是不同数据。需要修改当前用户的账号头像时，使用[更新当前用户资料](/zh/sdk/uniapp/user/profile/set-self-info)。先把本地图片上传到业务可访问的 HTTPS 地址，不要把 `unifile://` 或沙盒路径写入远端资料。\n\nPromise 成功后，通过 `onGroupMemberInfoChanged` 按 `groupID:userID` 合并；完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "通过 setGroupMemberInfo 更新成员在群内的头像。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/set-group-member-avatar",
       "title": "设置群成员头像"
     },
     "/sdk/uniapp/group/managing-group-members/set-group-member-extension": {
-      "body": "成员 `ex` 是整段业务扩展字符串。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nawait setGroupMemberInfo({ groupID, userID: 'user_b', ex: JSON.stringify({ title: 'PM' }) })\n```\n\n修改前合并已有值，不覆盖其他模块字段。扩展对有权查看成员资料的用户可见，不存秘密。",
+      "body": "`ex` 是完整字符串，SDK 不会自动合并 JSON。写入前应保留其他业务模块的命名空间。\n\n```uts\nimport { setGroupMemberInfo } from '@/uni_modules/unix-openim-sdk'\n\nconst previous = JSON.parse(member.ex || '{}')\n\nawait setGroupMemberInfo({\n  groupID,\n  userID: targetUserID,\n  ex: JSON.stringify({\n    ...previous,\n    title: 'maintainer',\n  }),\n})\n```\n\n扩展字段对有权查看成员资料的用户可见，不要存放 Token 等秘密。\n\nPromise 成功后，通过 `onGroupMemberInfoChanged` 按 `groupID:userID` 合并；完整监听见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "通过 setGroupMemberInfo 更新成员 ex。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/set-group-member-extension",
       "title": "设置群成员扩展字段"
     },
     "/sdk/uniapp/group/managing-group-members/transfer-group-owner": {
-      "body": "`transferGroupOwner()` 是不可轻易撤销的高风险操作。\n\n```uts\nimport { transferGroupOwner } from '@/uni_modules/unix-openim-sdk'\n\nawait transferGroupOwner({ groupID, newOwnerUserID: 'user_b' })\n```\n\n目标必须是有效群成员。UI 二次确认并说明当前群主角色会变化；成功后重新查询群资料和双方成员角色。",
+      "body": "只有当前群主可以调用 `transferGroupOwner()`。`groupID` 是目标群组 ID，`newOwnerUserID` 是新群主的用户 ID；目标用户必须是该群组中的有效成员。\n\n```uts\nimport { transferGroupOwner } from '@/uni_modules/unix-openim-sdk'\n\nawait transferGroupOwner({\n  groupID,\n  newOwnerUserID: targetUserID,\n})\n```\n\n## 调用后的状态变化\n\nPromise 成功表示 OpenIMServer 已完成群主转让：原群主变为普通成员，新群主获得群主角色。成员角色变化通过 `onGroupMemberInfoChanged` 增量同步，事件参数是单个 `OpenIMGroupMemberItem`；一次转让可能涉及原群主和新群主两条成员记录，均按 `groupID:userID` 合并。\n\n完整监听和清理代码见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。不要只依赖事件数量判断转让结果；需要确认当前角色时，应重新调用 `getSpecifiedGroupMembersInfo()` 获取相关成员快照。\n\n群主需要退出群组时，必须先完成转让，再调用 `quitGroup()`。如果群组不再需要，群主也可以选择 `dismissGroup()`，但解散会影响所有成员，不能替代普通转让。UI 应提供二次确认并说明角色变化。",
       "description": "把群主权限转让给指定成员。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "调用后的状态变化",
+          "url": "#调用后的状态变化"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/transfer-group-owner",
       "title": "转让群主"
     },
     "/sdk/uniapp/group/managing-group-members/change-group-member-mute": {
-      "body": "`changeGroupMemberMute()` 使用 `mutedSeconds` 设置禁言时长。\n\n```uts\nimport { changeGroupMemberMute } from '@/uni_modules/unix-openim-sdk'\n\nawait changeGroupMemberMute({ groupID, userID: 'user_b', mutedSeconds: 3600 })\n```\n\n解除禁言使用服务端约定的 0 秒。权限、最大时长和特殊角色限制由服务端校验；最终成员状态以事件或重新查询为准。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `groupID` | `string` | 是 | 目标群组 ID。 |\n| `userID` | `string` | 是 | 目标成员用户 ID。 |\n| `mutedSeconds` | `number` | 是 | 禁言时长，单位为秒；传 `0` 解除禁言。 |\n\n```uts\nimport { changeGroupMemberMute } from '@/uni_modules/unix-openim-sdk'\n\nawait changeGroupMemberMute({\n  groupID,\n  userID: targetUserID,\n  mutedSeconds: 3600,\n})\n```\n\n群主可以禁言管理员和普通成员；管理员只能禁言普通成员，最终权限由 OpenIMServer 校验。\n\nPromise 成功表示服务端完成设置。最终状态以成员资料中的 `muteEndTime` 为准，不要只按提交的秒数推算。`onGroupMemberInfoChanged` 的处理见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。",
       "description": "按秒设置指定群成员的禁言时长。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/group/managing-group-members/change-group-member-mute",
       "title": "设置成员禁言"
     },
@@ -1699,9 +2101,40 @@
       "title": "检查群组 full-sync 状态"
     },
     "/sdk/uniapp/message/overview-message": {
-      "body": "OpenIM 消息以 `clientMsgID` 作为客户端稳定标识，服务端消息还包含 `serverMsgID`、会话路由、发送者、时间、内容类型与具体 elem。应用应使用 `conversationID:clientMsgID` 组合键幂等合并发送结果、实时事件和历史列表。\n\n创建消息只生成 `OpenIMMessageItem`，不会发送；随后调用 `sendMessage()` 指定 `recvID` 或 `groupID`。接收方通过消息事件获得增量，首次进入和翻页通过历史 API建立快照。\n\n本页归属发送、文件上传和日志上传进度事件：\n\n```uts\nimport {\n  off,\n  onSendMessageProgress,\n  onUploadFileProgress,\n  onUploadLogsProgress,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst sendProgressSubscription = onSendMessageProgress((event) => {\n  updateMessageProgress(event.clientMsgID, event.progress)\n})\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  sendProgressSubscription,\n  onUploadFileProgress((event) => updateCurrentUpload(event.progress)),\n  onUploadLogsProgress((event) => updateLogUpload(event.progress)),\n]\n\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n进度可能重复、跳跃或在最终 Promise 前后到达；只做单调展示，最终成功/失败以 API 结果为准。\n\n文件消息的本地完整路径必须能被原生层读取。`unifile://` 先转为真实沙盒路径；网络 URL 使用对应 by-URL 创建入口。",
+      "body": "uni-app / uni-app x 插件使用 `OpenIMMessageItem` 表示一条消息。发送消息分为两个阶段：先根据内容创建待发送对象，再把该对象发送到单聊用户或群组。创建方法不会发送消息；发送方法的 Promise 成功也不代表其他客户端已经收到消息。\n\n接收新消息、读取历史、搜索和管理消息都以会话为范围。应用应使用 `conversationID:clientMsgID` 组合键幂等合并发送结果、实时事件和历史列表；`conversationID` 确定所属会话，`clientMsgID` 定位具体消息。\n\n## 消息处理流程\n\n| 阶段 | 主要操作 | 说明 |\n| --- | --- | --- |\n| 创建 | 调用对应的 `create*Message()` | 返回待发送的 `OpenIMMessageItem`，不会写入服务端或触发新消息事件。 |\n| 发送 | 调用 `sendMessage()` 或 `sendMessageNotOss()` | 单聊填写 `recvID`，群聊填写 `groupID`；另一个目标字段传空字符串。 |\n| 接收 | 监听新消息事件 | 根据消息路由字段确定目标会话，再按 `clientMsgID` 幂等合并。 |\n| 查询 | 读取历史、搜索或按 ID 定位消息 | 查询返回调用时的快照，不触发新消息事件。 |\n| 更新 | 删除、撤回、修改、置顶或上报已读 | 分别处理 Promise 结果、相关事件和必要的重新查询。 |\n\n从原生完整路径创建的图片、音频、视频和文件消息，通过 `sendMessage()` 进入 SDK 上传与发送流程。媒体资源已经由业务上传服务取得 URL 时，先用对应的 `create*MessageByURL()` 创建消息，再通过 `sendMessageNotOss()` 发送，避免重复上传。\n\n## OpenIMMessageItem 返回结构\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `clientMsgID` | `string \\| null` | 客户端稳定 ID，用于列表去重、状态更新、查询和分页游标。 |\n| `serverMsgID` | `string \\| null` | 服务端消息 ID；待发送或失败消息可能没有有效值。 |\n| `sessionType` | `OpenIMSessionType` | 消息所属会话类型。 |\n| `sendID`、`recvID`、`groupID` | `string \\| null` | 发送者及单聊/群聊路由字段。 |\n| `contentType` | `OpenIMMessageType` | 消息内容类型，决定读取哪个 elem。 |\n| `createTime`、`sendTime` | `number` | 创建和发送时间。 |\n| `seq` | `number` | 服务端消息序号。 |\n| `senderPlatformID` | `OpenIMPlatform` | 发送端平台。 |\n| `senderNickname`、`senderFaceUrl` | `string \\| null` | 发送者资料快照。 |\n| `status` | `OpenIMMessageStatus` | 当前发送状态。 |\n| `isRead` | `boolean` | 当前已读状态快照。 |\n| `offlinePush` | `OpenIMOfflinePush \\| null` | 发送时的离线推送配置。 |\n| `content`、`attachedInfo` | `string \\| null` | SDK 序列化内容和附加信息。 |\n| `ex` | `string \\| null` | 随消息同步的扩展字符串。 |\n| `localEx` | `string \\| null` | 只保存在当前设备的扩展字符串。 |\n\n消息正文位于与 `contentType` 对应的字段中：文本使用 `textElem`，图片/音频/视频/文件使用 `pictureElem`、`soundElem`、`videoElem`、`fileElem`，@ 与回复使用 `atTextElem`、`quoteElem`，合并与自定义消息使用 `mergeElem`、`customElem`，名片/位置/表情使用 `cardElem`、`locationElem`、`faceElem`，高级文本、输入状态和通知分别使用 `advancedTextElem`、`typingElem`、`notificationElem`。不要通过展示文本或数组位置判断消息类型。\n\n`conversationID` 用于确定所属会话，但不是 `OpenIMMessageItem` 字段。它来自当前会话、查询条件、搜索结果或事件上下文；消息状态通常按 `conversationID:clientMsgID` 合并。\n\n## 创建不同内容的消息\n\n| 内容 | 页面 | 注意事项 |\n| --- | --- | --- |\n| 文本与 Markdown | [创建文本消息](/zh/sdk/uniapp/message/creating-messages/create-text-message)、[创建 Markdown 消息](/zh/sdk/uniapp/message/creating-messages/create-markdown-message) | Markdown 内容需要由接收端安全渲染。 |\n| 群聊 @ 消息 | [创建 @ 消息](/zh/sdk/uniapp/message/creating-messages/create-text-at-message) | 只能发送到群聊。 |\n| 图片、音频、视频和文件 | [使用完整路径创建图片消息](/zh/sdk/uniapp/message/creating-messages/create-image-message-from-full-path)、[使用 URL 创建图片消息](/zh/sdk/uniapp/message/creating-messages/create-image-message-by-url) | 其他媒体类型采用相同的本地路径或已上传 URL 流程。 |\n| 名片、位置与表情 | [创建名片消息](/zh/sdk/uniapp/message/creating-messages/create-card-message)、[创建位置消息](/zh/sdk/uniapp/message/creating-messages/create-location-message)、[创建表情消息](/zh/sdk/uniapp/message/creating-messages/create-face-message) | 创建时保存内容快照。 |\n| 回复、转发与合并 | [创建回复消息](/zh/sdk/uniapp/message/creating-messages/create-quote-message)、[创建转发消息](/zh/sdk/uniapp/message/creating-messages/create-forward-message)、[创建合并消息](/zh/sdk/uniapp/message/creating-messages/create-merger-message) | 创建结果仍需显式发送。 |\n| 自定义业务内容 | [创建自定义消息](/zh/sdk/uniapp/message/creating-messages/create-custom-message) | 接收端必须校验业务 schema。 |\n\n只影响当前客户端展示的状态应写入 `localEx`，不要放入需要同步给其他用户的业务内容，见[设置消息本地扩展](/zh/sdk/uniapp/message/managing-messages/set-message-local-ex)。\n\n## 进度事件\n\n本页归属发送、文件上传和日志上传进度事件：\n\n```uts\nimport {\n  off,\n  onSendMessageProgress,\n  onUploadFileProgress,\n  onUploadLogsProgress,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst sendProgressSubscription = onSendMessageProgress((event) => {\n  updateMessageProgress(event.clientMsgID, event.progress)\n})\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  sendProgressSubscription,\n  onUploadFileProgress((event) => updateCurrentUpload(event.progress)),\n  onUploadLogsProgress((event) => updateLogUpload(event.progress)),\n]\n\nfunction removeProgressListeners() {\n  subscriptions.forEach((subscription) => off(subscription))\n}\n```\n\n进度可能重复、跳跃或在最终 Promise 前后到达；只做单调展示，最终成功/失败以 API 结果为准。退出登录、切换账号或销毁进度状态层时调用 `removeProgressListeners()`。\n\n文件消息的本地完整路径必须能被原生层读取。`unifile://` 先转为真实沙盒路径；网络 URL 使用对应 by-URL 创建入口。\n\n## 按任务查找页面\n\n| 任务 | 页面 |\n| --- | --- |\n| 发送普通消息或已上传媒体 | [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)、[发送已上传的媒体消息](/zh/sdk/uniapp/message/sending-messages/send-message-not-oss) |\n| 接收在线、离线和只在线消息 | [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages) |\n| 加载历史或读取消息上下文 | [加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)、[读取消息上下文](/zh/sdk/uniapp/message/retrieving-messages/load-message-context) |\n| 按 ID 定位或搜索本地消息 | [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)、[搜索消息](/zh/sdk/uniapp/message/searching-messages/search-messages) |\n| 删除、撤回、修改或置顶 | [批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)、[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)、[修改消息](/zh/sdk/uniapp/message/managing-messages/modify-a-message)、[置顶消息](/zh/sdk/uniapp/message/managing-messages/set-message-pinned) |\n| 群聊成员级已读 | [上报群消息已读](/zh/sdk/uniapp/message/managing-read-status/send-group-read-receipts)、[查询群消息已读成员](/zh/sdk/uniapp/message/managing-read-status/get-group-message-readers) |\n| 输入状态或语音识别 | [上报输入状态](/zh/sdk/uniapp/message/composing-messages/update-typing-status)、[识别音频文字](/zh/sdk/uniapp/message/composing-messages/transcribe-audio) |\n\n## 状态同步边界\n\n新消息、删除、撤回、修改、置顶、群已读和输入状态的完整监听分别保留在对应任务页。创建消息对象和纯查询操作只使用 Promise 返回值建立快照，不会触发共享消息事件。会改变状态的操作应分别处理 Promise 成功、事件到达和重新查询校准，不能将三个阶段视为同一结果。\n\n会话未读数、总未读数和群聊 @ 提醒属于会话状态，分别由[标记会话已读](/zh/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)、[维护总未读数](/zh/sdk/uniapp/conversation/managing-conversations/get-total-unread-count)和[获取会话列表](/zh/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)中的事件处理器维护。",
       "description": "理解消息创建、发送、接收、历史、状态和进度事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "消息处理流程",
+          "url": "#消息处理流程"
+        },
+        {
+          "depth": 2,
+          "title": "OpenIMMessageItem 返回结构",
+          "url": "#openimmessageitem-返回结构"
+        },
+        {
+          "depth": 2,
+          "title": "创建不同内容的消息",
+          "url": "#创建不同内容的消息"
+        },
+        {
+          "depth": 2,
+          "title": "进度事件",
+          "url": "#进度事件"
+        },
+        {
+          "depth": 2,
+          "title": "按任务查找页面",
+          "url": "#按任务查找页面"
+        },
+        {
+          "depth": 2,
+          "title": "状态同步边界",
+          "url": "#状态同步边界"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/overview-message",
       "title": "消息概览"
     },
@@ -1713,16 +2146,38 @@
       "title": "创建文本消息"
     },
     "/sdk/uniapp/message/creating-messages/create-text-at-message": {
-      "body": "`createTextAtMessage()` 创建群聊 @ 消息，参数包含正文、被 @ 用户和可选引用信息。\n\n```uts\nimport { createTextAtMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createTextAtMessage({\n  text: '@Alice 请确认',\n  atUserIDList: ['user_a'],\n  atUsersInfo: [{ atUserID: 'user_a', groupNickname: 'Alice' }],\n  quoteMessage: null,\n})\n```\n\n字段以 `OpenIMCreateTextAtMessageParams` 为准，用户列表和显示信息保持一致。商业版 `getAtAllTag()` <span className=\"enterprise-field-badge\">商业版</span> 可查询当前服务端使用的“@所有人”标签；HarmonyOS 支持该本地/企业入口。\n\n创建后仍需调用发送 API并填写目标群 ID。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `text` | `string` | 是 | 消息正文；建议使用稳定的 `@userID` 标记。 |\n| `atUserIDList` | `string[]` | 是 | 被提及用户 ID；@ 全体时先调用 `getAtAllTag()` 获取专用标记。 |\n| `atUsersInfo` | `OpenIMAtUsersInfoItem[] \\| null` | 否 | 用户 ID 与群内展示名信息。 |\n| `quoteMessage` | `OpenIMMessageItem \\| null` | 否 | 被引用的原消息。 |\n\n```uts\nimport { createTextAtMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createTextAtMessage({\n  text: '@user_a 请确认',\n  atUserIDList: ['user_a'],\n  atUsersInfo: [{ atUserID: 'user_a', groupNickname: 'Alex' }],\n})\n```\n\nPromise 成功只返回待发送的 `OpenIMMessageItem | null`。该消息只能发送到群聊；创建本身不会改变会话的 @ 状态，也不会触发新消息事件。`atUserIDList` 与 `atUsersInfo` 中的用户应保持一致。\n\n## 提及全体成员\n\n不要在业务代码中写死全体成员标记。商业版先调用 `getAtAllTag()` <span className=\"enterprise-field-badge\">商业版</span> 取得当前标记，再将它同时放入正文和 `atUserIDList`：\n\n```uts\nimport { getAtAllTag } from '@/uni_modules/unix-openim-sdk'\n\nconst atAllResult = await getAtAllTag()\nconst atAllTag = atAllResult?.tag\nif (atAllTag != null) {\n  const message = await createTextAtMessage({\n    text: `${atAllTag} 请查看群公告`,\n    atUserIDList: [atAllTag],\n  })\n}\n```\n\n`getAtAllTag()` 只读取 SDK 约定，不创建消息，也不触发事件。创建后仍需调用发送 API 并填写目标群 ID。",
       "description": "在群聊中创建带 @ 用户信息的文本消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "提及全体成员",
+          "url": "#提及全体成员"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-text-at-message",
       "title": "创建 @ 文本消息"
     },
     "/sdk/uniapp/message/creating-messages/create-custom-message": {
-      "body": "`createCustomMessage()` 用于双方已约定 schema 的业务载荷：\n\n```uts\nimport { createCustomMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createCustomMessage({\n  data: JSON.stringify({ orderID: 'order_123' }),\n  extension: '',\n  descriptionText: '订单卡片',\n})\n```\n\n`data`、`extension`、`descriptionText` 都会发给接收方，不能包含秘密。接收端先验证内容类型和 JSON 字段，再映射业务模型。\n\n`createAdvancedTextMessage()` 使用 `OpenIMCreateAdvancedTextMessageParams` 创建带文本实体/样式范围的消息。范围必须对应原始文本索引，越界数据应在调用前拒绝。两种入口都只创建消息，不发送。",
+      "body": "`createCustomMessage()` 适合订单、任务、邀请或投票等双方已约定 schema 的业务消息。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `data` | `string` | 是 | 业务载荷的完整字符串，通常保存序列化后的 JSON。 |\n| `extension` | `string` | 是 | 业务扩展信息的完整字符串。 |\n| `descriptionText` | `string` | 是 | 消息类型说明或不支持该类型时的降级展示文本。 |\n\n```uts\nimport { createCustomMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createCustomMessage({\n  data: JSON.stringify({ type: 'task', taskID: 'task_42' }),\n  extension: JSON.stringify({ schemaVersion: 1 }),\n  descriptionText: '任务卡片',\n})\n```\n\n`data` 是业务载荷，`extension` 是扩展信息，`descriptionText` 用于类型说明或降级展示。三者都会发给接收方，不能包含秘密；接收端应校验协议版本、大小和字段，再映射业务模型，不要执行不可信内容。\n\n当前 uni-app / uni-app x 合同没有 Wasm 商业扩展中的 `searchText` 参数，不要传入该字段。Promise 成功只返回待发送的 `OpenIMMessageItem | null`；发送与自定义业务事件是不同链路。\n\n## 高级文本消息\n\n`createAdvancedTextMessage()` 使用 `OpenIMCreateAdvancedTextMessageParams` 创建带文本实体/样式范围的消息。范围必须对应原始文本索引，越界数据应在调用前拒绝。两种入口都只创建消息，不发送。",
       "description": "创建业务自定义消息或带实体范围的高级文本。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "高级文本消息",
+          "url": "#高级文本消息"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-custom-message",
       "title": "创建自定义或高级文本消息"
     },
@@ -1734,9 +2189,15 @@
       "title": "从完整路径创建图片消息"
     },
     "/sdk/uniapp/message/creating-messages/create-image-message-by-url": {
-      "body": "`createImageMessageByURL()` 适合图片已由业务上传并取得可访问 URL 的场景。\n\n```uts\nimport { createImageMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createImageMessageByURL(pictureElem)\n```\n\n`OpenIMPictureElem` 应包含源图及缩略图等合同字段。URL 必须能被消息参与者访问，尺寸、大小和类型与真实资源一致。不要把本地路径填入 URL 字段。",
+      "body": "`createImageMessageByURL()` 使用已经上传的图片信息创建消息。原图、大图和缩略图可以指向不同资源；示例仅在三者相同时复用同一个对象。\n\n## 参数说明\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `sourcePicture` | `OpenIMPicture \\| null` | 原图信息。 |\n| `bigPicture` | `OpenIMPicture \\| null` | 大图信息。 |\n| `snapshotPicture` | `OpenIMPicture \\| null` | 缩略图信息。 |\n| `sourcePath` | `string \\| null` | 原始文件的本地名称或业务路径；只有远端资源时传空字符串。 |\n\n三个图片对象使用相同字段：`uuid`、`type`、`size`、`width`、`height` 和 `url`，均为可选值；创建完整可展示消息时应填写真实上传结果。\n\n```uts\nimport { createImageMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst picture = {\n  uuid: createBusinessUUID(),\n  type: 'image/jpeg',\n  size: 120000,\n  width: 1280,\n  height: 720,\n  url: uploaded.url,\n}\n\nconst message = await createImageMessageByURL({\n  sourcePicture: picture,\n  bigPicture: picture,\n  snapshotPicture: picture,\n  sourcePath: '',\n})\n```\n\nURL 必须能被消息参与者访问，尺寸、大小和类型要与真实资源一致，不要把本地路径填入 URL 字段。Promise 成功只创建待发送对象；资源已经上传时使用 `sendMessageNotOss()`。",
       "description": "使用已上传图片的 elem 信息创建消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-image-message-by-url",
       "title": "从 URL 创建图片消息"
     },
@@ -1748,9 +2209,15 @@
       "title": "从完整路径创建语音消息"
     },
     "/sdk/uniapp/message/creating-messages/create-sound-message-by-url": {
-      "body": "`createSoundMessageByURL()` 接收完整 `OpenIMSoundElem`。\n\n```uts\nimport { createSoundMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createSoundMessageByURL(soundElem)\n```\n\nURL、UUID、大小、时长和类型应与上传结果一致。资源需对接收方可访问；不要把本地沙盒路径当成远端 URL。",
+      "body": "`createSoundMessageByURL()` 使用已经上传的音频信息创建消息。\n\n## 参数说明\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `uuid` | `string \\| null` | 音频资源的唯一标识。 |\n| `soundPath` | `string \\| null` | 音频文件的本地名称或业务路径；只有远端资源时传空字符串。 |\n| `sourceUrl` | `string \\| null` | 已上传音频的可访问地址。 |\n| `dataSize` | `number \\| null` | 音频大小，单位为字节。 |\n| `duration` | `number \\| null` | 音频时长，单位按服务端协议约定。 |\n\n```uts\nimport { createSoundMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createSoundMessageByURL({\n  uuid: createBusinessUUID(),\n  soundPath: '',\n  sourceUrl: uploaded.url,\n  dataSize: uploaded.size,\n  duration,\n})\n```\n\nURL、UUID、大小和时长应与上传结果一致。资源需对接收方可访问，不要把本地沙盒路径当成远端 URL。当前 `OpenIMSoundElem` 不包含 Wasm 版的 `soundType` 字段，不要传入未公开字段。\n\nPromise 成功只创建待发送的 `OpenIMMessageItem | null`；发送时使用 `sendMessageNotOss()`。",
       "description": "使用已上传音频的 OpenIMSoundElem 创建消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-sound-message-by-url",
       "title": "从 URL 创建语音消息"
     },
@@ -1762,9 +2229,15 @@
       "title": "从完整路径创建视频消息"
     },
     "/sdk/uniapp/message/creating-messages/create-video-message-by-url": {
-      "body": "`createVideoMessageByURL()` 接收 `OpenIMVideoElem`。\n\n```uts\nimport { createVideoMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createVideoMessageByURL(videoElem)\n```\n\n视频 URL、封面 URL、UUID、大小、时长和类型使用上传后的真实值。接收方必须能访问两个资源。",
+      "body": "`createVideoMessageByURL()` 使用已经上传的视频和快照信息创建消息。\n\n## 参数说明\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `videoPath` | `string \\| null` | 视频文件的本地名称或业务路径；只有远端资源时传空字符串。 |\n| `duration` | `number \\| null` | 视频时长。 |\n| `videoType` | `string \\| null` | 视频 MIME 类型。 |\n| `videoUUID` | `string \\| null` | 视频资源的唯一标识。 |\n| `videoUrl` | `string \\| null` | 已上传视频的可访问地址。 |\n| `videoSize` | `number \\| null` | 视频大小，单位为字节。 |\n| `snapshotPath` | `string \\| null` | 快照文件的本地名称或业务路径。 |\n| `snapshotUUID` | `string \\| null` | 快照资源的唯一标识。 |\n| `snapshotSize` | `number \\| null` | 快照大小，单位为字节。 |\n| `snapshotUrl` | `string \\| null` | 已上传快照的可访问地址。 |\n| `snapshotWidth` | `number \\| null` | 快照宽度，单位为像素。 |\n| `snapshotHeight` | `number \\| null` | 快照高度，单位为像素。 |\n\n```uts\nimport { createVideoMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createVideoMessageByURL({\n  videoPath: '',\n  duration,\n  videoType: uploadedVideo.contentType,\n  videoUUID: createBusinessUUID(),\n  videoUrl: uploadedVideo.url,\n  videoSize: uploadedVideo.size,\n  snapshotPath: '',\n  snapshotUUID: createBusinessUUID(),\n  snapshotSize: uploadedSnapshot.size,\n  snapshotUrl: uploadedSnapshot.url,\n  snapshotWidth,\n  snapshotHeight,\n})\n```\n\n视频 URL、封面 URL、UUID、大小、时长和类型必须使用上传后的真实值，接收方必须能访问两个资源。当前 `OpenIMVideoElem` 不包含 Wasm 版的 `snapShotType` 字段，不要传入未公开字段。\n\nPromise 成功只创建待发送的 `OpenIMMessageItem | null`；发送时使用 `sendMessageNotOss()`。",
       "description": "使用已上传视频和封面的 OpenIMVideoElem 创建消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-video-message-by-url",
       "title": "从 URL 创建视频消息"
     },
@@ -1776,23 +2249,41 @@
       "title": "从完整路径创建文件消息"
     },
     "/sdk/uniapp/message/creating-messages/create-file-message-by-url": {
-      "body": "`createFileMessageByURL()` 接收 `OpenIMFileElem`。\n\n```uts\nimport { createFileMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createFileMessageByURL(fileElem)\n```\n\n文件 URL、名称、UUID、大小和类型应来自可信上传结果。URL 需要接收方可访问，不直接暴露私有存储凭据。",
+      "body": "`createFileMessageByURL()` 使用已经上传的文件信息创建消息。\n\n## 参数说明\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `filePath` | `string \\| null` | 文件的本地名称或业务路径；只有远端资源时传空字符串。 |\n| `fileName` | `string \\| null` | 对外展示的文件名。 |\n| `uuid` | `string \\| null` | 文件资源的唯一标识。 |\n| `sourceUrl` | `string \\| null` | 已上传文件的可访问地址。 |\n| `fileSize` | `number \\| null` | 文件大小，单位为字节。 |\n\n```uts\nimport { createFileMessageByURL } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createFileMessageByURL({\n  filePath: '',\n  fileName: 'report.pdf',\n  uuid: createBusinessUUID(),\n  sourceUrl: uploaded.url,\n  fileSize: uploaded.size,\n})\n```\n\n文件 URL、名称、UUID 和大小必须来自真实上传结果；URL 需要接收方可访问，不能直接暴露私有存储凭据。当前 `OpenIMFileElem` 不包含 Wasm 版的 `fileType` 字段，不要传入未公开字段。\n\nPromise 成功只创建待发送的 `OpenIMMessageItem | null`。由于资源已经上传，发送时使用 `sendMessageNotOss()`。",
       "description": "使用已上传文件的 OpenIMFileElem 创建消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-file-message-by-url",
       "title": "从 URL 创建文件消息"
     },
     "/sdk/uniapp/message/creating-messages/create-card-message": {
-      "body": "`createCardMessage()` 接收 `OpenIMCardElem`。\n\n```uts\nimport { createCardMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createCardMessage({\n  userID: 'user_b',\n  nickname: 'Alice',\n  faceURL: 'https://cdn.example.com/alice.png',\n  ex: '',\n})\n```\n\n名片是发送时快照，接收方点击后应按 `userID` 查询最新资料。不要把名片字段当作可信身份认证。",
+      "body": "## 参数说明\n\n`createCardMessage()` 接收 `OpenIMCardElem`。合同字段都是可选值，但创建可展示名片时应提供以下完整快照：\n\n| 参数 | 类型 | 建议 | 说明 |\n| --- | --- | --- | --- |\n| `userID` | `string \\| null` | 必填 | 名片对应的用户 ID。 |\n| `nickname` | `string \\| null` | 必填 | 名片中保存的展示名称。 |\n| `faceURL` | `string \\| null` | 必填 | 名片中保存的头像地址。 |\n| `ex` | `string \\| null` | 必填 | 名片扩展信息；没有内容时传空字符串。 |\n\n```uts\nimport { createCardMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createCardMessage({\n  userID: 'user_b',\n  nickname: 'Alex',\n  faceURL: 'https://example.com/avatar.png',\n  ex: '',\n})\n```\n\nPromise 成功只创建 `OpenIMMessageItem | null`，不会自动发送。名片是创建时快照，不会随用户资料自动更新；接收方点击后应按 `userID` 查询最新资料，也不要把名片字段当作可信身份认证。",
       "description": "使用 OpenIMCardElem 创建用户名片消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-card-message",
       "title": "创建名片消息"
     },
     "/sdk/uniapp/message/creating-messages/create-location-message": {
-      "body": "`createLocationMessage()` 使用描述、经度和纬度。\n\n```uts\nimport { createLocationMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createLocationMessage({\n  descriptionText: '会议室 A',\n  longitude: 121.47,\n  latitude: 31.23,\n})\n```\n\n调用前取得用户授权并校验范围。位置属于敏感数据，发送前明确提示接收范围；不要在日志中记录精确坐标。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `descriptionText` | `string` | 是 | 位置名称或地址描述。 |\n| `longitude` | `number` | 是 | 经度。 |\n| `latitude` | `number` | 是 | 纬度。 |\n\n```uts\nimport { createLocationMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createLocationMessage({\n  descriptionText: '上海市浦东新区',\n  longitude: 121.4737,\n  latitude: 31.2304,\n})\n```\n\n业务层应在获得用户授权后获取定位，并根据产品隐私规则控制精度。位置属于敏感数据，发送前明确提示接收范围，不要在日志中记录精确坐标。Promise 成功只返回待发送的 `OpenIMMessageItem | null`。",
       "description": "使用经纬度和描述创建位置消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-location-message",
       "title": "创建位置消息"
     },
@@ -1825,9 +2316,15 @@
       "title": "创建逐条转发消息"
     },
     "/sdk/uniapp/message/creating-messages/create-merger-message": {
-      "body": "`createMergerMessage()` 使用标题、摘要和原消息列表创建合并转发。\n\n```uts\nimport { createMergerMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst merger = await createMergerMessage({\n  messageList: selectedMessages,\n  title: '聊天记录',\n  abstractList: ['Alice: 方案已确认'],\n})\n```\n\n摘要由业务生成但不可与实际消息矛盾。转发前检查每条消息的可分享权限和敏感信息；大型列表限制条数与总大小。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `messageList` | `OpenIMMessageItem[]` | 是 | 要合并的已发送消息列表。 |\n| `title` | `string` | 是 | 合并消息卡片标题。 |\n| `abstractList` | `string[]` | 是 | 卡片摘要列表。 |\n\n```uts\nimport { createMergerMessage } from '@/uni_modules/unix-openim-sdk'\n\nconst merger = await createMergerMessage({\n  messageList: selectedMessages,\n  title: '项目讨论记录',\n  abstractList: selectedMessages.slice(0, 4).map(buildSummary),\n})\n```\n\nPromise 成功只返回新的待发送对象，不修改原消息。摘要由业务生成但不可与实际消息矛盾，应为无法解析的消息类型提供降级文本。转发前检查每条消息的可分享权限和敏感信息；大型列表还应限制条数与总大小。",
       "description": "把多条消息合并为摘要与消息列表。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/creating-messages/create-merger-message",
       "title": "创建合并转发消息"
     },
@@ -1845,16 +2342,58 @@
       "title": "发送消息"
     },
     "/sdk/uniapp/message/sending-messages/send-message-not-oss": {
-      "body": "`sendMessageNotOss()` 与 `sendMessage()` 使用同一 options，但跳过普通 OSS 上传流程，适合消息 elem 已包含可访问远端资源的场景。\n\n```uts\nimport { sendMessageNotOss } from '@/uni_modules/unix-openim-sdk'\n\nconst sent = await sendMessageNotOss({ message, recvID, groupID })\n```\n\n只有确认资源 URL、大小、类型和权限均完整时使用。把本地路径消息误交给本入口会导致接收方无法访问媒体。普通本地文件优先使用 `sendMessage()`。",
+      "body": "`sendMessageNotOss()` 适用于文件、图片、音频或视频已经通过业务上传服务取得 URL 的消息，可避免再次进入 SDK 的上传流程。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `recvID` | `string` | 条件必填 | 单聊时填写接收方用户 ID；群聊时传空字符串。 |\n| `groupID` | `string` | 条件必填 | 群聊时填写群组 ID；单聊时传空字符串。 |\n| `message` | `OpenIMMessageItem` | 是 | 由 URL 型创建 API 返回、已含远端资源的待发送消息。 |\n| `offlinePushInfo` | `OpenIMOfflinePush \\| null` | 否 | 离线推送标题、描述和平台配置。 |\n| `isOnlineOnly` | `boolean \\| null` | 否 | 是否只向在线客户端投递；此类消息不进入本地历史。 |\n\n```uts\nimport { sendMessageNotOss } from '@/uni_modules/unix-openim-sdk'\n\nconst sentMessage = await sendMessageNotOss({\n  recvID: receiverUserID,\n  groupID: '',\n  message: urlMessage,\n})\n```\n\n资源 URL、大小、类型、尺寸和时长必须来自实际上传结果。Promise 成功后直接返回服务端确认的 `OpenIMMessageItem`，应用按 `clientMsgID` 合并返回对象；字段见[消息概览](/zh/sdk/uniapp/message/overview-message)。\n\n该方法不会负责上传资源，也不适用于仍只包含本地文件的消息。把本地路径消息误交给本入口会导致接收方无法访问媒体；普通本地文件使用 `sendMessage()`。",
       "description": "发送已经准备好远端资源信息的消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/sending-messages/send-message-not-oss",
       "title": "发送非 OSS 消息"
     },
     "/sdk/uniapp/message/receiving-messages/receive-messages": {
-      "body": "不同平台或恢复路径可能使用单条或批量事件。为保证完整性，同时订阅五个入口，并按 `conversationID:clientMsgID` 去重。\n\n```uts\nimport {\n  off,\n  onRecvNewMessage,\n  onRecvNewMessages,\n  onRecvOfflineNewMessage,\n  onRecvOfflineNewMessages,\n  onRecvOnlineOnlyMessage,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst newMessageSubscription = onRecvNewMessage((message) => mergeMessage(message))\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  newMessageSubscription,\n  onRecvOfflineNewMessage((message) => mergeMessage(message)),\n  onRecvOnlineOnlyMessage((message) => mergeOnlineOnlyMessage(message)),\n  onRecvNewMessages((result) => result.messages.forEach(mergeMessage)),\n  onRecvOfflineNewMessages((result) => result.messages.forEach(mergeMessage)),\n]\n\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\n只在线消息按产品语义展示，不假定可从历史恢复。事件只提供增量；首次进入、断线恢复和向上翻页仍查询历史。不要在多个页面重复注册同一组全局消息事件，推荐由消息 store 统一持有。",
+      "body": "消息页通常同时处理实时新消息、应用进入后台后到达的离线消息、只在线投递的消息，以及首次进入会话时主动读取的历史消息。事件提供增量，历史 API 按 `conversationID` 建立快照。\n\n不同 Core 版本或恢复路径可能使用单条或批量事件。为保证完整性，可以同时订阅五个入口，但必须按 `conversationID:clientMsgID` 去重。在组件卸载、退出登录或切换账号前使用订阅句柄调用 `off()`，避免同一批消息被重复合并。\n\n## 消息类型\n\n每条 `OpenIMMessageItem` 根据 `contentType` 和对应 elem 选择渲染方式：文本读取 `textElem`，@ 文本读取 `atTextElem`，自定义消息读取 `customElem`，图片、音频、视频和文件分别读取对应媒体 elem。未知类型应显示降级内容，而不是执行未校验的 `content`。\n\n```uts\nfunction renderMessage(message : OpenIMMessageItem) {\n  if (message.textElem != null) return renderTextMessage(message)\n  if (message.atTextElem != null) return renderMentionMessage(message)\n  if (message.customElem != null) return renderCustomMessage(message)\n  if (\n    message.pictureElem != null ||\n    message.soundElem != null ||\n    message.videoElem != null ||\n    message.fileElem != null\n  ) {\n    return renderFileLikeMessage(message)\n  }\n  return renderUnsupportedMessage(message)\n}\n```\n\n消息事件可能包含当前用户没有打开的会话。`OpenIMMessageItem` 不直接提供 `conversationID`；应根据 `sessionType`、`sendID`、`recvID` 和 `groupID` 计算或查询目标会话，再按 `clientMsgID` 去重。\n\n```uts\nfunction mergeMessage(message : OpenIMMessageItem) {\n  const targetConversationID = getConversationIDForMessage(message)\n  if (targetConversationID.length == 0) return\n  mergeMessageByClientMsgID(targetConversationID, message)\n}\n```\n\n### 图片、音频、视频和文件消息\n\n接收端无需重新上传文件，只需读取消息中已有的资源地址、大小、名称、时长或快照图并展示。如果产品一次发送多个文件，通常连续发送多条文件消息，或用一条经过版本校验的自定义消息承载文件组；每条消息仍以 `clientMsgID` 作为稳定标识。\n\n## 事件处理器\n\n```uts\nimport {\n  off,\n  onRecvNewMessage,\n  onRecvNewMessages,\n  onRecvOfflineNewMessage,\n  onRecvOfflineNewMessages,\n  onRecvOnlineOnlyMessage,\n  type OpenIMMessageItem,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst newMessageSubscription = onRecvNewMessage((message) => {\n  if (message != null) mergeMessage(message)\n})\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  newMessageSubscription,\n  onRecvOfflineNewMessage((message) => {\n    if (message != null) mergeMessage(message)\n  }),\n  onRecvOnlineOnlyMessage((message) => {\n    if (message != null) mergeOnlineOnlyMessage(message)\n  }),\n  onRecvNewMessages((result) => {\n    if (result != null) result.messages.forEach(mergeMessage)\n  }),\n  onRecvOfflineNewMessages((result) => {\n    if (result != null) result.messages.forEach(mergeMessage)\n  }),\n]\n\nfunction removeMessageListeners() {\n  subscriptions.forEach((subscription) => off(subscription))\n}\n```\n\n`onRecvNewMessages` 和 `onRecvOfflineNewMessages` 返回 `OpenIMMessageListResult | null`，其中 `messages` 是数组；三个单条事件返回 `OpenIMMessageItem | null`。单数和复数入口可能描述同一消息，所以不能按事件次数插入。\n\n调用 `setAppBackgroundStatus(true)` 后到达的消息通常走离线入口；回到前台时再设置为 `false`。离线消息与实时消息复用同一个合并函数，筛选当前会话、按 `clientMsgID` 去重并保持时间顺序。\n\n只在线消息由发送方设置 `isOnlineOnly: true`。它不会进入 SDK 本地消息存储，也不能通过历史接口回放，通常只适合临时提示或业务通知；是否加入当前界面由产品规则决定，不应把它当作可靠聊天记录。\n\n本页是五个接收事件的完整归属页。先根据消息路由字段确定会话，再用“目标会话 + `clientMsgID`”幂等合并。不要在多个页面重复注册同一组全局事件，推荐由消息 store 统一持有；状态层销毁时调用 `removeMessageListeners()`。\n\n撤回消息通过 `onNewRecvMessageRevoked` 更新为撤回态，处理见[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)。\n\n## 首次进入会话时读取历史\n\n事件只负责新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史快照，参数和返回结构见[加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)。历史结果和事件可能包含同一条消息，两条路径必须使用相同的去重规则。\n\n如果事件注册在全局消息状态层，不要在每次进入同一个聊天页面时重复注册。需要显示当前会话历史时，只读取该会话的边界快照；重新登录后的消息变化由新的登录作用域事件同步，不要把事件到达视为某次历史查询的完成回调。\n\n## 将群聊会话标记为已读\n\n用户进入群聊并看到最新消息后，可以清理会话未读数。这个操作不等同于群消息成员级已读回执，调用方式见[标记会话已读](/zh/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)。会话列表和总未读角标分别由会话域事件最终同步。\n\n## 验证接收流程\n\n- 用另一个已登录账号向目标会话发送消息，确认前台入口收到且列表只渲染一次。\n- 设置后台状态后再次发送，确认离线入口合并；回到前台后恢复状态。\n- 发送只在线消息，确认它不会进入本地历史。\n- 撤回一条消息，确认对应 `clientMsgID` 更新为撤回态。\n- 标记会话已读，确认会话未读数和总角标随事件更新。\n\n测试单条和批量入口时，只断言每个 `clientMsgID` 最终出现一次，不应要求固定使用某一个入口。后台恢复测试还应确认前后台状态调用成对执行，退出账号后旧订阅不再改变新账号状态。\n\n## 相关页面\n\n- [消息概览](/zh/sdk/uniapp/message/overview-message)\n- [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)\n- [加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)\n- [标记会话已读](/zh/sdk/uniapp/conversation/managing-conversations/mark-conversation-read)",
       "description": "订阅单条、批量、离线和只在线消息事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "消息类型",
+          "url": "#消息类型"
+        },
+        {
+          "depth": 3,
+          "title": "图片、音频、视频和文件消息",
+          "url": "#图片-音频-视频和文件消息"
+        },
+        {
+          "depth": 2,
+          "title": "事件处理器",
+          "url": "#事件处理器"
+        },
+        {
+          "depth": 2,
+          "title": "首次进入会话时读取历史",
+          "url": "#首次进入会话时读取历史"
+        },
+        {
+          "depth": 2,
+          "title": "将群聊会话标记为已读",
+          "url": "#将群聊会话标记为已读"
+        },
+        {
+          "depth": 2,
+          "title": "验证接收流程",
+          "url": "#验证接收流程"
+        },
+        {
+          "depth": 2,
+          "title": "相关页面",
+          "url": "#相关页面"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/receiving-messages/receive-messages",
       "title": "接收消息"
     },
@@ -1866,30 +2405,84 @@
       "title": "接收自定义业务与消息扩展事件"
     },
     "/sdk/uniapp/message/retrieving-messages/load-older-messages": {
-      "body": "公共入口 `getAdvancedHistoryMessageList()` 读取历史：\n\n```uts\nimport { getAdvancedHistoryMessageList } from '@/uni_modules/unix-openim-sdk'\n\nconst page = await getAdvancedHistoryMessageList({\n  conversationID,\n  startClientMsgID: '',\n  count: 50,\n})\n```\n\n第一页用空 `startClientMsgID`，后续使用当前最早边界消息的 ID。读取结果中的结束标记与消息列表，按 `clientMsgID` 去重。\n\n商业版 `getHistoryMessageList()` <span className=\"enterprise-field-badge\">商业版</span> 额外支持 `isReverse`、`viewType` 和 `lastMinSeq`。不要把它等同于已删除的单独 reverse-history 页面；方向通过参数表达。",
+      "body": "聊天页面进入会话时使用公共入口 `getAdvancedHistoryMessageList()` 建立第一页快照；继续加载更早消息时，把当前最早一条消息的 `clientMsgID` 作为下一页游标。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string` | 是 | 要读取历史消息的会话 ID。 |\n| `startClientMsgID` | `string` | 是 | 分页锚点消息 ID；第一页传空字符串。 |\n| `count` | `number` | 是 | 本次读取的消息数量。 |\n| `lastMinSeq` | `number \\| null` | 否 | 上一页返回的最小序号，用于连续分页。 |\n\n```uts\nimport { getAdvancedHistoryMessageList } from '@/uni_modules/unix-openim-sdk'\n\nconst page = await getAdvancedHistoryMessageList({\n  conversationID,\n  startClientMsgID: oldestMessage?.clientMsgID ?? '',\n  count: 30,\n  lastMinSeq,\n})\n```\n\n## 返回结果\n\nPromise 成功后，结果是 `OpenIMAdvancedHistoryMessageListResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `messageList` | `OpenIMMessageItem[]` | 当前页消息。 |\n| `lastMinSeq` | `number` | 继续读取时传回的最小序号。 |\n| `isEnd` | `boolean` | 是否到达当前加载方向的历史边界。 |\n| `errCode` | `number` | 历史读取结果状态码。 |\n| `errMsg` | `string` | 与状态码对应的说明。 |\n\n只有 `errCode` 表示成功时才合并 `messageList`；Promise 被拒绝时仍按通用错误处理。按 `conversationID` 限定列表，并以 `clientMsgID` 去重；查询不会触发新消息事件。\n\n商业版 `getHistoryMessageList()` <span className=\"enterprise-field-badge\">商业版</span> 额外要求 `isReverse`，并支持可选 `viewType` 和 `lastMinSeq`。不要把它等同于已删除的单独 reverse-history 页面；方向通过参数表达。",
       "description": "按会话和 clientMsgID 游标读取历史消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/retrieving-messages/load-older-messages",
       "title": "加载历史消息"
     },
     "/sdk/uniapp/message/retrieving-messages/find-messages-by-id": {
-      "body": "`findMessageList()` 接收查询数组，每项包含会话 ID 与消息 ID 列表。\n\n```uts\nimport { findMessageList } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await findMessageList([\n  { conversationID, clientMsgIDList: ['msg_a', 'msg_b'] },\n])\n```\n\n返回 `OpenIMFindMessageResult`，按原查询的会话与消息标识建立映射。未找到项不应导致整个结果失效。需要加载消息前后文时使用商业版上下文查询。",
+      "body": "搜索结果、引用消息或通知跳转应保存消息的 `conversationID` 和 `clientMsgID`，再用 `findMessageList()` 取回本地已经同步的消息。\n\n## 参数说明\n\n`findMessageList()` 接收查询条件数组，每一项结构如下：\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `items[].conversationID` | `string` | 是 | 目标消息所属的会话 ID。 |\n| `items[].clientMsgIDList` | `string[]` | 是 | 要在该会话中查找的消息 ID。 |\n\n```uts\nimport { findMessageList } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await findMessageList([\n  { conversationID, clientMsgIDList: [clientMsgID] },\n])\n\nconst targetMessage = result?.findResultItems[0]?.messageList[0]\n```\n\nPromise 成功后，结果是 `OpenIMFindMessageResult | null`，包含 `totalCount` 和 `findResultItems`。每个结果项提供 `conversationID`、`conversationType`、会话展示资料、`messageCount` 和 `messageList`。\n\n一次调用可以包含多个会话条件。不要假设响应项与输入数组位置一致，应按结果的 `conversationID` 和消息的 `clientMsgID` 对应。缓存未同步、消息已删除或 ID 不存在时可能没有结果；查询不会触发消息事件。需要加载消息前后文时使用[读取消息上下文](/zh/sdk/uniapp/message/retrieving-messages/load-message-context)。",
       "description": "在多个会话中按 clientMsgID 批量定位消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/retrieving-messages/find-messages-by-id",
       "title": "按 ID 查找消息"
     },
     "/sdk/uniapp/message/retrieving-messages/load-message-context": {
-      "body": "`fetchSurroundingMessages()` <span className=\"enterprise-field-badge\">商业版</span> 围绕完整锚点消息读取前后文。\n\n```uts\nimport { fetchSurroundingMessages } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await fetchSurroundingMessages({\n  startMessage: targetMessage,\n  viewType: 0,\n  before: 20,\n  after: 20,\n})\n```\n\n`viewType` 使用产品/合同定义值。结果与实时事件可能重复，按 `clientMsgID` 去重并保持时间顺序。不要用只包含 ID 的伪消息作为锚点。",
+      "body": "从搜索结果或引用消息跳入聊天上下文时，把已经取得的完整 `OpenIMMessageItem` 作为锚点。`fetchSurroundingMessages()` 属于<span className=\"enterprise-field-badge\">商业版</span>。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `startMessage` | `OpenIMMessageItem` | 是 | 已经取得的锚点消息。 |\n| `viewType` | `number` | 是 | 上下文查看方向，使用服务端约定值。 |\n| `before` | `number` | 是 | 锚点之前最多读取的消息数量。 |\n| `after` | `number` | 是 | 锚点之后最多读取的消息数量。 |\n\n```uts\nimport { fetchSurroundingMessages } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await fetchSurroundingMessages({\n  startMessage: targetMessage,\n  viewType: 0,\n  before: 20,\n  after: 20,\n})\nconst surroundingMessages = result?.messages ?? []\n```\n\nPromise 成功后，`result?.messages` 是锚点前后取得的 `OpenIMMessageItem[]`，字段见[消息概览](/zh/sdk/uniapp/message/overview-message)。当前 uni-app / uni-app x 返回字段名是 `messages`，不是 Wasm 的 `messageList`。\n\n`before` 和 `after` 分别限制锚点前后的数量。返回结果可能少于请求总数，例如锚点靠近边界或部分消息已删除。结果与实时事件可能重复，应按 `conversationID:clientMsgID` 去重并保持时间顺序。不要使用只包含 ID 的伪消息作为锚点；需要先定位时见[按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)。",
       "description": "商业版围绕一条锚点消息读取前后文。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/retrieving-messages/load-message-context",
       "title": "加载消息上下文"
     },
     "/sdk/uniapp/message/searching-messages/search-messages": {
-      "body": "`searchLocalMessages()` 在 SDK 本地数据中搜索。\n\n```uts\nimport { searchLocalMessages } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await searchLocalMessages({\n  conversationID,\n  keywordList: ['发布'],\n  keywordListMatchType: 0,\n  senderUserIDList: [],\n  messageTypeList: [],\n  searchTimePosition: 0,\n  searchTimePeriod: 0,\n  pageIndex: 1,\n  count: 50,\n})\n```\n\n匹配类型、时间单位和页码使用合同/服务端约定。搜索只覆盖已同步到本地且可索引的内容；不要承诺服务器全量历史。结果按会话与消息 ID 去重。",
+      "body": "`searchLocalMessages()` 搜索当前用户本地已经同步的消息。群消息搜索的目标参数是群聊对应的 `conversationID`，不是发送消息时使用的 `groupID`；如果只保存了群 ID，先按[获取会话 ID](/zh/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id)取得群会话 ID。\n\n搜索范围来自 SDK 本地数据库。跨用户审计、服务端全量检索、复杂权限过滤或全局排序应由后端搜索服务承担，再把命中的 `conversationID` 和 `clientMsgID` 返回客户端定位。\n\n## 创建搜索查询\n\n`keywordList` 接收一个或多个关键词。搜索框通常只代表一次输入，应先去除首尾空格并过滤空值。\n\n```uts\nimport {\n  OpenIMMessageTypeAtText,\n  OpenIMMessageTypeText,\n  searchLocalMessages,\n  type OpenIMMessageItem,\n  type OpenIMSearchMessageResult,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst result = await searchLocalMessages({\n  conversationID,\n  keywordList: [keyword.trim()],\n  keywordListMatchType: 0,\n  senderUserIDList: [],\n  messageTypeList: [OpenIMMessageTypeText, OpenIMMessageTypeAtText],\n  searchTimePosition: 0,\n  searchTimePeriod: 0,\n  pageIndex: 1,\n  count: 20,\n})\n```\n\n## 高级搜索\n\n可以使用发送者、消息类型和时间窗口缩小范围。当前 `OpenIMSearchLocalMessagesParams` 除 `conversationID` 外的筛选与分页字段均为必填；不限制某个数组条件时传空数组，不限制时间时按服务端约定传 `0`。\n\n```uts\nconst result = await searchLocalMessages({\n  conversationID,\n  keywordList: ['release'],\n  keywordListMatchType: 0,\n  senderUserIDList: [senderUserID],\n  messageTypeList: [OpenIMMessageTypeText],\n  searchTimePosition,\n  searchTimePeriod,\n  pageIndex: 1,\n  count: 20,\n})\n```\n\n### 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string \\| null` | 否 | 要搜索的会话 ID；省略时搜索当前本地可见范围。 |\n| `keywordList` | `string[]` | 是 | 关键词列表。 |\n| `keywordListMatchType` | `number` | 是 | 多关键词匹配方式，使用 SDK 数字约定。 |\n| `senderUserIDList` | `string[]` | 是 | 只搜索这些用户发送的消息；不限制时传空数组。 |\n| `messageTypeList` | `OpenIMMessageType[]` | 是 | 只搜索指定类型；不限制时传空数组。 |\n| `searchTimePosition` | `number` | 是 | 搜索结束位置，Unix 时间戳，单位为秒。 |\n| `searchTimePeriod` | `number` | 是 | 从结束位置向前搜索的时间范围，单位为秒。 |\n| `pageIndex` | `number` | 是 | 搜索结果页码，第一页传 `1`。 |\n| `count` | `number` | 是 | 每页返回数量。 |\n\n如果搜索入口允许图片、文件或自定义消息，把相应 `OpenIMMessageType` 常量加入 `messageTypeList`。匹配类型、时间单位和页码必须服从合同及服务端约定。\n\n## 处理分页结果\n\nPromise 成功后，结果是 `OpenIMSearchMessageResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `totalCount` | `number` | 当前条件下匹配的消息总数。 |\n| `searchResultItems` | `OpenIMSearchMessageResultItem[]` | 按会话分组的搜索结果。 |\n\n每个结果项包含：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `conversationID` | `string` | 结果所属会话 ID。 |\n| `conversationType` | `OpenIMSessionType` | 会话类型。 |\n| `showName`、`faceURL` | `string` | 会话展示名称与头像快照。 |\n| `latestMsgSendTime` | `number \\| null` | 当前结果会话的最新消息时间。 |\n| `messageCount` | `number` | 当前结果项的匹配消息数量。 |\n| `messageList` | `OpenIMMessageItem[]` | 匹配消息。 |\n\n可以把分组结果转换为业务搜索行，但必须保留会话 ID 和消息 ID：\n\n```uts\ntype SearchMessageRow = {\n  conversationID : string\n  clientMsgID : string\n  message : OpenIMMessageItem\n}\n\nfunction toSearchRows(result : OpenIMSearchMessageResult) : Array<SearchMessageRow> {\n  const rows : Array<SearchMessageRow> = []\n  result.searchResultItems.forEach((item) => {\n    item.messageList.forEach((message) => {\n      const clientMsgID = message.clientMsgID\n      if (clientMsgID != null) {\n        rows.push({\n          conversationID: item.conversationID,\n          clientMsgID,\n          message,\n        })\n      }\n    })\n  })\n  return rows\n}\n```\n\n分页时保持相同的会话、关键词和筛选条件，只递增 `pageIndex`。用户修改任一条件时，把页码重置为 `1` 并清空旧结果。同一搜索页按 `conversationID:clientMsgID` 去重，不要按结果位置保存选中项。查询不会触发消息事件。\n\n## 处理搜索结果变化\n\n命中的消息可能在页面打开后被撤回或删除，搜索范围也可能因新消息同步而变化。统一事件处理器见[接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)、[批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)和[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)；本页只负责查询和分页，不重复注册消息事件。\n\n跳转时使用结果中的 `conversationID` 和 `clientMsgID` 定位。需要展示前后聊天记录时，把命中的完整 `OpenIMMessageItem` 作为起点读取[消息上下文](/zh/sdk/uniapp/message/retrieving-messages/load-message-context)，不要用 `findMessageList()` 拼接附近记录。\n\n需要显示当前时刻的结果时，可以用相同条件重新执行当前页搜索。搜索 Promise、消息事件增量和重新查询是三条独立路径；重新登录后必须清除旧账号搜索状态，并由新事件作用域继续同步。\n\n## 相关页面\n\n- [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)\n- [加载历史消息](/zh/sdk/uniapp/message/retrieving-messages/load-older-messages)\n- [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)",
       "description": "按关键词、发送者、类型和时间范围搜索消息。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "创建搜索查询",
+          "url": "#创建搜索查询"
+        },
+        {
+          "depth": 2,
+          "title": "高级搜索",
+          "url": "#高级搜索"
+        },
+        {
+          "depth": 3,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "处理分页结果",
+          "url": "#处理分页结果"
+        },
+        {
+          "depth": 2,
+          "title": "处理搜索结果变化",
+          "url": "#处理搜索结果变化"
+        },
+        {
+          "depth": 2,
+          "title": "相关页面",
+          "url": "#相关页面"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/searching-messages/search-messages",
       "title": "搜索本地消息"
     },
@@ -1908,14 +2501,14 @@
       "title": "查询输入状态"
     },
     "/sdk/uniapp/message/composing-messages/check-speech-to-text": {
-      "body": "`getSpeechToTextCapabilities()` <span className=\"enterprise-field-badge\">商业版</span> 返回能力信息。\n\n```uts\nimport { getSpeechToTextCapabilities } from '@/uni_modules/unix-openim-sdk'\n\nconst capabilities = await getSpeechToTextCapabilities()\n```\n\n在展示转写入口前查询并缓存当前 session 的结果。能力可能随服务端、语言或账号变化；重新登录后刷新。没有能力时隐藏入口，不发送必然失败的请求。",
+      "body": "`getSpeechToTextCapabilities()` <span className=\"enterprise-field-badge\">商业版</span> 返回能力信息。\n\n```uts\nimport { getSpeechToTextCapabilities } from '@/uni_modules/unix-openim-sdk'\n\nconst capabilities = await getSpeechToTextCapabilities()\n```\n\nPromise 成功后，结果是 `OpenIMSpeechToTextCapabilitiesResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `format` | `string[] \\| null` | 支持的音频格式。 |\n| `sampleRateHz` | `number[] \\| null` | 支持的音频采样率，单位为赫兹。 |\n| `maxRecordTimeMs` | `number \\| null` | 最大录音时长，单位为毫秒。 |\n| `maxFileSize` | `number \\| null` | 最大文件大小，单位为字节。 |\n| `provider` | `string \\| null` | 当前语音识别服务提供方。 |\n| `requestType` | `string \\| null` | 服务端要求的请求类型。 |\n| `crossDomain` | `boolean \\| null` | 是否允许跨域处理。 |\n\n在展示转写入口前查询并缓存当前 session 的结果。录音完成后按能力字段校验格式、采样率、时长和字节数；能力可能随服务端、语言或账号变化，重新登录后应刷新。查询失败或没有能力时停用入口，不要猜测限制。查询不会触发消息事件。",
       "description": "商业版查询当前语音转写能力。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/message/composing-messages/check-speech-to-text",
       "title": "检查语音转文字能力"
     },
     "/sdk/uniapp/message/composing-messages/transcribe-audio": {
-      "body": "`speechToText()` <span className=\"enterprise-field-badge\">商业版</span> 使用文件名和音频数据。\n\n```uts\nimport { speechToText } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await speechToText({ filename: 'voice.m4a', data: audioBase64 })\n```\n\n先检查能力，限制音频大小和格式。`data` 的编码以商业服务协议为准；不要记录完整音频或 Base64。转写结果需要用户确认，不用于高风险自动决策。",
+      "body": "`speechToText()` <span className=\"enterprise-field-badge\">商业版</span> 使用文件名和音频数据。原生文件不能直接作为 UTS 跨层参数，需按商业服务协议编码为字符串再提交。\n\n```uts\nimport { speechToText } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await speechToText({\n  filename: 'voice.m4a',\n  data: audioBase64,\n})\nif (result?.text != null) setTranscript(result.text)\n```\n\nPromise 成功返回 `OpenIMSpeechToTextResult | null`，其中 `text` 是可选的识别文本。调用前先[查询语音识别能力](/zh/sdk/uniapp/message/composing-messages/check-speech-to-text)，限制音频大小、格式、采样率和时长。\n\n`data` 的编码以商业服务协议为准；不要记录完整音频或 Base64。转写不会自动修改原语音消息，也不触发消息事件。转写结果需要用户确认，不用于高风险自动决策；需要本地保存结果时见[保存语音转写结果](/zh/sdk/uniapp/message/composing-messages/save-local-transcript)。",
       "description": "商业版提交音频文件名和数据进行语音转写。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/message/composing-messages/transcribe-audio",
@@ -1943,9 +2536,15 @@
       "title": "删除本地消息"
     },
     "/sdk/uniapp/message/managing-messages/delete-saved-messages": {
-      "body": "`deleteMessages()` <span className=\"enterprise-field-badge\">商业版</span> 批量删除明确指定的消息。本页归属公共 `onMsgDeleted` 事件。\n\n```uts\nimport {\n  deleteMessages,\n  off,\n  onMsgDeleted,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst deletedSubscription = onMsgDeleted((message) => {\n  removeMessageByID(message.clientMsgID)\n})\n\nawait deleteMessages(deleteParams)\noff(deletedSubscription)\n```\n\n`deleteParams` 使用锁定的 `OpenIMDeleteMessagesParams`，不要只传本地数组。事件和请求结果幂等合并；是否影响其他设备由商业服务语义决定。",
+      "body": "`deleteMessages()` <span className=\"enterprise-field-badge\">商业版</span> 批量删除当前账号在同一会话中明确指定的消息。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string` | 是 | 要删除消息所在的会话 ID。 |\n| `clientMsgIDs` | `string[]` | 是 | 要删除的消息 ID；同一批 ID 必须属于同一会话。 |\n| `IsSync` | `boolean` | 是 | 是否把删除动作同步到当前账号的其他客户端；字段名首字母为大写。 |\n\n```uts\nimport {\n  deleteMessages,\n  off,\n  onMsgDeleted,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst deletedSubscription = onMsgDeleted((message) => {\n  if (message == null) return\n  removeMessage(resolveConversationID(message), message.clientMsgID)\n})\n\nawait deleteMessages({\n  conversationID,\n  clientMsgIDs: selectedMessageIDs,\n  IsSync: true,\n})\n\nfunction removeMessageDeletedListener() {\n  off(deletedSubscription)\n}\n```\n\n`IsSync: false` 删除当前设备及当前账号服务端记录；`true` 还请求把删除动作同步到其他客户端。它不会删除其他会话成员的副本，也不会产生撤回提示。\n\nPromise 成功表示删除请求已经完成；同步开启时，这不代表其他客户端已经收到事件或完成界面更新。公共事件 `onMsgDeleted` 是本页归属事件，参数是 `OpenIMMessageItem | null`；结合消息路由确定会话后按 `clientMsgID` 幂等移除。组件卸载、退出登录或切换账号时调用 `removeMessageDeletedListener()`；需要校准时重新查询对应会话的历史消息。",
       "description": "商业版批量删除消息，并处理 onMsgDeleted。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/delete-saved-messages",
       "title": "删除已保存消息"
     },
@@ -1957,16 +2556,63 @@
       "title": "删除用户在会话中的全部消息"
     },
     "/sdk/uniapp/message/managing-messages/revoke-a-message": {
-      "body": "`revokeMessage()` 使用会话和客户端消息 ID。\n\n```uts\nimport {\n  off,\n  onNewRecvMessageRevoked,\n  revokeMessage,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst revokedSubscription = onNewRecvMessageRevoked((info) => mergeRevokedInfo(info))\nawait revokeMessage({ conversationID, clientMsgID })\noff(revokedSubscription)\n```\n\n服务端校验发送者、时限与权限。撤回后保留消息占位和撤回信息，不简单删除数组项。事件可能先于 Promise 到达，处理需幂等。",
+      "body": "如果界面需要让其他会话成员看到“消息已撤回”，使用 `revokeMessage()`，不要用普通删除替代。删除只影响当前账号侧可见性，见[批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)。修改已发送消息内容见[修改消息](/zh/sdk/uniapp/message/managing-messages/modify-a-message)。\n\n## 撤回一条消息\n\n`revokeMessage()` 接收消息所在的 `conversationID` 和目标 `clientMsgID`：\n\n```uts\nimport {\n  off,\n  onNewRecvMessageRevoked,\n  revokeMessage,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst revokedSubscription = onNewRecvMessageRevoked((info) => {\n  if (info == null) return\n  markMessageRevoked(info.clientMsgID, info)\n})\nawait revokeMessage({ conversationID, clientMsgID })\n\nfunction removeRevokeListener() {\n  off(revokedSubscription)\n}\n```\n\nPromise 成功后，调用端可以先把当前列表中的同 `clientMsgID` 消息更新为撤回态。在线客户端随后通过 `onNewRecvMessageRevoked` 收到撤回信息，接收端应更新对应气泡，而不是直接从列表中删除。\n\n允许撤回的发送者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留撤回展示。Promise 成功代表当前请求已完成，不代表所有端界面已经更新。\n\n## 返回结果\n\n`revokeMessage()` 成功直接返回字符串结果，不返回被撤回消息对象。调用端继续使用请求中的 `clientMsgID` 更新本地气泡，并以撤回事件校准其他客户端状态。\n\n## 监听撤回事件\n\n本页是 `onNewRecvMessageRevoked` 的完整监听示例归属页。事件参数是 `OpenIMMessageRevokedItem | null`，使用 `clientMsgID` 合并；`isAdminRevoke` 表示是否由管理员撤回，可用于选择系统提示文案。事件可能先于 Promise 到达，处理必须幂等。\n\n组件卸载、退出登录或切换账号时调用 `removeRevokeListener()`；重新登录后的撤回变化由消息事件同步。\n\n## 相关页面\n\n- [批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)\n- [修改消息](/zh/sdk/uniapp/message/managing-messages/modify-a-message)\n- [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)\n- [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)\n- [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)",
       "description": "撤回指定消息，并处理消息撤回事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "撤回一条消息",
+          "url": "#撤回一条消息"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        },
+        {
+          "depth": 2,
+          "title": "监听撤回事件",
+          "url": "#监听撤回事件"
+        },
+        {
+          "depth": 2,
+          "title": "相关页面",
+          "url": "#相关页面"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/revoke-a-message",
       "title": "撤回消息"
     },
     "/sdk/uniapp/message/managing-messages/modify-a-message": {
-      "body": "`modifyMessage()`、`onMessageModified` 和 `onMessageEdited` 属于<span className=\"enterprise-field-badge\">商业版</span>。两个事件都是 raw 字符串。\n\n```uts\nimport {\n  modifyMessage,\n  off,\n  onMessageEdited,\n  onMessageModified,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst modifiedSubscription = onMessageModified((payload) => refreshModifiedMessage(payload))\nconst editedSubscription = onMessageEdited((payload) => refreshModifiedMessage(payload))\n\nconst result = await modifyMessage(modifyParams)\noff(modifiedSubscription)\noff(editedSubscription)\n```\n\n`modifyParams` 按 `OpenIMModifyMessageParams` 构造。raw 事件先校验 JSON，再按稳定消息 ID查询或更新；不要记录完整正文。多端编辑按服务端最终版本解决冲突。",
+      "body": "`modifyMessage()` <span className=\"enterprise-field-badge\">商业版</span> 用于修改一条已存在消息的内容。它和[批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)、[撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)不同：删除影响当前账号可见性，撤回让会话成员看到撤回态，修改则替换消息内容并同步给其他客户端。\n\n## 修改消息内容\n\n### 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string` | 是 | 消息所属的会话 ID。 |\n| `message` | `OpenIMMessageItem` | 是 | 修改后的完整消息对象；必须保留原 `clientMsgID`。 |\n\n```uts\nimport {\n  modifyMessage,\n  off,\n  onMessageEdited,\n  onMessageModified,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst modifiedSubscription = onMessageModified((payload) => refreshModifiedMessage(payload))\nconst editedSubscription = onMessageEdited((payload) => refreshModifiedMessage(payload))\n\nconst result = await modifyMessage({\n  conversationID,\n  message: buildEditedMessage(message, editedText),\n})\nif (result?.message != null) replaceMessage(result.message)\n\nfunction removeMessageModifiedListeners() {\n  off(modifiedSubscription)\n  off(editedSubscription)\n}\n```\n\n该方法不是局部更新。应从当前消息复制并只修改目标内容，保留 `clientMsgID` 和其他消息字段。允许修改的发送者、时间窗口和消息类型由 OpenIMServer 校验；失败时不要只在本地保留编辑结果。\n\n## 返回结果\n\nPromise 成功后，`result?.message` 是服务端确认的修改后 `OpenIMMessageItem | null`。调用端可先用返回值替换当前列表中的同 `clientMsgID` 消息；这不代表所有端界面已经更新。\n\n## 监听消息修改\n\n`onMessageModified` 和 `onMessageEdited` 都属于<span className=\"enterprise-field-badge\">商业版</span>，参数是 raw JSON 字符串。部署可能按版本使用其中一种，若同时监听必须按稳定消息 ID 和版本去重。先验证 JSON，再查询或替换消息；不要记录完整正文。组件卸载、退出登录或切换账号时调用 `removeMessageModifiedListeners()`，多端编辑按服务端最终版本解决冲突。\n\n## 相关页面\n\n- [批量删除消息](/zh/sdk/uniapp/message/managing-messages/delete-saved-messages)\n- [撤回消息](/zh/sdk/uniapp/message/managing-messages/revoke-a-message)\n- [发送消息](/zh/sdk/uniapp/message/sending-messages/send-message)\n- [按 ID 查找消息](/zh/sdk/uniapp/message/retrieving-messages/find-messages-by-id)\n- [接收消息](/zh/sdk/uniapp/message/receiving-messages/receive-messages)",
       "description": "商业版修改消息，并处理 modified/edited raw 事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "修改消息内容",
+          "url": "#修改消息内容"
+        },
+        {
+          "depth": 3,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        },
+        {
+          "depth": 2,
+          "title": "监听消息修改",
+          "url": "#监听消息修改"
+        },
+        {
+          "depth": 2,
+          "title": "相关页面",
+          "url": "#相关页面"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/modify-a-message",
       "title": "修改消息"
     },
@@ -1978,23 +2624,41 @@
       "title": "查询置顶消息"
     },
     "/sdk/uniapp/message/managing-messages/set-message-pinned": {
-      "body": "`setConversationPinnedMsg()` 与 `onChangedPinnedMsg` 属于<span className=\"enterprise-field-badge\">商业版</span>。\n\n```uts\nimport {\n  off,\n  onChangedPinnedMsg,\n  setConversationPinnedMsg,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst pinnedSubscription = onChangedPinnedMsg((payload) => {\n  refreshPinnedMessagesAfterValidJson(payload)\n})\nawait setConversationPinnedMsg(pinParams)\noff(pinnedSubscription)\n```\n\n参数使用 `OpenIMSetConversationPinnedMsgParams`。事件是 raw 字符串，校验后重新查询置顶列表；不要把未验证 payload 强转为消息对象。",
+      "body": "`setConversationPinnedMsg()` 与 `onChangedPinnedMsg` 属于<span className=\"enterprise-field-badge\">商业版</span>。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string` | 是 | 消息所在的会话 ID。 |\n| `clientMsgID` | `string` | 是 | 要置顶或取消置顶的消息 ID。 |\n| `pinned` | `boolean` | 是 | `true` 表示置顶，`false` 表示取消置顶。 |\n\n```uts\nimport {\n  off,\n  onChangedPinnedMsg,\n  setConversationPinnedMsg,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst pinnedSubscription = onChangedPinnedMsg((payload) => {\n  refreshPinnedMessagesAfterValidJson(payload)\n})\nawait setConversationPinnedMsg({\n  conversationID,\n  clientMsgID: message.clientMsgID,\n  pinned: true,\n})\n\nfunction removePinnedListener() {\n  off(pinnedSubscription)\n}\n```\n\n权限、消息类型和数量限制由 OpenIMServer 校验。Promise 成功表示置顶请求已完成，不表示变化事件已经到达。\n\n本页唯一归属 `onChangedPinnedMsg`。事件是 raw JSON 字符串，应先校验，再按 `conversationID` 替换置顶集合并按消息 `clientMsgID` 去重；不要把未验证 payload 强转为消息对象。组件卸载、退出登录或切换账号时调用 `removePinnedListener()`。",
       "description": "商业版修改会话消息置顶状态并处理变化事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/set-message-pinned",
       "title": "置顶或取消置顶消息"
     },
     "/sdk/uniapp/message/managing-messages/insert-local-single-message": {
-      "body": "`insertSingleMessageToLocalStorage()` 只写当前设备本地数据库，不发送给对方。\n\n```uts\nimport { insertSingleMessageToLocalStorage } from '@/uni_modules/unix-openim-sdk'\n\nawait insertSingleMessageToLocalStorage(insertParams)\n```\n\n`insertParams` 使用真实 `OpenIMInsertSingleMessageParams`，包含消息、发送方和接收方。适合系统迁移或本地提示，不用于伪造已发送消息。确保 ID 不与现有消息冲突。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `message` | `OpenIMMessageItem` | 是 | 要写入本地数据库的完整消息对象。 |\n| `recvID` | `string` | 是 | 单聊接收方的用户 ID。 |\n| `sendID` | `string` | 是 | 消息发送方的用户 ID。 |\n\n```uts\nimport {\n  createTextMessage,\n  insertSingleMessageToLocalStorage,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst message = await createTextMessage('本地提示')\nif (message != null) {\n  await insertSingleMessageToLocalStorage({\n    message,\n    recvID: targetUserID,\n    sendID: currentUserID,\n  })\n}\n```\n\nPromise 成功只表示当前设备本地数据库已写入，不发送消息，也不触发新消息事件。`createTextMessage()` 只是准备参数，其正文归属[创建文本消息](/zh/sdk/uniapp/message/creating-messages/create-text-message)页面。该能力适合系统迁移或本地提示，不用于伪造已发送消息，并应确保消息 ID 不与现有记录冲突。",
       "description": "把业务生成的消息插入单聊本地历史。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/insert-local-single-message",
       "title": "插入本地单聊消息"
     },
     "/sdk/uniapp/message/managing-messages/insert-local-group-message": {
-      "body": "`insertGroupMessageToLocalStorage()` 只写本机群聊历史。\n\n```uts\nimport { insertGroupMessageToLocalStorage } from '@/uni_modules/unix-openim-sdk'\n\nawait insertGroupMessageToLocalStorage(insertParams)\n```\n\n参数使用 `OpenIMInsertGroupMessageParams`，包含群、发送方和消息。它不广播给群成员；需要真实投递使用发送 API。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `message` | `OpenIMMessageItem` | 是 | 要写入本地数据库的完整消息对象。 |\n| `groupID` | `string` | 是 | 目标群组 ID。 |\n| `sendID` | `string` | 是 | 消息发送方的用户 ID。 |\n\n```uts\nimport { insertGroupMessageToLocalStorage } from '@/uni_modules/unix-openim-sdk'\n\nawait insertGroupMessageToLocalStorage({\n  message,\n  groupID,\n  sendID: currentUserID,\n})\n```\n\nPromise 成功只修改当前设备的本地数据库，不发送给群成员，也不触发新消息事件。适合迁移或本地提示，不应用于伪造服务端已投递消息；需要服务端投递、离线推送或多端同步时使用发送 API。",
       "description": "把业务生成的消息插入群聊本地历史。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/insert-local-group-message",
       "title": "插入本地群聊消息"
     },
@@ -2013,114 +2677,203 @@
       "title": "清空本地与服务端消息"
     },
     "/sdk/uniapp/message/managing-messages/set-message-local-ex": {
-      "body": "`setMessageLocalEx()` 使用会话和消息 ID 更新本地扩展。\n\n```uts\nimport { setMessageLocalEx } from '@/uni_modules/unix-openim-sdk'\n\nawait setMessageLocalEx({ conversationID, clientMsgID, localEx: JSON.stringify(localState) })\n```\n\n`localEx` 不同步到对端。它是整段替换，合并已有 JSON 并限制大小；不存 Token 或不可恢复的重要业务数据。",
+      "body": "`localEx` 只保存在当前客户端，适合折叠、选中或本地来源标记，不会同步给其他用户或设备。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string` | 是 | 目标消息所在的会话 ID。 |\n| `clientMsgID` | `string` | 是 | 目标消息 ID。 |\n| `localEx` | `string` | 是 | 要写入的完整字符串。 |\n\n```uts\nimport { setMessageLocalEx } from '@/uni_modules/unix-openim-sdk'\n\nawait setMessageLocalEx({\n  conversationID,\n  clientMsgID,\n  localEx: JSON.stringify({ selected: true }),\n})\n```\n\nPromise 成功表示本地数据已更新。该方法不会自动合并旧 JSON，也不会触发共享消息事件；需要保留旧字段时先在业务层合并，并限制大小。不要在 `localEx` 中存放 Token 或不可恢复的重要业务数据。",
       "description": "更新一条消息在当前设备的 localEx。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-messages/set-message-local-ex",
       "title": "设置消息本地扩展"
     },
     "/sdk/uniapp/message/managing-read-status/send-group-read-receipts": {
-      "body": "`sendGroupMessageReadReceipt()` 与 `onRecvGroupReadReceipt` 属于<span className=\"enterprise-field-badge\">商业版</span>。\n\n```uts\nimport {\n  off,\n  onRecvGroupReadReceipt,\n  sendGroupMessageReadReceipt,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst receiptSubscription = onRecvGroupReadReceipt((payload) => refreshReadState(payload))\nawait sendGroupMessageReadReceipt(receiptParams)\noff(receiptSubscription)\n```\n\n参数使用 `OpenIMSendGroupMessageReadReceiptParams`。事件为 raw JSON，校验后按消息 ID合并；Promise 成功、事件到达和成员列表查询是不同阶段。",
+      "body": "`sendGroupMessageReadReceipt()` 与 `onRecvGroupReadReceipt` 属于<span className=\"enterprise-field-badge\">商业版</span>。\n\n```uts\nimport {\n  off,\n  onRecvGroupReadReceipt,\n  sendGroupMessageReadReceipt,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst receiptSubscription = onRecvGroupReadReceipt((payload) => {\n  mergeValidatedGroupReadReceipt(payload)\n})\n\nawait sendGroupMessageReadReceipt({\n  conversationID,\n  clientMsgIDs: visibleUnreadMessageIDs,\n})\n\nfunction removeGroupReadReceiptListener() {\n  off(receiptSubscription)\n}\n```\n\n同一批消息必须属于目标群会话。Promise 成功只表示服务端接受上报，不等于其他客户端界面已更新；会话未读数仍由 `markConversationMessageAsRead()` 独立维护。\n\n其他客户端通过 raw JSON 事件 `onRecvGroupReadReceipt` 接收群聊成员级已读变化。本页是该事件的完整监听归属页；先校验 JSON，再按 `conversationID + clientMsgID` 合并消息的已读计数、未读计数和成员信息。组件卸载、退出登录或切换账号时调用 `removeGroupReadReceiptListener()`。\n\n上报 Promise、群回执事件和[查询群消息已读成员](/zh/sdk/uniapp/message/managing-read-status/get-group-message-readers)得到的成员快照是三个独立阶段。",
       "description": "商业版发送群消息已读回执并处理 raw 回执事件。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/message/managing-read-status/send-group-read-receipts",
       "title": "上报群消息已读"
     },
     "/sdk/uniapp/message/managing-read-status/get-group-message-readers": {
-      "body": "`getGroupMessageReaderList()` <span className=\"enterprise-field-badge\">商业版</span> 使用 `OpenIMGetGroupMessageReaderListParams` 查询。\n\n```uts\nimport { getGroupMessageReaderList } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getGroupMessageReaderList(readerParams)\n```\n\n按返回 DTO 的分页字段继续加载，并按 `userID` 去重。已读成员数据可能随新回执变化，打开详情时重新查询。",
+      "body": "`getGroupMessageReaderList()` <span className=\"enterprise-field-badge\">商业版</span> 分页查询指定群消息的已读或未读成员。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `string` | 是 | 群聊会话 ID。 |\n| `clientMsgID` | `string` | 是 | 要查询阅读成员的消息 ID。 |\n| `filter` | `number` | 是 | `0` 查询已读成员，`1` 查询未读成员。 |\n| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |\n| `count` | `number` | 是 | 本次请求的成员数量。 |\n\n```uts\nimport { getGroupMessageReaderList } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await getGroupMessageReaderList({\n  conversationID,\n  clientMsgID,\n  filter: 0,\n  offset: 0,\n  count: 50,\n})\nconst readers = result?.readers ?? []\n```\n\nPromise 成功后，`result?.readers` 是当前页 `OpenIMGroupMemberItem[]`，字段含义见[分页查询群成员](/zh/sdk/uniapp/group/retrieving-group-members/get-group-member-list)。按 `groupID:userID` 去重，需要完整列表时继续增加 `offset` 分页。\n\n查询建立调用时快照，不触发回执事件。已读成员数据可能随新回执变化，打开详情时应重新查询。",
       "description": "商业版分页查询读过指定群消息的成员。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/message/managing-read-status/get-group-message-readers",
       "title": "查询群消息已读成员"
     },
     "/sdk/uniapp/file-uploads/upload-file": {
-      "body": "`uploadFile()` 上传原生层可读的本地文件，返回 URL/URI、UUID、大小和媒体信息。\n\n```uts\nimport { uploadFile } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await uploadFile({\n  filepath: '/data/user/0/app/cache/report.pdf',\n  name: 'report.pdf',\n  contentType: 'application/pdf',\n  uuid: createStableUploadUUID(),\n  cancelID: 'upload-report-1',\n})\n```\n\n路径必须是原生可读的完整路径。`unifile://` 先转换；不要把网络 URL 作为 `filepath`。上传进度由[消息概览](/sdk/uniapp/message/overview-message)归属的 `onUploadFileProgress` 提供。\n\n商业版可以通过 `cancelUpload()` <span className=\"enterprise-field-badge\">商业版</span> 取消同一 `cancelID`：\n\n```uts\nimport { cancelUpload } from '@/uni_modules/unix-openim-sdk'\n\nawait cancelUpload({ cancelID: 'upload-report-1' })\n```\n\n取消是异步请求，最终状态以原上传 Promise 和错误码为准。退出页面时不要删除仍被原生层读取的临时文件，先完成或取消上传。",
+      "body": "`uploadFile()` 是独立上传能力，可用于头像、群头像、资料附件或其他业务文件，不从属于消息，也不会自动创建消息。它上传原生层可读的本地文件，并返回 URL/URI、UUID、大小和媒体信息。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `filepath` | `string` | 是 | 原生层可读取的本地完整路径。 |\n| `name` | `string` | 是 | 文件名。 |\n| `contentType` | `string` | 是 | MIME 类型。 |\n| `uuid` | `string` | 是 | 业务为本次上传生成的稳定任务 ID。 |\n| `cancelID` | `string \\| null` | 否 | 用于取消本次上传的稳定 ID。 |\n| `cause` | `string \\| null` | 否 | 业务侧记录的上传用途或原因。 |\n\n如果界面需要显示进度，应在调用 `uploadFile()` 前注册进度事件，避免较小文件在监听建立前完成上传。\n\n```uts\nimport {\n  off,\n  onUploadFileProgress,\n  uploadFile,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst progressSubscription = onUploadFileProgress((event) => {\n  if (event == null) return\n  updateUploadProgress(event.progress)\n})\n\nconst result = await uploadFile({\n  filepath: '/data/user/0/app/cache/report.pdf',\n  name: 'report.pdf',\n  contentType: 'application/pdf',\n  uuid: createStableUploadUUID(),\n  cancelID: 'upload-report-1',\n})\n\nfunction removeUploadListener() {\n  off(progressSubscription)\n}\n```\n\n路径必须是原生可读的完整路径。`unifile://` 先转换为平台沙盒路径；不要把网络 URL 作为 `filepath`。Android 和 iOS 的临时目录、文件授权与生命周期不同，上传完成前不要移动或删除原文件。\n\n## 返回结果\n\nPromise 成功后，结果是 `OpenIMUploadFileResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `url` | `string \\| null` | 上传后的远端资源 URL。 |\n| `uri` | `string \\| null` | 服务端返回的资源 URI。 |\n| `uuid` | `string \\| null` | 本次上传的任务标识。 |\n| `size` | `number \\| null` | 文件大小。 |\n| `typ` | `number \\| null` | 服务端返回的资源类型。 |\n| `mediaID` | `string \\| null` | 媒体资源 ID。 |\n\n使用 `result?.url` 写入头像、群资料或创建对应消息对象。Promise 成功只表示上传请求成功，不表示资料已经更新，也不表示聊天消息已经创建或发送；后续业务写入必须单独完成。\n\n## 监听上传进度\n\n`onUploadFileProgress` 返回 `OpenIMSDKEventSubscription`，事件只包含 `progress`。当前 uni-app / uni-app x 合同不像 Wasm 完成事件那样携带任务 ID，因此不要依赖数组位置关联并行任务；需要精确展示多个并行上传时，应由业务层限制并发或按各自 Promise 状态管理。账号退出或上传状态层销毁时调用 `removeUploadListener()`。\n\n商业版可以通过 `cancelUpload()` <span className=\"enterprise-field-badge\">商业版</span> 取消同一 `cancelID`：\n\n```uts\nimport { cancelUpload } from '@/uni_modules/unix-openim-sdk'\n\nawait cancelUpload({ cancelID: 'upload-report-1' })\n```\n\n取消是异步请求，最终状态以原上传 Promise 和错误码为准。退出页面时不要删除仍被原生层读取的临时文件，先完成或取消上传。",
       "description": "上传本地文件、观察进度，并在商业版取消上传。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        },
+        {
+          "depth": 2,
+          "title": "监听上传进度",
+          "url": "#监听上传进度"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/file-uploads/upload-file",
       "title": "上传文件"
     },
     "/sdk/uniapp/calling/overview-calling": {
-      "body": "本节全部能力属于<span className=\"enterprise-field-badge\">商业版</span>，要求商业版 OpenIMServer 信令服务。`unix-openim-sdk` 负责邀请、接受、拒绝、取消、挂断、房间凭据和信令事件；它不提供通话 UI、摄像头或音频渲染。\n\n需要完整通话与会议 UI 时，另行集成 `openim-av-runtime`。AV Runtime 复用本插件的唯一登录态，通过类型化 Host RPC调用这些信令 API，不初始化第二套 OpenIM Core。\n\n典型流程：\n\n1. 应用登录 IM，并注册全部信令事件。\n2. 主叫构造 `OpenIMSignalingInvitationInfo` 后调用邀请。\n3. 被叫收到 raw 邀请事件，校验 JSON 并展示来电。\n4. 被叫申请媒体权限后再接受；拒绝则直接发送 reject。\n5. 双方使用返回的 room/token/liveURL 建立媒体连接。\n6. 取消、超时、挂断和多设备事件驱动统一 session 状态机。\n\n同一账号/运行时只维护一个活动通话或会议。Token、liveURL 和 raw 信令 payload 不写日志或持久化。",
+      "body": "本节全部能力属于<span className=\"enterprise-field-badge\">商业版</span>，要求商业版 OpenIMServer 信令服务。`unix-openim-sdk` 提供发起邀请、接受、拒绝、取消、挂断、查询房间和同步通话状态所需的信令 API。它负责协调参与者、房间信息和通话生命周期，不负责采集摄像头画面、播放远端媒体流或渲染通话界面。\n\n应用需要把返回的 `roomID`、`token` 和 `liveURL` 交给所选的实时音视频媒体引擎，并自行处理设备权限、媒体轨道、弱网策略和界面状态。信令 API 不是一套完整的 WebRTC 媒体 SDK。需要完整通话与会议 UI 时，可另行集成 `openim-av-runtime`；AV Runtime 复用本插件的唯一登录态，不初始化第二套 OpenIM Core。\n\n## 通话流程\n\n1. 应用登录 IM 并注册全部信令事件，调用 `signalingInvite()` 发起单聊通话，或调用 `signalingInviteInGroup()` 发起群聊通话。\n2. 被邀请方从 `onReceiveNewInvitation` 获取 raw JSON 邀请，校验并映射为 `OpenIMSignalingInvitationInfo` 后展示来电。\n3. 接受方先申请媒体权限，再调用 `signalingAccept()`；拒绝则调用 `signalingReject()`。\n4. 双方使用返回的 `roomID`、`token` 和 `liveURL` 接入媒体引擎。\n5. 通话过程中根据参与者、媒体流和自定义信令事件更新本地状态。\n6. 发起方可以取消尚未接通的邀请；任一参与者都可以挂断已经建立的通话。\n\n## 核心数据\n\n| 数据 | 说明 |\n| --- | --- |\n| `OpenIMSignalingInvitationInfo` | 邀请人、被邀请人、群组、房间、媒体类型、超时时间和会话类型。 |\n| `OpenIMSignalingInviteResult` | OpenIMServer 返回的 `roomID`、`token`、`liveURL` 和忙线用户列表。 |\n| `OpenIMSignalingAcceptResult`、`OpenIMSignalingGetTokenByRoomIDResult` | 接受邀请或重新获取 Token 时返回的媒体房间凭据。 |\n| `OpenIMSignalingGetRoomByGroupIDResult` | 按群组查询到的 `roomID` 和原始邀请快照。 |\n\n`customData` 和自定义信令只适合传递业务可公开的协商信息。不要在其中写入长期凭据、管理员密钥或其他敏感数据。\n\n## 状态更新与事件归属\n\n发起、接受、拒绝、取消和挂断等写操作需要分别处理 API 的 Promise 结果与通话事件。Promise 成功表示 OpenIMServer 已接受或完成当前信令请求；事件反映邀请方、被邀请方、其他设备或房间参与者看到的增量状态，两者不是同一个完成信号。\n\n信令事件参数是 raw JSON 字符串，必须先校验再进入应用状态。邀请生命周期、成员进出房间、挂断和媒体流变化的完整监听统一见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)；自定义信令事件见[发送自定义信令](/zh/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal)。查询房间、重新获取 Token 和恢复待处理邀请只通过 Promise 返回调用时的快照。\n\n概览页不注册事件处理器。通话状态以 `roomID` 为主键，参与者状态还要结合用户 ID；重新登录后的通话变化由事件同步，需要显示当前房间快照时再查询房间信息。\n\n## 按任务查找页面\n\n| 任务 | 页面 |\n| --- | --- |\n| 发起单聊或群聊通话 | [发起单聊通话](/zh/sdk/uniapp/calling/managing-calls/start-single-call)、[发起群聊通话](/zh/sdk/uniapp/calling/managing-calls/start-group-call) |\n| 接受或拒绝邀请 | [接受通话](/zh/sdk/uniapp/calling/managing-calls/accept-call)、[拒绝通话](/zh/sdk/uniapp/calling/managing-calls/reject-call) |\n| 取消邀请或挂断通话 | [取消通话邀请](/zh/sdk/uniapp/calling/managing-calls/cancel-call)、[挂断通话](/zh/sdk/uniapp/calling/managing-calls/hang-up-call) |\n| 恢复房间或待处理邀请 | [查询群组通话房间](/zh/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id)、[获取通话房间 Token](/zh/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id)、[恢复待处理的通话邀请](/zh/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation) |\n| 处理通话事件和业务协商 | [通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)、[发送自定义信令](/zh/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal) |\n\n同一账号/运行时只维护一个活动通话或会议。Token、liveURL 和 raw 信令 payload 不写日志或持久化。",
       "description": "商业版通话邀请、房间凭据、事件和 AV Runtime 的职责边界。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "通话流程",
+          "url": "#通话流程"
+        },
+        {
+          "depth": 2,
+          "title": "核心数据",
+          "url": "#核心数据"
+        },
+        {
+          "depth": 2,
+          "title": "状态更新与事件归属",
+          "url": "#状态更新与事件归属"
+        },
+        {
+          "depth": 2,
+          "title": "按任务查找页面",
+          "url": "#按任务查找页面"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/calling/overview-calling",
       "title": "音视频信令概览"
     },
     "/sdk/uniapp/calling/managing-calls/start-single-call": {
-      "body": "`signalingInvite()` <span className=\"enterprise-field-badge\">商业版</span> 使用 invitation 和可选离线推送信息。\n\n```uts\nimport { signalingInvite } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingInvite({\n  invitation: {\n    inviterUserID: selfUserID,\n    inviteeUserIDList: [peerUserID],\n    mediaType: 'video',\n    timeout: 30,\n    sessionType: 1,\n  },\n  offlinePushInfo: { title: '视频通话', desc: '收到新的通话邀请' },\n})\n```\n\n返回值可能含 `roomID`、`token`、`liveURL` 和忙线用户列表，全部按可选字段处理。邀请成功后若页面展示失败，应主动取消。不要在日志中打印 token 或 liveURL。",
+      "body": "`signalingInvite()` <span className=\"enterprise-field-badge\">商业版</span> 发起单聊通话。`unix-openim-sdk` 负责通话信令，应用仍需使用返回的房间凭据接入实时音视频媒体引擎。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `invitation` | `OpenIMSignalingInvitationInfo` | 是 | 本次通话邀请。 |\n| `invitation.inviterUserID` | `string` | 是 | 当前登录用户 ID。 |\n| `invitation.inviteeUserIDList` | `string[]` | 是 | 被邀请用户列表；单聊只填写对方一个用户。 |\n| `invitation.groupID` | `string` | 是 | 单聊固定传空字符串。 |\n| `invitation.roomID` | `string` | 是 | 本次通话的唯一房间标识，后续状态按它合并。 |\n| `invitation.timeout` | `number` | 是 | 邀请等待时长，单位为秒。 |\n| `invitation.mediaType` | `string` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |\n| `invitation.sessionType` | `number` | 是 | 单聊传 `OpenIMSessionTypeSingle`。 |\n| `invitation.platformID` | `number` | 是 | 当前客户端平台；Android/iOS 分别使用对应平台常量。 |\n| `invitation.customData` | `string` | 否 | 随邀请携带的业务扩展字符串。 |\n| `invitation.initiateTime` | `number` | 否 | 邀请发起时间，通常由信令链路维护。 |\n| `invitation.busyLineUserIDList` | `string[]` | 否 | 忙线用户列表；发起新邀请时通常不填写。 |\n| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |\n| `offlinePushInfo.title` | `string` | 否 | 推送标题。 |\n| `offlinePushInfo.desc` | `string` | 否 | 推送正文。 |\n| `offlinePushInfo.ex` | `string` | 否 | 推送扩展字符串。 |\n| `offlinePushInfo.iOSPushSound` | `string` | 否 | iOS 推送声音。 |\n| `offlinePushInfo.iOSBadgeCount` | `boolean` | 否 | 是否更新 iOS 角标。 |\n\n```uts\nimport {\n  OpenIMPlatformAndroid,\n  OpenIMSessionTypeSingle,\n  signalingInvite,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst roomCredentials = await signalingInvite({\n  invitation: {\n    inviterUserID: currentUserID,\n    inviteeUserIDList: [peerUserID],\n    customData: JSON.stringify({ source: 'contact-card' }),\n    groupID: '',\n    roomID: createBusinessRoomID(),\n    mediaType: 'video',\n    timeout: 30,\n    sessionType: OpenIMSessionTypeSingle,\n    platformID: OpenIMPlatformAndroid,\n  },\n  offlinePushInfo: {\n    title: '视频通话',\n    desc: '你收到一个视频通话邀请',\n    ex: '',\n    iOSPushSound: 'default',\n    iOSBadgeCount: true,\n  },\n})\n```\n\niOS 端将 `platformID` 改为 `OpenIMPlatformIOS`。房间 ID 应由业务生成并在本次通话各参与端保持一致。\n\n## 返回结果\n\nPromise 成功后，`roomCredentials` 是 `OpenIMSignalingInviteResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `roomID` | `string \\| null` | 本次通话的媒体房间 ID。 |\n| `token` | `string \\| null` | 加入媒体房间使用的短期凭据，只应保存在内存中。 |\n| `liveURL` | `string \\| null` | 媒体服务返回的房间连接地址。 |\n| `busyLineUserIDList` | `string[] \\| null` | 因忙线未能进入邀请流程的用户 ID。 |\n| `invitation` | `OpenIMSignalingInvitationInfo \\| null` | 服务端返回的邀请快照。 |\n\n取得有效的 `token` 和 `roomID` 后再连接媒体房间。Promise 成功只表示信令请求完成并取得房间凭据，不表示对方已经接听；后续状态见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。邀请成功后若页面展示失败，应主动取消。不要在日志中打印 token 或 liveURL。",
       "description": "商业版向一个用户发起音频或视频邀请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/start-single-call",
       "title": "发起单人通话"
     },
     "/sdk/uniapp/calling/managing-calls/start-group-call": {
-      "body": "`signalingInviteInGroup()` <span className=\"enterprise-field-badge\">商业版</span> 使用同一邀请结构，但 invitation 必须包含 `groupID` 和目标成员。\n\n```uts\nimport { signalingInviteInGroup } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingInviteInGroup({\n  invitation: {\n    inviterUserID: selfUserID,\n    inviteeUserIDList: selectedUserIDs,\n    groupID,\n    mediaType: 'audio',\n    timeout: 30,\n    sessionType: 2,\n  },\n})\n```\n\n发送前确认成员仍在群内并去重。`busyLineUserIDList` 只表示本次忙线结果，其他用户仍可能后续接受、拒绝或超时。",
+      "body": "`signalingInviteInGroup()` <span className=\"enterprise-field-badge\">商业版</span> 发起群聊通话，只邀请 `inviteeUserIDList` 明确列出的群成员，不会因为填写 `groupID` 自动邀请全群。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `invitation` | `OpenIMSignalingInvitationInfo` | 是 | 本次通话邀请。 |\n| `invitation.inviterUserID` | `string` | 是 | 发起人的用户 ID。 |\n| `invitation.inviteeUserIDList` | `string[]` | 是 | 被邀请的群成员用户 ID；不要包含发起人。 |\n| `invitation.groupID` | `string` | 是 | 群组 ID，群聊通话不能为空。 |\n| `invitation.roomID` | `string` | 是 | 本次通话的唯一房间标识，所有参与端必须一致。 |\n| `invitation.timeout` | `number` | 是 | 邀请等待时长，单位为秒。 |\n| `invitation.mediaType` | `string` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |\n| `invitation.sessionType` | `number` | 是 | 工作群会话传 `OpenIMSessionTypeWriteGroup`。 |\n| `invitation.platformID` | `number` | 是 | 当前客户端平台；Android/iOS 分别使用对应平台常量。 |\n| `invitation.customData` | `string` | 否 | 随邀请携带的业务扩展字符串。 |\n| `invitation.initiateTime` | `number` | 否 | 邀请发起时间，通常由信令链路维护。 |\n| `invitation.busyLineUserIDList` | `string[]` | 否 | 发起新邀请时通常不填写。 |\n| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |\n\n```uts\nimport {\n  OpenIMPlatformAndroid,\n  OpenIMSessionTypeWriteGroup,\n  signalingInviteInGroup,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst roomCredentials = await signalingInviteInGroup({\n  invitation: {\n    inviterUserID: currentUserID,\n    inviteeUserIDList: selectedGroupMemberIDs,\n    customData: JSON.stringify({ source: 'group-call' }),\n    groupID,\n    roomID: groupID,\n    mediaType: 'video',\n    timeout: 30,\n    sessionType: OpenIMSessionTypeWriteGroup,\n    platformID: OpenIMPlatformAndroid,\n  },\n  offlinePushInfo,\n})\n```\n\n示例沿用群组 ID 作为房间 ID；若业务自行生成 `roomID`，所有参与端必须使用同一个值。iOS 端将 `platformID` 改为 `OpenIMPlatformIOS`。发起前应排除当前用户、空值和重复成员，并确认目标仍在群内。\n\nPromise 成功后，`roomCredentials` 是 `OpenIMSignalingInviteResult | null`，字段含义见[发起单聊通话](/zh/sdk/uniapp/calling/managing-calls/start-single-call)。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请；成功也不代表其他成员已经接听，后续状态由[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)合并。",
       "description": "商业版向群成员发起群组通话邀请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "参数说明",
+          "url": "#参数说明"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/start-group-call",
       "title": "发起群通话"
     },
     "/sdk/uniapp/calling/managing-calls/accept-call": {
-      "body": "收到邀请后，先校验当前 session、请求麦克风/摄像头权限，再调用 `signalingAccept()`。\n\n```uts\nimport { signalingAccept } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingAccept({ invitation })\n```\n\n返回的 `token`、`roomID`、`liveURL` 均可选且敏感，只保存在内存中。权限失败时不得发送 accept；应按产品策略拒绝或提示用户。\n\nPromise 成功与对方接受事件、媒体真正连接是不同阶段。",
+      "body": "从 `onReceiveNewInvitation` 取得原始 `OpenIMSignalingInvitationInfo` 后，先校验当前 session，并请求麦克风或摄像头权限，再调用 `signalingAccept()`：\n\n```uts\nimport { signalingAccept } from '@/uni_modules/unix-openim-sdk'\n\nconst roomCredentials = await signalingAccept({ invitation })\n```\n\n`invitation` 必须保留收到的原始 `roomID`、邀请人、被邀请人和会话类型，不能重新构造。权限失败时不得发送 accept，应按产品策略拒绝或提示用户。\n\nPromise 成功后，`roomCredentials` 是 `OpenIMSignalingAcceptResult | null`：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `roomID` | `string \\| null` | 本次通话的媒体房间 ID。 |\n| `token` | `string \\| null` | 加入媒体房间使用的短期凭据。 |\n| `liveURL` | `string \\| null` | 媒体服务返回的连接地址。 |\n| `invitation` | `OpenIMSignalingInvitationInfo \\| null` | 服务端返回的邀请快照。 |\n\n这些字段均为可选值且敏感，只保存在内存中。取得有效的 `token` 和 `roomID` 后再连接媒体房间；Promise 成功、对方收到接受事件和媒体真正连接是不同阶段。后续状态由[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)继续合并。",
       "description": "商业版接受邀请并取得房间凭据。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/accept-call",
       "title": "接受通话"
     },
     "/sdk/uniapp/calling/managing-calls/reject-call": {
-      "body": "`signalingReject()` 使用收到的完整 invitation。\n\n```uts\nimport { signalingReject } from '@/uni_modules/unix-openim-sdk'\n\nawait signalingReject({ invitation })\n```\n\n拒绝后立即关闭本地来电 UI，并等待/幂等处理对端和其他设备事件。不要自行重建 invitation 或修改 `roomID`。",
+      "body": "用户拒绝来电时，将收到的原始 `OpenIMSignalingInvitationInfo` 交给 `signalingReject()`：\n\n```uts\nimport { signalingReject } from '@/uni_modules/unix-openim-sdk'\n\nawait signalingReject({ invitation })\n```\n\n`invitation` 必须保留完整的原始通话信息，不要自行重建或修改 `roomID`。\n\nPromise 成功只表示 OpenIMServer 已完成拒绝请求。拒绝后可以关闭本地来电 UI，并幂等处理对端和其他设备事件；发起端随后通过 `onInviteeRejected` 更新界面，完整处理见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。",
       "description": "商业版拒绝当前邀请。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/reject-call",
       "title": "拒绝通话"
     },
     "/sdk/uniapp/calling/managing-calls/cancel-call": {
-      "body": "主叫在对方接受前使用 `signalingCancel()`。\n\n```uts\nimport { signalingCancel } from '@/uni_modules/unix-openim-sdk'\n\nawait signalingCancel({ invitation })\n```\n\n取消与挂断语义不同：取消用于未接通邀请，挂断用于已建立或正在建立的会话。按钮防重复，并以取消/接受竞态事件决定最终状态。",
+      "body": "主叫在对方接受前使用 `signalingCancel()`。\n\n```uts\nimport { signalingCancel } from '@/uni_modules/unix-openim-sdk'\n\nawait signalingCancel({ invitation })\n```\n\n必须传本次通话的完整原始 `OpenIMSignalingInvitationInfo`，不能只构造一个 `roomID`。取消与挂断语义不同：取消用于尚未接通的邀请，挂断用于已经建立或正在建立的会话。\n\nPromise 成功表示取消信令请求完成。应用还应结束本地的等待接听状态，并释放尚未使用的媒体资源；远端通过 `onInvitationCancelled` 更新。按钮应防止重复提交，并以取消、接受等竞态事件决定最终状态，完整处理见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。",
       "description": "商业版由主叫取消尚未接通的邀请。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/cancel-call",
       "title": "取消通话邀请"
     },
     "/sdk/uniapp/calling/managing-calls/hang-up-call": {
-      "body": "`signalingHungUp()` 使用当前会话的 invitation。\n\n```uts\nimport { signalingHungUp } from '@/uni_modules/unix-openim-sdk'\n\nawait signalingHungUp({ invitation })\n```\n\n调用前先锁定结束流程，避免本地按钮、远端挂断和网络错误重复执行。发送后关闭媒体连接、释放页面资源，并幂等处理 `onHangUp`。",
+      "body": "通话已经建立后，参与者调用 `signalingHungUp()`。`invitation` 是本次通话使用的完整 `OpenIMSignalingInvitationInfo`，其中的 `roomID` 必须与当前媒体房间一致。\n\n```uts\nimport { signalingHungUp } from '@/uni_modules/unix-openim-sdk'\n\nawait signalingHungUp({ invitation })\n```\n\nPromise 成功只表示挂断信令请求完成。应用还需要停止本地采集、断开媒体房间，并释放摄像头、麦克风和页面资源。\n\n调用前先锁定结束流程，避免本地按钮、远端挂断和网络错误重复执行。取消、拒绝、超时和挂断应进入同一套按 `roomID` 幂等的清理流程，并继续处理 `onHangUp`，完整监听见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。",
       "description": "商业版结束已接受的通话。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/hang-up-call",
       "title": "挂断通话"
     },
     "/sdk/uniapp/calling/managing-calls/handle-call-events": {
-      "body": "所有事件返回 raw JSON 字符串。注册后立即 ACK，异步展示 UI；先校验 JSON，再映射到应用自己的通话领域模型。\n\n```uts\nimport {\n  off,\n  onHangUp,\n  onInvitationCancelled,\n  onInvitationTimeout,\n  onInviteeAccepted,\n  onInviteeAcceptedByOtherDevice,\n  onInviteeRejected,\n  onInviteeRejectedByOtherDevice,\n  onReceiveNewInvitation,\n  onRoomParticipantConnected,\n  onRoomParticipantDisconnected,\n  onStreamChange,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nfunction handleCallPayload(payload : string) {\n  try {\n    const value = JSON.parseObject<UTSJSONObject>(payload)\n    if (value != null) routeValidatedCallEvent(value)\n  } catch (_) {\n    console.error('Invalid call event payload')\n  }\n}\n\nconst invitationSubscription = onReceiveNewInvitation(handleCallPayload)\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  invitationSubscription,\n  onInviteeAccepted(handleCallPayload),\n  onInviteeAcceptedByOtherDevice(handleCallPayload),\n  onInviteeRejected(handleCallPayload),\n  onInviteeRejectedByOtherDevice(handleCallPayload),\n  onInvitationCancelled(handleCallPayload),\n  onInvitationTimeout(handleCallPayload),\n  onHangUp(handleCallPayload),\n  onRoomParticipantConnected(handleCallPayload),\n  onRoomParticipantDisconnected(handleCallPayload),\n  onStreamChange(handleCallPayload),\n]\nsubscriptions.forEach((subscription) => off(subscription))\n```\n\nHarmonyOS 当前不支持 `onStreamChange`，注册会返回 unsupported subscription；其余信令事件支持。应用用 room/session ID 和运行 generation 去重，过期事件不能打开新页面。raw payload 与 RTC Token 不落日志。",
+      "body": "通话状态层应集中监听邀请生命周期、参与者连接状态和媒体流变化，并按 `roomID` 合并到同一份本地状态。所有事件返回 raw JSON 字符串；回调应尽快完成，异步展示 UI，并先校验 JSON 再映射到应用自己的通话领域模型。\n\n| 事件 | 用途 |\n| --- | --- |\n| `onReceiveNewInvitation` | 收到新的通话邀请。 |\n| `onInviteeAccepted`、`onInviteeRejected` | 当前邀请被接受或拒绝。 |\n| `onInvitationCancelled`、`onInvitationTimeout` | 邀请被取消或超时。 |\n| `onInviteeAcceptedByOtherDevice`、`onInviteeRejectedByOtherDevice` | 同一账号的其他设备处理邀请。 |\n| `onHangUp` | 通话参与者挂断。 |\n| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 房间参与者连接状态变化。 |\n| `onStreamChange` | 参与者媒体流状态变化。 |\n\n```uts\nimport {\n  off,\n  onHangUp,\n  onInvitationCancelled,\n  onInvitationTimeout,\n  onInviteeAccepted,\n  onInviteeAcceptedByOtherDevice,\n  onInviteeRejected,\n  onInviteeRejectedByOtherDevice,\n  onReceiveNewInvitation,\n  onRoomParticipantConnected,\n  onRoomParticipantDisconnected,\n  onStreamChange,\n  type OpenIMSDKEventSubscription,\n} from '@/uni_modules/unix-openim-sdk'\n\nfunction handleCallPayload(payload : string) {\n  try {\n    const value = JSON.parseObject<UTSJSONObject>(payload)\n    if (value != null) routeValidatedCallEvent(value)\n  } catch (_) {\n    console.error('Invalid call event payload')\n  }\n}\n\nconst invitationSubscription = onReceiveNewInvitation(handleCallPayload)\nconst subscriptions : Array<OpenIMSDKEventSubscription> = [\n  invitationSubscription,\n  onInviteeAccepted(handleCallPayload),\n  onInviteeAcceptedByOtherDevice(handleCallPayload),\n  onInviteeRejected(handleCallPayload),\n  onInviteeRejectedByOtherDevice(handleCallPayload),\n  onInvitationCancelled(handleCallPayload),\n  onInvitationTimeout(handleCallPayload),\n  onHangUp(handleCallPayload),\n  onRoomParticipantConnected(handleCallPayload),\n  onRoomParticipantDisconnected(handleCallPayload),\n  onStreamChange(handleCallPayload),\n]\n\nfunction removeCallListeners() {\n  subscriptions.forEach((subscription) => off(subscription))\n}\n```\n\n本页是以上 11 个通话事件的唯一完整监听归属页。参与者状态还要结合用户 ID 更新；不要按事件顺序、展示名称或数组下标合并。应用应使用 `roomID`、本地 session ID 和运行 generation 去重，过期事件不能打开新页面。退出登录、切换账号或销毁通话状态层时调用 `removeCallListeners()`。\n\nHarmonyOS 当前不支持 `onStreamChange`，注册会返回 `platform-unsupported` subscription，不会伪造媒体流事件；其余本页信令事件支持。raw payload 与 RTC Token 不写入日志或持久化存储。",
       "description": "商业版统一接收邀请、接受、拒绝、取消、超时、挂断和房间事件。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/calling/managing-calls/handle-call-events",
       "title": "处理通话事件"
     },
     "/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation": {
-      "body": "事件监听建立后调用一次 `signalingGetInvitationInfoStartApp()`，恢复初始化前到达的邀请。\n\n```uts\nimport { signalingGetInvitationInfoStartApp } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingGetInvitationInfoStartApp()\nif (result?.invitation != null) recoverInvitation(result.invitation)\n```\n\n可选参数 `userID` 只用于明确查询用户。无邀请时合法返回 `null`，不是错误。恢复结果与实时邀请可能重复，按 room/session 标识去重；每次 runtime 初始化只查询一次。",
+      "body": "事件监听建立后调用一次 `signalingGetInvitationInfoStartApp()`，返回应用启动或恢复时需要处理的邀请快照：\n\n```uts\nimport { signalingGetInvitationInfoStartApp } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingGetInvitationInfoStartApp()\nif (result?.invitation != null) recoverInvitation(result.invitation)\n```\n\n可选参数 `{ userID }` 只用于明确查询用户；通常由当前登录态决定，不需要传入。\n\n## 返回结果\n\nPromise 成功后，结果是 `OpenIMSignalingGetInvitationInfoStartAppResult | null`，其中 `invitation` 为 `OpenIMSignalingInvitationInfo | null`。无邀请时合法返回 `null` 或 `invitation: null`，不是错误。\n\n该查询只取得当前快照，不会触发通话事件。只在 invitation 非空且 `roomID` 有效时恢复来电界面；恢复结果与实时邀请可能重复，应按 `roomID` 和本地 session 标识去重。每次 runtime 初始化只查询一次，随后仍需监听取消、超时、接受和挂断，完整处理见[通话事件](/zh/sdk/uniapp/calling/managing-calls/handle-call-events)。",
       "description": "商业版在 SDK 启动后查询可能遗漏的当前邀请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation",
       "title": "恢复启动时邀请"
     },
     "/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id": {
-      "body": "`signalingGetRoomByGroupID()` 返回可选 `roomID` 和 invitation。\n\n```uts\nimport { signalingGetRoomByGroupID } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingGetRoomByGroupID({ groupID })\n```\n\n空值表示没有可加入房间。查询结果可能在返回后过期，真正加入前继续处理信令事件并获取有效 Token。",
+      "body": "`signalingGetRoomByGroupID()` 的参数是群组 ID，不是自定义 `roomID`：\n\n```uts\nimport { signalingGetRoomByGroupID } from '@/uni_modules/unix-openim-sdk'\n\nconst room = await signalingGetRoomByGroupID({ groupID })\n```\n\n## 返回结果\n\nPromise 成功后，结果是 `OpenIMSignalingGetRoomByGroupIDResult | null` 快照：\n\n| 字段 | 类型 | 说明 |\n| --- | --- | --- |\n| `roomID` | `string \\| null` | 当前群通话的房间 ID。 |\n| `invitation` | `OpenIMSignalingInvitationInfo \\| null` | 当前房间对应的原始邀请信息。 |\n\n当前 uni-app / uni-app x 合同不像 Wasm 结果那样包含参与者资料；成员快照应由媒体引擎或业务状态提供，不要伪造 `participant` 字段。\n\n空结果或空 `roomID` 表示没有可加入房间。查询结果可能在返回后过期，真正加入前继续处理信令事件并通过 `signalingGetTokenByRoomID()` 获取有效 Token。若业务为群通话使用自定义房间 ID，仍需用 `groupID` 调用本方法，再按返回或已保存的 `roomID` 合并通话状态。",
       "description": "商业版查询群当前关联的 roomID 与邀请。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "返回结果",
+          "url": "#返回结果"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id",
       "title": "按群查询通话房间"
     },
     "/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id": {
-      "body": "`signalingGetTokenByRoomID()` 返回可选 Token 与 liveURL。\n\n```uts\nimport { signalingGetTokenByRoomID } from '@/uni_modules/unix-openim-sdk'\n\nconst result = await signalingGetTokenByRoomID({ roomID })\n```\n\n凭据只保存在内存并立即交给媒体层，不写日志、文件或持久化 storage。空字段或服务端过期时停止加入流程并重新获取，不复用旧 Token。",
+      "body": "已经知道 `roomID`、但需要重新获取入会凭据时，调用 `signalingGetTokenByRoomID()`：\n\n```uts\nimport { signalingGetTokenByRoomID } from '@/uni_modules/unix-openim-sdk'\n\nconst roomCredentials = await signalingGetTokenByRoomID({ roomID })\n```\n\nPromise 成功后，`roomCredentials` 是 `OpenIMSignalingGetTokenByRoomIDResult | null`，包含可选的 `token` 和 `liveURL`，不重复返回 `roomID`。只有取得有效 Token 后，才能使用本次查询参数中的 `roomID` 连接媒体引擎。\n\n房间 Token 是短期敏感凭据，只保存在内存并立即交给媒体层，不要写入日志、URL、分析事件、文件或持久化 storage。空字段或服务端过期时停止加入流程并重新获取，不复用旧 Token。",
       "description": "商业版为指定 roomID 获取 RTC Token 和 liveURL。",
       "headings": [],
       "sourcePath": "/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id",
       "title": "按房间获取 Token"
     },
     "/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal": {
-      "body": "`signalingSendCustomSignaling()` 发送房间内自定义字符串。两个兼容接收事件可能随平台/版本使用其一，业务应去重而不是重复处理。\n\n```uts\nimport {\n  off,\n  onReceiveCustomSignal,\n  onReceiveCustomSignaling,\n  signalingSendCustomSignaling,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst signalSubscription = onReceiveCustomSignal((payload) => handleValidatedSignal(payload))\nconst signalingSubscription = onReceiveCustomSignaling((payload) => handleValidatedSignal(payload))\n\nawait signalingSendCustomSignaling({\n  roomID,\n  customInfo: JSON.stringify({ type: 'raise-hand', version: 1 }),\n})\n\noff(signalSubscription)\noff(signalingSubscription)\n```\n\n接收端用事件 ID/内容哈希去重，校验 `type`、`version` 和字段。`customInfo` 不承担权限认证，不含 Token 或秘密。",
+      "body": "`signalingSendCustomSignaling()` 用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。\n\n## 发送信令\n\n`customInfo` 是字符串。需要传递结构化数据时，先定义稳定的数据格式并序列化为 JSON。\n\n```uts\nimport {\n  off,\n  onReceiveCustomSignal,\n  onReceiveCustomSignaling,\n  signalingSendCustomSignaling,\n} from '@/uni_modules/unix-openim-sdk'\n\nconst signal = {\n  version: 1,\n  eventID: createBusinessEventID(),\n  type: 'hand-raised',\n  userID: currentUserID,\n  sentAt: Date.now(),\n}\n\nawait signalingSendCustomSignaling({\n  roomID,\n  customInfo: JSON.stringify(signal),\n})\n```\n\nPromise 成功表示 OpenIMServer 已接受本次发送，不等于其他参与者已经处理该数据。`customInfo` 应保持精简，并包含协议版本和业务幂等 ID。大文件、聊天记录、长期状态和敏感凭据不应放入其中。\n\n## 接收信令\n\n`onReceiveCustomSignal` 和 `onReceiveCustomSignaling` 是兼容不同 Core/商业服务版本的 raw JSON 事件。实际部署只订阅其中真实产生的一种；若为了兼容同时订阅，必须按 `roomID:eventID` 去重。\n\n```uts\nfunction handleValidatedSignal(payload : string) {\n  try {\n    const event = JSON.parseObject<UTSJSONObject>(payload)\n    if (event == null) return\n\n    const eventRoomID = event.getString('roomID')\n    const customInfo = event.getString('customInfo')\n    if (eventRoomID != activeRoomID || customInfo == null) return\n\n    const signal = JSON.parseObject<UTSJSONObject>(customInfo)\n    if (signal == null) return\n    applyValidatedCallSignal(eventRoomID, signal)\n  } catch (_) {\n    console.warn('无法解析通话自定义信令')\n  }\n}\n\nconst signalSubscription = onReceiveCustomSignal(handleValidatedSignal)\nconst signalingSubscription = onReceiveCustomSignaling(handleValidatedSignal)\n\nfunction removeCustomSignalListeners() {\n  off(signalSubscription)\n  off(signalingSubscription)\n}\n```\n\n解析函数应检查 JSON 结构、协议版本、`eventID`、`type` 和业务字段，再返回已验证的应用内对象。本页是两个兼容事件的完整监听示例归属页。离开通话页、退出登录或切换账号时调用 `removeCustomSignalListeners()`。\n\n自定义信令不承担权限认证。不要信任客户端信令来授予主持人、付费或隐私权限；需要权威校验的状态应由可信后端保存和判断。连接恢复后，通过房间查询或业务后端校准长期状态，不要把自定义信令当作可重放的权威记录。",
       "description": "商业版向房间发送业务自定义信令，并安全解析接收事件。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "发送信令",
+          "url": "#发送信令"
+        },
+        {
+          "depth": 2,
+          "title": "接收信令",
+          "url": "#接收信令"
+        }
+      ],
       "sourcePath": "/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal",
       "title": "发送自定义信令"
     },
