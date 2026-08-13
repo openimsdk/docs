@@ -11,12 +11,30 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/managing-messages/delete-saved-messages'
 ---
 
+`deleteMessages()` is <span className="enterprise-field-badge">Commercial</span> and batch-deletes explicitly selected messages from one conversation.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Conversation containing the messages. |
+| `clientMsgIDs` | `string[]` | Yes | Message IDs; all IDs in one request must belong to this conversation. |
+| `IsSync` | `boolean` | Yes | Whether to synchronize deletion to this account's other clients. The capital `I` is part of the field name. |
+
 ```uts
 import { deleteMessages, off, onMsgDeleted } from '@/uni_modules/unix-openim-sdk'
 
-const deletedSubscription = onMsgDeleted((message) => removeMessageByID(message.clientMsgID))
-await deleteMessages(deleteParams)
-off(deletedSubscription)
+const deletedSubscription = onMsgDeleted((message) => {
+  if (message == null) return
+  removeMessage(resolveConversationID(message), message.clientMsgID)
+})
+await deleteMessages({ conversationID, clientMsgIDs: selectedMessageIDs, IsSync: true })
+
+function removeMessageDeletedListener() {
+  off(deletedSubscription)
+}
 ```
 
-`deleteMessages()` is <span className="enterprise-field-badge">Commercial</span> and uses `OpenIMDeleteMessagesParams`; `onMsgDeleted` is public. Merge request/event idempotently and follow the deployed service's cross-device semantics.
+`IsSync: false` removes current-device and current-account server records; `true` also requests synchronization to other clients. It does not remove copies belonging to other conversation members and does not create a revoked-message notice.
+
+Promise completion does not prove that every client received the event. Public `onMsgDeleted` belongs to this page and provides `OpenIMMessageItem | null`; resolve its conversation and remove by `clientMsgID` idempotently. Remove the listener on logout/account change and reconcile with history when necessary.

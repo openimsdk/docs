@@ -11,14 +11,18 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/composing-messages/update-typing-status'
 ---
 
-`changeInputStates()` updates typing/input state; commercial `typingStatusUpdate()` provides the legacy compatible route. Receive updates through `onConversationUserInputStatusChanged`.
+Pass `focus: true` when the user starts typing. Pass `false` after sending, when the input loses focus, when switching conversations, or when typing stops. Typing state belongs to `conversationID`; it neither saves a draft nor writes a message.
 
 ```uts
 import { changeInputStates, off, onConversationUserInputStatusChanged } from '@/uni_modules/unix-openim-sdk'
 
-const typingSubscription = onConversationUserInputStatusChanged((state) => renderTyping(state))
-await changeInputStates({ conversationID, focus: true })
+const typingSubscription = onConversationUserInputStatusChanged((status) => {
+  updateConversationInputStatus(status)
+})
+await changeInputStates({ conversationID, userID: peerUserID, focus: true })
 off(typingSubscription)
 ```
 
-Debounce high-frequency UI changes and expire stale indicators locally.
+Report `true` when the input gains focus and `false` on blur or page exit, and throttle high-frequency changes. Commercial compatibility method `typingStatusUpdate()` <span className="enterprise-field-badge">Commercial</span> uses `recvID` and `msgTip`; do not call both routes for one typing flow. Expire stale indicators locally.
+
+Deduplicate state changes instead of reporting every keyboard event. Promise completion only means the request was accepted; it does not mean a remote interface has already updated. This page is the sole owner of `onConversationUserInputStatusChanged`. Replace the current `platformIDs` snapshot by `conversationID:userID`, and call `off(typingSubscription)` when the component, login, or account scope ends.

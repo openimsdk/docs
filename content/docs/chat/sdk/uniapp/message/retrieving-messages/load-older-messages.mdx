@@ -11,12 +11,40 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/retrieving-messages/load-older-messages'
 ---
 
+Use public `getAdvancedHistoryMessageList()` to establish the first snapshot when a chat opens. To load older records, pass the current earliest message's `clientMsgID` as the next cursor.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Conversation whose history is being loaded. |
+| `startClientMsgID` | `string` | Yes | Paging anchor; pass an empty string for the first page. |
+| `count` | `number` | Yes | Number of messages to request. |
+| `lastMinSeq` | `number` or `null` | No | Minimum sequence returned by the previous page. |
+
 ```uts
 import { getAdvancedHistoryMessageList } from '@/uni_modules/unix-openim-sdk'
 
-const page = await getAdvancedHistoryMessageList({ conversationID, startClientMsgID: '', count: 50 })
+const page = await getAdvancedHistoryMessageList({
+  conversationID,
+  startClientMsgID: oldestMessage?.clientMsgID ?? '',
+  count: 30,
+  lastMinSeq,
+})
 ```
 
-Use an empty cursor for the first page and the earliest boundary message ID for the next. Deduplicate by `clientMsgID` and honor the returned end marker.
+## Return result
 
-Commercial `getHistoryMessageList()` additionally supports `isReverse`, `viewType`, and `lastMinSeq`; direction is a parameter, not a separate reverse-history API.
+The Promise resolves to `OpenIMAdvancedHistoryMessageListResult | null`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `messageList` | `OpenIMMessageItem[]` | Messages in this page. |
+| `lastMinSeq` | `number` | Minimum sequence to send with the next request. |
+| `isEnd` | `boolean` | Whether the history boundary in this direction was reached. |
+| `errCode` | `number` | History result status code. |
+| `errMsg` | `string` | Description associated with the status code. |
+
+Merge `messageList` only when `errCode` reports success; handle a rejected Promise through the normal error path. Scope the list by `conversationID` and deduplicate by `clientMsgID`. History queries do not emit new-message events.
+
+Commercial `getHistoryMessageList()` <span className="enterprise-field-badge">Commercial</span> additionally requires `isReverse` and supports optional `viewType` and `lastMinSeq`. Direction is a parameter, not a separate reverse-history API.

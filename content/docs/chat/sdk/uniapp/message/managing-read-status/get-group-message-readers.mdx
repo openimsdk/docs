@@ -11,10 +11,25 @@ platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/managing-read-status/get-group-message-readers'
 ---
 
+`getGroupMessageReaderList()` is <span className="enterprise-field-badge">Commercial</span> and paginates members who have or have not read a specific group message.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Group conversation ID. |
+| `clientMsgID` | `string` | Yes | Message whose readers are queried. |
+| `filter` | `number` | Yes | `0` for readers, `1` for unread members. |
+| `offset` | `number` | Yes | Pagination offset; start with `0`. |
+| `count` | `number` | Yes | Number of members to request. |
+
 ```uts
 import { getGroupMessageReaderList } from '@/uni_modules/unix-openim-sdk'
 
-const result = await getGroupMessageReaderList(readerParams)
+const result = await getGroupMessageReaderList({
+  conversationID, clientMsgID, filter: 0, offset: 0, count: 50,
+})
+const readers = result?.readers ?? []
 ```
 
-This <span className="enterprise-field-badge">Commercial</span> operation uses `OpenIMGetGroupMessageReaderListParams`. Continue through returned pagination fields, deduplicate by `userID`, and refresh because new receipts can change the list.
+`result?.readers` is the current page of `OpenIMGroupMemberItem[]`. Continue by increasing `offset` and deduplicate by `groupID:userID`. The query creates a snapshot and emits no receipt event; refresh the detail because later receipts can change it.
