@@ -11,7 +11,9 @@ platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
 ---
 
-`signalingInviteInGroup()` starts a group call. It invites only the members explicitly listed in `inviteeUserIDList`; setting `groupID` does not automatically invite every group member.
+`signalingInviteInGroup()` starts a group call and uses the same parameter types as [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call). For group calls, `invitation.groupID` must contain the group ID and `invitation.sessionType` is always `ConversationType.GROUP_CHAT`.
+
+Only members in `inviteeUserIDList` are invited; setting `groupID` does not invite every group member automatically. Exclude the current user, empty IDs, and duplicates from the list. This example uses the group ID as the room ID; if you generate a separate `roomID`, every participant must use the same value.
 
 ```java
 SignalingInvitationInfo invitation = new SignalingInvitationInfo();
@@ -26,7 +28,6 @@ invitation.setPlatformID(Platform.ANDROID);
 invitation.setCustomData("{\"source\":\"group-call\"}");
 
 SignalingInfo info = new SignalingInfo();
-info.setUserID(currentUserID);
 info.setInvitation(invitation);
 info.setOfflinePushInfo(offlinePushInfo);
 
@@ -46,6 +47,6 @@ OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
 );
 ```
 
-`groupID` must not be empty. Remove the current user, empty IDs, and duplicates from `inviteeUserIDList`. The example reuses the group ID as the room ID. If your application generates another `roomID`, every participant must use the same value.
+The success callback returns `SignalingCertificate`. `roomID` is the media room ID, `token` is the short-lived credential for joining it, `liveURL` is the media service address, and `busyLineUserIDList` lists busy users. Busy users do not prevent invitations to the remaining members, and a successful callback does not mean that any member has accepted.
 
-The success callback returns `SignalingCertificate`; see [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call) for its fields. `busyLineUserIDList` only identifies some unavailable members and should not stop invitations to the others. Success does not mean that any member has accepted.
+Connect to the media room only after obtaining a valid `token` and `roomID`. A successful API call does not mean the invitees have accepted; merge subsequent state through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

@@ -11,14 +11,14 @@ platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/hang-up-call'
 ---
 
-After a call is established, a participant can call `signalingHungUp()`. The supplied `SignalingInfo` should preserve the complete invitation, and its `roomID` must match the active media room.
+After a call is established, any participant can call `signalingHungUp()` to hang up. Pass the complete `SignalingInfo` saved for the active call; its `roomID` must match the active media room.
 
 ```java
 OpenIMClient.getInstance().signalingManager.signalingHungUp(
     new OnBase<String>() {
         @Override
         public void onSuccess(String result) {
-            releaseCallResources(activeInfo.getInvitation().getRoomID());
+            releaseCallResources(signalingInfo.getInvitation().getRoomID());
         }
 
         @Override
@@ -26,8 +26,8 @@ OpenIMClient.getInstance().signalingManager.signalingHungUp(
             showHangUpError(code, error);
         }
     },
-    activeInfo
+    signalingInfo
 );
 ```
 
-The success callback only means that the hang-up request completed. Stop local capture, disconnect the media room, and release the camera and microphone. Cancellation, rejection, timeout, and hang-up should all enter one idempotent cleanup flow keyed by `roomID`.
+The success callback only confirms that the hang-up signaling request completed; it does not release local resources automatically. Close the call UI, stop local capture, disconnect from the media room, and release the camera and microphone.

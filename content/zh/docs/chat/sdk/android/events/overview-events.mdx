@@ -4,25 +4,39 @@ description: '集中设置 Android SDK listener，并按业务领域分发连接
 sourcePath: '/sdk/android/events/overview-events'
 ---
 
-OpenIM Android SDK 通过 listener 推送连接、同步、用户、好友、会话、群组、消息和通话变化。各 manager 的 listener 设置方法采用替换语义，后一次设置会覆盖此前实例。因此应在应用级事件中心组合所有回调，并在登录前集中设置一次，不要在 Activity、Fragment、Compose 页面或功能组件中重复设置。
+OpenIM Android SDK 通过 listener 推送连接、同步、用户、好友、会话、群组、消息和通话变化。每个 manager 同时只保留一个 listener；再次设置会覆盖之前设置的 listener。因此应在应用中统一管理这些 listener，并在登录前设置一次，不要在 Activity、Fragment、Compose 页面或各功能组件中重复设置。
 
-连接 listener 是例外：`OnConnListener` 在 `initSDK()` 时传入，其完整处理见[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)。
+IM Server 连接状态由 `OnConnListener` 监听。它不通过 manager 单独设置，而是在调用 `initSDK()` 时传入；完整处理方式见[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)。
 
 ## 集中设置 listener
 
-下面的注册入口使用应用级稳定 listener。每个 listener 内应包含对应领域的全部回调；具体状态合并逻辑保留在事件归属页面。
+以下示例在应用的统一位置注册各类 listener。每个 listener 只处理其所属业务的事件，例如消息、会话、好友和通话。
 
 ```java
 public final class OpenIMEventCenter {
     private final OpenIMClient client = OpenIMClient.getInstance();
 
-    private final OnUserListener userListener = buildUserListener();
-    private final OnFriendshipListener friendshipListener = buildFriendshipListener();
-    private final OnConversationListener conversationListener = buildConversationListener();
-    private final OnGroupListener groupListener = buildGroupListener();
-    private final OnAdvanceMsgListener messageListener = buildMessageListener();
-    private final OnCustomBusinessListener businessListener = buildBusinessListener();
-    private final OnSignalingListener signalingListener = buildSignalingListener();
+    private final OnUserListener userListener = new OnUserListener() {
+        // 处理用户资料和在线状态变化
+    };
+    private final OnFriendshipListener friendshipListener = new OnFriendshipListener() {
+        // 处理好友关系、好友申请和黑名单变化
+    };
+    private final OnConversationListener conversationListener = new OnConversationListener() {
+        // 处理会话、未读数、输入状态和初始化同步
+    };
+    private final OnGroupListener groupListener = new OnGroupListener() {
+        // 处理群组、群成员和群申请变化
+    };
+    private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
+        // 处理新消息、撤回、删除、修改和已读回执
+    };
+    private final OnCustomBusinessListener businessListener = new OnCustomBusinessListener() {
+        // 处理自定义业务消息
+    };
+    private final OnSignalingListener signalingListener = new OnSignalingListener() {
+        // 处理通话邀请、成员状态和自定义通话信令
+    };
 
     public void registerBeforeLogin() {
         client.userInfoManager.setOnUserListener(userListener);
@@ -36,7 +50,7 @@ public final class OpenIMEventCenter {
 }
 ```
 
-Android SDK 没有公开的 remove 或 unset 方法。退出登录、切换账号或销毁应用状态层时，应停止向旧账号状态和已销毁页面分发回调；重新登录前，用新账号对应的完整 listener 组合覆盖设置。
+Android SDK 不提供移除 listener 的方法。退出登录、切换账号或页面销毁时，应停止用回调更新旧账号数据和已销毁界面，并清理应用自身持有的引用。下次登录前，重新设置新账号使用的各类 listener。
 
 ## 事件归属
 
@@ -63,59 +77,34 @@ Android SDK 没有公开的 remove 或 unset 方法。退出登录、切换账�
 | 通话自定义信令 | `OnSignalingListener` | [发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |
 | SDK 数据同步 | `OnConversationListener` | [监听初始化同步](#监听初始化同步) |
 
-查询 API 建立状态快照，listener 合并后续增量，必要时再重新查询校准。API 成功 callback、事件到达和重新查询结果是三个独立阶段，不能相互替代。
-
 ## 监听初始化同步
 
-同步生命周期属于应用级 `OnConversationListener`。该 listener 还应包含会话列表、未读数和输入状态回调；下面只展示本页负责的同步处理逻辑：
+同步生命周期属于 `OnConversationListener`，该 listener 还应包含会话列表、未读数和输入状态回调；下面只展示初始化同步相关的回调：
 
 ```java
-private OnConversationListener buildConversationListener() {
-    return new OnConversationListener() {
-        @Override
-        public void onNewConversation(List<ConversationInfo> conversations) {
-            mergeNewConversations(conversations);
-        }
+private final OnConversationListener conversationListener = new OnConversationListener() {
+    @Override
+    public void onSyncServerStart(boolean reinstall) {
+        // 开始同步：更新同步状态并按需显示加载界面
+    }
 
-        @Override
-        public void onConversationChanged(List<ConversationInfo> conversations) {
-            mergeChangedConversations(conversations);
-        }
+    @Override
+    public void onSyncServerProgress(long progress) {
+        // 同步中：更新同步进度
+    }
 
-        @Override
-        public void onTotalUnreadMessageCountChanged(int total) {
-            updateTotalUnreadCount(total);
-        }
+    @Override
+    public void onSyncServerFinish(boolean reinstall) {
+        // 同步完成：刷新依赖完整数据的页面
+    }
 
-        @Override
-        public void onConversationUserInputStatusChanged(String payload) {
-            handleInputStatus(payload);
-        }
+    @Override
+    public void onSyncServerFailed(boolean reinstall) {
+        // 同步失败：更新同步失败状态并等待重试或连接恢复
+    }
 
-        @Override
-        public void onSyncServerStart(boolean reinstall) {
-            setSyncState("syncing", 0, reinstall);
-        }
-
-        @Override
-        public void onSyncServerProgress(long progress) {
-            setSyncProgress(progress);
-        }
-
-        @Override
-        public void onSyncServerFinish(boolean reinstall) {
-            setSyncState("ready", 100, reinstall);
-            reloadVisibleSnapshots();
-        }
-
-        @Override
-        public void onSyncServerFailed(boolean reinstall) {
-            setSyncState("failed", 0, reinstall);
-        }
-    };
-}
+    // conversationListener 的其他回调函数...
+};
 ```
 
-`reinstall` 为 `true` 表示本地数据需要按重建场景处理，通常应展示更完整的同步状态，并避免在同步完成前使用旧缓存。`onSyncServerProgress` 提供当前进度；完成后重新查询当前界面所需快照，失败时记录错误并等待重试或连接恢复。
-
-本页是 `onSyncServerStart`、`onSyncServerProgress`、`onSyncServerFinish` 和 `onSyncServerFailed` 的完整处理归属页。同步状态没有业务实体合并键，应按当前 `OpenIMClient` 单例和登录用户隔离。
+`reinstall` 表示本次是否为本地数据重建后的同步：`true` 表示应用重装、清除本地数据等场景后的同步，本地通常没有可用缓存；`false` 表示普通登录后的同步。`onSyncServerProgress` 提供当前同步进度；同步完成后重新查询当前界面需要的数据，失败时更新同步失败状态并等待重试或连接恢复。

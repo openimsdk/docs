@@ -1,6 +1,6 @@
 ---
 title: 'Logging'
-description: 'Configure Android SDK logging, write application diagnostics, and upload logs.'
+description: 'Configure Android SDK logging, write application logs, and upload logs.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
@@ -15,7 +15,7 @@ OpenIM Android SDK logs help diagnose initialization, connection, and business A
 
 ## Configure logging during initialization
 
-Logging options belong to `InitConfig` and must be set before `initSDK()`.
+Configure logging when calling `initSDK()`:
 
 ```java
 File dataDirectory = new File(application.getFilesDir(), "openim");
@@ -45,9 +45,9 @@ boolean initialized = OpenIMClient.getInstance().initSDK(
 
 Use `Debug` for ordinary development diagnostics. Enable `DebugWithSQL` temporarily and only when diagnosing database problems. Production builds normally use `Warn` or `Error` and disable unnecessary standard output.
 
-## Write application diagnostic logs
+## Write application logs
 
-Use the non-deprecated `logs()` overload to add application context to SDK logs.
+Use `logs()` to write application logs to the SDK log:
 
 ```java
 OpenIMClient.getInstance().logs(
@@ -65,12 +65,12 @@ OpenIMClient.getInstance().logs(
 
 The older `logs()` overload with `OnBase<String>` and `Map` parameters is deprecated and should not be used in new code.
 
-## Upload diagnostic logs
+## Upload logs
 
-Call `uploadLogs()` only after the user explicitly agrees to submit diagnostic information. The Android API retains the `params` argument; pass an empty list when no additional parameters are needed. `line` configures how many log lines are read for the upload.
+Use `uploadLogs()` to upload client logs to the server, primarily when a user actively submits diagnostic logs.
 
 ```java
-String uploadID = UUID.randomUUID().toString();
+String cancelID = UUID.randomUUID().toString();
 
 OpenIMClient.getInstance().uploadLogs(
     new OnBase<String>() {
@@ -84,10 +84,10 @@ OpenIMClient.getInstance().uploadLogs(
             showLogUploadError(code, error);
         }
     },
-    Collections.emptyList(),
-    2000,
-    uploadID,
-    "support-ticket-42",
+    new ArrayList<>(),
+    2000, // line
+    cancelID,
+    "support-ticket-42", // ex
     new UploadLogProgress() {
         @Override
         public void onProgress(long current, long total) {
@@ -99,18 +99,19 @@ OpenIMClient.getInstance().uploadLogs(
 
 | Parameter           | Description                                                                                                            |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `params`            | Legacy parameter that the current SDK does not use. Pass an empty list, such as `new ArrayList<>()`.                 |
 | `line`              | Number of log lines configured for this upload.                                                                        |
 | `cancelID`          | Stable identifier for this upload, such as an application-generated UUID.                                              |
 | `ex`                | Diagnostic context attached to the task, such as a support ticket ID. It must not contain credentials or private data. |
 | `UploadLogProgress` | Reports current progress and total work for the upload interface.                                                      |
 
-The success callback means that the log upload request completed. It does not change user, conversation, or message state and does not trigger a business-domain event. On failure, record the error code, current user, and application diagnostic ID without printing the complete logs again.
+The success callback means that the log upload request completed.
 
-## operationID and application tracing
+## Use operationID to locate an SDK call
 
-Public methods in the Android Java wrapper do not accept `operationID`. The wrapper generates one with `ParamsUtil.buildOperationID()` for each call and passes it to Core, so applications normally do not create or supply this value.
+Public methods in the OpenIM Android SDK do not accept `operationID`. Each SDK call generates an `operationID` automatically. `operationID` identifies only one SDK call; it is not a user identity, permission credential, business idempotency key, or business ID.
 
-Maintain a separate application trace ID in your own logs. Record the business action, error code, and only the required `conversationID`, `clientMsgID`, `groupID`, or `roomID`. The application trace ID links a multi-step business flow, while the SDK `operationID` links one SDK call. Neither is an identity credential or a business idempotency key.
+When investigating a problem, find the `operationID` near the failed or unexpected call in the client SDK logs. It identifies the related log records for that SDK call. When providing logs to support, also include the time of the issue, user ID, action name, and any relevant `conversationID`, `clientMsgID`, `groupID`, or `roomID` to help locate the records.
 
 ## Related pages
 

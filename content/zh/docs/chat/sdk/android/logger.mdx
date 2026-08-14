@@ -8,7 +8,7 @@ OpenIM Android SDK 日志用于定位初始化、连接和业务 API 调用问�
 
 ## 初始化日志配置
 
-日志选项属于 `InitConfig`，必须在 `initSDK()` 前设置：
+在调用 `initSDK()` 时配置日志：
 
 ```java
 File dataDirectory = new File(application.getFilesDir(), "openim");
@@ -38,9 +38,9 @@ boolean initialized = OpenIMClient.getInstance().initSDK(
 
 开发诊断可以使用 `Debug`；只有排查数据库问题时才临时启用 `DebugWithSQL`。生产环境通常使用 `Warn` 或 `Error`，并关闭不必要的标准输出。
 
-## 写入应用诊断日志
+## 写入应用日志
 
-需要把业务上下文写入 SDK 日志时，使用未废弃的 `logs()` 重载：
+需要把业务日志写入 SDK 日志时，使用 `logs()`：
 
 ```java
 OpenIMClient.getInstance().logs(
@@ -56,14 +56,14 @@ OpenIMClient.getInstance().logs(
 
 `currentClassName` 和 `currentLineNum` 用于定位调用位置，`msgStr` 是简短动作描述，`errStr` 是错误信息。`Warn`、`Error`、`Panic` 和 `Fatal` 级别必须提供非空错误信息。末尾的 `extra` 按“键、值”成对传入；只记录排查所需的非敏感标识。
 
-旧的带 `OnBase<String>`、`Map` 参数的 `logs()` 重载已经废弃，不应在新代码中使用。
+旧版带 `OnBase<String>`、`Map` 参数的 `logs()` 重载已经废弃，不应在新代码中使用。
 
-## 上传诊断日志
+## 上传日志
 
-只在用户明确同意提交诊断信息后调用 `uploadLogs()`。Android API 保留了 `params` 参数；没有额外参数时传空列表。`line` 表示本次上传读取的日志行数配置。
+`uploadLogs()` 可将客户端日志上传至服务器，主要使用场景是用户主动提交诊断日志。
 
 ```java
-String uploadID = UUID.randomUUID().toString();
+String cancelID = UUID.randomUUID().toString();
 
 OpenIMClient.getInstance().uploadLogs(
     new OnBase<String>() {
@@ -77,10 +77,10 @@ OpenIMClient.getInstance().uploadLogs(
             showLogUploadError(code, error);
         }
     },
-    Collections.emptyList(),
-    2000,
-    uploadID,
-    "support-ticket-42",
+    new ArrayList<>(),
+    2000, // line
+    cancelID,
+    "support-ticket-42", // ex
     new UploadLogProgress() {
         @Override
         public void onProgress(long current, long total) {
@@ -92,18 +92,19 @@ OpenIMClient.getInstance().uploadLogs(
 
 | 参数 | 说明 |
 | --- | --- |
+| `params` | 历史遗留参数，当前 SDK 不使用；传入空列表，例如 `new ArrayList<>()`。 |
 | `line` | 本次上传读取的日志行数配置。 |
 | `cancelID` | 本次上传的稳定标识，可使用业务生成的 UUID。 |
 | `ex` | 附加到上传任务的诊断说明，例如工单 ID；不能包含凭据或隐私数据。 |
 | `UploadLogProgress` | 提供当前进度和总量，用于更新上传界面。 |
 
-成功 callback 表示本次日志上传请求完成，不会修改用户、会话或消息状态，也不会触发业务领域事件。上传失败时记录错误码、当前用户和业务诊断 ID，不要再次输出完整日志内容。
+成功 callback 表示本次日志上传请求完成。
 
-## operationID 与业务追踪
+## 使用 operationID 定位一次 SDK 调用
 
-Android Java wrapper 的公共业务方法不接收 `operationID`。每次调用时，wrapper 会通过 `ParamsUtil.buildOperationID()` 自动生成并传给 Core，因此应用通常不需要创建或传递该值。
+OpenIM Android SDK 的公共业务方法不接收 `operationID` 参数。每次调用 SDK 时，会自动生成 `operationID`。`operationID` 只对应一次 SDK 调用，不是用户身份、权限凭据、业务幂等键或业务 ID。
 
-应用日志应另外维护自己的 trace ID，并记录业务动作、错误码以及必要的 `conversationID`、`clientMsgID`、`groupID` 或 `roomID`。应用 trace ID 用于串联多步骤业务流程；SDK 的 `operationID` 用于单次 SDK 调用链路，两者都不是身份凭据或业务幂等键。
+排查问题时，在客户端 SDK 日志中找到报错或异常调用附近的 `operationID`，可用它定位这一次 SDK 调用的相关日志。向技术支持提供日志时，同时提供发生时间、用户 ID、操作名称，以及必要的 `conversationID`、`clientMsgID`、`groupID` 或 `roomID`，有助于更快找到对应记录。
 
 ## 相关页面
 

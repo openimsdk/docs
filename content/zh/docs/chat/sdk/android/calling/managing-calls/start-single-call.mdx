@@ -8,19 +8,33 @@ sourcePath: '/sdk/android/calling/managing-calls/start-single-call'
 
 ## 参数说明
 
-| 字段 | 类型 | 是否必填 | 说明 |
+调用方法：
+
+```java
+signalingInvite(OnBase<SignalingCertificate> callback, SignalingInfo info)
+```
+
+下表字段均为 `info` 的属性；使用点号表示嵌套对象。仅列出 Android SDK 与 WASM SDK 共有的参数。
+
+| 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `userID` | `String` | 是 | 执行邀请操作的当前登录用户 ID。 |
-| `inviterUserID` | `String` | 是 | 邀请方用户 ID，通常与当前登录用户一致。 |
-| `inviteeUserIDList` | `List<String>` | 是 | 被邀请用户列表；单聊只填写对方一个用户。 |
-| `groupID` | `String` | 是 | 单聊固定传空字符串。 |
-| `roomID` | `String` | 是 | 本次通话的唯一房间标识，后续状态按它合并。 |
-| `timeout` | `long` | 是 | 邀请等待时长，单位为秒。 |
-| `mediaType` | `String` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |
-| `sessionType` | `int` | 是 | 单聊使用 `ConversationType.SINGLE_CHAT`。 |
-| `platformID` | `int` | 是 | Android 手机端使用 `Platform.ANDROID`。 |
-| `customData` | `String` | 否 | 随邀请携带的业务扩展字符串。 |
+| `invitation` | `SignalingInvitationInfo` | 是 | 本次通话邀请。 |
+| `invitation.inviterUserID` | `String` | 是 | 邀请者，传入当前登录用户 ID。 |
+| `invitation.inviteeUserIDList` | `List<String>` | 是 | 被邀请用户列表；单聊只填写对方一个用户。 |
+| `invitation.groupID` | `String` | 是 | 群ID，单聊固定传空字符串。 |
+| `invitation.roomID` | `String` | 是 | 本次通话的唯一房间标识，后续状态按它合并。 |
+| `invitation.timeout` | `long` | 是 | 邀请等待时长，单位为秒。 |
+| `invitation.mediaType` | `String` | 是 | 媒体类型，业务通常约定为 `audio` 或 `video`。 |
+| `invitation.sessionType` | `int` | 是 | 单聊使用 `ConversationType.SINGLE_CHAT`，群聊使用 `ConversationType.SUPER_GROUP_CHAT`。 |
+| `invitation.platformID` | `int` | 是 | 当前客户端平台，固定传入 `Platform.ANDROID`。 |
+| `invitation.customData` | `String` | 否 | 随邀请携带的业务扩展字符串。 |
+| `invitation.initiateTime` | `long` | 否 | 邀请发起时间。通常由信令链路维护，无需手动填写。 |
 | `offlinePushInfo` | `OfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |
+| `offlinePushInfo.title` | `String` | 条件必填 | 推送标题，提供 `offlinePushInfo` 时必填 |
+| `offlinePushInfo.desc` | `String` | 条件必填 | 推送正文，提供 `offlinePushInfo` 时必填 |
+| `offlinePushInfo.ex` | `String` | 条件必填 | 推送扩展字符串，没有内容时传空字符串。 |
+| `offlinePushInfo.iOSPushSound` | `String` | 条件必填 | iOS 推送声音，提供 `offlinePushInfo` 时必填 |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | 条件必填 | 是否更新 iOS 角标，提供 `offlinePushInfo` 时必填 |
 
 ```java
 SignalingInvitationInfo invitation = new SignalingInvitationInfo();
@@ -35,7 +49,6 @@ invitation.setPlatformID(Platform.ANDROID);
 invitation.setCustomData("{\"source\":\"contact-card\"}");
 
 SignalingInfo info = new SignalingInfo();
-info.setUserID(currentUserID);
 info.setInvitation(invitation);
 info.setOfflinePushInfo(offlinePushInfo);
 
@@ -61,4 +74,4 @@ OpenIMClient.getInstance().signalingManager.signalingInvite(
 
 成功回调返回 `SignalingCertificate`。其中 `roomID` 是媒体房间 ID，`token` 是加入房间使用的短期凭据，`liveURL` 是媒体服务提供的连接地址，`busyLineUserIDList` 是忙线用户列表。
 
-只有取得有效的 `token` 和 `roomID` 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态由[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)合并。
+只有取得有效的 `token` 和 `roomID` 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)。

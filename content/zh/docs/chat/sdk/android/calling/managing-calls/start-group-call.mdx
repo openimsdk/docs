@@ -4,7 +4,9 @@ description: '使用 Android SDK 发起群聊音视频通话。'
 sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
 ---
 
-`signalingInviteInGroup()` 发起群聊通话，只邀请 `inviteeUserIDList` 明确列出的群成员，不会因为填写 `groupID` 自动邀请全群。
+`signalingInviteInGroup()` 发起群聊通话，参数类型与[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)相同。群聊通话时，`invitation.groupID` 必须传入群组 ID，`invitation.sessionType` 固定为 `ConversationType.GROUP_CHAT`。
+
+只会邀请 `inviteeUserIDList` 中列出的成员，填写 `groupID` 不会自动邀请全群。`inviteeUserIDList` 列表应排除当前用户、空值和重复成员。示例以群组 ID 作为房间 ID；若自行生成 `roomID`，所有参与者必须使用相同的值。
 
 ```java
 SignalingInvitationInfo invitation = new SignalingInvitationInfo();
@@ -19,7 +21,6 @@ invitation.setPlatformID(Platform.ANDROID);
 invitation.setCustomData("{\"source\":\"group-call\"}");
 
 SignalingInfo info = new SignalingInfo();
-info.setUserID(currentUserID);
 info.setInvitation(invitation);
 info.setOfflinePushInfo(offlinePushInfo);
 
@@ -39,6 +40,6 @@ OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
 );
 ```
 
-`groupID` 不能为空，`inviteeUserIDList` 应排除当前用户、空值和重复成员。示例沿用群组 ID 作为房间 ID；若业务自行生成 `roomID`，所有参与端必须使用同一个值。
+成功回调返回 `SignalingCertificate`，其中 `roomID` 是媒体房间 ID，`token` 是加入房间使用的短期凭据，`liveURL` 是媒体服务提供的连接地址，`busyLineUserIDList` 是忙线用户列表。忙线用户不影响其余成员的邀请；成功也不表示已有成员接听。
 
-成功回调返回 `SignalingCertificate`，字段含义见[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请流程；成功也不表示其他成员已经接听。
+只有取得有效的 `token` 和 `roomID` 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)。

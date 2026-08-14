@@ -11,25 +11,39 @@ platform: 'android'
 sourcePath: '/sdk/android/events/overview-events'
 ---
 
-OpenIM Android SDK uses listeners to report connection, synchronization, user, friendship, conversation, group, message, and calling changes. Listener setters on each manager use replacement semantics: a later call replaces the previous instance. Combine all callbacks in an application-level event center and register them once before login. Do not register them repeatedly from an Activity, Fragment, Compose screen, or feature component.
+OpenIM Android SDK uses listeners to report connection, synchronization, user, friendship, conversation, group, message, and calling changes. Each manager keeps only one listener; setting another one replaces the previous listener. Manage these listeners in one place in your application and set them once before login. Do not register them repeatedly from an Activity, Fragment, Compose screen, or feature component.
 
-The connection listener is the exception. `OnConnListener` is passed to `initSDK()`; its complete handling contract is described in [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
+`OnConnListener` monitors the connection status to IM Server. It is not set separately through a manager; pass it when calling `initSDK()`. For complete handling guidance, see [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
 
 ## Register listeners centrally
 
-The following entry point uses stable application-level listeners. Each listener should include all callbacks for its domain; detailed merge behavior remains on the page that owns each event.
+The following example registers each listener in one place in the application. Each listener handles events for its own domain, such as messages, conversations, friends, or calls.
 
 ```java
 public final class OpenIMEventCenter {
     private final OpenIMClient client = OpenIMClient.getInstance();
 
-    private final OnUserListener userListener = buildUserListener();
-    private final OnFriendshipListener friendshipListener = buildFriendshipListener();
-    private final OnConversationListener conversationListener = buildConversationListener();
-    private final OnGroupListener groupListener = buildGroupListener();
-    private final OnAdvanceMsgListener messageListener = buildMessageListener();
-    private final OnCustomBusinessListener businessListener = buildBusinessListener();
-    private final OnSignalingListener signalingListener = buildSignalingListener();
+    private final OnUserListener userListener = new OnUserListener() {
+        // Handles user profile and online-status changes.
+    };
+    private final OnFriendshipListener friendshipListener = new OnFriendshipListener() {
+        // Handles friend relationships, friend applications, and blacklist changes.
+    };
+    private final OnConversationListener conversationListener = new OnConversationListener() {
+        // Handles conversations, unread counts, input status, and initial synchronization.
+    };
+    private final OnGroupListener groupListener = new OnGroupListener() {
+        // Handles groups, group members, and group application changes.
+    };
+    private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
+        // Handles new messages, revocations, deletions, modifications, and read receipts.
+    };
+    private final OnCustomBusinessListener businessListener = new OnCustomBusinessListener() {
+        // Handles custom business messages.
+    };
+    private final OnSignalingListener signalingListener = new OnSignalingListener() {
+        // Handles call invitations, participant status, and custom call signals.
+    };
 
     public void registerBeforeLogin() {
         client.userInfoManager.setOnUserListener(userListener);
@@ -43,7 +57,7 @@ public final class OpenIMEventCenter {
 }
 ```
 
-The Android SDK does not expose remove or unset methods for these listeners. When signing out, switching accounts, or destroying the application state layer, stop dispatching into old account state and destroyed screens. Before the next login, replace each listener with the complete listener set for the new account.
+The Android SDK does not provide a way to remove listeners. When signing out, switching accounts, or destroying a screen, stop callbacks from updating old account data or destroyed UI and clear references held by your application. Before the next login, set each listener again for the new account.
 
 ## Event ownership
 
@@ -70,59 +84,34 @@ The Android SDK does not expose remove or unset methods for these listeners. Whe
 | Custom call signaling | `OnSignalingListener` | [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |
 | SDK data synchronization | `OnConversationListener` | [Handle initial synchronization](#handle-initial-synchronization) |
 
-Query APIs establish snapshots, and listeners merge subsequent changes. Query results, successful API callbacks, and event delivery are three independent stages and cannot replace one another.
-
 ## Handle initial synchronization
 
-The synchronization lifecycle belongs to the application-level `OnConversationListener`. That listener must also include conversation-list, unread-count, and typing-status callbacks. The following example only highlights synchronization logic owned by this page.
+The synchronization lifecycle belongs to `OnConversationListener`, which also includes callbacks for the conversation list, unread count, and typing status. The following example shows only the callbacks related to initial synchronization:
 
 ```java
-private OnConversationListener buildConversationListener() {
-    return new OnConversationListener() {
-        @Override
-        public void onNewConversation(List<ConversationInfo> conversations) {
-            mergeNewConversations(conversations);
-        }
+private final OnConversationListener conversationListener = new OnConversationListener() {
+    @Override
+    public void onSyncServerStart(boolean reinstall) {
+        // Synchronization started: update the sync state and show loading UI when needed.
+    }
 
-        @Override
-        public void onConversationChanged(List<ConversationInfo> conversations) {
-            mergeChangedConversations(conversations);
-        }
+    @Override
+    public void onSyncServerProgress(long progress) {
+        // Synchronization in progress: update the progress indicator.
+    }
 
-        @Override
-        public void onTotalUnreadMessageCountChanged(int total) {
-            updateTotalUnreadCount(total);
-        }
+    @Override
+    public void onSyncServerFinish(boolean reinstall) {
+        // Synchronization finished: refresh screens that require complete data.
+    }
 
-        @Override
-        public void onConversationUserInputStatusChanged(String payload) {
-            handleInputStatus(payload);
-        }
+    @Override
+    public void onSyncServerFailed(boolean reinstall) {
+        // Synchronization failed: update the failure state and wait for retry or connection recovery.
+    }
 
-        @Override
-        public void onSyncServerStart(boolean reinstall) {
-            setSyncState("syncing", 0, reinstall);
-        }
-
-        @Override
-        public void onSyncServerProgress(long progress) {
-            setSyncProgress(progress);
-        }
-
-        @Override
-        public void onSyncServerFinish(boolean reinstall) {
-            setSyncState("ready", 100, reinstall);
-            reloadVisibleSnapshots();
-        }
-
-        @Override
-        public void onSyncServerFailed(boolean reinstall) {
-            setSyncState("failed", 0, reinstall);
-        }
-    };
-}
+    // Other conversationListener callbacks...
+};
 ```
 
-When `reinstall` is `true`, treat local data as being rebuilt. Show a more complete synchronization state and avoid relying on old cache data until synchronization completes. `onSyncServerProgress` reports current progress. After completion, query the snapshots needed by visible screens again. On failure, record the error and wait for retry or connection recovery.
-
-This page owns the complete handling contract for `onSyncServerStart`, `onSyncServerProgress`, `onSyncServerFinish`, and `onSyncServerFailed`. Synchronization state has no business entity key; isolate it by the current `OpenIMClient` singleton and signed-in user.
+`reinstall` indicates whether synchronization follows a local data rebuild: `true` means synchronization after the application is reinstalled, local data is cleared, or a similar scenario, when local cache is usually unavailable; `false` means ordinary synchronization after login. `onSyncServerProgress` reports the current synchronization progress. After synchronization completes, query the data required by the current screen again. On failure, update the synchronization failure state and wait for retry or connection recovery.

@@ -4,71 +4,76 @@ description: '集中设置 Android SDK 的通话邀请、参与者和媒体流 l
 sourcePath: '/sdk/android/calling/managing-calls/handle-call-events'
 ---
 
-通话状态层应集中设置一次 `OnSignalingListener`，并按 `roomID` 合并邀请生命周期、参与者连接状态和媒体流变化。
+在应用的通话状态管理处注册一次 `OnSignalingListener`。SDK 通过这些回调通知来电、接听、拒绝、取消、超时、挂断以及成员进出房间；应用据此更新通话界面和本地通话状态。
+
+`SignalingManager` 同时只保留一个 listener，重复调用 `setSignalingListener()` 会替换之前的 listener。退出登录或切换账号时，先停止更新旧账号的通话状态，再为新账号设置 listener。
 
 ```java
 OpenIMClient.getInstance().signalingManager.setSignalingListener(
     new OnSignalingListener() {
         @Override
         public void onReceiveNewInvitation(SignalingInfo info) {
-            upsertCall(info, "ringing");
+            showIncomingCall(info);
         }
 
         @Override
         public void onInviteeAccepted(SignalingInfo info) {
-            mergeCallEvent("accepted", info);
+            updateCallStatus(info, "accepted");
         }
 
         @Override
         public void onInviteeRejected(SignalingInfo info) {
-            mergeCallEvent("rejected", info);
+            updateCallStatus(info, "rejected");
         }
 
         @Override
         public void onInvitationCancelled(SignalingInfo info) {
-            mergeCallEvent("cancelled", info);
+            endCall(info);
         }
 
         @Override
         public void onInvitationTimeout(SignalingInfo info) {
-            mergeCallEvent("timeout", info);
+            endCall(info);
         }
 
         @Override
         public void onInviteeAcceptedByOtherDevice(SignalingInfo info) {
-            mergeCallEvent("accepted-by-other-device", info);
+            endCall(info);
         }
 
         @Override
         public void onInviteeRejectedByOtherDevice(SignalingInfo info) {
-            mergeCallEvent("rejected-by-other-device", info);
+            endCall(info);
         }
 
         @Override
         public void onHangup(SignalingInfo info) {
-            finishCall(info.getInvitation().getRoomID());
+            endCall(info);
         }
 
         @Override
         public void onRoomParticipantConnected(RoomCallingInfo room) {
-            mergeConnectedParticipants(room.getRoomID(), room.getParticipant());
+            updateParticipantStatus(room, true);
         }
 
         @Override
         public void onRoomParticipantDisconnected(RoomCallingInfo room) {
-            mergeDisconnectedParticipants(room.getRoomID(), room.getParticipant());
+            updateParticipantStatus(room, false);
         }
 
         @Override
         public void onStreamChange(String streamInfo) {
-            mergeStreamChange(streamInfo);
+            handleStreamChange(streamInfo);
         }
     }
 );
 ```
 
-本页是除 `onReceiveCustomSignal` 外 11 个已接入 Android 适配层的通话回调的完整归属页。自定义信令的处理边界见[发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal)。
-
-邀请事件使用 `SignalingInfo.invitation.roomID` 合并。参与者状态使用 `RoomCallingInfo.roomID`，并结合参与者的用户 ID 更新；不要按事件顺序、展示名称或数组位置合并。`onStreamChange` 当前提供字符串载荷，应由接入层按服务端实际协议解析并校验。
-
-`SignalingManager` 只设置一个 listener，后一次设置会替换先前实例，并且没有公开移除方法。自定义信令回调必须与本页的其他回调组合在同一个应用级 listener 中。退出登录或切换账号时，应停止向旧账号状态写入，并用新账号的完整 listener 覆盖。
+| 回调 | 何时触发 | 应用应做什么 |
+| --- | --- | --- |
+| `onReceiveNewInvitation` | 收到新的通话邀请。 | 保存 `SignalingInfo`，显示来电界面，并让用户选择接听或拒绝。 |
+| `onInviteeAccepted`、`onInviteeRejected` | 某位被邀请者接听或拒绝。 | 更新该成员的通话状态；群聊中不应影响其他成员。 |
+| `onInvitationCancelled`、`onInvitationTimeout`、`onHangup` | 邀请被取消、超时或任一方挂断。 | 关闭对应通话界面，断开媒体房间并释放本地资源。 |
+| `onInviteeAcceptedByOtherDevice`、`onInviteeRejectedByOtherDevice` | 同一账号的另一台设备已接听或拒绝。 | 结束当前设备上的来电界面，避免两台设备同时处理同一邀请。 |
+| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 成员进入或离开媒体房间。 | 更新群聊中的成员状态。 |
+| `onStreamChange` | 服务端发送媒体流变化信息。 | 按接入服务端实际约定解析字符串，再更新媒体流。 |
