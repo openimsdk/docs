@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/delete-user-messages'
@@ -29,15 +29,13 @@ messageManager.deleteUserAllMessagesInConv(
 );
 ```
 
-This API is available only for group chats and deletes every message sent by the specified user in the target group conversation. It is a high-impact group moderation action and should not appear in an ordinary single-message menu. OpenIMServer validates the operator's permission. A successful callback does not mean that the event has already arrived.
+This API is available only for group chats and deletes every message sent by the specified user in the target group conversation. If the caller does not have permission, `onError` returns the error.
 
-This page owns `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv`. When the event arrives, use its `conversationID` and `userID` to remove messages from that sender in the cached conversation, or reload conversation history to reconcile the state.
+Other clients receive the deletion notification through `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv`. The callback includes the corresponding `conversationID` and `userID`:
 
 ```java
 @Override
 public void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {
-    removeMessagesBySender(event.getConversationID(), event.getUserID());
+    handleUserMessagesDeleted(event.getConversationID(), event.getUserID());
 }
 ```
-
-Callback completion, event arrival, and a new history query are three independent stages.

@@ -11,12 +11,138 @@ platform: 'android'
 sourcePath: '/sdk/android/message/overview-message'
 ---
 
-Android messages are represented by `Message`. Use `clientMsgID` for deduplication, and use `sessionType`, `recvID`, and `groupID` to distinguish one-to-one chats from group chats. Message content is stored in the corresponding element field. Sending, receiving, revoking, and deleting are separate state changes.
+The Android SDK represents each message as `Message`. Message creation, sending, receiving, querying, and state changes are separate stages: creating a `Message` does not send it, and a successful send does not mean that other clients have already received it.
+
+Use `clientMsgID` as the client-side deduplication and update key, together with the conversation context that identifies a one-to-one or group chat. `Message` does not contain `conversationID`; obtain it from the active conversation, history query, or message event context.
+
+## Message processing flow
+
+| Stage   | Android API or callback                                     | Description                                                                                                |
+| ------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Create  | `MessageManager.create*Message()`                           | Creates a `Message` object ready to be sent, without writing it to the server or triggering a new-message callback. |
+| Send    | `sendMessage()` or `sendMessageNotOss()`                    | Pass `recvUid` for a one-to-one chat or `recvGid` for a group chat.                                       |
+| Receive | `OnAdvanceMsgListener`                                      | Handles live, offline, online-only, revoked, deleted, and read-receipt changes.                            |
+| Query   | History, ID lookup, or search APIs                          | Queries return a message snapshot and do not replace real-time message listening.                          |
+| Update  | Revoke, delete, modify, pin, read, and local-extension APIs | Handle API results, related events, and any necessary list re-query separately.                            |
 
 ```java
-OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
-    @Override public void onRecvNewMessage(Message message) { messageStore.merge(message); }
+messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
+    @Override
+    public void onRecvNewMessage(Message message) {
+        messageStore.merge(message);
+    }
+
+    @Override
+    public void onRecvOfflineNewMessage(List<Message> messages) {
+        messageStore.mergeAll(messages);
+    }
+
+    @Override
+    public void onRecvMessageRevokedV2(RevokedInfo info) {
+        messageStore.markRevoked(info);
+    }
+
+    @Override
+    public void onMsgDeleted(Message message) {
+        messageStore.remove(message.getClientMsgID());
+    }
 });
 ```
 
-Queries establish a snapshot, while `OnAdvanceMsgListener` merges incremental changes. Setting a listener on `MessageManager` replaces the current listener, so register it once in a shared state layer.
+Calling `setAdvancedMsgListener()` on the same `MessageManager` replaces the current listener. Register it in the shared message state layer and dispatch the resulting changes to screens.
+
+## Message fields
+
+The message object returned by creation, sending, receiving, and querying APIs is a `Message`. Common fields include:
+
+| Field                  | Type              | Description                                                                                      |
+| ---------------------- | ----------------- | ------------------------------------------------------------------------------------------------ |
+| `clientMsgID`          | `String`          | Client message ID used for list deduplication, state updates, and message lookup.                |
+| `serverMsgID`          | `String`          | Server message ID; it may not have a valid value before a message is sent successfully.          |
+| `sessionType`          | `int`             | Conversation type; use it with `recvID` and `groupID` to distinguish one-to-one and group chats. |
+| `sendID`               | `String`          | Sender user ID.                                                                                  |
+| `recvID`               | `String`          | Recipient user ID for a one-to-one message.                                                      |
+| `groupID`              | `String`          | Group ID for a group message.                                                                    |
+| `msgFrom`              | `int`             | Indicates whether the message is user-level or system-level.                                     |
+| `contentType`          | `int`             | Message type; use `MessageType` constants to select the content field.                           |
+| `createTime`           | `long`            | Message creation time; the Android model documents this value in nanoseconds.                    |
+| `sendTime`             | `long`            | Message send time; the Android model documents this value in milliseconds.                       |
+| `seq`                  | `int`             | Server message sequence number.                                                                  |
+| `status`               | `int`             | Send state; use `MessageStatus` constants to interpret it.                                       |
+| `isRead`               | `boolean`         | Read-state snapshot stored on the current client.                                                |
+| `platformID`           | `int`             | Client platform from which the message was sent.                                                 |
+| `senderNickname`       | `String`          | Snapshot of the sender's nickname.                                                               |
+| `senderFaceUrl`        | `String`          | Snapshot of the sender's avatar URL.                                                             |
+| `isReact`              | `boolean`         | Whether the message carries a reaction marker.                                                   |
+| `isExternalExtensions` | `boolean`         | Whether the message uses external extensions.                                                    |
+| `offlinePush`          | `OfflinePushInfo` | Offline-push content.                                                                            |
+| `attachedInfo`         | `String`          | SDK attachment information.                                                                      |
+| `ext`                  | `Object`          | Android message attachment field.                                                                |
+| `ex`                   | `Object`          | Message attachment field.                                                                        |
+| `localEx`              | `Object`          | Message extension field stored only on the current device.                                       |
+
+The message body is stored in the element field selected by `contentType`. Do not infer the message type from list position or rendered text:
+
+| Message content                          | Corresponding field                                  |
+| ---------------------------------------- | ---------------------------------------------------- |
+| Text and rich text                       | `textElem`, `advancedTextElem`                       |
+| Image, audio, video, and file            | `pictureElem`, `soundElem`, `videoElem`, `fileElem`  |
+| @ mention and reply                      | `atTextElem`, `quoteElem`                            |
+| Merged forward                           | `mergeElem`                                          |
+| Contact card, location, and emoji        | `cardElem`, `locationElem`, `faceElem`               |
+| Custom message                           | `customElem`                                         |
+| Notification, typing, and attached state | `notificationElem`, `typingElem`, `attachedInfoElem` |
+
+## Create and send different content types
+
+Sending a message has two steps:
+
+1. Call the `create*Message()` method for the desired content to obtain a pending `Message`.
+2. Pass that `Message` to [`sendMessage()`](/sdk/android/message/sending-messages/send-message). For a one-to-one chat, set `recvUid`; for a group chat, set `recvGid`.
+
+The available message types and creation methods are:
+
+| Message content | Creation API                                                                                                                                                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Text            | [`createTextMessage()`](/sdk/android/message/creating-messages/create-text-message)                                                                                                                                                                                                                 |
+| Rich text       | [`createAdvancedTextMessage()`](/sdk/android/message/creating-messages/create-advanced-text-message)                                                                                                                                                                                                |
+| @ mention       | [`createTextAtMessage()`](/sdk/android/message/creating-messages/create-text-at-message)                                                                                                                                                                                                            |
+| Image           | [`createImageMessage()`](/sdk/android/message/creating-messages/create-image-message), [`createImageMessageFromFullPath()`](/sdk/android/message/creating-messages/create-image-message-by-file), [`createImageMessageByURL()`](/sdk/android/message/creating-messages/create-image-message-by-url) |
+| Audio           | [`createSoundMessage()`](/sdk/android/message/creating-messages/create-sound-message), [`createSoundMessageFromFullPath()`](/sdk/android/message/creating-messages/create-sound-message-by-file), [`createSoundMessageByURL()`](/sdk/android/message/creating-messages/create-sound-message-by-url) |
+| Video           | [`createVideoMessage()`](/sdk/android/message/creating-messages/create-video-message), [`createVideoMessageFromFullPath()`](/sdk/android/message/creating-messages/create-video-message-by-file), [`createVideoMessageByURL()`](/sdk/android/message/creating-messages/create-video-message-by-url) |
+| File            | [`createFileMessage()`](/sdk/android/message/creating-messages/create-file-message), [`createFileMessageFromFullPath()`](/sdk/android/message/creating-messages/create-file-message-by-file), [`createFileMessageByURL()`](/sdk/android/message/creating-messages/create-file-message-by-url)       |
+| Contact card    | [`createCardMessage()`](/sdk/android/message/creating-messages/create-card-message)                                                                                                                                                                                                                 |
+| Location        | [`createLocationMessage()`](/sdk/android/message/creating-messages/create-location-message)                                                                                                                                                                                                         |
+| Emoji           | [`createFaceMessage()`](/sdk/android/message/creating-messages/create-face-message)                                                                                                                                                                                                                 |
+| Reply           | [`createQuoteMessage()`](/sdk/android/message/creating-messages/create-quote-message), [`createAdvancedQuoteMessage()`](/sdk/android/message/creating-messages/create-advanced-quote-message)                                                                                                       |
+| Forward         | [`createForwardMessage()`](/sdk/android/message/creating-messages/create-forward-message)                                                                                                                                                                                                           |
+| Merged forward  | [`createMergerMessage()`](/sdk/android/message/creating-messages/create-merger-message)                                                                                                                                                                                                             |
+| Custom message  | [`createCustomMessage()`](/sdk/android/message/creating-messages/create-custom-message)                                                                                                                                                                                                             |
+
+Choose the send method based on the media source. For a message created from a local path or local file, call `sendMessage()` so the SDK uploads the media during sending. For a message created from an existing remote URL with `create*MessageByURL()`, call [`sendMessageNotOss()`](/sdk/android/message/sending-messages/send-message-not-oss) to send the message without uploading the media again.
+
+## Find a page by task
+
+| Task                                                     | Page                                                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Send an ordinary message or already-uploaded media       | [Send a message](/sdk/android/message/sending-messages/send-message), [Send an uploaded media message](/sdk/android/message/sending-messages/send-message-not-oss)                                                                                                                                                    |
+| Receive live, offline, and online-only messages          | [Receive messages](/sdk/android/message/receiving-messages/receive-messages), [Receive custom business messages](/sdk/android/message/receiving-messages/receive-custom-business-messages)                                                                                                                            |
+| Load message history or load it in reverse               | [Load message history](/sdk/android/message/retrieving-messages/load-older-messages), [Load message history in reverse](/sdk/android/message/retrieving-messages/load-newer-messages)                                                                                                                                 |
+| Locate or search messages                                | [Find messages by ID](/sdk/android/message/retrieving-messages/find-messages-by-id), [Search messages](/sdk/android/message/searching-messages/search-messages)                                                                                                                                                       |
+| Delete, revoke, modify, or pin messages                  | [Delete messages](/sdk/android/message/managing-messages/delete-saved-messages), [Revoke a message](/sdk/android/message/managing-messages/revoke-a-message), [Modify a message](/sdk/android/message/managing-messages/modify-a-message), [Pin a message](/sdk/android/message/managing-messages/set-message-pinned) |
+| Manage conversation unread state and group read receipts | [Mark a conversation as read](/sdk/android/conversation/managing-conversations/mark-conversation-read), [Report group messages as read](/sdk/android/message/managing-read-status/send-group-read-receipts), [Get group message readers](/sdk/android/message/managing-read-status/get-group-message-readers)         |
+| Report or retrieve typing status                         | [Update typing status](/sdk/android/message/composing-messages/update-typing-status), [Get typing status](/sdk/android/message/composing-messages/get-typing-status)                                                                                                                                                  |
+| Insert, delete, or extend current-device-only messages   | [Insert a local one-to-one message](/sdk/android/message/managing-messages/insert-local-single-message), [Delete a local message](/sdk/android/message/managing-messages/delete-local-message), [Set a local message extension](/sdk/android/message/managing-messages/set-message-local-ex)                          |
+
+## State synchronization boundaries
+
+| Change                      | Handling location                                                                    | Merge strategy                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| New and offline messages    | [Receive messages](/sdk/android/message/receiving-messages/receive-messages)         | Determine the target conversation, then merge by `clientMsgID`.                       |
+| Message revocation          | `onRecvMessageRevokedV2`                                                             | Update the original message by the ID in the revoke information.                      |
+| Message deletion            | `onMsgDeleted`                                                                       | Remove the message from the current conversation by ID.                               |
+| C2C and group read receipts | `onRecvC2CReadReceipt`, `onRecvGroupMessageReadReceipt`                              | Update the corresponding message or conversation read state.                          |
+| Message extension changes   | `onRecvMessageExtensionsChanged` and related callbacks                               | Update extension fields by message ID without replacing the message body.             |
+| Typing status               | [Update typing status](/sdk/android/message/composing-messages/update-typing-status) | Maintain temporary state by conversation and user, outside the ordinary message list. |
+
+For message revocation, deletion, read receipts, and extension changes, handle the API result first, then process the related `OnAdvanceMsgListener` callbacks. Re-query the message list when necessary.

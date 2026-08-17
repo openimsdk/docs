@@ -30,7 +30,7 @@ conversationManager.changeInputState(
 conversationManager.changeInputState(callback, conversationID, false);
 ```
 
-调用侧应合并连续的焦点变化，并在页面退出或连接中断前尝试上报 `false`。成功回调只表示上报请求完成，不表示其他客户端已经更新界面。
+避免频繁重复上报相同状态。成功回调表示上报请求已经完成。
 
 其他客户端通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化。Android SDK 以字符串形式返回事件载荷，应在校验 JSON 后再解析：
 
@@ -52,6 +52,6 @@ public void onConversationUserInputStatusChanged(String payload) {
 }
 ```
 
-输入状态按 `conversationID:userID` 合并，并设置业务侧超时自动清除。`ConversationManager` 只保存一个会话 listener，本回调应与会话列表、总未读数和同步事件组合后统一设置。
+回调中的 `conversationID`、`userID` 和 `platformIDs` 分别表示会话、用户和正在输入的平台。`ConversationManager` 只能设置一个 `OnConversationListener`；如果应用还需要处理其他会话事件，请在同一个 listener 中实现相应回调。
 
-进入会话或连接恢复时，可通过[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)获取当前快照。
+需要主动查询指定用户是否正在输入时，使用[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)。

@@ -5,31 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/modify-a-message'
 ---
 
-Use `modifyMessage` to change an existing message in a conversation. Preserve the original conversation ID, `clientMsgID`, routing fields, sender, and other message data in the request, and update only the supported content.
+Use `modifyMessage` to change an existing message in a conversation. Normally, start with the original message, change the supported content, and preserve its other fields.
 
 ```java
 messageManager.modifyMessage(callback, modifyRequest);
 ```
 
-The success callback means that the modification request completed; it does not mean that every client interface has updated. Other clients receive the complete modified `Message` through `OnAdvanceMsgListener.onMessageModified`.
+The success callback means that the modification request completed.
 
-This page is the complete owner of `onMessageModified`. Resolve the `conversationID` from the message routing fields, then replace the original message by `conversationID:clientMsgID`. Do not match by array position or displayed text:
+After a message is modified, other clients receive the complete modified `Message` through `OnAdvanceMsgListener.onMessageModified`:
 
 ```java
 @Override
 public void onMessageModified(Message message) {
-    String conversationID = resolveConversationID(message);
-    if (conversationID == null) {
-        return;
-    }
-    replaceMessage(conversationID, message.getClientMsgID(), message);
+    handleModifiedMessage(message);
 }
 ```
 
-Add this callback to the application's single `OnAdvanceMsgListener`; see [Events](/sdk/android/events/overview-events) for centralized setup. Callback completion, event delivery, and a new history query are three independent stages.
+`MessageManager` can retain only one `OnAdvanceMsgListener`. If the application handles other message events, implement their callbacks in the same listener. See [Events](/sdk/android/events/overview-events) for setup.

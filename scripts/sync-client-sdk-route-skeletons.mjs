@@ -58,7 +58,6 @@ const androidRouteTitles = {
   'message/creating-messages/create-advanced-text-message': 'Create a rich-text message',
   'message/creating-messages/create-advanced-quote-message': 'Create a rich-text reply',
   'message/composing-messages/get-typing-status': 'Retrieve typing status',
-  'file-uploads/track-file-upload-progress': 'Track file upload progress',
 };
 
 const conversationGroupTitles = {

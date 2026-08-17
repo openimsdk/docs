@@ -4,12 +4,128 @@ description: '了解 Android SDK 的 Message 模型、消息生命周期和消�
 sourcePath: '/sdk/android/message/overview-message'
 ---
 
-Android 消息以 `Message` 表示，使用 `clientMsgID` 去重，使用 `sessionType`、`recvID` 和 `groupID` 区分单聊与群聊。消息内容由对应的 element 字段承载，发送、接收、撤回和删除是不同的状态变化。
+Android SDK 使用 `Message` 表示一条消息。消息创建、发送、接收、查询和状态变更是不同阶段；创建 `Message` 不会发送消息，发送成功也不代表其他客户端已经完成接收。
+
+消息列表通常以 `clientMsgID` 作为客户端去重和更新键，并结合当前会话上下文判断消息属于单聊还是群聊。`Message` 本身不包含 `conversationID`，会话 ID 来自当前会话、历史查询参数或消息事件上下文。
+
+## 消息处理流程
+
+| 阶段 | Android API 或回调                         | 说明                                                              |
+| ---- | ------------------------------------------ | ----------------------------------------------------------------- |
+| 创建 | `MessageManager.create*Message()`          | 创建待发送的 `Message` 对象，不写入服务端，也不会触发新消息回调。 |
+| 发送 | `sendMessage()` 或 `sendMessageNotOss()`   | 单聊传入 `recvUid`，群聊传入 `recvGid`。                          |
+| 接收 | `OnAdvanceMsgListener`                     | 处理实时、离线、在线消息以及撤回、删除和已读回执等变化。          |
+| 查询 | 历史消息、按 ID 查找或搜索 API             | 查询结果是调用时的消息快照，不代替实时消息监听。                  |
+| 更新 | 撤回、删除、修改、置顶、已读和本地扩展 API | 分别处理 API 结果、对应事件和必要的列表重新查询。                 |
 
 ```java
-OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
-    @Override public void onRecvNewMessage(Message message) { messageStore.merge(message); }
+messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
+    @Override
+    public void onRecvNewMessage(Message message) {
+        messageStore.merge(message);
+    }
+
+    @Override
+    public void onRecvOfflineNewMessage(List<Message> messages) {
+        messageStore.mergeAll(messages);
+    }
+
+    @Override
+    public void onRecvMessageRevokedV2(RevokedInfo info) {
+        messageStore.markRevoked(info);
+    }
+
+    @Override
+    public void onMsgDeleted(Message message) {
+        messageStore.remove(message.getClientMsgID());
+    }
 });
 ```
 
-查询建立快照，`OnAdvanceMsgListener` 合并增量；`MessageManager` 的 listener 设置会替换当前 listener。
+重复调用 `MessageManager` 的 `setAdvancedMsgListener()` 会覆盖之前设置的 listener。应用应在统一的消息状态层注册一次，再把回调中的消息变化分发给页面。
+
+## Message 字段
+
+创建、发送、接收和查询返回的消息对象都是 `Message`。常用字段如下：
+
+| 字段             | 类型              | 说明                                                |
+| ---------------- | ----------------- | --------------------------------------------------- |
+| `clientMsgID`    | `String`          | 客户端消息 ID，用于列表去重、状态更新和定位消息。   |
+| `serverMsgID`    | `String`          | 服务端消息 ID；消息尚未成功发送时可能没有有效值。   |
+| `sessionType`    | `int`             | 会话类型；结合 `recvID`、`groupID` 判断单聊或群聊。 |
+| `sendID`         | `String`          | 发送者用户 ID。                                     |
+| `recvID`         | `String`          | 单聊接收方用户 ID。                                 |
+| `groupID`        | `String`          | 群聊对应的群组 ID。                                 |
+| `msgFrom`        | `int`             | 标识消息是用户级别还是系统级别。                    |
+| `contentType`    | `int`             | 消息类型，使用 `MessageType` 常量判断内容字段。     |
+| `createTime`     | `long`            | 消息对象创建时间，Android SDK 模型注释约定为纳秒。  |
+| `sendTime`       | `long`            | 消息发送时间，Android SDK 模型注释约定为毫秒。      |
+| `seq`            | `int`             | 服务端消息序号。                                    |
+| `status`         | `int`             | 发送状态，使用 `MessageStatus` 常量判断。           |
+| `isRead`         | `boolean`         | 当前客户端保存的已读状态。                          |
+| `platformID`     | `int`             | 发送消息的客户端平台。                              |
+| `senderNickname` | `String`          | 发送者昵称快照。                                    |
+| `senderFaceUrl`  | `String`          | 发送者头像 URL 快照。                               |
+| `offlinePush`    | `OfflinePushInfo` | 离线推送内容。                                      |
+| `attachedInfo`   | `String`          | SDK 附加信息。                                      |
+| `ext`            | `Object`          | Android 消息附加字段。                              |
+| `ex`             | `Object`          | 消息附加字段。                                      |
+| `localEx`        | `Object`          | 仅保存在当前设备的消息扩展字段。                    |
+
+消息正文位于与 `contentType` 对应的 element 字段中，不要根据列表位置或展示文本判断消息类型：
+
+| 消息内容                 | 对应字段                                             |
+| ------------------------ | ---------------------------------------------------- |
+| 文本、富文本             | `textElem`、`advancedTextElem`                       |
+| 图片、音频、视频、文件   | `pictureElem`、`soundElem`、`videoElem`、`fileElem`  |
+| @ 消息、回复消息         | `atTextElem`、`quoteElem`                            |
+| 合并转发                 | `mergeElem`                                          |
+| 名片、位置、表情         | `cardElem`、`locationElem`、`faceElem`               |
+| 自定义消息               | `customElem`                                         |
+| 通知、输入状态和附加状态 | `notificationElem`、`typingElem`、`attachedInfoElem` |
+
+## 创建和发送不同内容
+
+发送一条消息分为两个步骤：
+
+1. 调用对应内容类型的 `create*Message()` 方法，获得待发送的 `Message`。
+2. 将该 `Message` 传给 [`sendMessage()`](/sdk/android/message/sending-messages/send-message)。单聊设置 `recvUid`，群聊设置 `recvGid`。
+
+下表列出了可创建的消息类型及其对应页面：
+
+| 内容                   | 页面                                                                                                                                                                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 文本与富文本           | [创建文本消息](/sdk/android/message/creating-messages/create-text-message)、[创建富文本消息](/sdk/android/message/creating-messages/create-advanced-text-message)                                                                            |
+| @ 消息                 | [创建 @ 消息](/sdk/android/message/creating-messages/create-text-at-message)                                                                                                                                                                 |
+| 图片、音频、视频和文件 | [创建图片消息](/sdk/android/message/creating-messages/create-image-message)、[创建文件消息](/sdk/android/message/creating-messages/create-file-message)                                                                                      |
+| 名片、位置和表情       | [创建名片消息](/sdk/android/message/creating-messages/create-card-message)、[创建位置消息](/sdk/android/message/creating-messages/create-location-message)、[创建表情消息](/sdk/android/message/creating-messages/create-face-message)       |
+| 回复、转发和合并转发   | [创建回复消息](/sdk/android/message/creating-messages/create-quote-message)、[创建转发消息](/sdk/android/message/creating-messages/create-forward-message)、[创建合并转发消息](/sdk/android/message/creating-messages/create-merger-message) |
+| 自定义业务内容         | [创建自定义消息](/sdk/android/message/creating-messages/create-custom-message)                                                                                                                                                               |
+
+发送本地路径或本地文件创建的媒体消息时，调用 `sendMessage()`，SDK 会在发送过程中上传媒体文件。使用已有远端 URL 创建媒体消息时，调用对应的 `create*MessageByURL()` 方法，再通过 [`sendMessageNotOss()`](/sdk/android/message/sending-messages/send-message-not-oss) 发送，无需再次上传媒体文件。
+
+## 按任务查找页面
+
+| 任务                                 | 页面                                                                                                                                                                                                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 发送普通消息或已上传的媒体消息       | [发送消息](/sdk/android/message/sending-messages/send-message)、[发送不经 OSS 的消息](/sdk/android/message/sending-messages/send-message-not-oss)                                                                                                                                             |
+| 接收实时、离线和在线消息             | [接收消息](/sdk/android/message/receiving-messages/receive-messages)、[接收自定义业务消息](/sdk/android/message/receiving-messages/receive-custom-business-messages)                                                                                                                          |
+| 加载历史消息或反向加载消息           | [加载历史消息](/sdk/android/message/retrieving-messages/load-older-messages)、[反向加载历史消息](/sdk/android/message/retrieving-messages/load-newer-messages)                                                                                                                                |
+| 按 ID 定位或搜索消息                 | [按 ID 查找消息](/sdk/android/message/retrieving-messages/find-messages-by-id)、[搜索消息](/sdk/android/message/searching-messages/search-messages)                                                                                                                                           |
+| 删除、撤回、修改或置顶消息           | [删除消息](/sdk/android/message/managing-messages/delete-saved-messages)、[撤回消息](/sdk/android/message/managing-messages/revoke-a-message)、[修改消息](/sdk/android/message/managing-messages/modify-a-message)、[设置消息置顶](/sdk/android/message/managing-messages/set-message-pinned) |
+| 管理会话未读数和群聊已读回执         | [标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read)、[上报群消息已读](/sdk/android/message/managing-read-status/send-group-read-receipts)、[查询群消息已读成员](/sdk/android/message/managing-read-status/get-group-message-readers)                      |
+| 上报或查询输入状态                   | [更新输入状态](/sdk/android/message/composing-messages/update-typing-status)、[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)                                                                                                                                       |
+| 插入、删除或扩展仅当前设备可见的消息 | [插入本地单聊消息](/sdk/android/message/managing-messages/insert-local-single-message)、[删除本地消息](/sdk/android/message/managing-messages/delete-local-message)、[设置消息本地扩展](/sdk/android/message/managing-messages/set-message-local-ex)                                          |
+
+## 状态同步边界
+
+| 变化               | 处理位置                                                                     | 合并方式                                       |
+| ------------------ | ---------------------------------------------------------------------------- | ---------------------------------------------- |
+| 新消息和离线消息   | [接收消息](/sdk/android/message/receiving-messages/receive-messages)         | 先确定目标会话，再按 `clientMsgID` 合并。      |
+| 消息撤回           | `onRecvMessageRevokedV2`                                                     | 按撤回信息中的消息 ID 更新原消息状态。         |
+| 消息删除           | `onMsgDeleted`                                                               | 按消息 ID 从当前会话列表移除。                 |
+| C2C 和群聊已读回执 | `onRecvC2CReadReceipt`、`onRecvGroupMessageReadReceipt`                      | 更新对应消息或会话的已读状态。                 |
+| 消息扩展变化       | `onRecvMessageExtensionsChanged` 等回调                                      | 按消息 ID 更新扩展字段，不替换整条消息的正文。 |
+| 输入状态           | [更新输入状态](/sdk/android/message/composing-messages/update-typing-status) | 按会话和用户更新临时状态，不写入普通消息列表。 |
+
+对于撤回、删除、已读和消息扩展等状态变化，应先处理 API 的调用结果，再通过 `OnAdvanceMsgListener` 同步相关回调；必要时重新查询消息列表。

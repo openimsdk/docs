@@ -22,15 +22,13 @@ messageManager.deleteUserAllMessagesInConv(
 );
 ```
 
-该 API 只用于群聊，可删除指定用户在目标群会话中的全部消息。这是高影响的群组管控操作，不应放入普通单条消息菜单；操作者权限由 OpenIMServer 校验。成功回调不代表事件已经到达。
+该 API 只用于群聊，可删除指定用户在目标群会话中的全部消息。调用者没有操作权限时，通过 `onError` 返回错误。
 
-`OnAdvanceMsgListener.onDeleteUserAllMsgsInConv` 是本页归属事件。收到事件后，根据 `conversationID` 和 `userID` 移除缓存中该用户发送的消息，或重新读取会话历史进行校准。
+其他客户端通过 `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv` 接收删除通知。回调参数包含对应的 `conversationID` 和 `userID`：
 
 ```java
 @Override
 public void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {
-    removeMessagesBySender(event.getConversationID(), event.getUserID());
+    handleUserMessagesDeleted(event.getConversationID(), event.getUserID());
 }
 ```
-
-成功回调、事件到达和重新查询历史是三个独立阶段。

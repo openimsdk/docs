@@ -4,25 +4,21 @@ description: '修改支持编辑的消息内容，并处理其他客户端收到
 sourcePath: '/sdk/android/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessage` 用于修改会话中已经存在的消息。请求对象应保留原消息的会话 ID、`clientMsgID`、路由和发送者等字段，只更新允许修改的内容。
+`modifyMessage` 用于修改会话中已经存在的消息。通常应以原消息为基础修改支持编辑的内容，并保留其他字段。
 
 ```java
 messageManager.modifyMessage(callback, modifyRequest);
 ```
 
-成功回调表示修改请求已经完成，不代表所有客户端界面都已经更新。其他客户端通过 `OnAdvanceMsgListener.onMessageModified` 接收修改后的完整 `Message`。
+成功回调表示修改请求已经完成。
 
-本页是 `onMessageModified` 的完整事件归属页。根据消息路由解析 `conversationID`，再按 `conversationID:clientMsgID` 替换原消息，不要按数组位置或显示文本匹配：
+消息修改后，其他客户端通过 `OnAdvanceMsgListener.onMessageModified` 接收修改后的完整 `Message`：
 
 ```java
 @Override
 public void onMessageModified(Message message) {
-    String conversationID = resolveConversationID(message);
-    if (conversationID == null) {
-        return;
-    }
-    replaceMessage(conversationID, message.getClientMsgID(), message);
+    handleModifiedMessage(message);
 }
 ```
 
-该回调应纳入应用唯一的 `OnAdvanceMsgListener`，集中设置入口见[事件概览](/sdk/android/events/overview-events)。成功回调、修改事件到达和重新查询历史是三个独立阶段。
+`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。

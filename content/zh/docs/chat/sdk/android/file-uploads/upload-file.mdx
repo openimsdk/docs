@@ -8,13 +8,13 @@ sourcePath: '/sdk/android/file-uploads/upload-file'
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `base` | `OnBase<String>` | 是 | 接收上传请求的最终成功或失败结果。 |
-| `listener` | `OnPutFileListener` | 是 | 接收当前任务的上传进度、分片状态和完成信息。 |
-| `putArgs.filepath` | `String` | 是 | Android 应用可读取的本地文件路径。 |
-| `putArgs.name` | `String` | 是 | 上传使用的文件名；`PutArgs` 默认使用传入路径，可按业务需要改为原始文件名。 |
-| `putArgs.cuase` | `String` | 否 | 业务约定的上传原因。字段名以 Android SDK 的 `PutArgs` 声明为准。 |
+| 参数               | 类型                | 是否必填 | 说明                                                                       |
+| ------------------ | ------------------- | -------- | -------------------------------------------------------------------------- |
+| `base`             | `OnBase<String>`    | 是       | 接收上传请求的最终成功或失败结果。                                         |
+| `listener`         | `OnPutFileListener` | 是       | 接收当前任务的文件、分片、哈希及上传完成信息。                             |
+| `putArgs.filepath` | `String`            | 是       | Android 应用可读取的本地文件路径。                                         |
+| `putArgs.name`     | `String`            | 是       | 上传使用的文件名；`PutArgs` 默认使用传入路径，可按业务需要改为原始文件名。 |
+| `putArgs.cuase`    | `String`            | 否       | 业务约定的上传原因。字段名以 Android SDK 的 `PutArgs` 声明为准。           |
 
 ```java
 File file = new File(localPath);
@@ -36,8 +36,18 @@ OpenIMClient.getInstance().uploadFile(
     },
     new OnPutFileListener() {
         @Override
-        public void uploadComplete(long fileSize, long uploadedSize, long storageSize) {
-            updateUploadProgress(uploadTaskID, uploadedSize, fileSize);
+        public void open(long size) {
+            initializeUpload(uploadTaskID, size);
+        }
+
+        @Override
+        public void uploadID(String id) {
+            bindSdkUploadID(uploadTaskID, id);
+        }
+
+        @Override
+        public void uploadComplete(long fileSize, long streamSize, long storageSize) {
+            recordUploadSizes(uploadTaskID, fileSize, streamSize, storageSize);
         }
 
         @Override
@@ -49,6 +59,19 @@ OpenIMClient.getInstance().uploadFile(
 );
 ```
 
-每次调用都传入独立的 `OnPutFileListener`，因此无需设置全局上传 listener。并行上传时应由业务层为任务生成稳定 ID，并在回调闭包中关联对应任务，不要使用文件名或列表位置作为唯一标识。各回调的职责见[跟踪文件上传进度](/sdk/android/file-uploads/track-file-upload-progress)。
+## 回调说明
+
+`OnPutFileListener` 的回调和参数如下：
+
+| 回调                 | 参数                                    | 说明                                                 |
+| -------------------- | --------------------------------------- | ---------------------------------------------------- |
+| `open`               | `size`                                  | 打开指定大小的文件，可用于初始化任务。               |
+| `partSize`           | `partSize`, `num`                       | 单个分片大小和分片总数。                             |
+| `hashPartProgress`   | `index`, `size`, `partHash`             | 单个分片完成哈希计算时的分片索引、大小和哈希值。     |
+| `hashPartComplete`   | `partsHash`, `fileHash`                 | 所有分片完成哈希计算后的组合哈希和最终文件哈希。     |
+| `uploadID`           | `uploadID`                              | SDK 生成的上传标识。                                 |
+| `uploadPartComplete` | `index`, `partSize`, `partHash`         | 一个分片上传完成时的分片索引、大小和哈希值。         |
+| `uploadComplete`     | `fileSize`, `streamSize`, `storageSize` | 整个文件上传阶段的数据：文件大小、流大小和存储大小。 |
+| `complete`           | `size`, `url`, `type`                   | 文件上传完成后的最终大小、远端 URL 和资源类型。      |
 
 `complete()` 返回的 URL 可用于后续更新头像、保存附件地址或创建 URL 类型的媒体消息。上传成功只表示文件资源已经写入远端；资料更新、消息创建和消息发送仍需分别调用对应 API。

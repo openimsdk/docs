@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
@@ -37,7 +37,7 @@ Clear the state promptly when typing ends:
 conversationManager.changeInputState(callback, conversationID, false);
 ```
 
-Coalesce consecutive focus changes and attempt to report `false` before the screen closes or the connection is interrupted. A successful callback means only that the report request completed; it does not mean that other clients have updated their interfaces.
+Avoid repeatedly reporting the same state. A successful callback means that the report request completed.
 
 Other clients receive typing-state changes through `OnConversationListener.onConversationUserInputStatusChanged`. The Android SDK returns the event payload as a string, so validate the JSON before parsing it:
 
@@ -59,6 +59,6 @@ public void onConversationUserInputStatusChanged(String payload) {
 }
 ```
 
-Merge typing states by `conversationID:userID` and clear them after an application-defined timeout. `ConversationManager` retains only one conversation listener, so combine this callback with conversation-list, total-unread, and synchronization events in one listener.
+The callback's `conversationID`, `userID`, and `platformIDs` identify the conversation, user, and platforms on which the user is typing. `ConversationManager` can retain only one `OnConversationListener`. If the application handles other conversation events, implement their callbacks in the same listener.
 
-When opening a conversation or restoring a connection, use [Get typing status](/sdk/android/message/composing-messages/get-typing-status) to retrieve the current snapshot.
+To query whether a specified user is currently typing, use [Retrieve typing status](/sdk/android/message/composing-messages/get-typing-status).

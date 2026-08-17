@@ -1,8 +1,8 @@
 {
   "sourceContext": "chat/sdk/android",
   "sourceRoot": "content/zh/docs/chat/sdk/android",
-  "pageCount": 146,
-  "manualPageCount": 146,
+  "pageCount": 145,
+  "manualPageCount": 145,
   "pendingPaths": [],
   "reviewStates": {
     "/sdk/android/overview": "published",
@@ -135,7 +135,6 @@
     "/sdk/android/message/managing-messages/set-message-local-ex": "published",
     "/sdk/android/message/managing-read-status/send-group-read-receipts": "published",
     "/sdk/android/message/managing-read-status/get-group-message-readers": "published",
-    "/sdk/android/file-uploads/track-file-upload-progress": "published",
     "/sdk/android/file-uploads/upload-file": "published",
     "/sdk/android/calling/overview-calling": "published",
     "/sdk/android/calling/managing-calls/start-single-call": "published",
@@ -461,8 +460,8 @@
     "load-message-context": "读取消息上下文",
     "Search messages": "搜索消息",
     "search-messages": "搜索消息",
-    "Composing messages": "编辑消息",
-    "composing-messages": "编辑消息",
+    "Typing status": "输入状态",
+    "composing-messages": "输入状态",
     "Update typing status": "上报输入状态",
     "update-typing-status": "上报输入状态",
     "Get typing status": "查询输入状态",
@@ -517,10 +516,6 @@
     "Insert a local one-to-one message": "插入本地单聊消息",
     "Clear local and server messages": "清理全部消息",
     "Set a local message extension": "设置消息本地扩展",
-    "File uploads": "文件上传",
-    "file-uploads": "文件上传",
-    "Track file upload progress": "监听文件上传进度",
-    "track-file-upload-progress": "监听文件上传进度",
     "Upload a file": "上传文件",
     "upload-file": "上传文件",
     "Calling": "音视频通话",
@@ -1346,21 +1341,47 @@
       "title": "设置群成员禁言"
     },
     "/sdk/android/message/overview-message": {
-      "body": "Android 消息以 `Message` 表示，使用 `clientMsgID` 去重，使用 `sessionType`、`recvID` 和 `groupID` 区分单聊与群聊。消息内容由对应的 element 字段承载，发送、接收、撤回和删除是不同的状态变化。\n\n```java\nOpenIMClient.getInstance().messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {\n    @Override public void onRecvNewMessage(Message message) { messageStore.merge(message); }\n});\n```\n\n查询建立快照，`OnAdvanceMsgListener` 合并增量；`MessageManager` 的 listener 设置会替换当前 listener。",
+      "body": "Android SDK 使用 `Message` 表示一条消息。消息创建、发送、接收、查询和状态变更是不同阶段；创建 `Message` 不会发送消息，发送成功也不代表其他客户端已经完成接收。\n\n消息列表通常以 `clientMsgID` 作为客户端去重和更新键，并结合当前会话上下文判断消息属于单聊还是群聊。`Message` 本身不包含 `conversationID`，会话 ID 来自当前会话、历史查询参数或消息事件上下文。\n\n## 消息处理流程\n\n| 阶段 | Android API 或回调                         | 说明                                                              |\n| ---- | ------------------------------------------ | ----------------------------------------------------------------- |\n| 创建 | `MessageManager.create*Message()`          | 创建待发送的 `Message` 对象，不写入服务端，也不会触发新消息回调。 |\n| 发送 | `sendMessage()` 或 `sendMessageNotOss()`   | 单聊传入 `recvUid`，群聊传入 `recvGid`。                          |\n| 接收 | `OnAdvanceMsgListener`                     | 处理实时、离线、在线消息以及撤回、删除和已读回执等变化。          |\n| 查询 | 历史消息、按 ID 查找或搜索 API             | 查询结果是调用时的消息快照，不代替实时消息监听。                  |\n| 更新 | 撤回、删除、修改、置顶、已读和本地扩展 API | 分别处理 API 结果、对应事件和必要的列表重新查询。                 |\n\n```java\nmessageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {\n    @Override\n    public void onRecvNewMessage(Message message) {\n        messageStore.merge(message);\n    }\n\n    @Override\n    public void onRecvOfflineNewMessage(List<Message> messages) {\n        messageStore.mergeAll(messages);\n    }\n\n    @Override\n    public void onRecvMessageRevokedV2(RevokedInfo info) {\n        messageStore.markRevoked(info);\n    }\n\n    @Override\n    public void onMsgDeleted(Message message) {\n        messageStore.remove(message.getClientMsgID());\n    }\n});\n```\n\n重复调用 `MessageManager` 的 `setAdvancedMsgListener()` 会覆盖之前设置的 listener。应用应在统一的消息状态层注册一次，再把回调中的消息变化分发给页面。\n\n## Message 字段\n\n创建、发送、接收和查询返回的消息对象都是 `Message`。常用字段如下：\n\n| 字段             | 类型              | 说明                                                |\n| ---------------- | ----------------- | --------------------------------------------------- |\n| `clientMsgID`    | `String`          | 客户端消息 ID，用于列表去重、状态更新和定位消息。   |\n| `serverMsgID`    | `String`          | 服务端消息 ID；消息尚未成功发送时可能没有有效值。   |\n| `sessionType`    | `int`             | 会话类型；结合 `recvID`、`groupID` 判断单聊或群聊。 |\n| `sendID`         | `String`          | 发送者用户 ID。                                     |\n| `recvID`         | `String`          | 单聊接收方用户 ID。                                 |\n| `groupID`        | `String`          | 群聊对应的群组 ID。                                 |\n| `msgFrom`        | `int`             | 标识消息是用户级别还是系统级别。                    |\n| `contentType`    | `int`             | 消息类型，使用 `MessageType` 常量判断内容字段。     |\n| `createTime`     | `long`            | 消息对象创建时间，Android SDK 模型注释约定为纳秒。  |\n| `sendTime`       | `long`            | 消息发送时间，Android SDK 模型注释约定为毫秒。      |\n| `seq`            | `int`             | 服务端消息序号。                                    |\n| `status`         | `int`             | 发送状态，使用 `MessageStatus` 常量判断。           |\n| `isRead`         | `boolean`         | 当前客户端保存的已读状态。                          |\n| `platformID`     | `int`             | 发送消息的客户端平台。                              |\n| `senderNickname` | `String`          | 发送者昵称快照。                                    |\n| `senderFaceUrl`  | `String`          | 发送者头像 URL 快照。                               |\n| `offlinePush`    | `OfflinePushInfo` | 离线推送内容。                                      |\n| `attachedInfo`   | `String`          | SDK 附加信息。                                      |\n| `ext`            | `Object`          | Android 消息附加字段。                              |\n| `ex`             | `Object`          | 消息附加字段。                                      |\n| `localEx`        | `Object`          | 仅保存在当前设备的消息扩展字段。                    |\n\n消息正文位于与 `contentType` 对应的 element 字段中，不要根据列表位置或展示文本判断消息类型：\n\n| 消息内容                 | 对应字段                                             |\n| ------------------------ | ---------------------------------------------------- |\n| 文本、富文本             | `textElem`、`advancedTextElem`                       |\n| 图片、音频、视频、文件   | `pictureElem`、`soundElem`、`videoElem`、`fileElem`  |\n| @ 消息、回复消息         | `atTextElem`、`quoteElem`                            |\n| 合并转发                 | `mergeElem`                                          |\n| 名片、位置、表情         | `cardElem`、`locationElem`、`faceElem`               |\n| 自定义消息               | `customElem`                                         |\n| 通知、输入状态和附加状态 | `notificationElem`、`typingElem`、`attachedInfoElem` |\n\n## 创建和发送不同内容\n\n发送一条消息分为两个步骤：\n\n1. 调用对应内容类型的 `create*Message()` 方法，获得待发送的 `Message`。\n2. 将该 `Message` 传给 [`sendMessage()`](/sdk/android/message/sending-messages/send-message)。单聊设置 `recvUid`，群聊设置 `recvGid`。\n\n下表列出了可创建的消息类型及其对应页面：\n\n| 内容                   | 页面                                                                                                                                                                                                                                         |\n| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 文本与富文本           | [创建文本消息](/sdk/android/message/creating-messages/create-text-message)、[创建富文本消息](/sdk/android/message/creating-messages/create-advanced-text-message)                                                                            |\n| @ 消息                 | [创建 @ 消息](/sdk/android/message/creating-messages/create-text-at-message)                                                                                                                                                                 |\n| 图片、音频、视频和文件 | [创建图片消息](/sdk/android/message/creating-messages/create-image-message)、[创建文件消息](/sdk/android/message/creating-messages/create-file-message)                                                                                      |\n| 名片、位置和表情       | [创建名片消息](/sdk/android/message/creating-messages/create-card-message)、[创建位置消息](/sdk/android/message/creating-messages/create-location-message)、[创建表情消息](/sdk/android/message/creating-messages/create-face-message)       |\n| 回复、转发和合并转发   | [创建回复消息](/sdk/android/message/creating-messages/create-quote-message)、[创建转发消息](/sdk/android/message/creating-messages/create-forward-message)、[创建合并转发消息](/sdk/android/message/creating-messages/create-merger-message) |\n| 自定义业务内容         | [创建自定义消息](/sdk/android/message/creating-messages/create-custom-message)                                                                                                                                                               |\n\n发送本地路径或本地文件创建的媒体消息时，调用 `sendMessage()`，SDK 会在发送过程中上传媒体文件。使用已有远端 URL 创建媒体消息时，调用对应的 `create*MessageByURL()` 方法，再通过 [`sendMessageNotOss()`](/sdk/android/message/sending-messages/send-message-not-oss) 发送，无需再次上传媒体文件。\n\n## 按任务查找页面\n\n| 任务                                 | 页面                                                                                                                                                                                                                                                                                          |\n| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\n| 发送普通消息或已上传的媒体消息       | [发送消息](/sdk/android/message/sending-messages/send-message)、[发送不经 OSS 的消息](/sdk/android/message/sending-messages/send-message-not-oss)                                                                                                                                             |\n| 接收实时、离线和在线消息             | [接收消息](/sdk/android/message/receiving-messages/receive-messages)、[接收自定义业务消息](/sdk/android/message/receiving-messages/receive-custom-business-messages)                                                                                                                          |\n| 加载历史消息或反向加载消息           | [加载历史消息](/sdk/android/message/retrieving-messages/load-older-messages)、[反向加载历史消息](/sdk/android/message/retrieving-messages/load-newer-messages)                                                                                                                                |\n| 按 ID 定位或搜索消息                 | [按 ID 查找消息](/sdk/android/message/retrieving-messages/find-messages-by-id)、[搜索消息](/sdk/android/message/searching-messages/search-messages)                                                                                                                                           |\n| 删除、撤回、修改或置顶消息           | [删除消息](/sdk/android/message/managing-messages/delete-saved-messages)、[撤回消息](/sdk/android/message/managing-messages/revoke-a-message)、[修改消息](/sdk/android/message/managing-messages/modify-a-message)、[设置消息置顶](/sdk/android/message/managing-messages/set-message-pinned) |\n| 管理会话未读数和群聊已读回执         | [标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read)、[上报群消息已读](/sdk/android/message/managing-read-status/send-group-read-receipts)、[查询群消息已读成员](/sdk/android/message/managing-read-status/get-group-message-readers)                      |\n| 上报或查询输入状态                   | [更新输入状态](/sdk/android/message/composing-messages/update-typing-status)、[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)                                                                                                                                       |\n| 插入、删除或扩展仅当前设备可见的消息 | [插入本地单聊消息](/sdk/android/message/managing-messages/insert-local-single-message)、[删除本地消息](/sdk/android/message/managing-messages/delete-local-message)、[设置消息本地扩展](/sdk/android/message/managing-messages/set-message-local-ex)                                          |\n\n## 状态同步边界\n\n| 变化               | 处理位置                                                                     | 合并方式                                       |\n| ------------------ | ---------------------------------------------------------------------------- | ---------------------------------------------- |\n| 新消息和离线消息   | [接收消息](/sdk/android/message/receiving-messages/receive-messages)         | 先确定目标会话，再按 `clientMsgID` 合并。      |\n| 消息撤回           | `onRecvMessageRevokedV2`                                                     | 按撤回信息中的消息 ID 更新原消息状态。         |\n| 消息删除           | `onMsgDeleted`                                                               | 按消息 ID 从当前会话列表移除。                 |\n| C2C 和群聊已读回执 | `onRecvC2CReadReceipt`、`onRecvGroupMessageReadReceipt`                      | 更新对应消息或会话的已读状态。                 |\n| 消息扩展变化       | `onRecvMessageExtensionsChanged` 等回调                                      | 按消息 ID 更新扩展字段，不替换整条消息的正文。 |\n| 输入状态           | [更新输入状态](/sdk/android/message/composing-messages/update-typing-status) | 按会话和用户更新临时状态，不写入普通消息列表。 |\n\n对于撤回、删除、已读和消息扩展等状态变化，应先处理 API 的调用结果，再通过 `OnAdvanceMsgListener` 同步相关回调；必要时重新查询消息列表。",
       "description": "了解 Android SDK 的 Message 模型、消息生命周期和消息监听。",
-      "headings": [],
+      "headings": [
+        {
+          "depth": 2,
+          "title": "消息处理流程",
+          "url": "#消息处理流程"
+        },
+        {
+          "depth": 2,
+          "title": "Message 字段",
+          "url": "#message-字段"
+        },
+        {
+          "depth": 2,
+          "title": "创建和发送不同内容",
+          "url": "#创建和发送不同内容"
+        },
+        {
+          "depth": 2,
+          "title": "按任务查找页面",
+          "url": "#按任务查找页面"
+        },
+        {
+          "depth": 2,
+          "title": "状态同步边界",
+          "url": "#状态同步边界"
+        }
+      ],
       "sourcePath": "/sdk/android/message/overview-message",
       "title": "消息概览"
     },
     "/sdk/android/message/creating-messages/create-text-message": {
-      "body": "`createTextMessage()` 只创建本地消息对象，不发送消息。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createTextMessage(text);\n```",
+      "body": "`createTextMessage()` 只创建待发送的 `Message`，不会发送消息。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createTextMessage(text);\n```",
       "description": "使用 createTextMessage 创建文本 Message。",
       "headings": [],
       "sourcePath": "/sdk/android/message/creating-messages/create-text-message",
       "title": "创建文本消息"
     },
     "/sdk/android/message/creating-messages/create-text-at-message": {
-      "body": "传入文本、被提醒用户 ID、`AtUserInfo` 列表和可选引用消息。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createTextAtMessage(\n    text, userIDs, atUserInfos, quoteMessage);\n```",
+      "body": "传入文本、被 @ 用户 ID、`AtUserInfo` 列表和可选引用消息。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createTextAtMessage(\n    text, userIDs, atUserInfos, quoteMessage);\n```",
       "description": "使用 createTextAtMessage 创建带成员提醒的文本消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/creating-messages/create-text-at-message",
@@ -1472,14 +1493,14 @@
       "title": "创建位置消息"
     },
     "/sdk/android/message/creating-messages/create-face-message": {
-      "body": "`index` 表示表情位置，`data` 保存表情 URL 等 JSON 数据。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createFaceMessage(index, dataJson);\n```",
+      "body": "`data` 保存表情 URL 等 JSON 数据。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createFaceMessage(index, dataJson);\n```",
       "description": "使用 createFaceMessage 创建自定义表情消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/creating-messages/create-face-message",
       "title": "创建表情消息"
     },
     "/sdk/android/message/creating-messages/create-quote-message": {
-      "body": "引用消息保存被引用的完整 `Message`，发送前应确保引用对象包含稳定的 `clientMsgID`。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager\n    .createQuoteMessage(replyText, quotedMessage);\n```",
+      "body": "引用消息保存被引用的完整 `Message`。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager\n    .createQuoteMessage(replyText, quotedMessage);\n```",
       "description": "使用 createQuoteMessage 创建引用已有消息的回复。",
       "headings": [],
       "sourcePath": "/sdk/android/message/creating-messages/create-quote-message",
@@ -1493,7 +1514,7 @@
       "title": "创建富文本消息"
     },
     "/sdk/android/message/creating-messages/create-advanced-quote-message": {
-      "body": "富文本回复同时保存回复正文、被引用的原消息和正文中的 `RichMessage` 实体范围。\n\n```java\nRichMessage mention = new RichMessage();\nmention.setType(\"mention\");\nmention.setOffset(0);\nmention.setLength(6);\nmention.setInfo(\"{\\\"userID\\\":\\\"user_a\\\"}\");\n\nMessage message = OpenIMClient.getInstance().messageManager.createAdvancedQuoteMessage(\n    \"OpenIM agreed\",\n    originalMessage,\n    Collections.singletonList(mention)\n);\n```\n\n被引用的 `originalMessage` 应包含稳定的 `clientMsgID`，实体范围必须对应最终回复正文。`type`、`url` 和 `info` 的业务协议与[创建富文本消息](/sdk/android/message/creating-messages/create-advanced-text-message)相同。本方法只创建待发送对象，不会自动发送。",
+      "body": "富文本回复同时保存回复正文、被引用的原消息和正文中的 `RichMessage` 实体范围。\n\n```java\nRichMessage mention = new RichMessage();\nmention.setType(\"mention\");\nmention.setOffset(0);\nmention.setLength(6);\nmention.setInfo(\"{\\\"userID\\\":\\\"user_a\\\"}\");\n\nMessage message = OpenIMClient.getInstance().messageManager.createAdvancedQuoteMessage(\n    \"OpenIM agreed\",\n    originalMessage,\n    Collections.singletonList(mention)\n);\n```\n\n实体范围必须对应最终回复正文。`type`、`url` 和 `info` 的业务协议与[创建富文本消息](/sdk/android/message/creating-messages/create-advanced-text-message)相同。本方法只创建待发送对象，不会自动发送。",
       "description": "使用 createAdvancedQuoteMessage 创建带富文本实体的引用回复消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/creating-messages/create-advanced-quote-message",
@@ -1507,42 +1528,42 @@
       "title": "创建转发消息"
     },
     "/sdk/android/message/creating-messages/create-merger-message": {
-      "body": "传入消息列表、标题和摘要列表；摘要顺序应与展示协议保持一致。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createMergerMessage(\n    messages, title, summaries);\n```",
+      "body": "传入消息列表、标题和摘要列表。\n\n```java\nMessage message = OpenIMClient.getInstance().messageManager.createMergerMessage(\n    messages, title, summaries);\n```",
       "description": "使用 createMergerMessage 将多条消息合并为一条摘要消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/creating-messages/create-merger-message",
       "title": "创建合并消息"
     },
     "/sdk/android/message/sending-messages/send-message": {
-      "body": "单聊填写 `recvUid`，群聊填写 `recvGid`，另一个目标参数传 `null`。`OnMsgSendCallback` 同时承载成功、失败和媒体进度。\n\n```java\nmessageManager.sendMessage(new OnMsgSendCallback() {\n    @Override public void onSuccess(Message sentMessage) { mergeSentMessage(sentMessage); }\n    @Override public void onError(int code, String error) { showSendError(error); }\n}, message, peerUserID, null, offlinePushInfo);\n```",
+      "body": "单聊填写 `recvUid`，群聊填写 `recvGid`。通过 `OnMsgSendCallback` 处理发送成功、失败和媒体进度。\n\n```java\nmessageManager.sendMessage(new OnMsgSendCallback() {\n    @Override public void onSuccess(Message sentMessage) { mergeSentMessage(sentMessage); }\n    @Override public void onError(int code, String error) { showSendError(error); }\n}, message, peerUserID, null, offlinePushInfo);\n```",
       "description": "使用 sendMessage 将 Message 发送到单聊或群聊。",
       "headings": [],
       "sourcePath": "/sdk/android/message/sending-messages/send-message",
       "title": "发送消息"
     },
     "/sdk/android/message/sending-messages/send-message-not-oss": {
-      "body": "消息中的媒体 URL 已准备好时使用该方法，避免 SDK 再次进入内置上传流程。\n\n```java\nmessageManager.sendMessageNotOss(callback, message, peerUserID, null, offlinePushInfo);\n```",
+      "body": "消息中已有媒体 URL 时使用该方法，无需再次上传媒体文件。\n\n```java\nmessageManager.sendMessageNotOss(callback, message, peerUserID, null, offlinePushInfo);\n```",
       "description": "使用 sendMessageNotOss 发送已经由业务上传资源的媒体消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/sending-messages/send-message-not-oss",
       "title": "发送不经 OSS 的消息"
     },
     "/sdk/android/message/sending-messages/set-msg-send-progress-listener": {
-      "body": "Android 没有独立的全局发送进度 listener；进度随每次 `sendMessage()` 或 `sendMessageNotOss()` 传入的 `OnMsgSendCallback` 返回。\n\n```java\nmessageManager.sendMessage(new OnMsgSendCallback() {\n    @Override public void onProgress(long progress) { updateProgress(progress); }\n    @Override public void onSuccess(Message sentMessage) { finishProgress(); }\n    @Override public void onError(int code, String error) { failProgress(error); }\n}, message, peerUserID, null, offlinePushInfo);\n```",
+      "body": "通过 `OnMsgSendCallback.onProgress()` 获取当前消息的发送进度。\n\n```java\nmessageManager.sendMessage(new OnMsgSendCallback() {\n    @Override public void onProgress(long progress) { updateProgress(progress); }\n    @Override public void onSuccess(Message sentMessage) { finishProgress(); }\n    @Override public void onError(int code, String error) { failProgress(error); }\n}, message, peerUserID, null, offlinePushInfo);\n```",
       "description": "通过 OnMsgSendCallback 的进度回调更新媒体发送进度。",
       "headings": [],
       "sourcePath": "/sdk/android/message/sending-messages/set-msg-send-progress-listener",
       "title": "监听消息发送进度"
     },
     "/sdk/android/message/receiving-messages/receive-messages": {
-      "body": "设置 `setAdvancedMsgListener()` 后，`onRecvNewMessage` 接收实时消息，`onRecvOfflineNewMessage` 接收离线批次，`onRecvOnlineOnlyMessage` 接收在线消息字符串。所有消息都按 `clientMsgID` 幂等合并。\n\n```java\nmessageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {\n    @Override public void onRecvNewMessage(Message message) { messageStore.merge(message); }\n    @Override public void onRecvOfflineNewMessage(List<Message> messages) { messageStore.mergeAll(messages); }\n});\n```",
+      "body": "设置 `setAdvancedMsgListener()` 后，`onRecvNewMessage` 接收实时消息，`onRecvOfflineNewMessage` 接收离线批次，`onRecvOnlineOnlyMessage` 仅接收在线消息。\n\n```java\nmessageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {\n    @Override public void onRecvNewMessage(Message message) { messageStore.merge(message); }\n    @Override public void onRecvOfflineNewMessage(List<Message> messages) { messageStore.mergeAll(messages); }\n});\n```",
       "description": "使用 OnAdvanceMsgListener 接收新消息、离线消息和在线消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/receiving-messages/receive-messages",
       "title": "接收消息"
     },
     "/sdk/android/message/receiving-messages/receive-custom-business-messages": {
-      "body": "自定义业务回调携带字符串，业务侧应按协议校验来源和 JSON 结构，不要将其直接当作 `Message` 渲染。\n\n```java\nmessageManager.setCustomBusinessListener(new OnCustomBusinessListener() {\n    @Override public void onRecvCustomBusinessMessage(String payload) { handleBusiness(payload); }\n});\n```\n\n本页是 `onRecvCustomBusinessMessage` 的完整处理归属页。载荷应包含业务协议版本和稳定幂等 ID，并按该 ID 去重；不要依赖回调顺序，也不要使用自定义业务消息授予客户端权限。\n\n`MessageManager` 只保存一个自定义业务 listener，后一次设置会替换前一次。应在应用级事件中心设置一次，并在退出或切换账号时停止向旧账号状态分发。",
+      "body": "自定义业务回调携带字符串，业务侧应按约定格式解析，不要将其直接当作 `Message` 渲染。\n\n```java\nmessageManager.setCustomBusinessListener(new OnCustomBusinessListener() {\n    @Override public void onRecvCustomBusinessMessage(String payload) { handleBusiness(payload); }\n});\n```",
       "description": "使用 setCustomBusinessListener 接收独立于普通聊天消息的业务回调。",
       "headings": [],
       "sourcePath": "/sdk/android/message/receiving-messages/receive-custom-business-messages",
@@ -1563,14 +1584,14 @@
       "title": "反向加载历史消息"
     },
     "/sdk/android/message/retrieving-messages/find-messages-by-id": {
-      "body": "构造 `SearchParams` 列表查询消息。返回结果应按消息 ID 合并，不要用列表位置作为稳定标识。\n\n```java\nmessageManager.findMessageList(new OnBase<SearchResult>() {\n    @Override public void onSuccess(SearchResult result) { showFoundMessages(result); }\n    @Override public void onError(int code, String error) { showQueryError(error); }\n}, searchParams);\n```",
+      "body": "构造 `SearchParams` 列表查询消息。\n\n```java\nmessageManager.findMessageList(new OnBase<SearchResult>() {\n    @Override public void onSuccess(SearchResult result) { showFoundMessages(result); }\n    @Override public void onError(int code, String error) { showQueryError(error); }\n}, searchParams);\n```",
       "description": "使用 findMessageList 按 SearchParams 查询消息记录。",
       "headings": [],
       "sourcePath": "/sdk/android/message/retrieving-messages/find-messages-by-id",
       "title": "按 ID 查找消息"
     },
     "/sdk/android/message/retrieving-messages/load-message-context": {
-      "body": "从搜索结果或引用消息跳入聊天上下文时，把已经取得的 `Message` 作为锚点。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `String` | 是 | 锚点消息所在的会话 ID。 |\n| `startMsg` | `Message` | 是 | 已经取得的锚点消息。 |\n| `type` | `ViewType` | 是 | 上下文查看类型；引用消息使用 `ViewType.History`，搜索结果使用 `ViewType.Search`。 |\n| `before` | `int` | 是 | 锚点之前最多读取的消息数量。 |\n| `after` | `int` | 是 | 锚点之后最多读取的消息数量。 |\n\n```java\nmessageManager.fetchSurroundingMessages(\n    new OnBase<Messages>() {\n        @Override\n        public void onSuccess(Messages messages) {\n            List<Message> surrounding = messages.getData();\n            renderMessages(surrounding);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    },\n    conversationID,\n    targetMessage,\n    ViewType.Search,\n    20,\n    20\n);\n```\n\n成功回调中的 `messages.getData()` 是锚点前后取得的消息列表，消息字段见[消息概览](/sdk/android/message/overview-message)。\n\n`before` 和 `after` 分别限制锚点前后的数量。返回结果可能少于请求总数，例如锚点靠近历史边界或部分消息已经删除。按 `conversationID:clientMsgID` 合并，不要依赖固定数组位置。需要先定位消息时见[按 ID 查找消息](/sdk/android/message/retrieving-messages/find-messages-by-id)。",
+      "body": "从搜索结果或引用消息跳入聊天上下文时，把已经取得的 `Message` 作为锚点。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `String` | 是 | 锚点消息所在的会话 ID。 |\n| `startMsg` | `Message` | 是 | 已经取得的锚点消息。 |\n| `type` | `ViewType` | 是 | 上下文查看类型；引用消息使用 `ViewType.History`，搜索结果使用 `ViewType.Search`。 |\n| `before` | `int` | 是 | 锚点之前最多读取的消息数量。 |\n| `after` | `int` | 是 | 锚点之后最多读取的消息数量。 |\n\n```java\nmessageManager.fetchSurroundingMessages(\n    new OnBase<Messages>() {\n        @Override\n        public void onSuccess(Messages messages) {\n            List<Message> surrounding = messages.getData();\n            renderMessages(surrounding);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    },\n    conversationID,\n    targetMessage,\n    ViewType.Search,\n    20,\n    20\n);\n```\n\n成功回调中的 `messages.getData()` 是锚点前后取得的消息列表，消息字段见[消息概览](/sdk/android/message/overview-message)。\n\n`before` 和 `after` 分别限制锚点前后的数量。锚点靠近历史边界或部分消息已经删除时，返回结果可能少于请求总数。需要先定位消息时，见[按 ID 查找消息](/sdk/android/message/retrieving-messages/find-messages-by-id)。",
       "description": "使用 Android SDK 读取一条消息前后的上下文。",
       "headings": [
         {
@@ -1590,14 +1611,14 @@
       "title": "搜索消息"
     },
     "/sdk/android/message/composing-messages/update-typing-status": {
-      "body": "进入输入状态时，将 `focus` 设为 `true`；输入结束、输入框失去焦点或退出会话时，将其设为 `false`。\n\n```java\nconversationManager.changeInputState(\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String data) {\n            // 输入状态已上报\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    },\n    conversationID,\n    true\n);\n```\n\n输入结束时及时清除状态：\n\n```java\nconversationManager.changeInputState(callback, conversationID, false);\n```\n\n调用侧应合并连续的焦点变化，并在页面退出或连接中断前尝试上报 `false`。成功回调只表示上报请求完成，不表示其他客户端已经更新界面。\n\n其他客户端通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化。Android SDK 以字符串形式返回事件载荷，应在校验 JSON 后再解析：\n\n```java\n@Override\npublic void onConversationUserInputStatusChanged(String payload) {\n    InputStatesChangedData state = JsonUtil.toObj(\n        payload,\n        InputStatesChangedData.class\n    );\n    if (state == null || state.getConversationID() == null) {\n        return;\n    }\n    updateTypingState(\n        state.getConversationID(),\n        state.getUserID(),\n        state.getPlatformIDs()\n    );\n}\n```\n\n输入状态按 `conversationID:userID` 合并，并设置业务侧超时自动清除。`ConversationManager` 只保存一个会话 listener，本回调应与会话列表、总未读数和同步事件组合后统一设置。\n\n进入会话或连接恢复时，可通过[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)获取当前快照。",
+      "body": "进入输入状态时，将 `focus` 设为 `true`；输入结束、输入框失去焦点或退出会话时，将其设为 `false`。\n\n```java\nconversationManager.changeInputState(\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String data) {\n            // 输入状态已上报\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    },\n    conversationID,\n    true\n);\n```\n\n输入结束时及时清除状态：\n\n```java\nconversationManager.changeInputState(callback, conversationID, false);\n```\n\n避免频繁重复上报相同状态。成功回调表示上报请求已经完成。\n\n其他客户端通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化。Android SDK 以字符串形式返回事件载荷，应在校验 JSON 后再解析：\n\n```java\n@Override\npublic void onConversationUserInputStatusChanged(String payload) {\n    InputStatesChangedData state = JsonUtil.toObj(\n        payload,\n        InputStatesChangedData.class\n    );\n    if (state == null || state.getConversationID() == null) {\n        return;\n    }\n    updateTypingState(\n        state.getConversationID(),\n        state.getUserID(),\n        state.getPlatformIDs()\n    );\n}\n```\n\n回调中的 `conversationID`、`userID` 和 `platformIDs` 分别表示会话、用户和正在输入的平台。`ConversationManager` 只能设置一个 `OnConversationListener`；如果应用还需要处理其他会话事件，请在同一个 listener 中实现相应回调。\n\n需要主动查询指定用户是否正在输入时，使用[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)。",
       "description": "使用 Android SDK 上报当前会话的输入状态。",
       "headings": [],
       "sourcePath": "/sdk/android/message/composing-messages/update-typing-status",
       "title": "上报输入状态"
     },
     "/sdk/android/message/composing-messages/get-typing-status": {
-      "body": "进入会话、连接恢复或需要校准状态时，查询指定用户当前正在输入的平台 ID 列表。\n\n```java\nOpenIMClient.getInstance().conversationManager.getInputState(\n    new OnBase<List<Integer>>() {\n        @Override\n        public void onSuccess(List<Integer> platformIDs) {\n            boolean typing = platformIDs != null && !platformIDs.isEmpty();\n            updateTypingState(conversationID, userID, typing);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            recordTypingStatusQueryFailure(code, error);\n        }\n    },\n    conversationID,\n    userID\n);\n```\n\n成功 callback 返回平台 ID 数组快照；空列表表示查询时没有平台处于输入状态。查询本身不会触发输入状态事件。群聊中不要频繁轮询全部成员，只在进入页面、连接恢复或补偿状态时查询重点成员；在线增量由[上报输入状态](/sdk/android/message/composing-messages/update-typing-status)归属的 listener 维护。",
+      "body": "查询指定用户当前正在输入的平台 ID 列表。\n\n```java\nOpenIMClient.getInstance().conversationManager.getInputState(\n    new OnBase<List<Integer>>() {\n        @Override\n        public void onSuccess(List<Integer> platformIDs) {\n            boolean typing = platformIDs != null && !platformIDs.isEmpty();\n            updateTypingState(conversationID, userID, typing);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            recordTypingStatusQueryFailure(code, error);\n        }\n    },\n    conversationID,\n    userID\n);\n```\n\n成功回调返回平台 ID 列表；空列表表示该用户当前没有平台处于输入状态。输入状态发生变化时，通过[上报输入状态](/sdk/android/message/composing-messages/update-typing-status)页面介绍的回调接收通知。",
       "description": "使用 getInputState 查询指定用户在会话中的当前输入状态。",
       "headings": [],
       "sourcePath": "/sdk/android/message/composing-messages/get-typing-status",
@@ -1611,7 +1632,7 @@
       "title": "删除本地消息"
     },
     "/sdk/android/message/managing-messages/delete-saved-messages": {
-      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `String` | 是 | 要删除消息所在的会话 ID。 |\n| `clientMsgIDs` | `String[]` | 是 | 要删除的消息 ID 列表；同一批 ID 必须属于同一会话。 |\n| `isSync` | `boolean` | 是 | 是否把删除动作同步到当前账号的其他客户端。 |\n\n```java\nDeleteMessagesReq request = new DeleteMessagesReq(\n    true,\n    conversationID,\n    selectedClientMsgIDs.toArray(new String[0])\n);\n\nmessageManager.deleteMessages(request, new OnBase<String>() {\n    @Override\n    public void onSuccess(String data) {\n        // 删除请求已完成\n    }\n\n    @Override\n    public void onError(int code, String error) {\n        // 处理失败\n    }\n});\n```\n\n`isSync` 为 `false` 时，删除当前设备及当前账号服务端保存的记录；为 `true` 时，还会请求把删除动作同步到当前账号的其他客户端。该操作不会删除其他会话成员持有的副本，也不会产生撤回提示。\n\n成功回调表示删除请求已经完成；开启同步时，不代表其他客户端已经收到事件或完成界面更新。\n\n`OnAdvanceMsgListener.onMsgDeleted` 是本页归属事件。根据消息路由字段确定会话后，按 `clientMsgID` 幂等移除消息。\n\n```java\n@Override\npublic void onMsgDeleted(Message message) {\n    removeMessage(resolveConversationID(message), message.getClientMsgID());\n}\n```\n\n需要校准当前消息快照时，重新查询对应会话的历史消息。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `String` | 是 | 要删除消息所在的会话 ID。 |\n| `clientMsgIDs` | `String[]` | 是 | 要删除的消息 ID 列表；同一批 ID 必须属于同一会话。 |\n| `isSync` | `boolean` | 是 | 是否把删除动作同步到当前账号的其他客户端。 |\n\n```java\nDeleteMessagesReq request = new DeleteMessagesReq(\n    true,\n    conversationID,\n    selectedClientMsgIDs.toArray(new String[0])\n);\n\nmessageManager.deleteMessages(request, new OnBase<String>() {\n    @Override\n    public void onSuccess(String data) {\n        // 删除请求已完成\n    }\n\n    @Override\n    public void onError(int code, String error) {\n        // 处理失败\n    }\n});\n```\n\n`isSync` 为 `false` 时，删除当前设备及当前账号服务端保存的记录；为 `true` 时，还会请求把删除动作同步到当前账号的其他客户端。该操作不会删除其他会话成员持有的副本，也不会产生撤回提示。\n\n成功回调表示删除请求已经完成；开启同步时，不代表其他客户端已经收到事件或完成界面更新。\n\n开启同步后，其他客户端可通过 `OnAdvanceMsgListener.onMsgDeleted` 接收删除的消息：\n\n```java\n@Override\npublic void onMsgDeleted(Message message) {\n    handleDeletedMessage(message);\n}\n```",
       "description": "使用 Android SDK 批量删除当前账号在同一会话中的消息。",
       "headings": [
         {
@@ -1624,42 +1645,42 @@
       "title": "批量删除消息"
     },
     "/sdk/android/message/managing-messages/delete-user-messages": {
-      "body": "```java\nmessageManager.deleteUserAllMessagesInConv(\n    conversationID,\n    targetUserID,\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String data) {\n            // 删除请求已完成\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    }\n);\n```\n\n该 API 只用于群聊，可删除指定用户在目标群会话中的全部消息。这是高影响的群组管控操作，不应放入普通单条消息菜单；操作者权限由 OpenIMServer 校验。成功回调不代表事件已经到达。\n\n`OnAdvanceMsgListener.onDeleteUserAllMsgsInConv` 是本页归属事件。收到事件后，根据 `conversationID` 和 `userID` 移除缓存中该用户发送的消息，或重新读取会话历史进行校准。\n\n```java\n@Override\npublic void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {\n    removeMessagesBySender(event.getConversationID(), event.getUserID());\n}\n```\n\n成功回调、事件到达和重新查询历史是三个独立阶段。",
+      "body": "```java\nmessageManager.deleteUserAllMessagesInConv(\n    conversationID,\n    targetUserID,\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String data) {\n            // 删除请求已完成\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    }\n);\n```\n\n该 API 只用于群聊，可删除指定用户在目标群会话中的全部消息。调用者没有操作权限时，通过 `onError` 返回错误。\n\n其他客户端通过 `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv` 接收删除通知。回调参数包含对应的 `conversationID` 和 `userID`：\n\n```java\n@Override\npublic void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {\n    handleUserMessagesDeleted(event.getConversationID(), event.getUserID());\n}\n```",
       "description": "使用 Android SDK 删除指定用户在群聊中的全部消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-messages/delete-user-messages",
       "title": "删除群聊中指定用户的全部消息"
     },
     "/sdk/android/message/managing-messages/revoke-a-message": {
-      "body": "撤回会使其他客户端把原消息显示为撤回状态。调用前应确认消息已经发送成功，并由业务界面限制可撤回时间；最终权限由服务端校验。\n\n```java\nmessageManager.revokeMessageV2(callback, conversationID, clientMsgID);\n```\n\n成功回调表示服务端完成撤回请求，不代表所有客户端都已经收到事件。接收端通过 `OnAdvanceMsgListener.onRecvMessageRevokedV2` 合并撤回变化。\n\n本页是 `onRecvMessageRevokedV2` 的完整事件归属页。`RevokedInfo` 包含 `clientMsgID`、撤回者和撤回时间，但不包含 `conversationID`，应先从当前账号的消息索引解析所属会话，再按 `conversationID:clientMsgID` 更新消息：\n\n```java\n@Override\npublic void onRecvMessageRevokedV2(RevokedInfo info) {\n    String clientMsgID = info.getClientMsgID();\n    String conversationID = findConversationIDByClientMsgID(clientMsgID);\n    if (conversationID == null) {\n        return;\n    }\n    markMessageRevoked(conversationID, clientMsgID, info);\n}\n```\n\n接收端应把对应消息更新为撤回状态，而不是直接从列表删除。该回调应纳入应用唯一的 `OnAdvanceMsgListener`，集中设置入口见[事件概览](/sdk/android/events/overview-events)。\n\n成功回调、撤回事件到达和重新查询历史是三个独立阶段。需要校准时重新读取对应会话的历史消息。",
+      "body": "撤回会使其他客户端把原消息显示为撤回状态。调用失败时，通过错误回调获取错误码和错误信息。\n\n```java\nmessageManager.revokeMessageV2(callback, conversationID, clientMsgID);\n```\n\n成功回调表示撤回请求已经完成。其他客户端通过 `OnAdvanceMsgListener.onRecvMessageRevokedV2` 接收撤回通知。\n\n`RevokedInfo` 包含 `clientMsgID`、撤回者和撤回时间：\n\n```java\n@Override\npublic void onRecvMessageRevokedV2(RevokedInfo info) {\n    handleRevokedMessage(info);\n}\n```\n\n接收端应把对应消息更新为撤回状态，而不是直接从列表删除。`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。",
       "description": "撤回已发送消息，并处理其他客户端收到的撤回通知。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-messages/revoke-a-message",
       "title": "撤回消息"
     },
     "/sdk/android/message/managing-messages/modify-a-message": {
-      "body": "`modifyMessage` 用于修改会话中已经存在的消息。请求对象应保留原消息的会话 ID、`clientMsgID`、路由和发送者等字段，只更新允许修改的内容。\n\n```java\nmessageManager.modifyMessage(callback, modifyRequest);\n```\n\n成功回调表示修改请求已经完成，不代表所有客户端界面都已经更新。其他客户端通过 `OnAdvanceMsgListener.onMessageModified` 接收修改后的完整 `Message`。\n\n本页是 `onMessageModified` 的完整事件归属页。根据消息路由解析 `conversationID`，再按 `conversationID:clientMsgID` 替换原消息，不要按数组位置或显示文本匹配：\n\n```java\n@Override\npublic void onMessageModified(Message message) {\n    String conversationID = resolveConversationID(message);\n    if (conversationID == null) {\n        return;\n    }\n    replaceMessage(conversationID, message.getClientMsgID(), message);\n}\n```\n\n该回调应纳入应用唯一的 `OnAdvanceMsgListener`，集中设置入口见[事件概览](/sdk/android/events/overview-events)。成功回调、修改事件到达和重新查询历史是三个独立阶段。",
+      "body": "`modifyMessage` 用于修改会话中已经存在的消息。通常应以原消息为基础修改支持编辑的内容，并保留其他字段。\n\n```java\nmessageManager.modifyMessage(callback, modifyRequest);\n```\n\n成功回调表示修改请求已经完成。\n\n消息修改后，其他客户端通过 `OnAdvanceMsgListener.onMessageModified` 接收修改后的完整 `Message`：\n\n```java\n@Override\npublic void onMessageModified(Message message) {\n    handleModifiedMessage(message);\n}\n```\n\n`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。",
       "description": "修改支持编辑的消息内容，并处理其他客户端收到的消息修改事件。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-messages/modify-a-message",
       "title": "修改消息"
     },
     "/sdk/android/message/managing-messages/get-pinned-messages": {
-      "body": "查询结果是指定会话当前的置顶消息快照。\n\n```java\nmessageManager.getConversationPinnedMsgs(new OnBase<List<Message>>() {\n    @Override public void onSuccess(List<Message> messages) { showPinned(messages); }\n    @Override public void onError(int code, String error) { showPinnedError(error); }\n}, conversationID);\n```",
+      "body": "成功回调返回指定会话当前的置顶消息列表。\n\n```java\nmessageManager.getConversationPinnedMsgs(new OnBase<List<Message>>() {\n    @Override public void onSuccess(List<Message> messages) { showPinned(messages); }\n    @Override public void onError(int code, String error) { showPinnedError(error); }\n}, conversationID);\n```",
       "description": "使用 getConversationPinnedMsgs 查询会话中的置顶消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-messages/get-pinned-messages",
       "title": "查询会话置顶消息"
     },
     "/sdk/android/message/managing-messages/set-message-pinned": {
-      "body": "最后一个参数为 `true` 时置顶消息，为 `false` 时取消置顶：\n\n```java\nmessageManager.setConversationPinnedMsg(\n    callback,\n    conversationID,\n    clientMsgID,\n    true\n);\n```\n\n成功回调表示设置请求完成，不代表置顶变化事件已经到达。\n\n`OnAdvanceMsgListener.onChangedPinnedMsg` 是本页归属事件。回调中的 `ChangedPinnedMsg` 包含 `conversationID` 和当前置顶消息集合；按会话替换集合，并按每条置顶消息的 `clientMsgID` 去重：\n\n```java\n@Override\npublic void onChangedPinnedMsg(ChangedPinnedMsg event) {\n    replacePinnedMessages(event.getConversationID(), event.getMsgs());\n}\n```\n\n该回调应纳入应用唯一的 `OnAdvanceMsgListener`，集中设置入口见[事件概览](/sdk/android/events/overview-events)。成功回调、事件到达和[查询会话置顶消息](/sdk/android/message/managing-messages/get-pinned-messages)取得的快照是三个独立阶段。",
+      "body": "最后一个参数为 `true` 时置顶消息，为 `false` 时取消置顶：\n\n```java\nmessageManager.setConversationPinnedMsg(\n    callback,\n    conversationID,\n    clientMsgID,\n    true\n);\n```\n\n成功回调表示设置请求完成，不代表置顶变化事件已经到达。\n\n置顶消息发生变化时，`OnAdvanceMsgListener.onChangedPinnedMsg` 返回对应的 `conversationID` 和当前置顶消息列表：\n\n```java\n@Override\npublic void onChangedPinnedMsg(ChangedPinnedMsg event) {\n    handlePinnedMessagesChanged(event.getConversationID(), event.getMsgs());\n}\n```\n\n`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。需要主动获取当前置顶消息时，使用[查询会话置顶消息](/sdk/android/message/managing-messages/get-pinned-messages)。",
       "description": "设置会话消息的置顶状态，并处理置顶消息变化事件。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-messages/set-message-pinned",
       "title": "置顶或取消置顶消息"
     },
     "/sdk/android/message/managing-messages/insert-local-single-message": {
-      "body": "该方法不向服务器发送消息，`receiver` 和 `sender` 用于建立本地消息归属。\n\n```java\nmessageManager.insertSingleMessageToLocalStorage(callback, message, receiverUserID, senderUserID);\n```",
+      "body": "该方法不向服务器发送消息。`receiver` 是接收者用户 ID，`sender` 是发送者用户 ID。\n\n```java\nmessageManager.insertSingleMessageToLocalStorage(callback, message, receiverUserID, senderUserID);\n```",
       "description": "使用 insertSingleMessageToLocalStorage 插入仅当前设备可见的单聊消息。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-messages/insert-local-single-message",
@@ -1694,14 +1715,14 @@
       "title": "设置消息本地扩展"
     },
     "/sdk/android/message/managing-read-status/send-group-read-receipts": {
-      "body": "```java\nmessageManager.sendGroupMessageReadReceipt(\n    conversationID,\n    visibleClientMsgIDs,\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String data) {\n            // 已读回执已上报\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    }\n);\n```\n\n同一批消息必须属于目标群会话。成功回调只表示服务端接受上报，不代表其他客户端界面已经更新。会话未读数仍由 `markConversationMessageAsRead` 独立维护。\n\n其他客户端通过 `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt` 接收群聊成员级已读变化。本页是该事件的完整监听归属页；根据 `conversationID` 以及回执中的消息 ID 合并消息已读数、未读数和成员信息。\n\n```java\n@Override\npublic void onRecvGroupMessageReadReceipt(GroupMessageReceipt receipt) {\n    mergeGroupReadReceipt(receipt);\n}\n```\n\n上报回调、群回执事件和[查询群消息已读成员](/sdk/android/message/managing-read-status/get-group-message-readers)取得的成员快照是三个独立阶段。",
+      "body": "```java\nmessageManager.sendGroupMessageReadReceipt(\n    conversationID,\n    visibleClientMsgIDs,\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String data) {\n            // 已读回执已上报\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    }\n);\n```\n\n同一批消息必须属于目标群会话。成功回调只表示服务端接受上报，不代表其他客户端界面已经更新。会话未读数仍由 `markConversationMessageAsRead` 独立维护。\n\n其他客户端通过 `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt` 接收群消息已读回执：\n\n```java\n@Override\npublic void onRecvGroupMessageReadReceipt(GroupMessageReceipt receipt) {\n    handleGroupMessageReadReceipt(receipt);\n}\n```\n\n需要查询某条群消息的已读或未读成员时，使用[查询群消息已读成员](/sdk/android/message/managing-read-status/get-group-message-readers)。",
       "description": "使用 Android SDK 上报群消息已读回执。",
       "headings": [],
       "sourcePath": "/sdk/android/message/managing-read-status/send-group-read-receipts",
       "title": "上报群消息已读"
     },
     "/sdk/android/message/managing-read-status/get-group-message-readers": {
-      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `String` | 是 | 群聊会话 ID。 |\n| `clientMsgID` | `String` | 是 | 要查询阅读成员的消息 ID。 |\n| `filter` | `int` | 是 | `0` 查询已读成员，`1` 查询未读成员。 |\n| `offset` | `int` | 是 | 分页偏移量，首页传 `0`。 |\n| `count` | `int` | 是 | 本次请求的成员数量。 |\n\n```java\nmessageManager.getGroupMessageReaderList(\n    conversationID,\n    clientMsgID,\n    0,\n    0,\n    50,\n    new OnBase<List<GroupMembersInfo>>() {\n        @Override\n        public void onSuccess(List<GroupMembersInfo> members) {\n            renderMembers(members);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    }\n);\n```\n\n成功回调返回当前页 `GroupMembersInfo` 列表，字段含义见[分页查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)。按 `groupID:userID` 去重；查询只建立当前快照，不触发回执事件。需要完整列表时继续分页。",
+      "body": "## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `conversationID` | `String` | 是 | 群聊会话 ID。 |\n| `clientMsgID` | `String` | 是 | 要查询阅读成员的消息 ID。 |\n| `filter` | `int` | 是 | `0` 查询已读成员，`1` 查询未读成员。 |\n| `offset` | `int` | 是 | 分页偏移量，首页传 `0`。 |\n| `count` | `int` | 是 | 本次请求的成员数量。 |\n\n```java\nmessageManager.getGroupMessageReaderList(\n    conversationID,\n    clientMsgID,\n    0,\n    0,\n    50,\n    new OnBase<List<GroupMembersInfo>>() {\n        @Override\n        public void onSuccess(List<GroupMembersInfo> members) {\n            renderMembers(members);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            // 处理失败\n        }\n    }\n);\n```\n\n成功回调返回当前页 `GroupMembersInfo` 列表，字段含义见[分页查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)。需要完整列表时继续分页。",
       "description": "使用 Android SDK 分页查询群消息的已读或未读成员。",
       "headings": [
         {
@@ -1713,21 +1734,19 @@
       "sourcePath": "/sdk/android/message/managing-read-status/get-group-message-readers",
       "title": "查询群消息已读成员"
     },
-    "/sdk/android/file-uploads/track-file-upload-progress": {
-      "body": "Android SDK 不设置全局文件上传 listener。每次调用 `uploadFile()` 时传入一个 `OnPutFileListener`，由该 listener 接收当前上传任务的进度、分片状态和完成信息。\n\n```java\nOnPutFileListener uploadListener = new OnPutFileListener() {\n    @Override\n    public void open(long size) {\n        initializeUploadProgress(uploadTaskID, size);\n    }\n\n    @Override\n    public void uploadID(String id) {\n        bindSdkUploadID(uploadTaskID, id);\n    }\n\n    @Override\n    public void uploadComplete(long fileSize, long uploadedSize, long storageSize) {\n        updateUploadProgress(uploadTaskID, uploadedSize, fileSize);\n    }\n\n    @Override\n    public void uploadPartComplete(long partNumber, long partSize, String partHash) {\n        markPartComplete(uploadTaskID, partNumber, partSize, partHash);\n    }\n\n    @Override\n    public void complete(long size, String url, long type) {\n        completeUpload(uploadTaskID, size, url, type);\n    }\n};\n\nOpenIMClient.getInstance().uploadFile(resultCallback, uploadListener, putArgs);\n```\n\n`open()` 可用于初始化总大小，`uploadID()` 返回 SDK 上传任务标识，`uploadComplete()` 提供上传过程数据，`uploadPartComplete()` 表示一个分片已经完成，`complete()` 返回最终大小、远端 URL 和资源类型。只有业务需要展示分片细节时才处理分片回调；普通进度条通常只需要过程回调和最终完成回调。\n\n业务层仍应生成自己的稳定 `uploadTaskID`，并在 listener 闭包中关联界面状态。SDK 上传 ID、文件名和数组位置都不应代替业务任务主键。每个上传任务使用独立 listener；页面或账号状态销毁后应停止向旧状态分发回调。\n\n完整的参数构造和错误处理见[上传文件](/sdk/android/file-uploads/upload-file)。",
-      "description": "使用 Android SDK 的 OnPutFileListener 跟踪单次文件上传任务。",
-      "headings": [],
-      "sourcePath": "/sdk/android/file-uploads/track-file-upload-progress",
-      "title": "监听文件上传进度"
-    },
     "/sdk/android/file-uploads/upload-file": {
-      "body": "`uploadFile()` 是独立文件上传能力，可用于头像、群头像、资料附件或其他业务文件。上传过程不从属于消息，也不会自动创建消息或更新用户资料。\n\n## 参数说明\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `base` | `OnBase<String>` | 是 | 接收上传请求的最终成功或失败结果。 |\n| `listener` | `OnPutFileListener` | 是 | 接收当前任务的上传进度、分片状态和完成信息。 |\n| `putArgs.filepath` | `String` | 是 | Android 应用可读取的本地文件路径。 |\n| `putArgs.name` | `String` | 是 | 上传使用的文件名；`PutArgs` 默认使用传入路径，可按业务需要改为原始文件名。 |\n| `putArgs.cuase` | `String` | 否 | 业务约定的上传原因。字段名以 Android SDK 的 `PutArgs` 声明为准。 |\n\n```java\nFile file = new File(localPath);\nPutArgs args = new PutArgs(file.getAbsolutePath());\nargs.name = file.getName();\nargs.cuase = \"user-avatar\";\n\nOpenIMClient.getInstance().uploadFile(\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String result) {\n            finishUploadRequest(result);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            showUploadError(code, error);\n        }\n    },\n    new OnPutFileListener() {\n        @Override\n        public void uploadComplete(long fileSize, long uploadedSize, long storageSize) {\n            updateUploadProgress(uploadTaskID, uploadedSize, fileSize);\n        }\n\n        @Override\n        public void complete(long size, String url, long type) {\n            completeUpload(uploadTaskID, size, url, type);\n        }\n    },\n    args\n);\n```\n\n每次调用都传入独立的 `OnPutFileListener`，因此无需设置全局上传 listener。并行上传时应由业务层为任务生成稳定 ID，并在回调闭包中关联对应任务，不要使用文件名或列表位置作为唯一标识。各回调的职责见[跟踪文件上传进度](/sdk/android/file-uploads/track-file-upload-progress)。\n\n`complete()` 返回的 URL 可用于后续更新头像、保存附件地址或创建 URL 类型的媒体消息。上传成功只表示文件资源已经写入远端；资料更新、消息创建和消息发送仍需分别调用对应 API。",
+      "body": "`uploadFile()` 是独立文件上传能力，可用于头像、群头像、资料附件或其他业务文件。上传过程不从属于消息，也不会自动创建消息或更新用户资料。\n\n## 参数说明\n\n| 参数               | 类型                | 是否必填 | 说明                                                                       |\n| ------------------ | ------------------- | -------- | -------------------------------------------------------------------------- |\n| `base`             | `OnBase<String>`    | 是       | 接收上传请求的最终成功或失败结果。                                         |\n| `listener`         | `OnPutFileListener` | 是       | 接收当前任务的文件、分片、哈希及上传完成信息。                             |\n| `putArgs.filepath` | `String`            | 是       | Android 应用可读取的本地文件路径。                                         |\n| `putArgs.name`     | `String`            | 是       | 上传使用的文件名；`PutArgs` 默认使用传入路径，可按业务需要改为原始文件名。 |\n| `putArgs.cuase`    | `String`            | 否       | 业务约定的上传原因。字段名以 Android SDK 的 `PutArgs` 声明为准。           |\n\n```java\nFile file = new File(localPath);\nPutArgs args = new PutArgs(file.getAbsolutePath());\nargs.name = file.getName();\nargs.cuase = \"user-avatar\";\n\nOpenIMClient.getInstance().uploadFile(\n    new OnBase<String>() {\n        @Override\n        public void onSuccess(String result) {\n            finishUploadRequest(result);\n        }\n\n        @Override\n        public void onError(int code, String error) {\n            showUploadError(code, error);\n        }\n    },\n    new OnPutFileListener() {\n        @Override\n        public void open(long size) {\n            initializeUpload(uploadTaskID, size);\n        }\n\n        @Override\n        public void uploadID(String id) {\n            bindSdkUploadID(uploadTaskID, id);\n        }\n\n        @Override\n        public void uploadComplete(long fileSize, long streamSize, long storageSize) {\n            recordUploadSizes(uploadTaskID, fileSize, streamSize, storageSize);\n        }\n\n        @Override\n        public void complete(long size, String url, long type) {\n            completeUpload(uploadTaskID, size, url, type);\n        }\n    },\n    args\n);\n```\n\n## 回调说明\n\n`OnPutFileListener` 的回调和参数如下：\n\n| 回调                 | 参数                                    | 说明                                                 |\n| -------------------- | --------------------------------------- | ---------------------------------------------------- |\n| `open`               | `size`                                  | 打开指定大小的文件，可用于初始化任务。               |\n| `partSize`           | `partSize`, `num`                       | 单个分片大小和分片总数。                             |\n| `hashPartProgress`   | `index`, `size`, `partHash`             | 单个分片完成哈希计算时的分片索引、大小和哈希值。     |\n| `hashPartComplete`   | `partsHash`, `fileHash`                 | 所有分片完成哈希计算后的组合哈希和最终文件哈希。     |\n| `uploadID`           | `uploadID`                              | SDK 生成的上传标识。                                 |\n| `uploadPartComplete` | `index`, `partSize`, `partHash`         | 一个分片上传完成时的分片索引、大小和哈希值。         |\n| `uploadComplete`     | `fileSize`, `streamSize`, `storageSize` | 整个文件上传阶段的数据：文件大小、流大小和存储大小。 |\n| `complete`           | `size`, `url`, `type`                   | 文件上传完成后的最终大小、远端 URL 和资源类型。      |\n\n`complete()` 返回的 URL 可用于后续更新头像、保存附件地址或创建 URL 类型的媒体消息。上传成功只表示文件资源已经写入远端；资料更新、消息创建和消息发送仍需分别调用对应 API。",
       "description": "使用 Android SDK 独立上传文件并获取远端资源地址。",
       "headings": [
         {
           "depth": 2,
           "title": "参数说明",
           "url": "#参数说明"
+        },
+        {
+          "depth": 2,
+          "title": "回调说明",
+          "url": "#回调说明"
         }
       ],
       "sourcePath": "/sdk/android/file-uploads/upload-file",
