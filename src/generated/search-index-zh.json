@@ -2258,10 +2258,10 @@
   {
     "path": "/sdk/android/group/overview-group",
     "title": "群组概览",
-    "description": "了解 Android SDK 中群资料、成员、申请和群组事件的职责。",
+    "description": "了解 Android SDK 中的群组概念、核心数据类型和主要能力。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group overview-group",
-    "content": "群组由 GroupInfo 表示， groupID 是群资料、成员、申请和权限设置的唯一目标标识。 GroupMembersInfo 表示成员在某个群内的昵称、角色、禁言结束时间和扩展字段；单聊关系和会话未读数不属于群组 API。 GroupManager 将群资料变化、成员增删改、入群申请处理和加入群组变化统一发送到一个 OnGroupListener 。在共享状态层设置一次 listener，并按 groupID 或 userID 合并事件。 OpenIMClient.getInstance .groupManager.setOnGroupListener new OnGroupListener @Override public void onGroupInfoChanged GroupInfo group groupStore.put group.getGroupID , group ; @Override public void onGroupMemberInfoChanged GroupMembersInfo member memberStore.put member.getGroupID + member.getUserID , member ; ; 群资料或成员操作的成功 callback 只表示该请求完成；状态以对应群组事件或重新查询结果为准。 主要能力 群资料与设置 /sdk/android/group/create group 群权限 /sdk/android/group/set group join verification 加入与退出群组 /sdk/android/group/join group 查询群组 /sdk/android/group/retrieving groups/get specified groups info 群申请 /sdk/android/group/group applications/overview group applications 查询群成员 /sdk/android/group/retrieving group members/overview retrieving group members 管理群成员 /sdk/android/group/managing group members/invite user to group"
+    "content": "OpenIMSDK 的多人聊天使用群组承载共享资料、成员关系和权限。 groupID 是群组稳定标识，发送群消息、读取群资料、管理成员和处理入群申请都使用它。当前用户聊天列表中的群会话仍由 conversationID 管理，两者不能混用。 核心数据类型 | 类型 | 用途 | | | | | GroupInfo | 群名称、头像、公告、群主、验证配置、成员数和扩展字段。 | | GroupMembersInfo | 用户在指定群内的昵称、角色、禁言和入群信息。 | | GroupApplicationInfo | 入群申请及处理状态。 | 群成员角色使用 GroupRole ： MEMBER 表示普通成员， ADMIN 表示管理员， OWNER 表示群主。 主要能力 群资料与设置 /sdk/android/group/create group 群权限与管理 /sdk/android/group/set group join verification 加入、退出与解散群组 /sdk/android/group/join group 查询群组 /sdk/android/group/retrieving groups/get specified groups info 入群申请 /sdk/android/group/group applications/get group application list as recipient 查询群成员 /sdk/android/group/retrieving group members/get group member list 管理群成员 /sdk/android/group/managing group members/invite user to group 状态更新 在登录前调用 setOnGroupListener 注册 OnGroupListener ，接收群资料、成员和入群申请的变化。下面示例根据回调刷新相应的群组、成员或申请界面： private final OnGroupListener groupListener = new OnGroupListener @Override public void onJoinedGroupAdded GroupInfo group // 刷新已加入群组列表 @Override public void onJoinedGroupDeleted GroupInfo group // 刷新已加入群组列表 @Override public void onGroupInfoChanged GroupInfo group // 根据 group.getGroupID 刷新群资料 @Override public void onGroupDismissed GroupInfo group // 根据 group.getGroupID 关闭已解散的群聊 @Override public void onGroupMemberAdded GroupMembersInfo member // 根据 member.getGroupID 刷新群成员列表 @Override public void onGroupMemberDeleted GroupMembersInfo member // 根据 member.getGroupID 刷新群成员列表 @Override public void onGroupMemberInfoChanged GroupMembersInfo member // 根据 member.getGroupID 刷新群成员列表 @Override public void onGroupApplicationAdded GroupApplicationInfo application // 刷新入群申请列表 @Override public void onGroupApplicationAccepted GroupApplicationInfo application // 刷新入群申请列表 @Override public void onGroupApplicationRejected GroupApplicationInfo application // 刷新入群申请列表 @Override public void onGroupApplicationDeleted GroupApplicationInfo application // 刷新入群申请列表 ; public void registerGroupListener OpenIMClient.getInstance .groupManager.setOnGroupListener groupListener ; onJoinedGroupAdded 和 onJoinedGroupDeleted 用于更新当前用户已加入的群组列表； onGroupInfoChanged 和 onGroupDismissed 用于更新群资料或关闭已解散的群聊。成员变化通过 onGroupMemberAdded 、 onGroupMemberDeleted 和 onGroupMemberInfoChanged 处理；入群申请变化通过四个 onGroupApplication... 回调处理。 群组 API 的成功回调表示本次调用已完成。群资料、成员和申请列表需要更新时，再根据对应的 listener 回调刷新界面或重新查询数据。"
   },
   {
     "path": "/sdk/android/group/create-group",
@@ -2269,7 +2269,7 @@
     "description": "使用 createGroup 创建群资料并指定初始成员、管理员和群主。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group create-group",
-    "content": "使用 createGroup 创建群组。 GroupInfo 填写群资料；初始普通成员、管理员和群主分别通过独立参数传入。成功回调返回创建后的完整 GroupInfo ，应保存服务端确定的 groupID 。 GroupInfo info = new GroupInfo ; info.setGroupName \"项目讨论\" ; info.setIntroduction \"仅限项目成员\" ; OpenIMClient.getInstance .groupManager.createGroup memberUserIDs, adminUserIDs, info, ownerUserID, new OnBase @Override public void onSuccess GroupInfo group openGroup group.getGroupID ; @Override public void onError int code, String error showCreateError error ; ; 群主和管理员必须由业务侧按权限选择。不要在客户端根据本地用户列表推导群主身份。"
+    "content": "使用 createGroup 创建群组。 GroupInfo 填写群资料；初始普通成员、管理员和群主分别通过独立参数传入。成功回调返回创建后的完整 GroupInfo ，其中包含新群组的 groupID 。 GroupInfo info = new GroupInfo ; info.setGroupName \"项目讨论\" ; info.setIntroduction \"仅限项目成员\" ; OpenIMClient.getInstance .groupManager.createGroup memberUserIDs, adminUserIDs, info, ownerUserID, new OnBase @Override public void onSuccess GroupInfo group openGroup group.getGroupID ; @Override public void onError int code, String error showCreateError error ; ;"
   },
   {
     "path": "/sdk/android/group/update-group-profile",
@@ -2277,7 +2277,7 @@
     "description": "使用 setGroupInfo 更新群名称、头像、简介和其他群资料字段。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group update-group-profile",
-    "content": "使用 setGroupInfo 更新群资料。请求对象至少应包含 groupID 和需要修改的字段；不要用不完整的本地缓存覆盖未参与本次编辑的字段。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setGroupName \"移动端项目组\" ; update.setIntroduction \"Android 与 iOS 协作群\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markGroupUpdateSubmitted groupID ; @Override public void onError int code, String error showGroupUpdateError error ; ; 最新群资料通过 onGroupInfoChanged 合并。群公告和扩展字段使用相同接口，分别见相关页面。"
+    "content": "使用 setGroupInfo 更新群资料。请求对象包含 groupID 和需要修改的字段，只提交本次要更新的内容。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setGroupName \"移动端项目组\" ; update.setIntroduction \"Android 与 iOS 协作群\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markGroupUpdateSubmitted groupID ; @Override public void onError int code, String error showGroupUpdateError error ; ; 群公告和扩展字段使用相同接口，分别见相关页面。"
   },
   {
     "path": "/sdk/android/group/set-group-announcement",
@@ -2285,7 +2285,7 @@
     "description": "通过 GroupInfo.notification 发布或更新群公告。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group set-group-announcement",
-    "content": "Android SDK 没有独立的公告方法。构造包含 groupID 与 notification 的 GroupInfo ，再调用 setGroupInfo 。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setNotification \"今晚 20:00 进行版本发布确认。\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data refreshAnnouncement groupID ; @Override public void onError int code, String error showAnnouncementError error ; ; 公告的更新时间和更新人由返回的 GroupInfo 中 notificationUpdateTime 、 notificationUserID 表示。权限由服务端校验。"
+    "content": "构造包含 groupID 与 notification 的 GroupInfo ，再调用 setGroupInfo 。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setNotification \"今晚 20:00 进行版本发布确认。\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data refreshAnnouncement groupID ; @Override public void onError int code, String error showAnnouncementError error ; ; 公告的更新时间和更新人保存在 GroupInfo 的 notificationUpdateTime 、 notificationUserID 字段中；需要读取时查询群资料。"
   },
   {
     "path": "/sdk/android/group/set-group-extension",
@@ -2293,7 +2293,7 @@
     "description": "通过 GroupInfo.ex 保存应用定义的群组扩展数据。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group set-group-extension",
-    "content": "GroupInfo.ex 是完整字符串，SDK 不会合并 JSON。多个业务模块共用该字段时，应由应用读取旧值、合并自己的命名空间后再提交。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setEx \" \\\"projectCode\\\":\\\"mobile\\\",\\\"archived\\\":false \" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markExtensionSubmitted groupID ; @Override public void onError int code, String error showExtensionError error ; ; 不要将访问令牌、密钥或仅适合本机的 UI 状态写入群扩展字段。"
+    "content": "GroupInfo.ex 是完整字符串，SDK 不会合并 JSON；提交新值会替换原有内容。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setEx \" \\\"projectCode\\\":\\\"mobile\\\",\\\"archived\\\":false \" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markExtensionSubmitted groupID ; @Override public void onError int code, String error showExtensionError error ; ;"
   },
   {
     "path": "/sdk/android/group/set-group-join-verification",
@@ -2317,7 +2317,7 @@
     "description": "通过 GroupInfo.applyMemberFriend 设置是否允许从群成员发起好友申请。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group set-group-member-friend-permission",
-    "content": "applyMemberFriend 使用整数开关： 0 关闭， 1 打开。该规则只影响从该群成员关系入口发起的好友申请。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setApplyMemberFriend 0 ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markFriendPermissionSubmitted groupID ; @Override public void onError int code, String error showPermissionError error ; ; 更新后以 onGroupInfoChanged 或重新读取的 GroupInfo 为准。"
+    "content": "applyMemberFriend 使用整数开关： 0 关闭， 1 打开。该规则只影响从该群成员关系入口发起的好友申请。 GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setApplyMemberFriend 0 ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markFriendPermissionSubmitted groupID ; @Override public void onError int code, String error showPermissionError error ; ;"
   },
   {
     "path": "/sdk/android/group/change-group-mute",
@@ -2325,7 +2325,7 @@
     "description": "使用 changeGroupMute 开启或关闭群组全员禁言。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group change-group-mute",
-    "content": "使用 changeGroupMute 切换全员禁言。 true 开启， false 关闭；成员级禁言见“禁言或解除禁言群成员”。 OpenIMClient.getInstance .groupManager.changeGroupMute new OnBase @Override public void onSuccess String data markGroupMuteSubmitted groupID, true ; @Override public void onError int code, String error showGroupMuteError error ; , groupID, true ; 群主和管理员的实际发言权限以及服务端权限校验以部署策略为准。"
+    "content": "使用 changeGroupMute 切换全员禁言。 true 开启， false 关闭；成员级禁言见 禁言或解除禁言群成员 /sdk/android/group/managing group members/change group member mute 。 OpenIMClient.getInstance .groupManager.changeGroupMute new OnBase @Override public void onSuccess String data markGroupMuteSubmitted groupID, true ; @Override public void onError int code, String error showGroupMuteError error ; , groupID, true ;"
   },
   {
     "path": "/sdk/android/group/join-group",
@@ -2333,7 +2333,7 @@
     "description": "使用 joinGroup 提交入群申请或加入请求。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group join-group",
-    "content": "使用 joinGroup 提交入群请求。 joinSource 使用群组来源值，例如邀请、搜索或二维码；带扩展数据时使用五参数重载。 OpenIMClient.getInstance .groupManager.joinGroup new OnBase @Override public void onSuccess String data markJoinSubmitted groupID ; @Override public void onError int code, String error showJoinError error ; , groupID, \"希望加入项目讨论\", 3, \" \\\"from\\\":\\\"search\\\" \" ; 验证方式决定请求是否立即加入。后续通过 onJoinedGroupAdded 或群申请事件更新本地状态。"
+    "content": "使用 joinGroup 提交入群请求。 joinSource 表示入群来源： 2 表示邀请， 3 表示搜索， 4 表示二维码；带扩展数据时使用五参数重载。 OpenIMClient.getInstance .groupManager.joinGroup new OnBase @Override public void onSuccess String data markJoinSubmitted groupID ; @Override public void onError int code, String error showJoinError error ; , groupID, \"希望加入项目讨论\", 3, \" \\\"from\\\":\\\"search\\\" \" ; 入群验证方式 /sdk/android/group/set group join verification 决定用户是直接加入还是先提交申请。需要审核时，成功回调只表示申请已提交；实际加入后通过 onJoinedGroupAdded 接收通知。"
   },
   {
     "path": "/sdk/android/group/quit-group",
@@ -2341,7 +2341,7 @@
     "description": "使用 quitGroup 让当前登录用户退出指定群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group quit-group",
-    "content": "quitGroup 仅作用于当前登录用户，不会解散群组或移除其他成员。 OpenIMClient.getInstance .groupManager.quitGroup new OnBase @Override public void onSuccess String data removeJoinedGroup groupID ; @Override public void onError int code, String error showQuitError error ; , groupID ; 请求成功后仍应处理 onJoinedGroupDeleted ，并清理该群的成员列表、群会话入口等应用缓存。"
+    "content": "quitGroup 仅作用于当前登录用户，不会解散群组或移除其他成员。 OpenIMClient.getInstance .groupManager.quitGroup new OnBase @Override public void onSuccess String data removeJoinedGroup groupID ; @Override public void onError int code, String error showQuitError error ; , groupID ; 请求成功后，继续处理 onJoinedGroupDeleted 回调。"
   },
   {
     "path": "/sdk/android/group/dismiss-group",
@@ -2349,7 +2349,7 @@
     "description": "使用 dismissGroup 解散当前用户有权限管理的群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group dismiss-group",
-    "content": "dismissGroup 解散指定群组，通常仅群主可执行。调用前应在产品层提供明确确认，避免将“退出群组”误实现为解散。 OpenIMClient.getInstance .groupManager.dismissGroup new OnBase @Override public void onSuccess String data markDismissSubmitted groupID ; @Override public void onError int code, String error showDismissError error ; , groupID ; 最终状态通过 onGroupDismissed 合并；收到事件后移除群资料、成员和群会话相关缓存。"
+    "content": "dismissGroup 解散指定群组，仅群主可执行。 OpenIMClient.getInstance .groupManager.dismissGroup new OnBase @Override public void onSuccess String data markDismissSubmitted groupID ; @Override public void onError int code, String error showDismissError error ; , groupID ; 通过 onGroupDismissed 接收群组解散通知。"
   },
   {
     "path": "/sdk/android/group/retrieving-groups/get-specified-groups-info",
@@ -2357,7 +2357,7 @@
     "description": "使用 getGroupsInfo 批量查询指定群组的最新资料。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups get-specified-groups-info",
-    "content": "已持有一组 groupID 时，使用 getGroupsInfo 查询群资料。结果是 GroupInfo 列表，不能依赖响应顺序与请求列表完全一致。 OpenIMClient.getInstance .groupManager.getGroupsInfo new OnBase @Override public void onSuccess List groups mergeGroups groups ; @Override public void onError int code, String error showGroupQueryError error ; , groupIDs ; 先移除空值和重复 ID；权限不足或群组不存在的 ID 应按缺失结果处理。"
+    "content": "getGroupsInfo 的 groupIDs 参数为要查询的群组 ID 列表，返回结果为 GroupInfo 列表。 OpenIMClient.getInstance .groupManager.getGroupsInfo new OnBase @Override public void onSuccess List groups showGroups groups ; @Override public void onError int code, String error showGroupQueryError error ; , groupIDs ;"
   },
   {
     "path": "/sdk/android/group/retrieving-groups/get-joined-group-list-page",
@@ -2365,7 +2365,7 @@
     "description": "使用 getJoinedGroupListPage 分页读取当前账号已加入的群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups get-joined-group-list-page",
-    "content": "Android SDK 仅提供分页版本。 offset 从 0 开始，后续页按已经成功合并的条目数推进；返回为空时停止加载。 OpenIMClient.getInstance .groupManager.getJoinedGroupListPage new OnBase @Override public void onSuccess List groups appendJoinedGroups groups ; @Override public void onError int code, String error showPageError error ; , offset, 20 ; 使用 onJoinedGroupAdded 与 onJoinedGroupDeleted 合并增量，不要仅依赖已加载分页作为完整群列表。"
+    "content": "offset 从 0 开始，后续页按上一页返回的条目数推进；返回为空时停止加载。 OpenIMClient.getInstance .groupManager.getJoinedGroupListPage new OnBase @Override public void onSuccess List groups appendJoinedGroups groups ; @Override public void onError int code, String error showPageError error ; , offset, 20 ; 加入或退出群组时，通过 onJoinedGroupAdded 和 onJoinedGroupDeleted 接收通知。"
   },
   {
     "path": "/sdk/android/group/retrieving-groups/is-join-group",
@@ -2373,7 +2373,7 @@
     "description": "使用 isJoinGroup 查询当前登录用户是否已经加入指定群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups is-join-group",
-    "content": "isJoinGroup 仅检查当前登录用户与目标 groupID 的成员关系。 OpenIMClient.getInstance .groupManager.isJoinGroup groupID, new OnBase @Override public void onSuccess Boolean joined updateJoinAction Boolean.TRUE.equals joined ; @Override public void onError int code, String error showMembershipError error ; ; 该结果不替代群资料查询，也不能用于判断其他用户是否在群内。"
+    "content": "isJoinGroup 检查当前登录用户是否加入目标群组，参数为 groupID 。 OpenIMClient.getInstance .groupManager.isJoinGroup groupID, new OnBase @Override public void onSuccess Boolean joined updateJoinAction Boolean.TRUE.equals joined ; @Override public void onError int code, String error showMembershipError error ; ;"
   },
   {
     "path": "/sdk/android/group/retrieving-groups/search-groups",
@@ -2381,15 +2381,7 @@
     "description": "使用 searchGroups 按群 ID 或群名称搜索本地可查询的群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups search-groups",
-    "content": "searchGroups 接收关键词列表，并分别指定是否搜索群 ID、群名称。两个开关都关闭时没有有效搜索范围。 OpenIMClient.getInstance .groupManager.searchGroups new OnBase @Override public void onSuccess List groups showSearchResults groups ; @Override public void onError int code, String error showSearchError error ; , Collections.singletonList keyword , true, true ; 搜索结果不是成员资格证明。进入群组前可使用“检查是否加入群组”确认当前状态。"
-  },
-  {
-    "path": "/sdk/android/group/group-applications/overview-group-applications",
-    "title": "入群申请概览",
-    "description": "说明 Android SDK 中收到和发出的群申请、处理结果及状态事件。",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android group group-applications overview-group-applications",
-    "content": "群申请记录使用 GroupApplicationInfo 表示。收到的申请面向群管理者，发出的申请面向当前用户； handleResult 、 reqMsg 、 handledMsg 和处理时间用于展示申请状态。 Android SDK 提供收到与发出申请的分页查询，以及同意、拒绝操作；不提供 Flutter 菜单中的“待处理申请数量”接口。申请新增、同意、拒绝和删除事件由 群组概览 /sdk/android/group/overview group 的统一 listener 负责合并。"
+    "content": "searchGroups 接收关键词列表，并分别指定是否搜索群 ID、群名称。两个开关都关闭时没有有效搜索范围。 OpenIMClient.getInstance .groupManager.searchGroups new OnBase @Override public void onSuccess List groups showSearchResults groups ; @Override public void onError int code, String error showSearchError error ; , Collections.singletonList keyword , true, true ; 用户不一定是 searchGroups 搜索到的群组的群成员，是否为群成员通过 isJoinGroup /sdk/android/group/retrieving groups/is join group 确定。"
   },
   {
     "path": "/sdk/android/group/group-applications/get-group-application-list-as-recipient",
@@ -2397,7 +2389,7 @@
     "description": "使用 getRecvGroupApplicationList 分页读取当前用户可处理的入群申请。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications get-group-application-list-as-recipient",
-    "content": "使用非废弃重载并传入 GetGroupApplicationListAsRecipientReq 。可设置 offset 、 count 、 groupIDs 和 handleResults 筛选条件。 GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .groupManager.getRecvGroupApplicationList new OnBase @Override public void onSuccess List items mergeReceivedApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; 收到事件后按申请中的 groupID 和 userID 合并，不要把列表下标作为申请标识。"
+    "content": "传入 GetGroupApplicationListAsRecipientReq 设置分页和筛选条件。可设置 offset 、 count 、 groupIDs 和 handleResults 。 GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .groupManager.getRecvGroupApplicationList new OnBase @Override public void onSuccess List items mergeReceivedApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ;"
   },
   {
     "path": "/sdk/android/group/group-applications/get-group-application-list-as-applicant",
@@ -2405,7 +2397,7 @@
     "description": "使用 getSendGroupApplicationList 分页读取当前用户发出的入群申请。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications get-group-application-list-as-applicant",
-    "content": "使用 GetGroupApplicationListAsApplicantReq 设置分页和筛选条件，再调用 getSendGroupApplicationList 。 GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .groupManager.getSendGroupApplicationList new OnBase @Override public void onSuccess List items mergeSentApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; 申请被同意后，群列表变化以 onJoinedGroupAdded 为准。"
+    "content": "使用 GetGroupApplicationListAsApplicantReq 设置分页和筛选条件，再调用 getSendGroupApplicationList 。 GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .groupManager.getSendGroupApplicationList new OnBase @Override public void onSuccess List items mergeSentApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; 申请被同意后，通过 onJoinedGroupAdded 接收加入群组通知。"
   },
   {
     "path": "/sdk/android/group/group-applications/accept-group-application",
@@ -2413,7 +2405,7 @@
     "description": "使用 acceptGroupApplication 同意指定用户的入群申请。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications accept-group-application",
-    "content": "调用时同时传入申请的 groupID 、申请人 userID 和处理说明。服务端负责校验当前用户是否有审批权限。 OpenIMClient.getInstance .groupManager.acceptGroupApplication new OnBase @Override public void onSuccess String data markApplicationHandled groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"欢迎加入\" ; 同意后通过群申请事件与 onGroupMemberAdded 更新申请列表和成员列表。"
+    "content": "调用时同时传入申请的 groupID 、申请人 userID 和处理说明。当前用户需要具有审批权限。 OpenIMClient.getInstance .groupManager.acceptGroupApplication new OnBase @Override public void onSuccess String data markApplicationHandled groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"欢迎加入\" ; 同意后，通过 群组概览 /sdk/android/group/overview group 中的相关事件接收申请状态和成员变化通知。"
   },
   {
     "path": "/sdk/android/group/group-applications/refuse-group-application",
@@ -2421,15 +2413,15 @@
     "description": "使用 refuseGroupApplication 拒绝指定用户的入群申请。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications refuse-group-application",
-    "content": "拒绝操作同样使用申请所属 groupID 、申请人 userID 和处理说明。 OpenIMClient.getInstance .groupManager.refuseGroupApplication new OnBase @Override public void onSuccess String data markApplicationRejected groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"当前群组人数已满\" ; 成功 callback 后不要直接删除本地申请记录；以 onGroupApplicationRejected 或重新查询结果更新。"
+    "content": "拒绝操作同样使用申请所属 groupID 、申请人 userID 和处理说明。 OpenIMClient.getInstance .groupManager.refuseGroupApplication new OnBase @Override public void onSuccess String data markApplicationRejected groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"当前群组人数已满\" ; 拒绝成功后，通过 onGroupApplicationRejected 接收通知，也可以重新调用查询 API 获取最新申请列表。"
   },
   {
-    "path": "/sdk/android/group/retrieving-group-members/overview-retrieving-group-members",
-    "title": "群成员查询概览",
-    "description": "说明 Android SDK 中群成员列表、指定成员资料和成员状态查询。",
+    "path": "/sdk/android/group/group-applications/delete-group-requests",
+    "title": "删除入群申请",
+    "description": "使用 deleteGroupRequests 批量删除指定的入群申请记录。",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android group retrieving-group-members overview-retrieving-group-members",
-    "content": "成员查询使用 groupID 限定范围，结果为 GroupMembersInfo 或用户 ID 列表。成员列表提供角色过滤和 offset 分页；指定成员资料、在群检查、群主管理员和关键词搜索各有独立接口。 成员增删和资料变化由 群组概览 /sdk/android/group/overview group 归属的 OnGroupListener 统一合并。查询只建立快照，不能替代事件处理。"
+    "keywords": "sdk android v4 sdk android group group-applications delete-group-requests",
+    "content": "deleteGroupRequests 接收 DeleteGroupRequestsReq ，可传入多个 SimpleGroupRequests 批量删除申请记录。每个 SimpleGroupRequests 包含 fromUserID 和 groupID ： fromUserID 为申请人的用户 ID， groupID 为申请加入的群组 ID。 SimpleGroupRequests groupRequests = new SimpleGroupRequests firstApplicantUserID, firstGroupID , new SimpleGroupRequests secondApplicantUserID, secondGroupID ; DeleteGroupRequestsReq request = new DeleteGroupRequestsReq groupRequests ; OpenIMClient.getInstance .groupManager.deleteGroupRequests new OnBase @Override public void onSuccess String data showDeleteSuccess ; @Override public void onError int code, String error showDeleteError error ; , request ; 删除申请记录不等于拒绝申请。需要拒绝申请时，使用 refuseGroupApplication 。"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-group-member-list",
@@ -2437,7 +2429,7 @@
     "description": "使用 getGroupMemberList 按角色和分页条件读取群成员。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-group-member-list",
-    "content": "filter 传 0 查询全部成员， 1 普通成员， 2 群主， 3 管理员。 offset 与 count 控制分页。 OpenIMClient.getInstance .groupManager.getGroupMemberList new OnBase @Override public void onSuccess List members appendMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, 0, offset, 50 ; 分页期间仍应接受成员事件，合并键使用 groupID 与 userID 。"
+    "content": "filter 传 0 查询全部成员， 1 普通成员， 2 群主， 3 管理员。 offset 与 count 控制分页。 OpenIMClient.getInstance .groupManager.getGroupMemberList new OnBase @Override public void onSuccess List members appendMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, 0, offset, 50 ;"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-specified-group-members-info",
@@ -2445,7 +2437,7 @@
     "description": "使用 getGroupMembersInfo 批量读取指定成员在群内的资料。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-specified-group-members-info",
-    "content": "getGroupMembersInfo 接收一个 groupID 和目标用户 ID 列表，返回这些用户在群内的 GroupMembersInfo 。 OpenIMClient.getInstance .groupManager.getGroupMembersInfo new OnBase @Override public void onSuccess List members mergeMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, userIDs ; 返回空列表可能表示目标未在群内或无读取权限，应按业务需求处理。"
+    "content": "getGroupMembersInfo 接收一个 groupID 和目标用户 ID 列表，返回这些用户在群内的 GroupMembersInfo 。 OpenIMClient.getInstance .groupManager.getGroupMembersInfo new OnBase @Override public void onSuccess List members mergeMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, userIDs ;"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-users-in-group",
@@ -2453,7 +2445,7 @@
     "description": "使用 getUsersInGroup 从候选用户中筛出当前在群内的用户 ID。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-users-in-group",
-    "content": "getUsersInGroup 返回传入用户中已在指定群内的 ID 列表，不返回成员资料。 OpenIMClient.getInstance .groupManager.getUsersInGroup new OnBase @Override public void onSuccess List joinedUserIDs updateMembership joinedUserIDs ; @Override public void onError int code, String error showMembershipError error ; , groupID, candidateUserIDs ; 需要昵称、角色或禁言状态时，再调用“获取群成员资料”。"
+    "content": "getUsersInGroup 返回传入用户中已在指定群内的 ID 列表，不返回成员资料。 OpenIMClient.getInstance .groupManager.getUsersInGroup new OnBase @Override public void onSuccess List joinedUserIDs updateMembership joinedUserIDs ; @Override public void onError int code, String error showMembershipError error ; , groupID, candidateUserIDs ; 需要昵称、角色或禁言状态时，再调用 查询指定群成员资料 /sdk/android/group/retrieving group members/get specified group members info 。"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin",
@@ -2461,7 +2453,7 @@
     "description": "使用 getGroupMemberOwnerAndAdmin 查询群主和管理员成员资料。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-group-member-owner-and-admin",
-    "content": "使用 getGroupMemberOwnerAndAdmin 获取需要展示或校验管理身份的成员记录。 OpenIMClient.getInstance .groupManager.getGroupMemberOwnerAndAdmin new OnBase @Override public void onSuccess List members showModerators members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID ; roleLevel 的群主、管理员和普通成员常量见 GroupRole ；实际操作权限仍由服务端决定。"
+    "content": "使用 getGroupMemberOwnerAndAdmin 获取需要展示或校验管理身份的成员记录。 OpenIMClient.getInstance .groupManager.getGroupMemberOwnerAndAdmin new OnBase @Override public void onSuccess List members showModerators members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID ; roleLevel 的群主、管理员和普通成员常量见 GroupRole 。"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/search-group-members",
@@ -2477,7 +2469,7 @@
     "description": "使用 inviteUserToGroup 邀请一组用户加入指定群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members invite-user-to-group",
-    "content": "传入群 ID、待邀请用户 ID 列表和邀请说明。服务端根据群设置和当前用户权限决定是否立即加入。 OpenIMClient.getInstance .groupManager.inviteUserToGroup new OnBase @Override public void onSuccess String data markInviteSubmitted groupID ; @Override public void onError int code, String error showInviteError error ; , groupID, inviteeUserIDs, \"邀请加入项目讨论\" ; 成员实际加入后以 onGroupMemberAdded 合并，不能仅以提交成功显示为已加入。"
+    "content": "传入群 ID、待邀请用户 ID 列表和邀请说明。调用成功表示邀请请求已提交；用户实际加入后通过 onGroupMemberAdded 接收通知。 OpenIMClient.getInstance .groupManager.inviteUserToGroup new OnBase @Override public void onSuccess String data markInviteSubmitted groupID ; @Override public void onError int code, String error showInviteError error ; , groupID, inviteeUserIDs, \"邀请加入项目讨论\" ;"
   },
   {
     "path": "/sdk/android/group/managing-group-members/kick-group-member",
@@ -2485,7 +2477,7 @@
     "description": "使用 kickGroupMember 将指定成员移出群组。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members kick-group-member",
-    "content": "kickGroupMember 接收成员 ID 列表和移除说明。产品层应先防止当前用户误移除自身，并遵守群主、管理员权限边界。 OpenIMClient.getInstance .groupManager.kickGroupMember new OnBase @Override public void onSuccess String data markRemovalSubmitted groupID ; @Override public void onError int code, String error showRemovalError error ; , groupID, memberUserIDs, \"已不再参与该项目\" ; 收到 onGroupMemberDeleted 后再从成员缓存中移除目标成员。"
+    "content": "kickGroupMember 接收成员 ID 列表和移除说明。 OpenIMClient.getInstance .groupManager.kickGroupMember new OnBase @Override public void onSuccess String data markRemovalSubmitted groupID ; @Override public void onError int code, String error showRemovalError error ; , groupID, memberUserIDs, \"已不再参与该项目\" ; 移除成功后，通过 onGroupMemberDeleted 接收成员移除通知。"
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-nickname",
@@ -2493,7 +2485,7 @@
     "description": "使用 SetGroupMemberInfo.nickname 更新成员在指定群中的显示昵称。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-nickname",
-    "content": "成员资料修改统一使用 setGroupMemberInfo 。请求中填写 groupID 、 userID 和 nickname 。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setNickname \"小林\" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markNicknameSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 以 onGroupMemberInfoChanged 返回的 GroupMembersInfo.nickname 更新显示。"
+    "content": "成员资料修改统一使用 setGroupMemberInfo 。请求中填写 groupID 、 userID 和 nickname 。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setNickname \"小林\" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markNicknameSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 修改成功后，通过 群组概览 /sdk/android/group/overview group 中的 onGroupMemberInfoChanged 接收成员资料变化通知。"
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-role-level",
@@ -2501,7 +2493,7 @@
     "description": "使用 SetGroupMemberInfo.roleLevel 设置成员的群内角色。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-role-level",
-    "content": "roleLevel 使用 GroupRole 常量： OWNER 、 ADMIN 和 MEMBER 。群主转让使用独立接口，不应通过本接口推测转让流程。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setRoleLevel GroupRole.ADMIN ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markRoleSubmitted groupID, userID ; @Override public void onError int code, String error showRoleError error ; ; 实际角色变更和权限由服务端校验，以成员资料变化事件为准。"
+    "content": "roleLevel 使用 GroupRole 常量： OWNER 、 ADMIN 和 MEMBER 。转让群主请使用 转让群主 /sdk/android/group/managing group members/transfer group owner 。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setRoleLevel GroupRole.ADMIN ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markRoleSubmitted groupID, userID ; @Override public void onError int code, String error showRoleError error ; ; 角色修改成功后，通过 onGroupMemberInfoChanged 接收成员资料变化通知。"
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-avatar",
@@ -2509,7 +2501,7 @@
     "description": "使用 SetGroupMemberInfo.faceURL 更新成员在群内展示的头像。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-avatar",
-    "content": "群成员头像是群内资料字段，不修改用户全局头像。传入已可访问的头像 URL。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setFaceURL avatarURL ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markAvatarSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 事件到达前保留原头像或使用本地乐观状态，并按最新成员资料校准。"
+    "content": "群成员头像是群内资料字段，不修改用户全局头像。传入已可访问的头像 URL。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setFaceURL avatarURL ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markAvatarSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 修改成功后，通过 onGroupMemberInfoChanged 接收成员资料变化通知。"
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-extension",
@@ -2517,7 +2509,7 @@
     "description": "使用 SetGroupMemberInfo.ex 保存应用定义的群成员扩展数据。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-extension",
-    "content": "SetGroupMemberInfo.ex 是完整字符串，不会自动合并 JSON。多个业务模块共享时应先读取、合并并保留其他命名空间。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setEx \" \\\"duty\\\":\\\"reviewer\\\" \" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markMemberExtensionSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; 不要将凭据、令牌或仅限本机的显示状态写入该字段。"
+    "content": "SetGroupMemberInfo.ex 字符串用于保存群成员扩展信息，可存储 JSON 字符串拓展群成员信息。 SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setEx \" \\\"duty\\\":\\\"reviewer\\\" \" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markMemberExtensionSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ;"
   },
   {
     "path": "/sdk/android/group/managing-group-members/transfer-group-owner",
@@ -2525,7 +2517,7 @@
     "description": "使用 transferGroupOwner 将群主身份转让给指定群成员。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members transfer-group-owner",
-    "content": "目标用户必须是该群成员。转让前应在产品层要求明确确认，并在完成后重新查询群主和管理员资料。 OpenIMClient.getInstance .groupManager.transferGroupOwner new OnBase @Override public void onSuccess String data markOwnershipTransferSubmitted groupID ; @Override public void onError int code, String error showTransferError error ; , groupID, newOwnerUserID ; onGroupMemberInfoChanged 和群资料变化可能异步到达；不要在成功 callback 中假定本地角色已完成更新。"
+    "content": "transferGroupOwner 接收 groupID 和 newOwnerUserID 两个参数： groupID 为要转让群主的群组 ID， newOwnerUserID 为新群主的用户 ID，该用户必须是该群的成员。 OpenIMClient.getInstance .groupManager.transferGroupOwner new OnBase @Override public void onSuccess String data markOwnershipTransferSubmitted groupID ; @Override public void onError int code, String error showTransferError error ; , groupID, newOwnerUserID ; 转让成功后，可以重新调用 获取群主和管理员 /sdk/android/group/retrieving group members/get group member owner and admin 获取最新资料。"
   },
   {
     "path": "/sdk/android/group/managing-group-members/change-group-member-mute",
@@ -2533,7 +2525,7 @@
     "description": "使用 changeGroupMemberMute 设置指定成员的禁言时长。",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members change-group-member-mute",
-    "content": "seconds 为禁言时长，单位为秒；传 0 解除成员禁言。该操作与全员禁言相互独立。 OpenIMClient.getInstance .groupManager.changeGroupMemberMute new OnBase @Override public void onSuccess String data markMemberMuteSubmitted groupID, userID ; @Override public void onError int code, String error showMemberMuteError error ; , groupID, userID, 3600L ; 在 onGroupMemberInfoChanged 中读取 muteEndTime 更新成员状态；不要用本机时间和请求时长长期推算最终禁言状态。"
+    "content": "seconds 为禁言时长，单位为秒；传 0 解除成员禁言。该操作与 全员禁言 /sdk/android/group/change group mute 相互独立。 OpenIMClient.getInstance .groupManager.changeGroupMemberMute new OnBase @Override public void onSuccess String data markMemberMuteSubmitted groupID, userID ; @Override public void onError int code, String error showMemberMuteError error ; , groupID, userID, 3600L ;"
   },
   {
     "path": "/sdk/android/message/overview-message",

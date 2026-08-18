@@ -30,9 +30,6 @@ const androidRouteTitles = {
   'user/online-status/subscribe-users-online-status': 'Subscribe to user online status',
   'user/online-status/get-subscribe-online-users-status': 'Get subscribed user online status',
   'user/online-status/unsubscribe-users-online-status': 'Unsubscribe from user status',
-  'group/group-applications/overview-group-applications': 'Group applications overview',
-  'group/retrieving-group-members/overview-retrieving-group-members':
-    'Group member queries overview',
   'message/sending-messages/set-msg-send-progress-listener': 'Track message sending progress',
   'message/managing-messages/delete-saved-messages': 'Delete messages in a batch',
   'message/creating-messages/create-image-message': 'Create an image message',

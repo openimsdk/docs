@@ -2258,10 +2258,10 @@
   {
     "path": "/sdk/android/group/overview-group",
     "title": "Group overview",
-    "description": "Learn how group profiles, members, applications, and group events are organized in the Android SDK.",
+    "description": "Understand group concepts, core data types, and main capabilities in the Android SDK.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group overview-group",
-    "content": "A group is represented by GroupInfo . Its groupID is the unique target identifier for profile, member, application, and permission operations. GroupMembersInfo represents a member's group specific nickname, role, mute expiration time, and extra data. One to one relationships and conversation unread counts do not belong to the group APIs. GroupManager delivers group profile changes, member changes, application handling, and joined group changes through one OnGroupListener . Set the listener once in a shared state layer and merge events by groupID or userID . OpenIMClient.getInstance .groupManager.setOnGroupListener new OnGroupListener @Override public void onGroupInfoChanged GroupInfo group groupStore.put group.getGroupID , group ; @Override public void onGroupMemberInfoChanged GroupMembersInfo member memberStore.put member.getGroupID + member.getUserID , member ; ; A successful callback from a group profile or member operation only means that the request completed. Use the corresponding group event or a fresh query as the source of truth. Main capabilities Group profile and settings /sdk/android/group/create group Group permissions /sdk/android/group/set group join verification Joining and leaving groups /sdk/android/group/join group Retrieving groups /sdk/android/group/retrieving groups/get specified groups info Group applications /sdk/android/group/group applications/overview group applications Retrieving group members /sdk/android/group/retrieving group members/overview retrieving group members Managing group members /sdk/android/group/managing group members/invite user to group"
+    "content": "OpenIMSDK uses groups to hold shared profiles, memberships, and permissions for multi user chats. groupID is the stable group identifier used to send group messages, retrieve group profiles, manage members, and handle join applications. A group conversation in the current user's chat list is still managed by conversationID ; do not interchange these identifiers. Core data types | Type | Purpose | | | | | GroupInfo | Group name, avatar, announcement, owner, verification settings, member count, and extension data. | | GroupMembersInfo | A user's nickname, role, mute state, and join information in a specified group. | | GroupApplicationInfo | A group application and its handling state. | Group member roles use GroupRole : MEMBER is a regular member, ADMIN is an administrator, and OWNER is the group owner. Main capabilities Group profile and settings /sdk/android/group/create group Group permissions /sdk/android/group/set group join verification Joining and leaving groups /sdk/android/group/join group Retrieving groups /sdk/android/group/retrieving groups/get specified groups info Group applications /sdk/android/group/group applications/get group application list as recipient Retrieving group members /sdk/android/group/retrieving group members/get group member list Managing group members /sdk/android/group/managing group members/invite user to group State updates Call setOnGroupListener before login to register an OnGroupListener for group profile, membership, and group application changes. The following example shows where the application can refresh the relevant screen for each callback: private final OnGroupListener groupListener = new OnGroupListener @Override public void onJoinedGroupAdded GroupInfo group // Refresh the joined group list. @Override public void onJoinedGroupDeleted GroupInfo group // Refresh the joined group list. @Override public void onGroupInfoChanged GroupInfo group // Refresh the group profile for group.getGroupID . @Override public void onGroupDismissed GroupInfo group // Close the dismissed group chat for group.getGroupID . @Override public void onGroupMemberAdded GroupMembersInfo member // Refresh the member list for member.getGroupID . @Override public void onGroupMemberDeleted GroupMembersInfo member // Refresh the member list for member.getGroupID . @Override public void onGroupMemberInfoChanged GroupMembersInfo member // Refresh the member list for member.getGroupID . @Override public void onGroupApplicationAdded GroupApplicationInfo application // Refresh the group application list. @Override public void onGroupApplicationAccepted GroupApplicationInfo application // Refresh the group application list. @Override public void onGroupApplicationRejected GroupApplicationInfo application // Refresh the group application list. @Override public void onGroupApplicationDeleted GroupApplicationInfo application // Refresh the group application list. ; public void registerGroupListener OpenIMClient.getInstance .groupManager.setOnGroupListener groupListener ; Use onJoinedGroupAdded and onJoinedGroupDeleted to update the current user's joined group list. Use onGroupInfoChanged and onGroupDismissed to update a group profile or close a dismissed group chat. Handle membership changes with onGroupMemberAdded , onGroupMemberDeleted , and onGroupMemberInfoChanged , and handle group application changes with the four onGroupApplication... callbacks. A group API success callback indicates that the call completed. When group profiles, members, or group application lists need updating, refresh the screen or query the data again based on the corresponding listener callback."
   },
   {
     "path": "/sdk/android/group/create-group",
@@ -2269,7 +2269,7 @@
     "description": "Use createGroup to create a group profile and specify its initial members, administrators, and owner.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group create-group",
-    "content": "Use createGroup to create a group. Set the group profile in GroupInfo , and pass the initial regular members, administrators, and owner as separate parameters. The success callback returns the complete GroupInfo created by the server. Store the server assigned groupID . GroupInfo info = new GroupInfo ; info.setGroupName \"Project discussion\" ; info.setIntroduction \"For project members only\" ; OpenIMClient.getInstance .groupManager.createGroup memberUserIDs, adminUserIDs, info, ownerUserID, new OnBase @Override public void onSuccess GroupInfo group openGroup group.getGroupID ; @Override public void onError int code, String error showCreateError error ; ; Select the owner and administrators according to your application's permission rules. Do not infer the owner from a local user list."
+    "content": "Use createGroup to create a group. Set the group profile in GroupInfo , and pass the initial regular members, administrators, and owner as separate parameters. The success callback returns the complete GroupInfo , including the new group's groupID . GroupInfo info = new GroupInfo ; info.setGroupName \"Project discussion\" ; info.setIntroduction \"For project members only\" ; OpenIMClient.getInstance .groupManager.createGroup memberUserIDs, adminUserIDs, info, ownerUserID, new OnBase @Override public void onSuccess GroupInfo group openGroup group.getGroupID ; @Override public void onError int code, String error showCreateError error ; ;"
   },
   {
     "path": "/sdk/android/group/update-group-profile",
@@ -2277,7 +2277,7 @@
     "description": "Use setGroupInfo to update a group name, avatar, introduction, and other profile fields.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group update-group-profile",
-    "content": "Use setGroupInfo to update a group profile. The request object should contain at least the groupID and the fields being changed. Do not use an incomplete local cache to overwrite fields that are not part of the current edit. GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setGroupName \"Mobile project team\" ; update.setIntroduction \"Android and iOS collaboration group\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markGroupUpdateSubmitted groupID ; @Override public void onError int code, String error showGroupUpdateError error ; ; Merge the latest profile from onGroupInfoChanged . Group announcements and extra data use the same API and are covered on their respective pages."
+    "content": "Use setGroupInfo to update a group profile. The request object contains the groupID and the fields being changed. Submit only the fields for the current update. GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setGroupName \"Mobile project team\" ; update.setIntroduction \"Android and iOS collaboration group\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markGroupUpdateSubmitted groupID ; @Override public void onError int code, String error showGroupUpdateError error ; ; Group announcements and extra data use the same API and are covered on their respective pages."
   },
   {
     "path": "/sdk/android/group/set-group-announcement",
@@ -2285,7 +2285,7 @@
     "description": "Publish or update a group announcement through GroupInfo.notification.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group set-group-announcement",
-    "content": "The Android SDK does not provide a separate announcement method. Create a GroupInfo containing the groupID and notification , then call setGroupInfo . GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setNotification \"Release review starts at 20:00 tonight.\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data refreshAnnouncement groupID ; @Override public void onError int code, String error showAnnouncementError error ; ; The returned GroupInfo exposes the update time and author through notificationUpdateTime and notificationUserID . The server validates whether the current user has permission to publish the announcement."
+    "content": "Create a GroupInfo containing the groupID and notification , then call setGroupInfo . GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setNotification \"Release review starts at 20:00 tonight.\" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data refreshAnnouncement groupID ; @Override public void onError int code, String error showAnnouncementError error ; ; The update time and author are stored in the GroupInfo fields notificationUpdateTime and notificationUserID . Query the group profile when you need to read them."
   },
   {
     "path": "/sdk/android/group/set-group-extension",
@@ -2293,7 +2293,7 @@
     "description": "Store application-defined group data in GroupInfo.ex.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group set-group-extension",
-    "content": "GroupInfo.ex is a complete string; the SDK does not merge JSON values. If several application modules share the field, read the existing value and preserve the other namespaces when merging your changes. GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setEx \" \\\"projectCode\\\":\\\"mobile\\\",\\\"archived\\\":false \" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markExtensionSubmitted groupID ; @Override public void onError int code, String error showExtensionError error ; ; Do not store access tokens, secrets, or device only UI state in group extra data."
+    "content": "GroupInfo.ex is a complete string; the SDK does not merge JSON values. Submitting a new value replaces the previous content. GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setEx \" \\\"projectCode\\\":\\\"mobile\\\",\\\"archived\\\":false \" ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markExtensionSubmitted groupID ; @Override public void onError int code, String error showExtensionError error ; ;"
   },
   {
     "path": "/sdk/android/group/set-group-join-verification",
@@ -2317,7 +2317,7 @@
     "description": "Use GroupInfo.applyMemberFriend to control whether users can send friend requests from the group member list.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group set-group-member-friend-permission",
-    "content": "applyMemberFriend is an integer switch: 0 disables friend requests and 1 enables them. This rule only affects requests initiated through the member relationship in this group. GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setApplyMemberFriend 0 ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markFriendPermissionSubmitted groupID ; @Override public void onError int code, String error showPermissionError error ; ; After the update, use onGroupInfoChanged or a newly retrieved GroupInfo as the source of truth."
+    "content": "applyMemberFriend is an integer switch: 0 disables friend requests and 1 enables them. This rule only affects requests initiated through the member relationship in this group. GroupInfo update = new GroupInfo ; update.setGroupID groupID ; update.setApplyMemberFriend 0 ; OpenIMClient.getInstance .groupManager.setGroupInfo update, new OnBase @Override public void onSuccess String data markFriendPermissionSubmitted groupID ; @Override public void onError int code, String error showPermissionError error ; ;"
   },
   {
     "path": "/sdk/android/group/change-group-mute",
@@ -2325,7 +2325,7 @@
     "description": "Use changeGroupMute to enable or disable mute-all mode for a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group change-group-mute",
-    "content": "Use changeGroupMute to toggle mute all mode. Pass true to enable it or false to disable it. To mute one member, see Mute or unmute a group member /sdk/android/group/managing group members/change group member mute . OpenIMClient.getInstance .groupManager.changeGroupMute new OnBase @Override public void onSuccess String data markGroupMuteSubmitted groupID, true ; @Override public void onError int code, String error showGroupMuteError error ; , groupID, true ; The effective speaking permissions for the owner and administrators, as well as server side permission checks, depend on the deployment policy."
+    "content": "Use changeGroupMute to toggle mute all mode. Pass true to enable it or false to disable it. To mute one member, see Mute or unmute a group member /sdk/android/group/managing group members/change group member mute . OpenIMClient.getInstance .groupManager.changeGroupMute new OnBase @Override public void onSuccess String data markGroupMuteSubmitted groupID, true ; @Override public void onError int code, String error showGroupMuteError error ; , groupID, true ;"
   },
   {
     "path": "/sdk/android/group/join-group",
@@ -2333,7 +2333,7 @@
     "description": "Use joinGroup to submit a group application or join request.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group join-group",
-    "content": "Use joinGroup to submit a request to join a group. Set joinSource to the source of the request, such as an invitation, search result, or QR code. Use the five parameter overload when attaching extra data. OpenIMClient.getInstance .groupManager.joinGroup new OnBase @Override public void onSuccess String data markJoinSubmitted groupID ; @Override public void onError int code, String error showJoinError error ; , groupID, \"I would like to join the project discussion\", 3, \" \\\"from\\\":\\\"search\\\" \" ; The verification mode determines whether the user joins immediately. Update local state later through onJoinedGroupAdded or the relevant group application event."
+    "content": "Use joinGroup to submit a request to join a group. joinSource identifies how the user joined: 2 for an invitation, 3 for search, or 4 for a QR code. Use the five parameter overload when attaching extra data. OpenIMClient.getInstance .groupManager.joinGroup new OnBase @Override public void onSuccess String data markJoinSubmitted groupID ; @Override public void onError int code, String error showJoinError error ; , groupID, \"I would like to join the project discussion\", 3, \" \\\"from\\\":\\\"search\\\" \" ; The verification mode /sdk/android/group/set group join verification determines whether the user joins immediately or submits an application first. When approval is required, a successful callback means only that the application was submitted; onJoinedGroupAdded arrives after the user joins."
   },
   {
     "path": "/sdk/android/group/quit-group",
@@ -2341,7 +2341,7 @@
     "description": "Use quitGroup to remove the current signed-in user from a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group quit-group",
-    "content": "quitGroup only removes the current signed in user. It does not dismiss the group or remove other members. OpenIMClient.getInstance .groupManager.quitGroup new OnBase @Override public void onSuccess String data removeJoinedGroup groupID ; @Override public void onError int code, String error showQuitError error ; , groupID ; Even after the request succeeds, handle onJoinedGroupDeleted and clear application caches for the group's member list, conversation entry, and related data."
+    "content": "quitGroup only removes the current signed in user. It does not dismiss the group or remove other members. OpenIMClient.getInstance .groupManager.quitGroup new OnBase @Override public void onSuccess String data removeJoinedGroup groupID ; @Override public void onError int code, String error showQuitError error ; , groupID ; After the request succeeds, continue handling the onJoinedGroupDeleted callback."
   },
   {
     "path": "/sdk/android/group/dismiss-group",
@@ -2349,7 +2349,7 @@
     "description": "Use dismissGroup to dismiss a group that the current user is allowed to manage.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group dismiss-group",
-    "content": "dismissGroup dismisses the specified group and is normally available only to its owner. Ask for explicit confirmation before calling it so that leaving a group is not accidentally implemented as dismissing it. OpenIMClient.getInstance .groupManager.dismissGroup new OnBase @Override public void onSuccess String data markDismissSubmitted groupID ; @Override public void onError int code, String error showDismissError error ; , groupID ; Merge the final state from onGroupDismissed . After receiving the event, remove cached group profile, member, and conversation related data."
+    "content": "dismissGroup dismisses the specified group and is available only to its owner. OpenIMClient.getInstance .groupManager.dismissGroup new OnBase @Override public void onSuccess String data markDismissSubmitted groupID ; @Override public void onError int code, String error showDismissError error ; , groupID ; Use onGroupDismissed to receive the group dismissal notification."
   },
   {
     "path": "/sdk/android/group/retrieving-groups/get-specified-groups-info",
@@ -2357,7 +2357,7 @@
     "description": "Use getGroupsInfo to retrieve the latest profiles for specified groups.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups get-specified-groups-info",
-    "content": "When you already have a set of groupID values, use getGroupsInfo to retrieve their profiles. The result is a list of GroupInfo objects. Do not assume that its order exactly matches the request list. OpenIMClient.getInstance .groupManager.getGroupsInfo new OnBase @Override public void onSuccess List groups mergeGroups groups ; @Override public void onError int code, String error showGroupQueryError error ; , groupIDs ; Remove empty and duplicate IDs before making the request. Treat groups that do not exist or cannot be accessed as missing results."
+    "content": "The groupIDs parameter of getGroupsInfo is the list of group IDs to query. The method returns a list of GroupInfo objects. OpenIMClient.getInstance .groupManager.getGroupsInfo new OnBase @Override public void onSuccess List groups showGroups groups ; @Override public void onError int code, String error showGroupQueryError error ; , groupIDs ;"
   },
   {
     "path": "/sdk/android/group/retrieving-groups/get-joined-group-list-page",
@@ -2365,7 +2365,7 @@
     "description": "Use getJoinedGroupListPage to retrieve the current account’s joined groups by page.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups get-joined-group-list-page",
-    "content": "The Android SDK provides the paginated API. Start offset at 0 , then advance it by the number of items successfully merged from each page. Stop loading when the returned list is empty. OpenIMClient.getInstance .groupManager.getJoinedGroupListPage new OnBase @Override public void onSuccess List groups appendJoinedGroups groups ; @Override public void onError int code, String error showPageError error ; , offset, 20 ; Merge incremental changes from onJoinedGroupAdded and onJoinedGroupDeleted . Do not treat the pages loaded so far as the complete joined group list."
+    "content": "Start offset at 0 , then advance it by the number of items returned in the previous page. Stop loading when the returned list is empty. OpenIMClient.getInstance .groupManager.getJoinedGroupListPage new OnBase @Override public void onSuccess List groups appendJoinedGroups groups ; @Override public void onError int code, String error showPageError error ; , offset, 20 ; When joining or leaving a group, receive notifications through onJoinedGroupAdded and onJoinedGroupDeleted ."
   },
   {
     "path": "/sdk/android/group/retrieving-groups/is-join-group",
@@ -2373,7 +2373,7 @@
     "description": "Use isJoinGroup to determine whether the current signed-in user has joined a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups is-join-group",
-    "content": "isJoinGroup only checks the membership relationship between the current signed in user and the specified groupID . OpenIMClient.getInstance .groupManager.isJoinGroup groupID, new OnBase @Override public void onSuccess Boolean joined updateJoinAction Boolean.TRUE.equals joined ; @Override public void onError int code, String error showMembershipError error ; ; This result does not replace a group profile query and cannot determine whether another user is in the group."
+    "content": "isJoinGroup checks whether the current signed in user has joined the target group. Its parameter is groupID . OpenIMClient.getInstance .groupManager.isJoinGroup groupID, new OnBase @Override public void onSuccess Boolean joined updateJoinAction Boolean.TRUE.equals joined ; @Override public void onError int code, String error showMembershipError error ; ;"
   },
   {
     "path": "/sdk/android/group/retrieving-groups/search-groups",
@@ -2381,15 +2381,7 @@
     "description": "Use searchGroups to search locally available groups by group ID or name.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-groups search-groups",
-    "content": "searchGroups accepts a keyword list and separate switches for searching group IDs and group names. If both switches are disabled, there is no valid search scope. OpenIMClient.getInstance .groupManager.searchGroups new OnBase @Override public void onSuccess List groups showSearchResults groups ; @Override public void onError int code, String error showSearchError error ; , Collections.singletonList keyword , true, true ; A search result does not prove membership. Before opening the group, call Check group membership /sdk/android/group/retrieving groups/is join group when the current state matters."
-  },
-  {
-    "path": "/sdk/android/group/group-applications/overview-group-applications",
-    "title": "Group applications overview",
-    "description": "Understand received and sent group applications, handling results, and state events in the Android SDK.",
-    "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android group group-applications overview-group-applications",
-    "content": "Group applications are represented by GroupApplicationInfo . Received applications are intended for group administrators, while sent applications belong to the current user. Use handleResult , reqMsg , handledMsg , and the handling time to display application state. The Android SDK provides paginated queries for received and sent applications, as well as accept and reject operations. It does not provide the pending application count API found in the Flutter menu. Merge application added, accepted, rejected, and deleted events through the shared listener described in Group overview /sdk/android/group/overview group ."
+    "content": "searchGroups accepts a keyword list and separate switches for searching group IDs and group names. If both switches are disabled, there is no valid search scope. OpenIMClient.getInstance .groupManager.searchGroups new OnBase @Override public void onSuccess List groups showSearchResults groups ; @Override public void onError int code, String error showSearchError error ; , Collections.singletonList keyword , true, true ; The current user is not necessarily a member of a group returned by searchGroups . Use isJoinGroup /sdk/android/group/retrieving groups/is join group to determine whether they are a member."
   },
   {
     "path": "/sdk/android/group/group-applications/get-group-application-list-as-recipient",
@@ -2397,7 +2389,7 @@
     "description": "Use getRecvGroupApplicationList to retrieve group applications that the current user can handle.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications get-group-application-list-as-recipient",
-    "content": "Use the non deprecated overload with GetGroupApplicationListAsRecipientReq . The request can filter by offset , count , groupIDs , and handleResults . GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .groupManager.getRecvGroupApplicationList new OnBase @Override public void onSuccess List items mergeReceivedApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; Merge application events by their groupID and userID . Do not use a list index as an application identifier."
+    "content": "Pass GetGroupApplicationListAsRecipientReq to set pagination and filters. You can set offset , count , groupIDs , and handleResults . GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq 0, 20 ; OpenIMClient.getInstance .groupManager.getRecvGroupApplicationList new OnBase @Override public void onSuccess List items mergeReceivedApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ;"
   },
   {
     "path": "/sdk/android/group/group-applications/get-group-application-list-as-applicant",
@@ -2405,7 +2397,7 @@
     "description": "Use getSendGroupApplicationList to retrieve group applications sent by the current user.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications get-group-application-list-as-applicant",
-    "content": "Configure pagination and filters in GetGroupApplicationListAsApplicantReq , then call getSendGroupApplicationList . GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .groupManager.getSendGroupApplicationList new OnBase @Override public void onSuccess List items mergeSentApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; After an application is accepted, use onJoinedGroupAdded as the source of truth for the joined group list."
+    "content": "Configure pagination and filters in GetGroupApplicationListAsApplicantReq , then call getSendGroupApplicationList . GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq 0, 20 ; OpenIMClient.getInstance .groupManager.getSendGroupApplicationList new OnBase @Override public void onSuccess List items mergeSentApplications items ; @Override public void onError int code, String error showApplicationError error ; , request ; After an application is accepted, receive the group joined notification through onJoinedGroupAdded ."
   },
   {
     "path": "/sdk/android/group/group-applications/accept-group-application",
@@ -2413,7 +2405,7 @@
     "description": "Use acceptGroupApplication to accept a user’s application to join a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications accept-group-application",
-    "content": "Pass the application's groupID , the applicant's userID , and a handling message. The server checks whether the current user has permission to approve the application. OpenIMClient.getInstance .groupManager.acceptGroupApplication new OnBase @Override public void onSuccess String data markApplicationHandled groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"Welcome to the group\" ; After acceptance, update the application and member lists through the group application event and onGroupMemberAdded ."
+    "content": "Pass the application's groupID , the applicant's userID , and a handling message. The current user must have permission to approve the application. OpenIMClient.getInstance .groupManager.acceptGroupApplication new OnBase @Override public void onSuccess String data markApplicationHandled groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"Welcome to the group\" ; After acceptance, receive application status and member change notifications through the relevant events described in Group overview /sdk/android/group/overview group ."
   },
   {
     "path": "/sdk/android/group/group-applications/refuse-group-application",
@@ -2421,15 +2413,15 @@
     "description": "Use refuseGroupApplication to reject a user’s application to join a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group group-applications refuse-group-application",
-    "content": "The reject operation also takes the application's groupID , the applicant's userID , and a handling message. OpenIMClient.getInstance .groupManager.refuseGroupApplication new OnBase @Override public void onSuccess String data markApplicationRejected groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"The group is currently full\" ; Do not delete the local record immediately after the success callback. Update it from onGroupApplicationRejected or a fresh query."
+    "content": "The reject operation also takes the application's groupID , the applicant's userID , and a handling message. OpenIMClient.getInstance .groupManager.refuseGroupApplication new OnBase @Override public void onSuccess String data markApplicationRejected groupID, applicantUserID ; @Override public void onError int code, String error showHandleError error ; , groupID, applicantUserID, \"The group is currently full\" ; After the rejection succeeds, receive the notification through onGroupApplicationRejected or call the query API again to retrieve the latest application list."
   },
   {
-    "path": "/sdk/android/group/retrieving-group-members/overview-retrieving-group-members",
-    "title": "Group member queries overview",
-    "description": "Understand group member lists, specified member profiles, and membership queries in the Android SDK.",
+    "path": "/sdk/android/group/group-applications/delete-group-requests",
+    "title": "Delete group applications",
+    "description": "Use deleteGroupRequests to delete specified group application records in a batch.",
     "context": "SDKs · Android · v4",
-    "keywords": "sdk android v4 sdk android group retrieving-group-members overview-retrieving-group-members",
-    "content": "Group member queries are scoped by groupID and return either GroupMembersInfo objects or user ID lists. The member list supports role filtering and offset pagination. Separate APIs retrieve specified member profiles, check membership, retrieve owners and administrators, and search by keyword. Merge member additions, removals, and profile changes through the OnGroupListener owned by Group overview /sdk/android/group/overview group . A query provides a snapshot and does not replace event handling."
+    "keywords": "sdk android v4 sdk android group group-applications delete-group-requests",
+    "content": "deleteGroupRequests accepts DeleteGroupRequestsReq , which can contain multiple SimpleGroupRequests items to delete application records in a batch. Each item contains fromUserID , the applicant's user ID, and groupID , the ID of the group the user applied to join. SimpleGroupRequests groupRequests = new SimpleGroupRequests firstApplicantUserID, firstGroupID , new SimpleGroupRequests secondApplicantUserID, secondGroupID ; DeleteGroupRequestsReq request = new DeleteGroupRequestsReq groupRequests ; OpenIMClient.getInstance .groupManager.deleteGroupRequests new OnBase @Override public void onSuccess String data showDeleteSuccess ; @Override public void onError int code, String error showDeleteError error ; , request ; Deleting an application record is not the same as rejecting an application. To reject an application, use refuseGroupApplication ."
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-group-member-list",
@@ -2437,7 +2429,7 @@
     "description": "Use getGroupMemberList to retrieve group members by role and page.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-group-member-list",
-    "content": "Set filter to 0 for all members, 1 for regular members, 2 for the owner, or 3 for administrators. Use offset and count for pagination. OpenIMClient.getInstance .groupManager.getGroupMemberList new OnBase @Override public void onSuccess List members appendMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, 0, offset, 50 ; Continue accepting member events while paging. Use the combination of groupID and userID as the merge key."
+    "content": "Set filter to 0 for all members, 1 for regular members, 2 for the owner, or 3 for administrators. Use offset and count for pagination. OpenIMClient.getInstance .groupManager.getGroupMemberList new OnBase @Override public void onSuccess List members appendMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, 0, offset, 50 ;"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-specified-group-members-info",
@@ -2445,7 +2437,7 @@
     "description": "Use getGroupMembersInfo to retrieve specified users’ profiles within a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-specified-group-members-info",
-    "content": "getGroupMembersInfo accepts one groupID and a list of target user IDs. It returns the users' GroupMembersInfo profiles within that group. OpenIMClient.getInstance .groupManager.getGroupMembersInfo new OnBase @Override public void onSuccess List members mergeMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, userIDs ; An empty list can mean that the targets are not in the group or that the current user cannot read their profiles. Handle the result according to your product requirements."
+    "content": "getGroupMembersInfo accepts one groupID and a list of target user IDs. It returns the users' GroupMembersInfo profiles within that group. OpenIMClient.getInstance .groupManager.getGroupMembersInfo new OnBase @Override public void onSuccess List members mergeMembers members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID, userIDs ;"
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/get-users-in-group",
@@ -2461,7 +2453,7 @@
     "description": "Use getGroupMemberOwnerAndAdmin to retrieve the group owner and administrator profiles.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group retrieving-group-members get-group-member-owner-and-admin",
-    "content": "Use getGroupMemberOwnerAndAdmin when you need to display or check members with management roles. OpenIMClient.getInstance .groupManager.getGroupMemberOwnerAndAdmin new OnBase @Override public void onSuccess List members showModerators members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID ; The owner, administrator, and regular member roleLevel constants are defined in GroupRole . The server still determines whether a particular operation is permitted."
+    "content": "Use getGroupMemberOwnerAndAdmin when you need to display or check members with management roles. OpenIMClient.getInstance .groupManager.getGroupMemberOwnerAndAdmin new OnBase @Override public void onSuccess List members showModerators members ; @Override public void onError int code, String error showMemberQueryError error ; , groupID ; The owner, administrator, and regular member roleLevel constants are defined in GroupRole ."
   },
   {
     "path": "/sdk/android/group/retrieving-group-members/search-group-members",
@@ -2477,7 +2469,7 @@
     "description": "Use inviteUserToGroup to invite a list of users to a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members invite-user-to-group",
-    "content": "Pass the group ID, the list of invited user IDs, and an invitation message. The server determines whether the users join immediately according to the group settings and the current user's permissions. OpenIMClient.getInstance .groupManager.inviteUserToGroup new OnBase @Override public void onSuccess String data markInviteSubmitted groupID ; @Override public void onError int code, String error showInviteError error ; , groupID, inviteeUserIDs, \"Join the project discussion\" ; Merge users into the member list only after onGroupMemberAdded confirms that they joined. A successful submission alone does not mean that they are already members."
+    "content": "Pass the group ID, the list of invited user IDs, and an invitation message. A successful call means that the invitation request was submitted; after a user joins, receive the notification through onGroupMemberAdded . OpenIMClient.getInstance .groupManager.inviteUserToGroup new OnBase @Override public void onSuccess String data markInviteSubmitted groupID ; @Override public void onError int code, String error showInviteError error ; , groupID, inviteeUserIDs, \"Join the project discussion\" ;"
   },
   {
     "path": "/sdk/android/group/managing-group-members/kick-group-member",
@@ -2485,7 +2477,7 @@
     "description": "Use kickGroupMember to remove specified members from a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members kick-group-member",
-    "content": "kickGroupMember accepts a list of member IDs and a removal message. Prevent the current user from accidentally selecting themselves and respect the permission boundaries between owners and administrators. OpenIMClient.getInstance .groupManager.kickGroupMember new OnBase @Override public void onSuccess String data markRemovalSubmitted groupID ; @Override public void onError int code, String error showRemovalError error ; , groupID, memberUserIDs, \"No longer participating in this project\" ; Remove targets from the member cache after receiving onGroupMemberDeleted ."
+    "content": "kickGroupMember accepts a list of member IDs and a removal message. OpenIMClient.getInstance .groupManager.kickGroupMember new OnBase @Override public void onSuccess String data markRemovalSubmitted groupID ; @Override public void onError int code, String error showRemovalError error ; , groupID, memberUserIDs, \"No longer participating in this project\" ; After the removal succeeds, receive the member removal notification through onGroupMemberDeleted ."
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-nickname",
@@ -2493,7 +2485,7 @@
     "description": "Use SetGroupMemberInfo.nickname to update a member’s display name in a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-nickname",
-    "content": "All group member profile changes use setGroupMemberInfo . Set the groupID , userID , and nickname in the request. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setNickname \"Lin\" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markNicknameSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; Update the displayed name from GroupMembersInfo.nickname received by onGroupMemberInfoChanged ."
+    "content": "All group member profile changes use setGroupMemberInfo . Set the groupID , userID , and nickname in the request. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setNickname \"Lin\" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markNicknameSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; After the update succeeds, receive the member profile change notification through onGroupMemberInfoChanged as described in Group overview /sdk/android/group/overview group ."
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-role-level",
@@ -2501,7 +2493,7 @@
     "description": "Use SetGroupMemberInfo.roleLevel to change a member’s role in a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-role-level",
-    "content": "Set roleLevel with a GroupRole constant: OWNER , ADMIN , or MEMBER . Use the separate ownership transfer API when changing the group owner; do not infer an ownership transfer flow from this API. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setRoleLevel GroupRole.ADMIN ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markRoleSubmitted groupID, userID ; @Override public void onError int code, String error showRoleError error ; ; The server validates the role change and its permissions. Use the member profile change event as the source of truth."
+    "content": "Set roleLevel with a GroupRole constant: OWNER , ADMIN , or MEMBER . To transfer group ownership, use Transfer group ownership /sdk/android/group/managing group members/transfer group owner . SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setRoleLevel GroupRole.ADMIN ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markRoleSubmitted groupID, userID ; @Override public void onError int code, String error showRoleError error ; ; After the role update succeeds, receive the member profile change notification through onGroupMemberInfoChanged ."
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-avatar",
@@ -2509,7 +2501,7 @@
     "description": "Use SetGroupMemberInfo.faceURL to update the avatar displayed for a member in a group.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-avatar",
-    "content": "A group member avatar is a group specific profile field and does not change the user's global avatar. Pass an avatar URL that group members can access. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setFaceURL avatarURL ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markAvatarSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; Keep the previous avatar or an optimistic local state until the event arrives, then reconcile it with the latest member profile."
+    "content": "A group member avatar is a group specific profile field and does not change the user's global avatar. Pass an avatar URL that group members can access. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setFaceURL avatarURL ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markAvatarSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; After the update succeeds, receive the member profile change notification through onGroupMemberInfoChanged ."
   },
   {
     "path": "/sdk/android/group/managing-group-members/set-group-member-extension",
@@ -2517,7 +2509,7 @@
     "description": "Store application-defined group member data in SetGroupMemberInfo.ex.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members set-group-member-extension",
-    "content": "SetGroupMemberInfo.ex is a complete string; the SDK does not merge JSON values. If several application modules share the field, read and merge the existing value while preserving the other namespaces. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setEx \" \\\"duty\\\":\\\"reviewer\\\" \" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markMemberExtensionSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ; Do not store credentials, tokens, or device only display state in this field."
+    "content": "The SetGroupMemberInfo.ex string stores extra group member information and can contain a JSON string with additional member information. SetGroupMemberInfo update = new SetGroupMemberInfo ; update.setGroupID groupID ; update.setUserID userID ; update.setEx \" \\\"duty\\\":\\\"reviewer\\\" \" ; OpenIMClient.getInstance .groupManager.setGroupMemberInfo update, new OnBase @Override public void onSuccess String data markMemberExtensionSubmitted groupID, userID ; @Override public void onError int code, String error showMemberUpdateError error ; ;"
   },
   {
     "path": "/sdk/android/group/managing-group-members/transfer-group-owner",
@@ -2525,7 +2517,7 @@
     "description": "Use transferGroupOwner to transfer group ownership to a specified member.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members transfer-group-owner",
-    "content": "The target user must already be a group member. Require explicit confirmation before transferring ownership, then retrieve the owner and administrator profiles again after completion. OpenIMClient.getInstance .groupManager.transferGroupOwner new OnBase @Override public void onSuccess String data markOwnershipTransferSubmitted groupID ; @Override public void onError int code, String error showTransferError error ; , groupID, newOwnerUserID ; onGroupMemberInfoChanged and group profile changes can arrive asynchronously. Do not assume that local roles have already been updated inside the success callback."
+    "content": "transferGroupOwner accepts two parameters: groupID , the ID of the group whose ownership is being transferred, and newOwnerUserID , the ID of the new owner. The target user must already be a member of the group. OpenIMClient.getInstance .groupManager.transferGroupOwner new OnBase @Override public void onSuccess String data markOwnershipTransferSubmitted groupID ; @Override public void onError int code, String error showTransferError error ; , groupID, newOwnerUserID ; After the transfer succeeds, you can call Get group owners and admins /sdk/android/group/retrieving group members/get group member owner and admin again to retrieve the latest profiles."
   },
   {
     "path": "/sdk/android/group/managing-group-members/change-group-member-mute",
@@ -2533,7 +2525,7 @@
     "description": "Use changeGroupMemberMute to set the mute duration for a specified group member.",
     "context": "SDKs · Android · v4",
     "keywords": "sdk android v4 sdk android group managing-group-members change-group-member-mute",
-    "content": "seconds is the mute duration in seconds. Pass 0 to unmute the member. Member level mute state is independent from the group's mute all setting. OpenIMClient.getInstance .groupManager.changeGroupMemberMute new OnBase @Override public void onSuccess String data markMemberMuteSubmitted groupID, userID ; @Override public void onError int code, String error showMemberMuteError error ; , groupID, userID, 3600L ; Read muteEndTime from onGroupMemberInfoChanged to update the member state. Do not keep deriving the final mute state from local time and the submitted duration."
+    "content": "seconds is the mute duration in seconds. Pass 0 to unmute the member. Member level mute state is independent from the group mute all setting /sdk/android/group/change group mute . OpenIMClient.getInstance .groupManager.changeGroupMemberMute new OnBase @Override public void onSuccess String data markMemberMuteSubmitted groupID, userID ; @Override public void onError int code, String error showMemberMuteError error ; , groupID, userID, 3600L ;"
   },
   {
     "path": "/sdk/android/message/overview-message",

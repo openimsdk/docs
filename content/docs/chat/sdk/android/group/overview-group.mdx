@@ -1,33 +1,27 @@
 ---
 title: 'Group overview'
-description: 'Learn how group profiles, members, applications, and group events are organized in the Android SDK.'
+description: 'Understand group concepts, core data types, and main capabilities in the Android SDK.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/overview-group'
 ---
 
-A group is represented by `GroupInfo`. Its `groupID` is the unique target identifier for profile, member, application, and permission operations. `GroupMembersInfo` represents a member's group-specific nickname, role, mute expiration time, and extra data. One-to-one relationships and conversation unread counts do not belong to the group APIs.
+OpenIMSDK uses groups to hold shared profiles, memberships, and permissions for multi-user chats. `groupID` is the stable group identifier used to send group messages, retrieve group profiles, manage members, and handle join applications. A group conversation in the current user's chat list is still managed by `conversationID`; do not interchange these identifiers.
 
-`GroupManager` delivers group profile changes, member changes, application handling, and joined-group changes through one `OnGroupListener`. Set the listener once in a shared state layer and merge events by `groupID` or `userID`.
+## Core data types
 
-```java
-OpenIMClient.getInstance().groupManager.setOnGroupListener(new OnGroupListener() {
-    @Override public void onGroupInfoChanged(GroupInfo group) {
-        groupStore.put(group.getGroupID(), group);
-    }
+| Type | Purpose |
+| --- | --- |
+| `GroupInfo` | Group name, avatar, announcement, owner, verification settings, member count, and extension data. |
+| `GroupMembersInfo` | A user's nickname, role, mute state, and join information in a specified group. |
+| `GroupApplicationInfo` | A group application and its handling state. |
 
-    @Override public void onGroupMemberInfoChanged(GroupMembersInfo member) {
-        memberStore.put(member.getGroupID() + member.getUserID(), member);
-    }
-});
-```
-
-A successful callback from a group profile or member operation only means that the request completed. Use the corresponding group event or a fresh query as the source of truth.
+Group member roles use `GroupRole`: `MEMBER` is a regular member, `ADMIN` is an administrator, and `OWNER` is the group owner.
 
 ## Main capabilities
 
@@ -35,6 +29,77 @@ A successful callback from a group profile or member operation only means that t
 - [Group permissions](/sdk/android/group/set-group-join-verification)
 - [Joining and leaving groups](/sdk/android/group/join-group)
 - [Retrieving groups](/sdk/android/group/retrieving-groups/get-specified-groups-info)
-- [Group applications](/sdk/android/group/group-applications/overview-group-applications)
-- [Retrieving group members](/sdk/android/group/retrieving-group-members/overview-retrieving-group-members)
+- [Group applications](/sdk/android/group/group-applications/get-group-application-list-as-recipient)
+- [Retrieving group members](/sdk/android/group/retrieving-group-members/get-group-member-list)
 - [Managing group members](/sdk/android/group/managing-group-members/invite-user-to-group)
+
+## State updates
+
+Call `setOnGroupListener()` before login to register an `OnGroupListener` for group profile, membership, and group application changes. The following example shows where the application can refresh the relevant screen for each callback:
+
+```java
+private final OnGroupListener groupListener = new OnGroupListener() {
+    @Override
+    public void onJoinedGroupAdded(GroupInfo group) {
+        // Refresh the joined-group list.
+    }
+
+    @Override
+    public void onJoinedGroupDeleted(GroupInfo group) {
+        // Refresh the joined-group list.
+    }
+
+    @Override
+    public void onGroupInfoChanged(GroupInfo group) {
+        // Refresh the group profile for group.getGroupID().
+    }
+
+    @Override
+    public void onGroupDismissed(GroupInfo group) {
+        // Close the dismissed group chat for group.getGroupID().
+    }
+
+    @Override
+    public void onGroupMemberAdded(GroupMembersInfo member) {
+        // Refresh the member list for member.getGroupID().
+    }
+
+    @Override
+    public void onGroupMemberDeleted(GroupMembersInfo member) {
+        // Refresh the member list for member.getGroupID().
+    }
+
+    @Override
+    public void onGroupMemberInfoChanged(GroupMembersInfo member) {
+        // Refresh the member list for member.getGroupID().
+    }
+
+    @Override
+    public void onGroupApplicationAdded(GroupApplicationInfo application) {
+        // Refresh the group application list.
+    }
+
+    @Override
+    public void onGroupApplicationAccepted(GroupApplicationInfo application) {
+        // Refresh the group application list.
+    }
+
+    @Override
+    public void onGroupApplicationRejected(GroupApplicationInfo application) {
+        // Refresh the group application list.
+    }
+
+    @Override
+    public void onGroupApplicationDeleted(GroupApplicationInfo application) {
+        // Refresh the group application list.
+    }
+};
+
+public void registerGroupListener() {
+    OpenIMClient.getInstance().groupManager.setOnGroupListener(groupListener);
+}
+```
+
+Use `onJoinedGroupAdded` and `onJoinedGroupDeleted` to update the current user's joined-group list. Use `onGroupInfoChanged` and `onGroupDismissed` to update a group profile or close a dismissed group chat. Handle membership changes with `onGroupMemberAdded`, `onGroupMemberDeleted`, and `onGroupMemberInfoChanged`, and handle group application changes with the four `onGroupApplication...` callbacks.
+
+A group API success callback indicates that the call completed. When group profiles, members, or group application lists need updating, refresh the screen or query the data again based on the corresponding listener callback.
