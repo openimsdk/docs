@@ -19,12 +19,12 @@ OpenIMClient.getInstance().friendshipManager.getRecvFriendApplicationList(
     new OnBase<List<FriendApplicationInfo>>() {
         @Override
         public void onSuccess(List<FriendApplicationInfo> applications) {
-            replaceReceivedApplications(applications);
+            // Use applications to update the received-request list.
         }
 
         @Override
         public void onError(int code, String error) {
-            recordReceivedApplicationFailure(code, error);
+            // Handle the error.
         }
     },
     request
@@ -35,8 +35,8 @@ OpenIMClient.getInstance().friendshipManager.getRecvFriendApplicationList(
 
 | Field                                         | Description                                                      |
 | --------------------------------------------- | ---------------------------------------------------------------- |
-| `fromUserID` / `fromNickname` / `fromFaceURL` | Applicant ID, nickname, and avatar snapshot.                     |
-| `toUserID` / `toNickname` / `toFaceURL`       | Recipient ID, nickname, and avatar snapshot.                     |
+| `fromUserID` / `fromNickname` / `fromFaceURL` | Applicant ID, nickname, and avatar.                              |
+| `toUserID` / `toNickname` / `toFaceURL`       | Recipient ID, nickname, and avatar.                              |
 | `reqMsg`                                      | Friend request message.                                          |
 | `handleResult`                                | Handling result: `0` pending, `1` accepted, `2` rejected.        |
 | `handlerUserID`                               | User ID that handled the request; it can be empty while pending. |
@@ -45,31 +45,28 @@ OpenIMClient.getInstance().friendshipManager.getRecvFriendApplicationList(
 | `createTime`                                  | Request creation time.                                           |
 | `ex`                                          | Friend request extension string.                                 |
 
-Use `fromUserID:toUserID` as the stable request key. This page owns the friend request added, accepted, rejected, and deleted callbacks. Combine them into the application's single `OnFriendshipListener`:
+Receive friend request added, accepted, rejected, and deleted callbacks through `OnFriendshipListener`:
 
 ```java
 @Override
 public void onFriendApplicationAdded(FriendApplicationInfo application) {
-    friendApplicationStore.merge(application);
+    // Handle a new or updated friend request.
 }
 
 @Override
 public void onFriendApplicationAccepted(FriendApplicationInfo application) {
-    friendApplicationStore.merge(application);
+    // Handle an accepted friend request.
 }
 
 @Override
 public void onFriendApplicationRejected(FriendApplicationInfo application) {
-    friendApplicationStore.merge(application);
+    // Handle a rejected friend request.
 }
 
 @Override
 public void onFriendApplicationDeleted(FriendApplicationInfo application) {
-    friendApplicationStore.remove(
-        application.getFromUserID(),
-        application.getToUserID()
-    );
+    // Handle a deleted friend request.
 }
 ```
 
-Use whether `toUserID` equals the signed-in user ID to route a record to the received or sent list. After an application is accepted, `onFriendAdded`, owned by [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page), merges the new friendship.
+Use whether `toUserID` equals the signed-in user ID to route a record to the received or sent list. After an application is accepted, receive the new friendship through `onFriendAdded`; see [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page).
