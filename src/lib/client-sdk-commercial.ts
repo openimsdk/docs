@@ -119,6 +119,7 @@ const fullCommercialConceptPages = new Set([
   '/sdk/android/conversation/managing-conversations/set-private-chat',
   '/sdk/android/conversation/managing-conversations/set-burn-duration',
   '/sdk/android/conversation/managing-conversations/set-message-destruct',
+  '/sdk/android/user/user-profile/set-friend-add-permission',
 ]);
 
 function applyCommercialConceptOverride(

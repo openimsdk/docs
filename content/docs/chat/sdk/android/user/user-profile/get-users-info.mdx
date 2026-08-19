@@ -1,17 +1,21 @@
 ---
 title: 'Get specified user profiles'
-description: 'Use getUsersInfo() to query public profiles by userID.'
+description: 'Retrieve public user profiles in batches by userID using PublicUserInfo.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
+lastUpdated: '2026-08-19'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/user-profile/get-users-info'
 ---
 
-`getUsersInfo()` returns public profiles for a list of user IDs. It is suitable for friend candidates and profiles of users outside the current friend list. It does not return relationship fields such as the current user's friend remark.
+`getUsersInfo()` retrieves public profiles for a list of `userID` values. Use it to display friend candidates and profiles for users who are not friends.
+
+## Retrieve public profiles
+
+Call `getUsersInfo()` with the user IDs to retrieve. Remove empty and duplicate IDs before calling, and keep each request within the supported batch size.
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -20,36 +24,52 @@ OpenIMClient.getInstance().userInfoManager.getUsersInfo(
     new OnBase<List<PublicUserInfo>>() {
         @Override
         public void onSuccess(List<PublicUserInfo> users) {
-            for (PublicUserInfo user : users) {
-                publicUserStore.put(user.getUserID(), user);
-            }
+            // Use users to display public profiles.
         }
 
         @Override
         public void onError(int code, String error) {
-            recordUserQueryFailure(code, error);
+            // Handle the error.
         }
     },
     userIDs
 );
 ```
 
-Remove empty and duplicate IDs before calling the API, and keep each request within the application's batch limit. The callback returns `List<PublicUserInfo>` with fields such as `userID`, `nickname`, `faceURL`, `ex`, and `createTime`. This query does not trigger `OnUserListener`; query again and merge by `userID` when the profile snapshot must be refreshed.
+`userIDs` is the list of user IDs to query. A successful callback returns `List<PublicUserInfo>`.
 
-## Returned fields
+### Returned fields
 
-| Field        | Description                                                       |
-| ------------ | ----------------------------------------------------------------- |
-| `userID`     | OpenIM user ID and the stable local cache key.                    |
-| `nickname`   | Account-level public nickname.                                    |
-| `faceURL`    | Account-level public avatar URL.                                  |
-| `ex`         | Account-level public extension string defined by the application. |
-| `createTime` | User profile creation time.                                       |
+| Field | Description |
+| --- | --- |
+| `userID` | User ID. |
+| `nickname` | Public account nickname. |
+| `faceURL` | Public account avatar URL. |
+| `ex` | Public account extension string defined by the application. |
+| `createTime` | User profile creation time. |
 
-Do not use `PublicUserInfo` to overwrite friend remarks, pinned state, or in-group nicknames. Use `FriendInfo` for friends and the group member model for group members.
+The returned `ex` contains the user's public extension data. Update the current user's extension data through [Update your profile](/sdk/android/user/user-profile/set-self-info).
 
-Searching by nickname, phone number, or email is an application backend capability. A trusted backend should perform the search and permission checks, then return candidate user IDs for this API.
+## Search and add a friend
 
-## Refreshing profiles
+When the application already has candidate user IDs, call `getUsersInfo()` to display their public profiles. After the user confirms a target, send a request through [Send a friend request](/sdk/android/user/friend-applications/add-friend).
 
-Replace or merge the public profile snapshot after a successful query. Re-query when opening a profile card, when the user explicitly refreshes, after reconnecting, or after a trusted backend reports a profile change. `OnUserListener.onSelfInfoUpdated` only describes the signed-in user's profile and is not a change event for other users.
+`getUsersInfo()` queries public profiles by `userID`; searching by nickname, phone number, or other fields is outside this API.
+
+## Choose data by scenario
+
+Use the corresponding user type for each scenario:
+
+| Scenario | Type |
+| --- | --- |
+| User search and stranger profile cards | `PublicUserInfo` |
+| Friend lists, contact pages, and friend remarks | `FriendInfo` |
+| Group member lists, in-group nicknames, and group roles | `GroupMembersInfo` |
+
+For friend data, see [Get specified friend profiles](/sdk/android/user/friends/get-friends-info). For group-member data, see [Get group members by page](/sdk/android/group/retrieving-group-members/get-group-member-list).
+
+## Next steps
+
+- [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page)
+- [Get specified friend profiles](/sdk/android/user/friends/get-friends-info)
+- [Get received friend requests](/sdk/android/user/friend-applications/get-recv-friend-application-list)

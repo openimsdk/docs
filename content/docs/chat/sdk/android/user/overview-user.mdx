@@ -1,60 +1,63 @@
 ---
 title: 'User overview'
-description: 'Learn about user profiles, friendships, friend requests, blacklists, and online status in the Android SDK.'
+description: 'Learn about current-user profiles, public user profiles, account settings, and online status in the Android SDK.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-19'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/overview-user'
 ---
 
-OpenIM Android SDK identifies each user by `userID`. When implementing profile cards, friend requests, contacts, or a blocklist, distinguish an application's public user profile from the current user's friend relationship and blocklist state.
+OpenIM Android SDK identifies each user by `userID`. User APIs retrieve and update the current account profile, retrieve public user profiles, and subscribe to user online status.
 
-Group member lists, in-group nicknames, group roles, and member administration belong to the Groups domain. User APIs cover profiles, friendships, friend requests, blacklists, and online status.
+Friends, friend requests, and blacklists are relationship capabilities between users. See [Relationship overview](/sdk/android/user/overview-relationships) for their types, APIs, and state updates.
 
 ## User objects
 
 Android SDK returns different user objects for different scenarios:
 
-| Type                    | Use case                                                                                             | Main APIs                                                         |
-| ----------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `LocalUser`             | The current user's local profile, settings page, avatar, nickname, and account-level receive setting | `getSelfLocalUserInfo()`, `setSelfInfo()`                         |
-| `PublicUserInfo`        | Application user lookup, friend candidates, and profiles for users who are not friends               | `getUsersInfo()`                                                  |
-| `UserInfo`              | User object returned by friend-list, friend-profile, or blocklist queries; it can include relationship data | `getFriendListPage()`, `getFriendsInfo()`, `getBlacklist()`       |
-| `FriendInfo`            | The current user's friend list, friend remarks, and relationship extension data                      | `searchFriends()`, `getFriendListPage()`                          |
-| `FriendApplicationInfo` | The parties, handling state, and message for a friend request                                        | Friend request queries and callbacks                              |
-| `BlacklistInfo`         | Users blocked by the current user and their blocklist relationship fields                            | `getBlacklist()`, `addBlacklist()`, `removeBlacklist()`           |
-| `UsersOnlineStatus`     | User online status and connected platforms                                                           | `subscribeUsersOnlineStatus()`, `getSubscribeOnlineUsersStatus()`, `unsubscribeOnlineUsersStatus()` |
+| Type | Use case | Main APIs |
+| --- | --- | --- |
+| `LocalUser` | The signed-in user's local profile, settings page, avatar, nickname, and account-level settings | `getSelfLocalUserInfo()`, `setSelfInfo()` |
+| `PublicUserInfo` | Application user lookup and public profile cards | `getUsersInfo()` |
+| `UsersOnlineStatus` | User online status and connected platforms | `subscribeUsersOnlineStatus()`, `getSubscribeOnlineUsersStatus()`, `unsubscribeOnlineUsersStatus()` |
 
-The same `userID` can appear in public profile, friend, blocklist, and group member data. Prefer `UserInfo.getFriendInfo()` when displaying a contact, `PublicUserInfo` when only a public account profile is needed, and `UserInfo.getBlackInfo()` on a blocklist screen. Conversation list and chat page titles belong to conversation data and should use the conversation display name.
-
-Use `userID` as the stable key for user lists and events. A friend request contains both parties, so use `fromUserID:toUserID` to identify one request.
+`LocalUser` represents the signed-in user, while `PublicUserInfo` represents a public user profile returned by a query. Group member profiles, in-group nicknames, and member management belong to group capabilities.
 
 ## Feature entry points
 
-| Requirement                                                                 | Recommended page                                                                                       |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Retrieve public profiles by `userID` for friend candidates or profile cards | [Get specified user profiles](/sdk/android/user/user-profile/get-users-info)                           |
-| Page through, search, or retrieve friend relationships by ID                | [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page)                          |
-| Send, retrieve, accept, or reject friend requests                           | [Get received friend requests](/sdk/android/user/friend-applications/get-recv-friend-application-list) |
-| Update friend data                                                          | [Update friend profiles](/sdk/android/user/friends/update-friends)                                     |
-| Delete a friend relationship                                                | [Delete a friend](/sdk/android/user/friends/delete-friend)                                             |
-| View and maintain the current user's blocklist                              | [Get the blacklist](/sdk/android/user/blacklist/get-blacklist)                                         |
-| Read or update the current user's nickname, avatar, and extension data      | [Update the current user profile](/sdk/android/user/user-profile/set-self-info)                        |
-| Configure account-level message reception and notification behavior         | [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception)            |
-| Subscribe to, retrieve, and unsubscribe from online status                  | [Subscribe to user online status](/sdk/android/user/online-status/subscribe-users-online-status), [Unsubscribe from user status](/sdk/android/user/online-status/unsubscribe-users-online-status) |
+| Requirement | Recommended page |
+| --- | --- |
+| Retrieve public profiles by `userID` for profile cards | [Get specified user profiles](/sdk/android/user/user-profile/get-users-info) |
+| Read or update the current user's nickname, avatar, and extension data | [Get the current user profile](/sdk/android/user/user-profile/get-self-local-user-info), [Update the current user profile](/sdk/android/user/user-profile/set-self-info) |
+| Configure account-level message reception and notification behavior | [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception) |
+| Choose how other users can add the current account | [Set friend request permissions](/sdk/android/user/user-profile/set-friend-add-permission) |
+| Subscribe to, retrieve, and unsubscribe from online status | [Subscribe to user online status](/sdk/android/user/online-status/subscribe-users-online-status), [Get subscribed user online status](/sdk/android/user/online-status/get-subscribe-online-users-status), [Unsubscribe from user status](/sdk/android/user/online-status/unsubscribe-users-online-status) |
+| Manage friends, friend requests, or the blacklist | [Relationship overview](/sdk/android/user/overview-relationships) |
 
 ## State updates
 
-Each user-related capability page owns the listener and merge behavior for its events:
+Set the user listener for user-related state changes. See the corresponding capability pages below for details about each callback:
+
+```java
+OpenIMClient client = OpenIMClient.getInstance();
+
+client.userInfoManager.setOnUserListener(new OnUserListener() {
+    @Override
+    public void onSelfInfoUpdated(UserInfo info) {
+        // Handle current-user profile changes.
+    }
+
+    @Override
+    public void onUserStatusChanged(UsersOnlineStatus status) {
+        // Handle user online-status changes.
+    }
+});
+```
 
 - Current user profile changes: [Update the current user profile](/sdk/android/user/user-profile/set-self-info).
-- Friend request changes: [Get received friend requests](/sdk/android/user/friend-applications/get-recv-friend-application-list).
-- Friend relationship and profile changes: [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page).
-- Blocklist changes: [Block a user](/sdk/android/user/blacklist/add-blacklist).
 - Online status changes: [Subscribe to user online status](/sdk/android/user/online-status/subscribe-users-online-status).
-
-`UserInfoManager` and `FriendshipManager` each retain one listener. `setOnUserListener()` and `setOnFriendshipListener()` replace the current listener. Combine the required callbacks in a shared state layer and set each listener once; multiple pages must not overwrite one another's listeners.
+- Friend, friend-request, and blacklist changes: [Relationship overview](/sdk/android/user/overview-relationships).

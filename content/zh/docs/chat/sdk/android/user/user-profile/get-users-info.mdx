@@ -1,10 +1,14 @@
 ---
 title: '获取指定用户资料'
-description: '使用 getUsersInfo() 按 userID 批量查询用户公开资料。'
+description: '按 userID 批量查询应用用户公开资料（PublicUserInfo）。'
 sourcePath: '/sdk/android/user/user-profile/get-users-info'
 ---
 
-`getUsersInfo()` 根据 `userID` 列表返回用户的公开资料，适合展示好友候选人或陌生人资料卡。该方法只读取公开资料，不返回当前账号为好友设置的备注等关系字段。
+`getUsersInfo()` 按 `userID` 查询应用用户的公开资料，适合展示好友候选人和陌生人资料卡。
+
+## 查询公开资料
+
+调用 `getUsersInfo()` 并传入要查询的用户 ID 列表，即可获取这些用户的公开资料。调用前应去除空值和重复 ID，并控制单次请求数量。
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -13,36 +17,52 @@ OpenIMClient.getInstance().userInfoManager.getUsersInfo(
     new OnBase<List<PublicUserInfo>>() {
         @Override
         public void onSuccess(List<PublicUserInfo> users) {
-            for (PublicUserInfo user : users) {
-                publicUserStore.put(user.getUserID(), user);
-            }
+            // 使用 users 显示用户资料
         }
 
         @Override
         public void onError(int code, String error) {
-            recordUserQueryFailure(code, error);
+            // 处理错误
         }
     },
     userIDs
 );
 ```
 
-调用前应去除空值和重复 ID，并控制单次请求的数量。成功 callback 返回 `List<PublicUserInfo>`，主要字段包括 `userID`、`nickname`、`faceURL`、`ex` 和 `createTime`。查询不会触发 `OnUserListener`，需要刷新资料时应重新调用并按 `userID` 合并结果。
+`userIDs` 是要查询的用户 ID 列表。成功 callback 返回 `List<PublicUserInfo>`。
 
-## 返回结果
+### 返回结果
 
-| 字段         | 说明                                     |
-| ------------ | ---------------------------------------- |
-| `userID`     | OpenIM 用户 ID，也是本地缓存的稳定 key。 |
-| `nickname`   | 账号级公开昵称。                         |
-| `faceURL`    | 账号级公开头像地址。                     |
-| `ex`         | 账号级公开扩展字符串，格式由业务约定。   |
-| `createTime` | 用户资料创建时间。                       |
+| 字段 | 说明 |
+| --- | --- |
+| `userID` | 用户 ID。 |
+| `nickname` | 账号公开昵称。 |
+| `faceURL` | 账号公开头像地址。 |
+| `ex` | 账号公开扩展字符串，格式由业务约定。 |
+| `createTime` | 用户资料创建时间。 |
 
-`PublicUserInfo` 中的资料不能用于覆盖好友备注、置顶状态或群内昵称。展示好友时应使用 `FriendInfo`，展示群成员时应使用群成员模型。
+这里返回的 `ex` 用于读取用户的公开扩展资料。当前用户自己的扩展资料通过[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)修改。
 
-按昵称、手机号或邮箱搜索用户属于业务服务能力，应由可信后端完成搜索和权限校验，再把候选 `userID` 交给客户端查询公开资料。
+## 搜索添加好友
 
-## 资料刷新
+当业务已经获得候选用户的 `userID` 时，可以先调用 `getUsersInfo()` 展示公开资料，用户确认后再通过[发送好友申请](/sdk/android/user/friend-applications/add-friend)向目标用户发起申请。
 
-查询成功后，以返回结果更新公开资料快照。打开资料卡、用户主动刷新、断线重连或业务后端通知资料变化时，可以重新调用该方法校准数据。`OnUserListener.onSelfInfoUpdated` 只表示当前登录用户资料变化，不能作为其他用户资料变化事件。
+`getUsersInfo()` 只按 `userID` 查询公开资料；昵称、手机号等其他条件的用户搜索不属于该 API。
+
+## 按场景选择展示数据
+
+同一个 `userID` 在不同场景中使用不同的资料类型：
+
+| 场景 | 使用的类型 |
+| --- | --- |
+| 用户搜索、陌生人资料卡 | `PublicUserInfo` |
+| 好友列表、联系人页和好友备注 | `FriendInfo` |
+| 群成员列表、群内昵称和群角色 | `GroupMembersInfo` |
+
+好友资料使用[查询指定好友资料](/sdk/android/user/friends/get-friends-info)，群成员资料使用[分页查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)。
+
+## 下一步
+
+- [分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)
+- [查询指定好友资料](/sdk/android/user/friends/get-friends-info)
+- [获取收到的好友申请](/sdk/android/user/friend-applications/get-recv-friend-application-list)

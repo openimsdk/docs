@@ -5,39 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/user-profile/set-self-info'
 ---
 
-Set only the fields that must change on `UserInfoReq`. The SDK omits `null` fields when serializing the request.
+Set only the fields that must change on `UserInfoReq`.
 
 ```java
 UserInfoReq request = new UserInfoReq();
 request.setNickname(displayName.trim());
 request.setFaceURL(avatarURL);
-request.setEx(mergedExtra);
+request.setEx(extra);
 
 OpenIMClient.getInstance().userInfoManager.setSelfInfo(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            markProfileUpdateSubmitted();
+            // Profile update succeeded.
         }
 
         @Override
         public void onError(int code, String error) {
-            recordProfileUpdateFailure(code, error);
+            // Handle the error.
         }
     },
     request
 );
 ```
 
-`UserInfoReq` supports fields such as `nickname`, `faceURL`, `ex`, and `addFriendPermission`. `ex` is a complete string; read, parse, and merge the application's namespace before updating it rather than overwriting the value with a partial JSON object.
+`UserInfoReq` supports fields such as `nickname`, `faceURL`, `ex`, and `addFriendPermission`. Use `ex` to store extension data for the current user.
 
-A successful callback means the update request completed. Merge the final profile increment from `onSelfInfoUpdated(UserInfo info)`, or query `getSelfLocalUserInfo()` again.
+A successful callback means the update request completed. `onSelfInfoUpdated(UserInfo info)` reports changes to the current user's profile.
 
 ## Updatable fields
 
@@ -45,16 +45,16 @@ A successful callback means the update request completed. Merge the final profil
 | --------------------- | ---------------------------- |
 | `nickname`            | New nickname.                |
 | `faceURL`             | New avatar URL.              |
-| `ex`                  | Complete extension string.   |
+| `ex`                  | User extension string.        |
 | `addFriendPermission` | Add-friend permission value. |
 
-Send only fields that should change. Although the global message reception setting is also written with `setSelfInfo()`, use the dedicated [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception) entry point.
+Send only fields that should change. To set global message reception, see [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception).
 
-This page owns `onSelfInfoUpdated`. Combine it into the application's single `OnUserListener`:
+Receive `onSelfInfoUpdated` through `OnUserListener` when the current user's profile changes:
 
 ```java
 @Override
 public void onSelfInfoUpdated(UserInfo info) {
-    currentUserStore.merge(info.getUserID(), info);
+    // Handle the current user's profile change.
 }
 ```

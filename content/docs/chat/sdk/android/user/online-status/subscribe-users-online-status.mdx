@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/online-status/subscribe-users-online-status'
@@ -18,19 +18,19 @@ OpenIMClient.getInstance().userInfoManager.subscribeUsersOnlineStatus(
     new OnBase<List<UsersOnlineStatus>>() {
         @Override
         public void onSuccess(List<UsersOnlineStatus> states) {
-            mergeOnlineStates(states);
+            // Use states to display online status.
         }
 
         @Override
         public void onError(int code, String error) {
-            recordStatusSubscriptionFailure(code, error);
+            // Handle the error.
         }
     },
     userIDs
 );
 ```
 
-Remove empty and duplicate IDs, and subscribe only to users whose status is needed. The callback returns the initial `List<UsersOnlineStatus>` snapshot. Each item contains `userID`, `status`, and `platformIDs`. Deduplicate repeated subscriptions in the application state layer.
+Remove empty and duplicate IDs, and subscribe only to users whose status is needed. The callback returns the initial `List<UsersOnlineStatus>`. Each item contains `userID`, `status`, and `platformIDs`.
 
 ## Status fields
 
@@ -40,13 +40,13 @@ Remove empty and duplicate IDs, and subscribe only to users whose status is need
 | `status`      | Online status value defined by the server contract. |
 | `platformIDs` | Platforms on which the user is online.              |
 
-This page owns `onUserStatusChanged`. Combine it into the application's single `OnUserListener` and merge by `userID`:
+Receive `onUserStatusChanged` through `OnUserListener` when a user's online status changes:
 
 ```java
 @Override
 public void onUserStatusChanged(UsersOnlineStatus status) {
-    onlineStatusStore.put(status.getUserID(), status);
+    // Handle the online-status change.
 }
 ```
 
-Subscription only creates or updates the subscription set; do not treat its callback as friend profile data. Manage the subscription set centrally when users leave the visible range or the account changes, and remove users that are no longer needed through [Unsubscribe from user status](/sdk/android/user/online-status/unsubscribe-users-online-status).
+Subscription creates or updates the subscription set. When a user's status is no longer needed, cancel the subscription through [Unsubscribe from user status](/sdk/android/user/online-status/unsubscribe-users-online-status).

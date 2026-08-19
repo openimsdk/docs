@@ -13,6 +13,8 @@ const androidRouteTitles = {
   'user/user-profile/get-self-local-user-info': 'Get the current user profile',
   'user/user-profile/set-self-info': 'Update the current user profile',
   'user/user-profile/set-global-message-reception': 'Set global message reception',
+  'user/user-profile/set-friend-add-permission': 'Set friend request permissions',
+  'user/overview-relationships': 'Relationship overview',
   'user/friends/get-friend-list-page': 'Get the friend list by page',
   'user/friends/search-friends': 'Search friends',
   'user/friends/get-friends-info': 'Get specified friend profiles',

@@ -1,55 +1,58 @@
 ---
 title: '用户概览'
-description: '了解 Android SDK 中的用户资料、好友关系、好友申请、黑名单和在线状态 API。'
+description: '了解 Android SDK 中的当前用户资料、公开用户资料、账号设置和在线状态。'
 sourcePath: '/sdk/android/user/overview-user'
 ---
 
-OpenIM Android SDK 使用 `userID` 标识用户。实现资料卡、好友添加、联系人或黑名单功能时，需要区分应用用户的公开资料、当前用户维护的好友关系，以及黑名单状态。
+OpenIM Android SDK 使用 `userID` 标识用户。用户相关 API 用于读取和更新当前账号资料、查询公开用户资料，以及订阅用户在线状态。
 
-群成员列表、群内昵称、群角色和成员管理属于群组能力，应使用群组相关 API；用户 API 只处理用户资料、好友关系、好友申请、黑名单和在线状态。
+好友、好友申请和黑名单属于用户之间的关系链能力，相关类型、API 和状态更新见[关系链概览](/sdk/android/user/overview-relationships)。
 
 ## 用户类型
 
 Android SDK 会根据使用场景返回不同的用户对象：
 
-| 类型                    | 适用场景                                                             | 主要 API                                                          |
-| ----------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `LocalUser`             | 当前登录用户的本地资料、设置页、头像、昵称和账号级接收设置           | `getSelfLocalUserInfo()`、`setSelfInfo()`                         |
-| `PublicUserInfo`        | 查询应用用户、查找好友候选人和展示陌生人资料卡                       | `getUsersInfo()`                                                  |
-| `UserInfo`              | 查询好友列表、好友资料或黑名单时返回的用户对象，可包含对应关系资料 | `getFriendListPage()`、`getFriendsInfo()`、`getBlacklist()`       |
-| `FriendInfo`            | 当前用户的好友列表、好友备注和关系扩展字段                           | `searchFriends()`、`getFriendListPage()`                          |
-| `FriendApplicationInfo` | 好友申请双方、处理状态和附言                                         | 好友申请查询与 listener                                           |
-| `BlacklistInfo`         | 当前用户拉黑的用户及黑名单关系字段                                   | `getBlacklist()`、`addBlacklist()`、`removeBlacklist()`           |
-| `UsersOnlineStatus`     | 用户在线状态和在线平台列表                                           | `subscribeUsersOnlineStatus()`、`getSubscribeOnlineUsersStatus()`、`unsubscribeOnlineUsersStatus()` |
+| 类型 | 适用场景 | 主要 API |
+| --- | --- | --- |
+| `LocalUser` | 当前登录用户的本地资料、设置页、头像、昵称和账号级设置 | `getSelfLocalUserInfo()`、`setSelfInfo()` |
+| `PublicUserInfo` | 查询应用用户和展示公开资料卡 | `getUsersInfo()` |
+| `UsersOnlineStatus` | 用户在线状态和在线平台列表 | `subscribeUsersOnlineStatus()`、`getSubscribeOnlineUsersStatus()`、`unsubscribeOnlineUsersStatus()` |
 
-同一个 `userID` 可能同时出现在公开资料、好友资料、黑名单和群成员资料中。展示联系人信息时优先使用 `UserInfo.getFriendInfo()`；只需要账号公开资料时使用 `PublicUserInfo`；黑名单页面使用 `UserInfo.getBlackInfo()`。会话列表和聊天页标题属于会话数据，应使用会话对象中的展示名称。
-
-所有列表和事件都应使用 `userID` 作为稳定标识。好友申请同时包含申请方和接收方，应使用 `fromUserID:toUserID` 标识一条申请。
+`LocalUser` 表示当前登录用户，`PublicUserInfo` 表示可查询的公开用户资料。群成员资料、群内昵称和成员管理属于群组能力。
 
 ## 功能入口
 
 下表列出了用户相关的常见需求和对应页面：
 
-| 需求                                                     | 推荐页面                                                                                     |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 按 `userID` 查询公开资料，用于查找好友候选人或展示资料卡 | [获取指定用户资料](/sdk/android/user/user-profile/get-users-info)                            |
-| 分页、搜索或按 ID 查询好友关系                           | [分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)                           |
-| 发送、查询、接受或拒绝好友申请                           | [获取收到的好友申请](/sdk/android/user/friend-applications/get-recv-friend-application-list) |
-| 修改好友资料                                             | [更新好友资料](/sdk/android/user/friends/update-friends)                                     |
-| 删除好友关系                                             | [删除好友](/sdk/android/user/friends/delete-friend)                                          |
-| 查看和维护当前用户黑名单                                 | [获取黑名单列表](/sdk/android/user/blacklist/get-blacklist)                                  |
-| 读取或更新当前用户的昵称、头像和扩展资料                 | [更新当前用户资料](/sdk/android/user/user-profile/set-self-info)                             |
-| 设置账号级消息接收和通知策略                             | [设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)          |
-| 订阅、读取和取消在线状态                                 | [订阅用户在线状态](/sdk/android/user/online-status/subscribe-users-online-status)、[取消用户状态订阅](/sdk/android/user/online-status/unsubscribe-users-online-status) |
+| 需求 | 推荐页面 |
+| --- | --- |
+| 按 `userID` 查询公开资料，用于展示资料卡 | [获取指定用户资料](/sdk/android/user/user-profile/get-users-info) |
+| 读取或更新当前用户的昵称、头像和扩展资料 | [获取当前用户资料](/sdk/android/user/user-profile/get-self-local-user-info)、[更新当前用户资料](/sdk/android/user/user-profile/set-self-info) |
+| 设置账号级消息接收和通知策略 | [设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception) |
+| 设置其他用户添加当前账号时的处理策略 | [设置好友添加权限](/sdk/android/user/user-profile/set-friend-add-permission) |
+| 订阅、读取和取消在线状态 | [订阅用户在线状态](/sdk/android/user/online-status/subscribe-users-online-status)、[查询已订阅用户状态](/sdk/android/user/online-status/get-subscribe-online-users-status)、[取消订阅用户状态](/sdk/android/user/online-status/unsubscribe-users-online-status) |
+| 管理好友、好友申请或黑名单 | [关系链概览](/sdk/android/user/overview-relationships) |
 
 ## 状态更新
 
-用户相关事件由对应能力页负责监听和合并：
+用户相关状态变化需要设置用户监听器；具体回调说明见下方对应能力页：
+
+```java
+OpenIMClient client = OpenIMClient.getInstance();
+
+client.userInfoManager.setOnUserListener(new OnUserListener() {
+    @Override
+    public void onSelfInfoUpdated(UserInfo info) {
+        // 处理当前用户资料变化
+    }
+
+    @Override
+    public void onUserStatusChanged(UsersOnlineStatus status) {
+        // 处理用户在线状态变化
+    }
+});
+```
 
 - 当前用户资料变化：见[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)。
-- 好友申请变化：见[获取收到的好友申请](/sdk/android/user/friend-applications/get-recv-friend-application-list)。
-- 好友关系和好友资料变化：见[分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)。
-- 黑名单变化：见[拉黑用户](/sdk/android/user/blacklist/add-blacklist)。
 - 在线状态变化：见[订阅用户在线状态](/sdk/android/user/online-status/subscribe-users-online-status)。
-
-Android SDK 的 `UserInfoManager` 和 `FriendshipManager` 各保存一个 listener，`setOnUserListener()` 和 `setOnFriendshipListener()` 都采用替换语义。应用应在统一状态层组合各页面所需 callback，并分别设置一次，不能让多个页面重复设置而覆盖其他 callback。
+- 好友、好友申请和黑名单变化：见[关系链概览](/sdk/android/user/overview-relationships)。

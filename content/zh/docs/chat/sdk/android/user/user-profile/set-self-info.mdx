@@ -4,33 +4,33 @@ description: '使用 setSelfInfo() 更新当前用户的昵称、头像或扩展
 sourcePath: '/sdk/android/user/user-profile/set-self-info'
 ---
 
-使用 `UserInfoReq` 只设置实际需要修改的字段。SDK 序列化请求时会忽略 `null` 字段。
+使用 `UserInfoReq` 只设置实际需要修改的字段。
 
 ```java
 UserInfoReq request = new UserInfoReq();
 request.setNickname(displayName.trim());
 request.setFaceURL(avatarURL);
-request.setEx(mergedExtra);
+request.setEx(extra);
 
 OpenIMClient.getInstance().userInfoManager.setSelfInfo(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            markProfileUpdateSubmitted();
+            // 更新当前用户资料成功
         }
 
         @Override
         public void onError(int code, String error) {
-            recordProfileUpdateFailure(code, error);
+            // 处理错误
         }
     },
     request
 );
 ```
 
-`UserInfoReq` 支持 `nickname`、`faceURL`、`ex` 和 `addFriendPermission` 等字段。`ex` 是完整字符串，更新前应读取、解析并合并业务自己的命名空间；不要把部分 JSON 直接覆盖到服务端。
+`UserInfoReq` 支持 `nickname`、`faceURL`、`ex` 和 `addFriendPermission` 等字段。`ex` 用于保存当前用户的扩展信息。
 
-成功 callback 表示更新请求完成；当前账号资料的最终增量通过 `onSelfInfoUpdated(UserInfo info)` 到达，或重新调用 `getSelfLocalUserInfo()` 校准。
+成功 callback 表示更新请求完成。当前账号资料变化时，可通过 `onSelfInfoUpdated(UserInfo info)` 接收通知。
 
 ## 更新字段
 
@@ -38,18 +38,16 @@ OpenIMClient.getInstance().userInfoManager.setSelfInfo(
 | --------------------- | ------------------ |
 | `nickname`            | 要更新的昵称。     |
 | `faceURL`             | 要更新的头像地址。 |
-| `ex`                  | 完整扩展字符串。   |
+| `ex`                  | 用户扩展字符串。   |
 | `addFriendPermission` | 添加好友权限值。   |
 
-一次请求只写入需要变更的字段。全局消息接收策略虽然也由 `setSelfInfo()` 写入，但应使用独立入口，见[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。
+一次请求只写入需要变更的字段。设置全局消息接收方式时，参见[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。
 
-`onSelfInfoUpdated` 由本页归属，应组合进应用唯一的 `OnUserListener`：
+当前用户资料变化时，可通过 `OnUserListener` 接收 `onSelfInfoUpdated`：
 
 ```java
 @Override
 public void onSelfInfoUpdated(UserInfo info) {
-    currentUserStore.merge(info.getUserID(), info);
+    // 处理当前用户资料变化
 }
 ```
-
-账号级消息接收策略也通过 `UserInfoReq` 更新，但应使用独立入口，见[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。
