@@ -5,13 +5,13 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
+lastUpdated: '2026-08-19'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/overview-conversation'
 ---
 
-A conversation is the chat-list state maintained by the signed-in account for a one-to-one or group chat. A `ConversationInfo` record contains unread count, latest message, pinning, draft, message reception, and extension data. `conversationID` identifies the account's conversation state; the chat target is the peer `userID` for a one-to-one chat or the `groupID` for a group chat.
+A conversation is the chat-list state maintained by the signed-in account for a one-to-one or group chat. A `ConversationInfo` record contains unread count, latest message, pinning, draft, message reception, and extension data. `conversationID` uniquely identifies a conversation and is used to query conversation information and set conversation state; the chat target is the peer `userID` for a one-to-one chat or the `groupID` for a group chat.
 
 Group profile, membership, and permissions belong to Group APIs. Use `groupID` for group operations and `conversationID` for conversation settings, unread state, drafts, and message cleanup.
 
@@ -24,27 +24,49 @@ Group profile, membership, and permissions belong to Group APIs. Use `groupID` f
 | `groupID`        | Group ID for a group chat and Group API target.                                                              |
 | `sourceId`       | Chat target passed to queries and ID resolution: `userID` for a one-to-one chat, `groupID` for a group chat. |
 
-Use `ConversationType.SINGLE_CHAT` for one-to-one chats. For a group chat, use `ConversationType.GROUP_CHAT` or `ConversationType.SUPER_GROUP_CHAT` according to the group type. Do not construct a `conversationID` in application code.
-
 ## ConversationInfo
 
-| Field                                 | Description                                        |
-| ------------------------------------- | -------------------------------------------------- |
-| `conversationID` / `conversationType` | Conversation ID and type.                          |
-| `userID` / `groupID`                  | Peer user or target group.                         |
-| `showName` / `faceURL`                | Conversation-list display name and avatar.         |
-| `unreadCount`                         | Unread count for the conversation.                 |
-| `latestMsg` / `latestMsgSendTime`     | Latest-message JSON and send time.                 |
-| `recvMsgOpt` / `groupAtType`          | Reception option and group mention state.          |
-| `draftText` / `draftTextTime`         | Draft and draft update time.                       |
-| `isPinned`                            | Whether the conversation is pinned.                |
-| `isPrivateChat` / `burnDuration`      | Burn-after-reading setting and duration.           |
-| `isMsgDestruct` / `msgDestructTime`   | Server message-destruction configuration.          |
-| `ex`                                  | Application-defined conversation extension string. |
+| Field | Description |
+| --- | --- |
+| `conversationID` | Conversation ID. |
+| `conversationType` | Conversation type: `ConversationType.SINGLE_CHAT` for one-to-one chats; `ConversationType.GROUP_CHAT` or `ConversationType.SUPER_GROUP_CHAT` for group chats. |
+| `userID` / `groupID` | `userID` identifies the peer user in a one-to-one chat, while `groupID` identifies the target group in a group chat. Only one applies. |
+| `showName` | Conversation name: the target user's nickname or remark for a one-to-one chat, and the group name or remark for a group chat. |
+| `faceURL` | Conversation avatar URL. |
+| `unreadCount` | Unread count for the conversation. |
+| `latestMsg` | JSON string for the latest message. |
+| `latestMsgSendTime` | Send time of the latest message. |
+| `recvMsgOpt` | Message reception option for the conversation. |
+| `groupAtType` | Group mention reminder state. |
+| `draftText` | Conversation draft. |
+| `draftTextTime` | Draft update time. |
+| `isPinned` | Whether the conversation is pinned. |
+| `isPrivateChat` | Whether burn after reading is enabled. |
+| `burnDuration` | Reading duration for burn-after-reading messages, in seconds. |
+| `isMsgDestruct` | Whether scheduled server-message deletion is enabled. |
+| `msgDestructTime` | Scheduled server-message deletion time. |
+| `ext` | Reserved conversation extension string. |
+| `ex` | Application-defined conversation extension string. |
+| `isNotInGroup` | Whether the current user is no longer in the group. |
+
+## Find pages by task
+
+| Task | Pages |
+| --- | --- |
+| Query one, several, or a paginated list of conversations | [Get a conversation by target](/sdk/android/conversation/retrieving-conversations/get-conversation-by-target), [Get conversations by ID](/sdk/android/conversation/retrieving-conversations/get-conversations-by-id), [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Generate a conversation ID | [Generate a conversation ID](/sdk/android/conversation/retrieving-conversations/get-conversation-id) |
+| Organize the conversation list | [Pin or unpin a conversation](/sdk/android/conversation/managing-conversations/pin-conversation), [Hide a conversation](/sdk/android/conversation/managing-conversations/hide-a-conversation) |
+| Maintain drafts and extension data | [Set a conversation draft](/sdk/android/conversation/managing-conversations/set-conversation-draft), [Set conversation extension data](/sdk/android/conversation/managing-conversations/set-conversation-extension) |
+| Set message reception and retention policy | [Set conversation message reception](/sdk/android/conversation/managing-conversations/set-message-receive-option), [Enable or disable burn after reading](/sdk/android/conversation/managing-conversations/set-private-chat), [Set burn-after-reading duration](/sdk/android/conversation/managing-conversations/set-burn-duration), [Schedule server message deletion](/sdk/android/conversation/managing-conversations/set-message-destruct) |
+| Handle unread counts and group mention reminders | [Mark a conversation as read](/sdk/android/conversation/managing-conversations/mark-conversation-read), [Get the total unread count](/sdk/android/conversation/managing-conversations/get-total-unread-count), [Reset group mention status](/sdk/android/conversation/managing-conversations/clear-group-mentions) |
+| Delete or clear conversation data | [Delete a conversation and its messages](/sdk/android/conversation/managing-conversations/delete-conversation-with-messages), [Clear messages in a conversation](/sdk/android/conversation/managing-conversations/clear-conversation-messages) |
 
 ## State updates
 
-- [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) owns `onNewConversation` and `onConversationChanged`.
-- [Track the total unread count](/sdk/android/conversation/managing-conversations/get-total-unread-count) owns `onTotalUnreadMessageCountChanged`.
+After you set an `OnConversationListener`, you can receive changes to the conversation list and total unread count. See [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list#keep-the-list-synchronized) for complete listener setup:
 
-`ConversationManager` retains one `OnConversationListener`; `setOnConversationListener()` replaces it. Set a composed listener once in a shared state layer. Request completion, event arrival, and snapshot reconciliation are separate stages.
+- `onNewConversation`: Receives newly created conversations.
+- `onConversationChanged`: Receives conversation property changes, such as unread count, pinning, and drafts.
+- `onTotalUnreadMessageCountChanged`: Receives changes to the signed-in account's total unread message count.
+
+Each call to `setOnConversationListener()` replaces the previously set listener.

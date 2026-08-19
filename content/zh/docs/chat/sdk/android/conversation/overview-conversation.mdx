@@ -4,7 +4,7 @@ description: '了解 Android SDK 中 ConversationInfo、conversationID、会话�
 sourcePath: '/sdk/android/conversation/overview-conversation'
 ---
 
-会话是当前登录用户围绕一次单聊或群聊维护的聊天列表状态，由一条 `ConversationInfo` 记录表示。它保存未读数、最后一条消息、置顶、草稿、消息接收方式和扩展字段。`conversationID` 用于定位当前账号的会话状态；单聊目标使用对方 `userID`，群聊目标使用 `groupID`。
+会话是当前登录用户围绕一次单聊或群聊维护的聊天列表状态，由一条 `ConversationInfo` 记录表示。它保存未读数、最后一条消息、置顶、草稿、消息接收方式和扩展字段。`conversationID` 是会话的唯一标识，用于查询会话信息和设置会话状态；单聊目标使用对方 `userID`，群聊目标使用 `groupID`。
 
 群资料、成员关系和群权限属于群组能力。群聊页面使用 `groupID` 调用群组 API，使用 `conversationID` 处理会话设置、未读数、草稿和消息清理。
 
@@ -17,47 +17,49 @@ sourcePath: '/sdk/android/conversation/overview-conversation'
 | `groupID`        | 群聊对应的群组 ID，也是群组 API 的目标标识。                                  |
 | `sourceId`       | 按会话类型查询或生成 ID 时传入的聊天目标：单聊为 `userID`，群聊为 `groupID`。 |
 
-单聊使用 `ConversationType.SINGLE_CHAT`。群聊根据群类型使用 `ConversationType.GROUP_CHAT` 或 `ConversationType.SUPER_GROUP_CHAT`；不要在应用层自行拼接 `conversationID`。
+## 会话数据
 
-## ConversationInfo
+| 字段 | 说明 |
+| --- | --- |
+| `conversationID` | 会话 ID。 |
+| `conversationType` | 会话类型：单聊为 `ConversationType.SINGLE_CHAT`；群聊为 `ConversationType.GROUP_CHAT` 或 `ConversationType.SUPER_GROUP_CHAT`。 |
+| `userID` / `groupID` | 单聊使用 `userID` 表示目标用户，群聊使用 `groupID` 表示目标群组；两者仅有一个生效。 |
+| `showName` | 会话名称，单聊为目标用户昵称或备注，群聊为群聊名称或备注。 |
+| `faceURL` | 会话头像URL。 |
+| `unreadCount` | 当前会话未读数。 |
+| `latestMsg` | 最后一条消息的 JSON 字符串。 |
+| `latestMsgSendTime` | 最后一条消息的发送时间。 |
+| `recvMsgOpt` | 当前会话消息接收方式。 |
+| `groupAtType` | 群聊 @ 提醒状态。 |
+| `draftText` | 会话草稿。 |
+| `draftTextTime` | 草稿更新时间。 |
+| `isPinned` | 是否置顶。 |
+| `isPrivateChat` | 是否开启阅后即焚。 |
+| `burnDuration` | 阅后即焚消息的阅读时长，单位为秒。 |
+| `isMsgDestruct` | 是否开启服务端消息定期删除。 |
+| `msgDestructTime` | 服务端消息定期删除时间。 |
+| `ext` | 预留的会话扩展字符串。 |
+| `ex` | 业务约定的会话扩展字符串。 |
+| `isNotInGroup` | 当前用户是否已不在该群组中。 |
 
-| 字段                                | 说明                                 |
-| ----------------------------------- | ------------------------------------ |
-| `conversationID`                    | 会话 ID。                            |
-| `conversationType`                  | 会话类型。                           |
-| `userID` / `groupID`                | 单聊目标用户或群聊目标群组。         |
-| `showName` / `faceURL`              | 会话列表显示名称和头像。             |
-| `unreadCount`                       | 当前会话未读数。                     |
-| `latestMsg` / `latestMsgSendTime`   | 最后一条消息 JSON 字符串及发送时间。 |
-| `recvMsgOpt`                        | 当前会话消息接收方式。               |
-| `groupAtType`                       | 群聊 @ 提醒状态。                    |
-| `draftText` / `draftTextTime`       | 会话草稿及更新时间。                 |
-| `isPinned`                          | 是否置顶。                           |
-| `isPrivateChat` / `burnDuration`    | 阅后即焚开关和保留时长。             |
-| `isMsgDestruct` / `msgDestructTime` | 服务端消息定期删除设置。             |
-| `ex`                                | 业务约定的会话扩展字符串。           |
+## 按任务查找页面
 
-## 查询和设置
-
-- [查询指定会话](/sdk/android/conversation/retrieving-conversations/get-conversation-by-target)
-- [生成会话 ID](/sdk/android/conversation/retrieving-conversations/get-conversation-id)
-- [按 ID 批量获取会话](/sdk/android/conversation/retrieving-conversations/get-conversations-by-id)
-- [获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)
-- [置顶或取消置顶会话](/sdk/android/conversation/managing-conversations/pin-conversation)
-- [设置会话扩展字段](/sdk/android/conversation/managing-conversations/set-conversation-extension)
-- [设置会话草稿](/sdk/android/conversation/managing-conversations/set-conversation-draft)
-- [设置会话消息接收方式](/sdk/android/conversation/managing-conversations/set-message-receive-option)
-- [重置群聊 @ 状态](/sdk/android/conversation/managing-conversations/clear-group-mentions)
-- [标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read)
-- [获取消息总未读数](/sdk/android/conversation/managing-conversations/get-total-unread-count)
-- [开启或关闭阅后即焚](/sdk/android/conversation/managing-conversations/set-private-chat)
-- [定期删除服务端消息](/sdk/android/conversation/managing-conversations/set-message-destruct)
+| 任务 | 页面 |
+| --- | --- |
+| 查询单个、多个或分页会话 | [查询指定会话](/sdk/android/conversation/retrieving-conversations/get-conversation-by-target)、[按 ID 批量获取会话](/sdk/android/conversation/retrieving-conversations/get-conversations-by-id)、[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) |
+| 生成会话 ID | [生成会话 ID](/sdk/android/conversation/retrieving-conversations/get-conversation-id) |
+| 整理会话列表 | [置顶或取消置顶会话](/sdk/android/conversation/managing-conversations/pin-conversation)、[隐藏会话](/sdk/android/conversation/managing-conversations/hide-a-conversation) |
+| 维护草稿和业务扩展 | [设置会话草稿](/sdk/android/conversation/managing-conversations/set-conversation-draft)、[设置会话扩展字段](/sdk/android/conversation/managing-conversations/set-conversation-extension) |
+| 设置消息接收和存储策略 | [设置会话消息接收方式](/sdk/android/conversation/managing-conversations/set-message-receive-option)、[开启或关闭阅后即焚](/sdk/android/conversation/managing-conversations/set-private-chat)、[设置阅后即焚时长](/sdk/android/conversation/managing-conversations/set-burn-duration)、[定期删除服务端消息](/sdk/android/conversation/managing-conversations/set-message-destruct) |
+| 处理未读数和群聊 @ 提醒 | [标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read)、[获取消息总未读数](/sdk/android/conversation/managing-conversations/get-total-unread-count)、[重置群聊 @ 状态](/sdk/android/conversation/managing-conversations/clear-group-mentions) |
+| 删除或清理会话数据 | [删除会话及消息](/sdk/android/conversation/managing-conversations/delete-conversation-with-messages)、[清空会话消息](/sdk/android/conversation/managing-conversations/clear-conversation-messages) |
 
 ## 状态更新
 
-查询方法建立会话快照，事件负责合并后续增量：
+设置 `OnConversationListener` 后，可以接收会话列表和总未读数的变化。监听器的完整设置方式见[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list#保持列表同步)：
 
-- 新会话和会话属性变化由[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)归属的 `onNewConversation` 与 `onConversationChanged` 处理。
-- 当前账号总未读数由[获取消息总未读数](/sdk/android/conversation/managing-conversations/get-total-unread-count)归属的 `onTotalUnreadMessageCountChanged` 处理。
+- `onNewConversation`：接收新增的会话。
+- `onConversationChanged`：接收会话属性变化，例如未读数、置顶状态和草稿。
+- `onTotalUnreadMessageCountChanged`：接收当前账号消息总未读数的变化。
 
-`ConversationManager` 只保存一个 `OnConversationListener`，`setOnConversationListener()` 会替换当前 listener。应用应在统一状态层组合所有 callback 并设置一次；请求成功、事件到达和重新查询校准是三个独立阶段。
+再次调用 `setOnConversationListener()` 会替换已设置的 listener。

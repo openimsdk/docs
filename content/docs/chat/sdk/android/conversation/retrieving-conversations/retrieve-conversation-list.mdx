@@ -1,6 +1,6 @@
 ---
 title: 'Get the conversation list'
-description: 'Use getConversationListSplit() to retrieve the current Android account conversation list by page.'
+description: 'Use getConversationListSplit() to retrieve the signed-in account conversation list by page.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
@@ -11,7 +11,7 @@ platform: 'android'
 sourcePath: '/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-The conversation list belongs to the signed-in account. Each `ConversationInfo` contains list state such as unread count, latest message, pinning, and draft. Use the paged API instead of the non-paged `getAllConversationList()`.
+The conversation list belongs to the signed-in account. Each `ConversationInfo` contains list state such as unread count, latest message, pinning, and draft.
 
 ## Retrieve a page
 
@@ -38,22 +38,28 @@ OpenIMClient.getInstance().conversationManager.getConversationListSplit(
 | `offset`  | `long` | Zero-based paging offset; reset it to `0` on refresh. |
 | `count`   | `long` | Requested number of conversations.                    |
 
-The callback returns the current `List<ConversationInfo>` page. Advance `offset` by the requested item count and deduplicate by `conversationID`. A page smaller than `count` normally indicates the end; clear paging state and reload from `0` on refresh.
+The callback returns the current `List<ConversationInfo>` page. Advance `offset` by the requested item count. A page smaller than `count` normally indicates the end.
 
 ## Keep the list synchronized
 
-`getConversationListSplit()` only creates a snapshot. Combine these callbacks in the application's single `OnConversationListener`:
+Use `OnConversationListener` to receive the following callbacks when conversations are added or changed:
 
 ```java
-@Override
-public void onNewConversation(List<ConversationInfo> conversations) {
-    mergeConversations(conversations);
-}
+OnConversationListener conversationListener = new OnConversationListener() {
+    @Override
+    public void onNewConversation(List<ConversationInfo> conversations) {
+        mergeConversations(conversations);
+    }
 
-@Override
-public void onConversationChanged(List<ConversationInfo> conversations) {
-    mergeConversations(conversations);
-}
+    @Override
+    public void onConversationChanged(List<ConversationInfo> conversations) {
+        mergeConversations(conversations);
+    }
+};
+
+OpenIMClient.getInstance().conversationManager.setOnConversationListener(
+    conversationListener
+);
 ```
 
-Both callbacks carry `List<ConversationInfo>` and must merge idempotently by `conversationID`. A user can join a group without an existing conversation, and a historical conversation can remain after leaving a group, so do not substitute the joined-group list for the conversation list.
+Both callbacks carry `List<ConversationInfo>`; update the corresponding conversation by `conversationID`. Once set, `setOnConversationListener()` receives conversation changes.
