@@ -54,36 +54,32 @@ config.isLogStandardOutput = false;
 OnConnListener connectionListener = new OnConnListener() {
     @Override
     public void onConnecting() {
-        sessionState.setConnectionState("connecting");
+        // The connection is being established.
     }
 
     @Override
     public void onConnectSuccess() {
-        sessionState.setConnectionState("connected");
-        sessionState.enableConnectedOperations();
+        // Continue with operations that require a connection.
     }
 
     @Override
     public void onConnectFailed(long code, String error) {
-        sessionState.setConnectionState("failed");
-        recordConnectionFailure(code, error);
+        // Handle the connection failure using code and error.
     }
 
     @Override
     public void onKickedOffline() {
-        sessionState.clearCurrentAccount();
-        showSignedInElsewhereScreen();
+        // Clear the current account state and prompt the user to sign in again.
     }
 
     @Override
     public void onUserTokenExpired() {
-        requestNewTokenAndRelogin();
+        // Obtain a new token and sign in again.
     }
 
     @Override
     public void onUserTokenInvalid(String reason) {
-        sessionState.clearCurrentAccount();
-        showSignInScreen(reason);
+        // Clear the current account state and prompt the user to sign in again.
     }
 };
 
@@ -107,13 +103,13 @@ A `true` return value means that the local SDK runtime initialized successfully.
 | `wsAddr`              | `String`      | OpenIMServer WebSocket endpoint.                                          |
 | `dataDirectory`       | `File`        | Application-private persistent directory for the SDK database and logs.   |
 | `config.logLevel`     | `int`         | A `LogLevel` constant; reduce the logging level explicitly in production. |
-| `isLogStandardOutput` | `boolean`     | Whether OpenIM Core logs are emitted to the standard log stream.          |
+| `isLogStandardOutput` | `boolean`     | Whether SDK logs are emitted to the standard log stream.                  |
 
-Initialize the SDK only once in `Application` or an application-level session component. The Java wrapper exposes `networkChanged()` to ask Core to re-evaluate network connectivity; call it only when the application already has one centralized system-network observer, not from multiple screens.
+Initialize the SDK only once in `Application` or an application-level session component. `networkChanged()` asks the SDK to re-evaluate network connectivity; call it only when the application already has one centralized system-network observer, not from multiple screens.
 
 ## Register business listeners before login
 
-Listener registration uses set semantics, so a later call replaces the previous listener. Create stable listener instances in an application-level event dispatcher and forward events to screen state. See [Send your first message](/sdk/android/getting-started/send-first-message) for the complete message-listener registration and incremental merge example. User, relationship, conversation, group, and call-signaling listeners follow the same ownership rule.
+Listener registration uses set semantics, so a later call replaces the previous listener. Create stable listener instances in an application-level event dispatcher and forward events to screen state. For centralized listener registration, replacement behavior, and lifecycle guidance, see [Event overview](/sdk/android/events/overview-events).
 
 The SDK does not expose remove or unset methods. During sign-out or account switching, the application event dispatcher must stop delivering callbacks to state owned by the previous account and replace the complete listener set before the next login.
 
@@ -123,14 +119,12 @@ The SDK does not expose remove or unset methods. During sign-out or account swit
 OpenIMClient.getInstance().login(new OnBase<String>() {
     @Override
     public void onError(int code, String error) {
-        sessionState.setLoginState("failed");
-        recordLoginFailure(code, error);
+        // Handle the login failure using code and error.
     }
 
     @Override
     public void onSuccess(String data) {
-        sessionState.setLoginState("logged");
-        sessionState.setCurrentUserID(userID);
+        // The login call has completed.
     }
 }, userID, token);
 ```
@@ -144,7 +138,7 @@ int loginStatus = OpenIMClient.getInstance().getLoginStatus();
 
 if (loginStatus == LoginStatus.Logged) {
     String currentUserID = OpenIMClient.getInstance().getLoginUserID();
-    restoreSessionFor(currentUserID);
+    // currentUserID is the current logged-in user ID.
 }
 ```
 
@@ -160,7 +154,7 @@ if (loginStatus == LoginStatus.Logged) {
 
 After `onUserTokenExpired()` or `onUserTokenInvalid()`, obtain new credentials for the current user from a trusted backend, then reauthenticate or return to the sign-in flow according to product policy. After `onKickedOffline()`, clear conversations, message views, unread counts, and other state owned by the current account. Do not treat forced logout as an explicit user sign-out.
 
-These callbacks do not have a business-entity merge key. Isolate them by the current `OpenIMClient` singleton and logged-in user. Stop asynchronous work and screen subscriptions owned by the previous account before starting a new login.
+These callbacks apply to the current logged-in account. Before switching accounts, stop asynchronous work and screen subscriptions for the previous account, then clear its state.
 
 ## Sign out and release the SDK
 
@@ -168,12 +162,12 @@ These callbacks do not have a business-entity merge key. Isolate them by the cur
 OpenIMClient.getInstance().logout(new OnBase<String>() {
     @Override
     public void onError(int code, String error) {
-        recordLogoutFailure(code, error);
+        // Handle the sign-out failure using code and error.
     }
 
     @Override
     public void onSuccess(String data) {
-        sessionState.clearCurrentAccount();
+        // The login session has signed out.
     }
 });
 ```

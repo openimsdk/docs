@@ -1,6 +1,6 @@
 ---
 title: '认证与管理登录会话'
-description: '使用 OpenIM Android SDK 初始化、登录、查询登录状态、处理连接 callback 并退出当前账号。'
+description: '使用 OpenIM Android SDK 初始化、登录、查询登录状态、处理连接回调并退出当前账号。'
 sourcePath: '/sdk/android/getting-started/authenticate-and-manage-session'
 ---
 
@@ -12,14 +12,14 @@ OpenIM Android SDK 使用 `initSDK()` 初始化本机运行环境，再使用 `l
 2. 调用 `initSDK()` 并确认返回 `true`。
 3. 在登录前设置消息、用户、好友、会话、群组和通话信令 listener。
 4. 从可信后端取得对应的 `userID` 与 Token，然后调用 `login()`。
-5. 分别等待登录 callback 成功与 `onConnectSuccess()`，再开放依赖连接的业务操作。
+5. 分别等待登录回调成功与 `onConnectSuccess()`，再开放依赖连接的业务操作。
 6. 主动退出或切换账号时调用 `logout()`，完成后清理当前账号的应用状态。
 
 下文中的 `apiAddr`、`wsAddr`、`userID` 和 `token` 均由可信后端提供。
 
 ## 初始化并处理连接生命周期
 
-在 `Application` 生命周期内创建数据目录、初始化 SDK，并传入连接 listener。应用应保存连接状态，但不要在 callback 中记录 Token 或完整服务凭据。
+在 `Application` 生命周期内创建数据目录、初始化 SDK，并传入连接 listener。应用应保存连接状态，但不要在回调中记录 Token 或完整服务凭据。
 
 ```java
 import android.app.Application;
@@ -47,36 +47,32 @@ config.isLogStandardOutput = false;
 OnConnListener connectionListener = new OnConnListener() {
     @Override
     public void onConnecting() {
-        sessionState.setConnectionState("connecting");
+        // 连接建立中。
     }
 
     @Override
     public void onConnectSuccess() {
-        sessionState.setConnectionState("connected");
-        sessionState.enableConnectedOperations();
+        // 连接可用后，继续执行依赖连接的操作。
     }
 
     @Override
     public void onConnectFailed(long code, String error) {
-        sessionState.setConnectionState("failed");
-        recordConnectionFailure(code, error);
+        // 根据 code 和 error 处理连接失败。
     }
 
     @Override
     public void onKickedOffline() {
-        sessionState.clearCurrentAccount();
-        showSignedInElsewhereScreen();
+        // 清理当前账号状态并提示重新登录。
     }
 
     @Override
     public void onUserTokenExpired() {
-        requestNewTokenAndRelogin();
+        // 获取新 Token 后重新登录。
     }
 
     @Override
     public void onUserTokenInvalid(String reason) {
-        sessionState.clearCurrentAccount();
-        showSignInScreen(reason);
+        // 清理当前账号状态并提示重新登录。
     }
 };
 
@@ -91,7 +87,7 @@ if (!initialized) {
 }
 ```
 
-`initSDK()` 返回 `true` 表示 SDK 本地运行环境初始化成功。`OnConnListener` 的连接 callback 在调用 `login()` 后开始反映长连接状态。
+`initSDK()` 返回 `true` 表示 SDK 本地运行环境初始化成功。`OnConnListener` 的连接回调在调用 `login()` 后开始反映长连接状态。
 
 | 字段                  | 类型          | 说明                                                       |
 | --------------------- | ------------- | ---------------------------------------------------------- |
@@ -100,15 +96,15 @@ if (!initialized) {
 | `wsAddr`              | `String`      | OpenIMServer WebSocket 地址。                              |
 | `dataDirectory`       | `File`        | SDK 数据库和日志使用的应用私有持久化目录。                 |
 | `config.logLevel`     | `int`         | 使用 `LogLevel` 常量；正式环境应主动收敛日志级别。          |
-| `isLogStandardOutput` | `boolean`     | 是否把 SDK Core 日志输出到标准日志流。                     |
+| `isLogStandardOutput` | `boolean`     | 是否把 SDK 日志输出到标准日志流。                         |
 
-SDK 只应在 `Application` 或应用级会话组件中初始化一次。当前 Java wrapper 公开 `networkChanged()`，用于通知 Core 重新检查网络；只有在应用已经统一监听系统网络变化时才调用，不能由多个页面重复注册网络 callback。
+SDK 只应在 `Application` 或应用级会话组件中初始化一次。`networkChanged()` 用于通知 SDK 重新检查网络；只有在应用已经统一监听系统网络变化时才调用，不能由多个页面重复注册网络回调。
 
 ## 在登录前设置业务 listener
 
-SDK 的 listener 注册方法采用 set 语义，后一次设置会替换前一次设置。应由应用级事件中心创建稳定 listener，再把事件分发给页面状态层。消息 listener 的完整注册与增量合并示例见[发送第一条消息](/sdk/android/getting-started/send-first-message)；用户、好友、会话、群组和通话信令 listener 采用相同的集中注册原则。
+SDK 的 listener 注册方法采用 set 语义，后一次设置会替换前一次设置。应由应用级事件中心创建稳定 listener，再把事件分发给页面状态层。各类 listener 的集中注册、覆盖行为和生命周期见[事件概览](/sdk/android/events/overview-events)。
 
-SDK 没有公开的 remove/unset 方法。退出或切换账号时，应用事件中心应停止向旧账号页面分发 callback，并在下次登录前用新账号对应的完整 listener 组合覆盖设置。
+SDK 没有公开的 remove/unset 方法。退出或切换账号时，应用事件中心应停止向旧账号页面分发回调，并在下次登录前用新账号对应的完整 listener 组合覆盖设置。
 
 ## 登录当前用户
 
@@ -116,19 +112,17 @@ SDK 没有公开的 remove/unset 方法。退出或切换账号时，应用事�
 OpenIMClient.getInstance().login(new OnBase<String>() {
     @Override
     public void onError(int code, String error) {
-        sessionState.setLoginState("failed");
-        recordLoginFailure(code, error);
+        // 根据 code 和 error 处理登录失败。
     }
 
     @Override
     public void onSuccess(String data) {
-        sessionState.setLoginState("logged");
-        sessionState.setCurrentUserID(userID);
+        // 登录调用完成。
     }
 }, userID, token);
 ```
 
-`login()` 的成功 callback 表示当前登录调用完成；`OnConnListener.onConnectSuccess()` 表示长连接可用。这两个阶段必须分别处理。不要并发调用 `login()`，也不要仅凭某一个 callback 同时推断登录与连接状态。
+`login()` 的成功回调表示当前登录调用完成；`OnConnListener.onConnectSuccess()` 表示长连接可用。这两个阶段必须分别处理。不要并发调用 `login()`，也不要仅凭某一个回调同时推断登录与连接状态。
 
 ## 查询登录状态
 
@@ -137,7 +131,7 @@ int loginStatus = OpenIMClient.getInstance().getLoginStatus();
 
 if (loginStatus == LoginStatus.Logged) {
     String currentUserID = OpenIMClient.getInstance().getLoginUserID();
-    restoreSessionFor(currentUserID);
+    // currentUserID 是当前登录用户 ID。
 }
 ```
 
@@ -147,13 +141,13 @@ if (loginStatus == LoginStatus.Logged) {
 | `LoginStatus.Logging` | 登录正在进行，不应再次发起并行登录。                 |
 | `LoginStatus.Logged`  | SDK 已登录；网络是否连接仍以 `OnConnListener` 为准。 |
 
-`getLoginStatus()` 和 `getLoginUserID()` 返回本地 SDK 状态快照，不会触发连接 callback。切换账号时应先退出旧账号，而不是直接用新参数覆盖当前登录。
+`getLoginStatus()` 和 `getLoginUserID()` 返回本地 SDK 状态快照，不会触发连接回调。切换账号时应先退出旧账号，而不是直接用新参数覆盖当前登录。
 
 ## 处理 Token 和强制下线
 
 收到 `onUserTokenExpired()` 或 `onUserTokenInvalid()` 后，应重新向可信后端取得当前用户凭据，再按产品策略重新登录或返回登录页。收到 `onKickedOffline()` 时，应清理当前用户的会话列表、消息视图、未读数和其他业务状态，不能把它当作用户主动退出。
 
-这些 callback 没有业务实体合并键，应按当前 `OpenIMClient` 单例和登录用户隔离状态。旧账号的异步任务和页面订阅必须在新账号登录前停止。
+这些是当前登录账号级别的回调。切换账号前必须停止旧账号的异步任务和页面订阅，并清理旧账号状态。
 
 ## 主动退出与释放 SDK
 
@@ -161,17 +155,17 @@ if (loginStatus == LoginStatus.Logged) {
 OpenIMClient.getInstance().logout(new OnBase<String>() {
     @Override
     public void onError(int code, String error) {
-        recordLogoutFailure(code, error);
+        // 根据 code 和 error 处理退出失败。
     }
 
     @Override
     public void onSuccess(String data) {
-        sessionState.clearCurrentAccount();
+        // 登录会话已退出。
     }
 });
 ```
 
-`logout()` 成功表示当前 SDK 登录会话已退出。应用状态清理应在成功 callback 后执行；切换账号时，等待旧账号退出完成后再调用新账号的 `login()`。
+`logout()` 成功表示当前 SDK 登录会话已退出。应用状态清理应在成功回调后执行；切换账号时，等待旧账号退出完成后再调用新账号的 `login()`。
 
 应用最终不再使用 SDK 时可以调用：
 
