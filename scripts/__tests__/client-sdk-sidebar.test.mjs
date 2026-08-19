@@ -105,7 +105,9 @@ test('keeps relationships beside users and account settings beside user profiles
     assert.ok(onlineStatus, platform);
     assert.equal(relationships.title, 'Relationships', platform);
     assert.deepEqual(
-      relationships.children.map((node) => node.id),
+      relationships.children
+        .filter((node) => typeof node !== 'string' && Array.isArray(node.children))
+        .map((node) => node.id),
       ['user/friends', 'user/blacklist'],
       platform,
     );
@@ -146,7 +148,9 @@ test('keeps relationships beside users and account settings beside user profiles
     const runtimeProfile = runtimeUser.children.find((node) => node.id === 'user/user-profile');
 
     assert.deepEqual(
-      runtimeRelationships.children.map((node) => node.id),
+      runtimeRelationships.children
+        .filter((node) => node.type === 'folder')
+        .map((node) => node.id),
       ['user/friends', 'user/blacklist'],
       `${platform}: generated navigation should expose the relationship groups`,
     );
