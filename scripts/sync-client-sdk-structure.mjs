@@ -8,6 +8,12 @@ import { getClientSdkSidebarPaths } from './lib/client-sdk-sidebar.mjs';
 const root = process.cwd();
 
 const sourceContracts = {
+  android: {
+    sdkKey: 'androidSdk',
+    sdkRepository: 'https://github.com/openimsdk/open-im-sdk-android-enterprise',
+    sdkTag: 'v3.8.4.0',
+    sdkCommit: 'f82b142c7d3b4b66ce20586adabc69de9cd61673',
+  },
   ios: {
     sdkKey: 'iosSdk',
     sdkRepository: 'https://github.com/openimsdk/open-im-sdk-ios',
@@ -28,6 +34,7 @@ const openimDocs = {
 };
 
 const omittedSuffixesByPlatform = {
+  android: new Set(),
   flutter: new Set(),
   ios: new Set(),
 };
@@ -155,7 +162,8 @@ function toOmittedAuditPage({ page, path, platformId, docsSource, sdkSource, his
 }
 
 export function buildClientSdkNavigationLabels(wasmLabels, platformId) {
-  const displayName = platformId === 'ios' ? 'iOS' : 'Flutter';
+  const displayName =
+    platformId === 'ios' ? 'iOS' : platformId === 'android' ? 'Android' : 'Flutter';
   const labels = { ...wasmLabels };
   delete labels['OpenIM SDK for WASM'];
   labels[`OpenIM SDK for ${displayName}`] = `OpenIM ${displayName} SDK 概览`;
@@ -184,7 +192,7 @@ export function buildClientSdkNavigationLabels(wasmLabels, platformId) {
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['ios', 'flutter'];
+  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter'];
   const [wasmSidebar, wasmLabels] = await Promise.all([
     readJson('data/structure/wasm-sidebar.json'),
     readJson('data/structure/wasm-navigation-labels.json'),
