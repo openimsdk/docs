@@ -1,0 +1,79 @@
+---
+title: '获取好友列表'
+description: 'OpenIM React Native SDK 获取好友列表。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/user/friends/get-friend-list-page'
+---
+
+调用 `getFriendListPage()` 分页获取当前用户的好友列表。
+
+```ts
+const friends = await OpenIMSDK.getFriendListPage({
+  offset: 0,
+  count: 50,
+  filterBlack: true,
+});
+```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次请求的好友数量。 |
+| `filterBlack` | `boolean` | 否 | 是否过滤黑名单用户。 |
+
+返回当前页的 `FriendUserItem[]`。继续加载时按请求条目数增加 `offset`；好友增删后重新请求列表。
+
+### 好友信息字段
+
+`FriendUserItem` 类型字段说明：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 好友用户 ID。 |
+| `nickname` | `string` | 好友昵称。 |
+| `faceURL` | `string` | 好友头像地址。 |
+| `remark` | `string` | 当前用户为好友设置的备注。 |
+| `isPinned` | `boolean` | 是否置顶。 |
+| `ownerUserID` | `string` | 好友关系所属用户 ID。 |
+| `operatorUserID` | `string` | 最近执行关系操作的用户 ID。 |
+| `addSource` | `number` | 好友关系添加来源。 |
+| `createTime` | `number` | 好友关系创建时间。 |
+| `ex` | `string` | 好友关系扩展字段。 |
+| `attachedInfo` | `string` | SDK 附加信息。 |
+
+`remark`、`isPinned` 和 `ex` 属于好友关系，不是账号级用户信息。
+
+## 监听好友变化
+
+好友关系变化时，触发 `OnFriendAdded`、`OnFriendInfoChanged` 或 `OnFriendDeleted` 事件。事件直接携带对应的好友信息：
+
+```ts
+const handleFriendAdd = (friend: FriendUserItem) => {
+  // 新增好友
+};
+const handleFriendChanged = (friend: FriendUserItem) => {
+  // 按 friend.userID 更新好友列表
+};
+const handleFriendDeleted = (friend: FriendUserItem) => {
+  // 按 friend.userID 从好友列表移除
+};
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnFriendAdded, handleFriendAdd);
+OpenIMSDK.on(OpenIMEvent.OnFriendInfoChanged, handleFriendChanged);
+OpenIMSDK.on(OpenIMEvent.OnFriendDeleted, handleFriendDeleted);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnFriendAdded, handleFriendAdd);
+OpenIMSDK.off(OpenIMEvent.OnFriendInfoChanged, handleFriendChanged);
+OpenIMSDK.off(OpenIMEvent.OnFriendDeleted, handleFriendDeleted);
+```
+
+退出登录、切换账号或销毁好友列表状态时，取消这些监听。

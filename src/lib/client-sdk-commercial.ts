@@ -1,5 +1,6 @@
 import flutterAudit from '@/data/structure/flutter-content-audit.json';
 import iosAudit from '@/data/structure/ios-content-audit.json';
+import reactNativeAudit from '@/data/structure/react-native-content-audit.json';
 import ownership from '@/data/structure/wasm-api-ownership.json';
 
 type OwnershipEntry = {
@@ -9,11 +10,11 @@ type OwnershipEntry = {
   commercial?: boolean;
 };
 
-type NativePlatform = 'flutter' | 'ios';
+type NativePlatform = 'flutter' | 'ios' | 'react-native';
 
 type ClientSdkAuditPage = {
   currentPath: string;
-  disposition: string;
+  disposition?: string;
   sdkEvents: string[];
   sdkMethods: string[];
 };
@@ -38,6 +39,7 @@ const commercialEventNames = new Set(
 const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
   flutter: flutterAudit.pages as ClientSdkAuditPage[],
   ios: iosAudit.pages as ClientSdkAuditPage[],
+  'react-native': reactNativeAudit.pages as ClientSdkAuditPage[],
 };
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
@@ -65,6 +67,7 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
     Open_im_sdkUpdateConversationGroup: 'updateConversationGroup',
     setConversationPinnedMsgWithConversationID: 'setConversationPinnedMsg',
   },
+  'react-native': {},
 };
 
 const partialCommercialConceptSources: Record<string, string[]> = {
@@ -95,6 +98,7 @@ const fullCommercialConceptPages = new Set([
   '/sdk/wasm/conversation/managing-conversations/mark-conversation',
   '/sdk/wasm/message/composing-messages/save-local-transcript',
   '/sdk/wasm/user/profile/set-friend-add-permission',
+  '/sdk/react-native/user/profile/set-friend-add-permission',
   '/sdk/flutter/conversation/managing-conversations/set-private-chat',
   '/sdk/flutter/conversation/managing-conversations/set-burn-duration',
   '/sdk/flutter/conversation/managing-conversations/set-message-destruct',
@@ -150,7 +154,7 @@ function parseClientSdkPath(
   | { platform: 'wasm'; wasmPath: string }
   | { platform: NativePlatform; wasmPath: string }
   | undefined {
-  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios|react-native)(\/.*)$/);
   if (!match) return undefined;
 
   const platform = match[1] as 'wasm' | NativePlatform;

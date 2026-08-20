@@ -43,6 +43,7 @@ const zhLabelOverrides: Record<string, string> = {
   'Platform API': '平台 API',
   'Server API': '服务端 API',
   'SDKs · Common reference': 'SDKs · 公共参考',
+  'Relationships overview': '关系链概览',
 };
 
 export function getLocalizedDocPage(
