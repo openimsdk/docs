@@ -15,6 +15,7 @@
 
 - OpenIMSDK 官网：<https://openim.io/>
 - OpenIMSDK 商业版：<https://openim.io/enterprise/>
+- 旧版文档：由 `NEXT_PUBLIC_LEGACY_DOCS_URL` 配置
 - GitHub：由 `NEXT_PUBLIC_GITHUB_URL` 配置
 - 文档编辑地址：由 `NEXT_PUBLIC_EDIT_BASE_URL` 配置
 
@@ -28,6 +29,7 @@
 NEXT_PUBLIC_SITE_URL=https://docs.example.com
 NEXT_PUBLIC_WEBSITE_URL=https://openim.io/
 NEXT_PUBLIC_ENTERPRISE_URL=https://openim.io/enterprise/
+NEXT_PUBLIC_LEGACY_DOCS_URL=https://openim-docs-legacy.vercel.app
 NEXT_PUBLIC_GITHUB_URL=https://github.com/openimsdk
 NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/your-org/your-repo/edit/main
 ```

@@ -142,11 +142,12 @@ Copy `.env.example` to `.env.local` for local development. The following public 
 NEXT_PUBLIC_SITE_URL=https://docs.openim.io
 NEXT_PUBLIC_WEBSITE_URL=https://openim.io/
 NEXT_PUBLIC_ENTERPRISE_URL=https://openim.io/enterprise/
+NEXT_PUBLIC_LEGACY_DOCS_URL=https://openim-docs-legacy.vercel.app
 NEXT_PUBLIC_GITHUB_URL=https://github.com/openimsdk
 NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/openimsdk/docs/edit/main
 ```
 
-Leave `NEXT_PUBLIC_EDIT_BASE_URL` empty if edit links should not be displayed.
+`NEXT_PUBLIC_LEGACY_DOCS_URL` controls the archived-documentation link in the global navigation. Leave `NEXT_PUBLIC_EDIT_BASE_URL` empty if edit links should not be displayed.
 
 ## Deployment
 

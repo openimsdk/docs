@@ -38,6 +38,8 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
   const sdkMenuRef = useRef<HTMLDetailsElement>(null);
   const isSdkMenuOpen = sdkMenuOpenPath === pathname;
   const isLanguageMenuOpen = languageMenuOpenPath === pathname;
+  const legacyDocsUrl =
+    locale === 'zh' ? `${siteConfig.legacyDocsUrl}/zh-Hans/` : `${siteConfig.legacyDocsUrl}/`;
 
   useEffect(() => {
     if (!isSdkMenuOpen) return;
@@ -136,6 +138,9 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
           >
             {text.chrome.platformApi}
           </Link>
+          <a href={legacyDocsUrl} rel="noreferrer" target="_blank">
+            {text.chrome.legacyDocs}
+          </a>
           <a href={siteConfig.enterpriseUrl} rel="noreferrer" target="_blank">
             {text.chrome.enterprise}
           </a>
