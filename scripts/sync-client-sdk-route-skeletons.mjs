@@ -7,6 +7,58 @@ import { getClientSdkSidebarPaths } from './lib/client-sdk-sidebar.mjs';
 
 const root = process.cwd();
 
+const androidRouteTitles = {
+  'user/overview-user': 'User overview',
+  'user/user-profile/get-users-info': 'Get specified user profiles',
+  'user/user-profile/get-self-local-user-info': 'Get the current user profile',
+  'user/user-profile/set-self-info': 'Update the current user profile',
+  'user/user-profile/set-global-message-reception': 'Set global message reception',
+  'user/user-profile/set-friend-add-permission': 'Set friend request permissions',
+  'user/overview-relationships': 'Relationship overview',
+  'user/friends/get-friend-list-page': 'Get the friend list by page',
+  'user/friends/search-friends': 'Search friends',
+  'user/friends/get-friends-info': 'Get specified friend profiles',
+  'user/friends/check-friend': 'Check friendship',
+  'user/friends/update-friends': 'Update friend profiles',
+  'user/friends/delete-friend': 'Delete a friend',
+  'user/friend-applications/add-friend': 'Send a friend request',
+  'user/friend-applications/get-recv-friend-application-list': 'Get received friend requests',
+  'user/friend-applications/get-send-friend-application-list': 'Get sent friend requests',
+  'user/friend-applications/accept-friend-application': 'Accept a friend request',
+  'user/friend-applications/refuse-friend-application': 'Reject a friend request',
+  'user/blacklist/get-blacklist': 'Get the blacklist',
+  'user/blacklist/add-blacklist': 'Block a user',
+  'user/blacklist/remove-blacklist': 'Unblock a user',
+  'user/online-status/subscribe-users-online-status': 'Subscribe to user online status',
+  'user/online-status/get-subscribe-online-users-status': 'Get subscribed user online status',
+  'user/online-status/unsubscribe-users-online-status': 'Unsubscribe from user status',
+  'message/sending-messages/set-msg-send-progress-listener': 'Track message sending progress',
+  'message/managing-messages/delete-saved-messages': 'Delete messages in a batch',
+  'message/creating-messages/create-image-message': 'Create an image message',
+  'message/creating-messages/create-image-message-by-file':
+    'Create an image message from a local path',
+  'message/creating-messages/create-image-message-by-url':
+    'Create an image message from URLs',
+  'message/creating-messages/create-sound-message': 'Create an audio message',
+  'message/creating-messages/create-sound-message-by-file':
+    'Create an audio message from a local path',
+  'message/creating-messages/create-sound-message-by-url':
+    'Create an audio message from a URL',
+  'message/creating-messages/create-video-message': 'Create a video message',
+  'message/creating-messages/create-video-message-by-file':
+    'Create a video message from local paths',
+  'message/creating-messages/create-video-message-by-url':
+    'Create a video message from URLs',
+  'message/creating-messages/create-file-message': 'Create a file message',
+  'message/creating-messages/create-file-message-by-file':
+    'Create a file message from a local path',
+  'message/creating-messages/create-file-message-by-url':
+    'Create a file message from a URL',
+  'message/creating-messages/create-advanced-text-message': 'Create a rich-text message',
+  'message/creating-messages/create-advanced-quote-message': 'Create a rich-text reply',
+  'message/composing-messages/get-typing-status': 'Retrieve typing status',
+};
+
 const conversationGroupTitles = {
   ios: {
     'conversation/managing-conversation-groups/overview-conversation-groups':
@@ -55,13 +107,13 @@ const conversationGroupTitles = {
 };
 
 export function resolveClientSdkRouteTitle({ platformId, suffix, baselineTitle }) {
-  if (suffix === 'overview')
-    return `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`;
+  if (suffix === 'overview') return `OpenIM SDK for ${getPlatformDisplayName(platformId)}`;
+  if (platformId === 'android' && androidRouteTitles[suffix]) return androidRouteTitles[suffix];
   return conversationGroupTitles[platformId]?.[suffix] ?? baselineTitle;
 }
 
 export function buildClientSdkSkeleton({ path, platformId, title }) {
-  const platformName = platformId === 'ios' ? 'iOS' : 'Flutter';
+  const platformName = getPlatformDisplayName(platformId);
   const template = path === `/sdk/${platformId}/overview` ? 'overview' : 'guide';
   return `---
 title: '${escapeSingleQuote(title)}'
@@ -87,8 +139,10 @@ export function isGeneratedClientSdkSkeleton(source) {
   return (
     /generatedBy:\s*['"]sync-client-sdk-route-skeletons['"]/.test(source) ||
     (/status:\s*['"]draft['"]/.test(source) &&
-      /context:\s*['"]chat\/sdk\/(?:ios|flutter)['"]/.test(source) &&
-      /The English version of this OpenIM (?:iOS|Flutter) SDK guide is deferred/.test(source))
+      /context:\s*['"]chat\/sdk\/(?:android|ios|flutter)['"]/.test(source) &&
+      /The English version of this OpenIM (?:Android|iOS|Flutter) SDK guide is deferred/.test(
+        source,
+      ))
   );
 }
 
@@ -103,14 +157,15 @@ export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) 
     const suffix = path.replace(`/sdk/${platformId}/`, '');
     const baseline = wasmBySuffix.get(suffix);
     const existing = routeByPath.get(path);
-    if (!baseline && !existing)
+    const extensionTitle = platformId === 'android' ? androidRouteTitles[suffix] : undefined;
+    if (!baseline && !existing && !extensionTitle)
       throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     return {
       path,
       title: resolveClientSdkRouteTitle({
         platformId,
         suffix,
-        baselineTitle: existing?.title ?? baseline.title,
+        baselineTitle: existing?.title ?? baseline?.title ?? extensionTitle,
       }),
     };
   });
@@ -125,7 +180,8 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
   const otherRoutes = routes.filter((route) => route.contextKey !== platform.contextKey);
   const baseId = Math.max(...otherRoutes.map((route) => route.id)) + 1;
   const baseSourceIndex = Math.max(...otherRoutes.map((route) => route.sourceIndex)) + 1;
-  const contextTitle = `SDKs · ${platformId === 'ios' ? 'iOS' : 'Flutter'} · v4`;
+  const platformName = getPlatformDisplayName(platformId);
+  const contextTitle = `SDKs · ${platformName} · v4`;
   const wasmBySuffix = new Map(
     routes
       .filter((route) => route.contextKey === 'chat/sdk/wasm')
@@ -136,12 +192,13 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
     const suffix = path.replace(`${platform.routePrefix}/`, '');
     const baseline = wasmBySuffix.get(suffix);
     const template = baseline ?? existingByPath.get(path);
-    if (!template)
+    const extensionTitle = platformId === 'android' ? androidRouteTitles[suffix] : undefined;
+    if (!template && !extensionTitle)
       throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     const title = resolveClientSdkRouteTitle({
       platformId,
       suffix,
-      baselineTitle: template.title,
+      baselineTitle: template?.title ?? extensionTitle,
     });
     return {
       ...template,
@@ -150,10 +207,14 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
       relativePath: `sdk/${platformId}/${suffix}`,
       sourcePath: path,
       title,
-      description: `OpenIM ${platformId === 'ios' ? 'iOS' : 'Flutter'} SDK guide for ${title}.`,
+      description: `OpenIM ${platformName} SDK guide for ${title}.`,
+      product: 'sdk',
+      version: 'v4',
       platform: platformId,
       contextKey: platform.contextKey,
       contextTitle,
+      template: template?.template ?? 'guide',
+      status: template?.status ?? 'draft',
       sourceIndex: baseSourceIndex + index,
       contentFile: `content/docs/chat/sdk/${platformId}/${suffix}.mdx`,
       navOrder: baseNavOrder + index,
@@ -167,7 +228,7 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['ios', 'flutter'];
+  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter'];
   let routes = await readJson('src/generated/routes.json');
 
   for (const platformId of platformIds) {
@@ -240,6 +301,12 @@ async function listMdxFiles(directory) {
 
 async function readJson(relativePath) {
   return JSON.parse(await readFile(resolve(root, relativePath), 'utf8'));
+}
+
+function getPlatformDisplayName(platformId) {
+  if (platformId === 'ios') return 'iOS';
+  if (platformId === 'android') return 'Android';
+  return 'Flutter';
 }
 
 function escapeSingleQuote(value) {

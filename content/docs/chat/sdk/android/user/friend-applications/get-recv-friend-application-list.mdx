@@ -1,0 +1,72 @@
+---
+title: 'Get received friend requests'
+description: 'Use getRecvFriendApplicationList() to query received friend requests by page.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-06'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/user/friend-applications/get-recv-friend-application-list'
+---
+
+```java
+GetFriendApplicationListAsRecipientReq request =
+    new GetFriendApplicationListAsRecipientReq(0, 20);
+
+OpenIMClient.getInstance().friendshipManager.getRecvFriendApplicationList(
+    new OnBase<List<FriendApplicationInfo>>() {
+        @Override
+        public void onSuccess(List<FriendApplicationInfo> applications) {
+            // Use applications to update the received-request list.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle the error.
+        }
+    },
+    request
+);
+```
+
+`offset` starts at `0`, and `count` is the page size. To filter by handling state, use `setHandleResults(int[])` with values defined by the server contract. The callback returns the current page as `List<FriendApplicationInfo>`.
+
+| Field                                         | Description                                                      |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `fromUserID` / `fromNickname` / `fromFaceURL` | Applicant ID, nickname, and avatar.                              |
+| `toUserID` / `toNickname` / `toFaceURL`       | Recipient ID, nickname, and avatar.                              |
+| `reqMsg`                                      | Friend request message.                                          |
+| `handleResult`                                | Handling result: `0` pending, `1` accepted, `2` rejected.        |
+| `handlerUserID`                               | User ID that handled the request; it can be empty while pending. |
+| `handleMsg`                                   | Handling message.                                                |
+| `handleTime`                                  | Handling time; do not treat it as valid while pending.           |
+| `createTime`                                  | Request creation time.                                           |
+| `ex`                                          | Friend request extension string.                                 |
+
+Receive friend request added, accepted, rejected, and deleted callbacks through `OnFriendshipListener`:
+
+```java
+@Override
+public void onFriendApplicationAdded(FriendApplicationInfo application) {
+    // Handle a new or updated friend request.
+}
+
+@Override
+public void onFriendApplicationAccepted(FriendApplicationInfo application) {
+    // Handle an accepted friend request.
+}
+
+@Override
+public void onFriendApplicationRejected(FriendApplicationInfo application) {
+    // Handle a rejected friend request.
+}
+
+@Override
+public void onFriendApplicationDeleted(FriendApplicationInfo application) {
+    // Handle a deleted friend request.
+}
+```
+
+Use whether `toUserID` equals the signed-in user ID to route a record to the received or sent list. After an application is accepted, receive the new friendship through `onFriendAdded`; see [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page).

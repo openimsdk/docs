@@ -1,0 +1,62 @@
+---
+title: 'Send a custom signal'
+description: 'Send and receive custom signaling data in an Android SDK call room.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-10'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/calling/sending-custom-signals/send-a-custom-signal'
+---
+
+Use `signalingSendCustomSignal()` to send small pieces of call-related application information to a call room, such as a raised-hand action, layout hint, or temporary state update. It is not suitable for chat content, large data, or files.
+
+## Send a signal
+
+Both `roomID` and `customInfo` are required strings. Define a stable schema and serialize structured data as JSON.
+
+```java
+JSONObject signal = new JSONObject();
+signal.put("version", 1);
+signal.put("eventID", eventID);
+signal.put("type", "hand-raised");
+signal.put("userID", currentUserID);
+signal.put("sentAt", System.currentTimeMillis());
+
+OpenIMClient.getInstance().signalingManager.signalingSendCustomSignal(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String result) {
+            // The signaling request completed.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code and error describe the failure.
+        }
+    },
+    roomID,
+    signal.toString()
+);
+```
+
+The success callback only confirms that the send request completed; it does not mean that other participants received or processed the signal. Include a protocol version and a unique `eventID` in `customInfo` so receivers can identify duplicate messages. Do not include large files, chat history, long-lived state, or sensitive credentials.
+
+## Receive a signal
+
+When a custom signal arrives, `OnSignalingListener.onReceiveCustomSignal` receives `CustomSignalingInfo`. Confirm that it belongs to the active room and validate its format before updating the UI.
+
+```java
+@Override
+public void onReceiveCustomSignal(CustomSignalingInfo info) {
+    // Check info.getRoomID(), then parse info.getCustomInfo() using your application protocol.
+}
+```
+
+If your application needs to avoid duplicate processing, include a unique event ID in the custom signal and record processed events on the receiving side. Messages may not arrive in send order, so do not rely on arrival order to determine application state.
+
+Register `onReceiveCustomSignal` together with the other call callbacks in the listener shown in [Handle call events](/sdk/android/calling/managing-calls/handle-call-events). `SignalingManager` retains only one listener; registering another one replaces the existing call callbacks.
+
+Do not grant host, payment, or privacy permissions based only on custom client signals. Store and validate these trusted states on your backend; after reconnecting, restore long-lived state from a room query or your backend.

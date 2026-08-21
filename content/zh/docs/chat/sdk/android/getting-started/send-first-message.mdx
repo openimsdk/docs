@@ -1,0 +1,103 @@
+---
+title: '发送第一条消息'
+description: '在 Android 应用中发送并验证第一条单聊文本消息。'
+sourcePath: '/sdk/android/getting-started/send-first-message'
+---
+
+本页用一条单聊文本消息验证 OpenIM 已接入成功。开始前，先按[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)完成 SDK 初始化和登录。
+
+## 开始前准备
+
+- 为发送方和接收方各准备一个测试账号。
+- 两个账号都需要按[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)完成 SDK 初始化；接收方需要在登录前设置下面的消息 listener。
+- 将示例中的 `user_b` 替换为接收方的真实 `userID`。
+
+## 第 1 步：让接收方监听新消息
+
+接收方在登录前设置消息 listener。收到消息后，将它加入页面消息列表或刷新界面即可。
+
+```java
+OpenIMClient.getInstance()
+    .messageManager
+    .setAdvancedMsgListener(new OnAdvanceMsgListener() {
+        @Override
+        public void onRecvNewMessage(Message message) {
+            // 将 message 显示在聊天界面中。
+        }
+    });
+```
+
+## 第 2 步：确认可以发送
+
+两个账号登录后，发送方的登录回调成功且 `OnConnListener.onConnectSuccess()` 已到达，即可发送消息。接收方也应保持连接，以便收到新消息。连接尚未成功时，先等待连接恢复，不要重复调用 `login()`。
+
+## 第 3 步：发送文本消息
+
+### 发送单聊文本消息
+
+先创建消息，再发送它。第三个目标参数填写接收方 `userID`，群组目标参数保持空字符串。
+
+```java
+Message message = OpenIMClient.getInstance()
+    .messageManager
+    .createTextMessage("你好，OpenIMSDK");
+
+OnMsgSendCallback sendCallback = new OnMsgSendCallback() {
+    @Override
+    public void onProgress(long progress) {
+        // 文本消息通常不需要处理进度。
+    }
+
+    @Override
+    public void onError(int code, String error) {
+        // 提示发送失败，并允许用户重试。
+    }
+
+    @Override
+    public void onSuccess(Message sentMessage) {
+        // 将 sentMessage 更新到发送方的聊天界面。
+    }
+};
+
+OpenIMClient.getInstance().messageManager.sendMessage(
+    sendCallback,
+    message,
+    "user_b",
+    "",
+    new OfflinePushInfo()
+);
+```
+
+`OfflinePushInfo` 用于配置离线推送内容。首次验证时可以传入空对象，后续再按产品需要设置标题、摘要和扩展数据。
+
+`onSuccess()` 表示发送方已成功发送消息；接收方的 `onRecvNewMessage()` 表示另一端已收到消息。这两个回调都会到达，才说明这次单聊验证完成。
+
+### 发送群聊文本消息
+
+发送群消息时，将接收方 `userID` 改为空字符串，并填写群组的 `groupID`：
+
+```java
+Message groupMessage = OpenIMClient.getInstance()
+    .messageManager
+    .createTextMessage("大家好，OpenIMSDK");
+
+OpenIMClient.getInstance().messageManager.sendMessage(
+    sendCallback,
+    groupMessage,
+    "",
+    "group_123",
+    new OfflinePushInfo()
+);
+```
+
+一次调用只能填写 `userID` 或 `groupID` 其中之一。
+
+## 验证成功
+
+- 发送方调用 `sendMessage()` 后触发 `onSuccess()` 回调。
+- 接收方进入 `onRecvNewMessage()`，并看到文本消息。
+
+## 下一步
+
+- [认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)
+- [OpenIM Android SDK 概览](/sdk/android/overview)

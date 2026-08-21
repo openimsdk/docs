@@ -1,4 +1,17 @@
 const clientSdkPlatforms = {
+  android: {
+    id: 'android',
+    contextKey: 'chat/sdk/android',
+    routePrefix: '/sdk/android',
+    manualRoot: 'content/zh/docs/chat/sdk/android',
+    auditPath: 'data/structure/android-content-audit.json',
+    labelsPath: 'data/structure/android-navigation-labels.json',
+    sidebarPath: 'data/structure/android-sidebar.json',
+    localizedOutputPath: 'src/generated/android-sdk-zh-content.json',
+    sdkSourceKey: 'androidSdk',
+    sdkTag: 'v3.8.4.0',
+    sdkCommit: 'f82b142c7d3b4b66ce20586adabc69de9cd61673',
+  },
   ios: {
     id: 'ios',
     contextKey: 'chat/sdk/ios',

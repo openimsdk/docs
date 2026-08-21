@@ -1,0 +1,98 @@
+---
+title: '群组概览'
+description: '了解 Android SDK 中的群组概念、核心数据类型和主要能力。'
+sourcePath: '/sdk/android/group/overview-group'
+---
+
+OpenIMSDK 的多人聊天使用群组承载共享资料、成员关系和权限。`groupID` 是群组稳定标识，发送群消息、读取群资料、管理成员和处理入群申请都使用它。当前用户聊天列表中的群会话仍由 `conversationID` 管理，两者不能混用。
+
+## 核心数据类型
+
+| 类型 | 用途 |
+| --- | --- |
+| `GroupInfo` | 群名称、头像、公告、群主、验证配置、成员数和扩展字段。 |
+| `GroupMembersInfo` | 用户在指定群内的昵称、角色、禁言和入群信息。 |
+| `GroupApplicationInfo` | 入群申请及处理状态。 |
+
+群成员角色使用 `GroupRole`：`MEMBER` 表示普通成员，`ADMIN` 表示管理员，`OWNER` 表示群主。
+
+## 主要能力
+
+- [群资料与设置](/sdk/android/group/create-group)
+- [群权限与管理](/sdk/android/group/set-group-join-verification)
+- [加入、退出与解散群组](/sdk/android/group/join-group)
+- [查询群组](/sdk/android/group/retrieving-groups/get-specified-groups-info)
+- [入群申请](/sdk/android/group/group-applications/get-group-application-list-as-recipient)
+- [查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)
+- [管理群成员](/sdk/android/group/managing-group-members/invite-user-to-group)
+
+## 状态更新
+
+在登录前调用 `setOnGroupListener()` 注册 `OnGroupListener`，接收群资料、成员和入群申请的变化。下面示例根据回调刷新相应的群组、成员或申请界面：
+
+```java
+private final OnGroupListener groupListener = new OnGroupListener() {
+    @Override
+    public void onJoinedGroupAdded(GroupInfo group) {
+        // 刷新已加入群组列表
+    }
+
+    @Override
+    public void onJoinedGroupDeleted(GroupInfo group) {
+        // 刷新已加入群组列表
+    }
+
+    @Override
+    public void onGroupInfoChanged(GroupInfo group) {
+        // 根据 group.getGroupID() 刷新群资料
+    }
+
+    @Override
+    public void onGroupDismissed(GroupInfo group) {
+        // 根据 group.getGroupID() 关闭已解散的群聊
+    }
+
+    @Override
+    public void onGroupMemberAdded(GroupMembersInfo member) {
+        // 根据 member.getGroupID() 刷新群成员列表
+    }
+
+    @Override
+    public void onGroupMemberDeleted(GroupMembersInfo member) {
+        // 根据 member.getGroupID() 刷新群成员列表
+    }
+
+    @Override
+    public void onGroupMemberInfoChanged(GroupMembersInfo member) {
+        // 根据 member.getGroupID() 刷新群成员列表
+    }
+
+    @Override
+    public void onGroupApplicationAdded(GroupApplicationInfo application) {
+        // 刷新入群申请列表
+    }
+
+    @Override
+    public void onGroupApplicationAccepted(GroupApplicationInfo application) {
+        // 刷新入群申请列表
+    }
+
+    @Override
+    public void onGroupApplicationRejected(GroupApplicationInfo application) {
+        // 刷新入群申请列表
+    }
+
+    @Override
+    public void onGroupApplicationDeleted(GroupApplicationInfo application) {
+        // 刷新入群申请列表
+    }
+};
+
+public void registerGroupListener() {
+    OpenIMClient.getInstance().groupManager.setOnGroupListener(groupListener);
+}
+```
+
+`onJoinedGroupAdded` 和 `onJoinedGroupDeleted` 用于更新当前用户已加入的群组列表；`onGroupInfoChanged` 和 `onGroupDismissed` 用于更新群资料或关闭已解散的群聊。成员变化通过 `onGroupMemberAdded`、`onGroupMemberDeleted` 和 `onGroupMemberInfoChanged` 处理；入群申请变化通过四个 `onGroupApplication...` 回调处理。
+
+群组 API 的成功回调表示本次调用已完成。群资料、成员和申请列表需要更新时，再根据对应的 listener 回调刷新界面或重新查询数据。

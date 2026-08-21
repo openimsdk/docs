@@ -1,0 +1,52 @@
+---
+title: 'Start a group call'
+description: 'Start a group audio or video call with the Android SDK.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-10'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
+---
+
+`signalingInviteInGroup()` starts a group call and uses the same parameter types as [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call). For group calls, `invitation.groupID` must contain the group ID and `invitation.sessionType` is always `ConversationType.GROUP_CHAT`.
+
+Only members in `inviteeUserIDList` are invited; setting `groupID` does not invite every group member automatically. Exclude the current user, empty IDs, and duplicates from the list. This example uses the group ID as the room ID; if you generate a separate `roomID`, every participant must use the same value.
+
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(selectedGroupMemberIDs);
+invitation.setGroupID(groupID);
+invitation.setRoomID(groupID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.GROUP_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"group-call\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            // credentials contains the media room credentials.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code and error describe the failure.
+        }
+    },
+    info
+);
+```
+
+The success callback returns `SignalingCertificate`. `roomID` is the media room ID, `token` is the short-lived credential for joining it, `liveURL` is the media service address, and `busyLineUserIDList` lists busy users. Busy users do not prevent invitations to the remaining members, and a successful callback does not mean that any member has accepted.
+
+Connect to the media room only after obtaining a valid `token` and `roomID`. A successful API call does not mean the invitees have accepted; merge subsequent state through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

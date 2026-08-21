@@ -212,7 +212,9 @@ export async function renderDocumentationPage(
 
   const candidateSdkOverviewPlatform = getSdkOverviewPlatform(effectiveRoute.path);
   const sdkOverviewPlatform =
-    locale === 'zh' || candidateSdkOverviewPlatform === 'wasm'
+    locale === 'zh' ||
+    candidateSdkOverviewPlatform === 'wasm' ||
+    candidateSdkOverviewPlatform === 'android'
       ? candidateSdkOverviewPlatform
       : undefined;
 
@@ -291,6 +293,7 @@ export async function renderDocumentationPage(
 
 function getSdkOverviewPlatform(path: string): SdkOverviewPlatform | undefined {
   const overviewPaths: Record<string, SdkOverviewPlatform> = {
+    '/sdk/android/overview': 'android',
     '/sdk/flutter/overview': 'flutter',
     '/sdk/ios/overview': 'ios',
     '/sdk/wasm/overview': 'wasm',

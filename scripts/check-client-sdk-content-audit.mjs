@@ -169,6 +169,10 @@ function validateManualPage({ platform, page, path, source, errors }) {
     ) {
       errors.push(`${path}: content invents a Flutter listener removal API`);
     }
+  } else if (platform.id === 'android') {
+    if ((page.sdkMethods?.length ?? 0) > 0 && !source.includes('```java')) {
+      errors.push(`${path}: method page requires a Java example`);
+    }
   }
 }
 
@@ -192,7 +196,7 @@ function extractDartCodeBlocks(source) {
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['ios', 'flutter'];
+  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter'];
   let failed = false;
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);

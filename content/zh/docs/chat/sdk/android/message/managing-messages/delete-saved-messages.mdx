@@ -1,0 +1,46 @@
+---
+title: '批量删除消息'
+description: '使用 Android SDK 批量删除当前账号在同一会话中的消息。'
+sourcePath: '/sdk/android/message/managing-messages/delete-saved-messages'
+---
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 要删除消息所在的会话 ID。 |
+| `clientMsgIDs` | `String[]` | 是 | 要删除的消息 ID 列表；同一批 ID 必须属于同一会话。 |
+| `isSync` | `boolean` | 是 | 是否把删除动作同步到当前账号的其他客户端。 |
+
+```java
+DeleteMessagesReq request = new DeleteMessagesReq(
+    true,
+    conversationID,
+    selectedClientMsgIDs.toArray(new String[0])
+);
+
+messageManager.deleteMessages(request, new OnBase<String>() {
+    @Override
+    public void onSuccess(String data) {
+        // 删除请求已完成
+    }
+
+    @Override
+    public void onError(int code, String error) {
+        // 处理失败
+    }
+});
+```
+
+`isSync` 为 `false` 时，删除当前设备及当前账号服务端保存的记录；为 `true` 时，还会请求把删除动作同步到当前账号的其他客户端。该操作不会删除其他会话成员持有的副本，也不会产生撤回提示。
+
+成功回调表示删除请求已经完成；开启同步时，不代表其他客户端已经收到事件或完成界面更新。
+
+开启同步后，其他客户端可通过 `OnAdvanceMsgListener.onMsgDeleted` 接收删除的消息：
+
+```java
+@Override
+public void onMsgDeleted(Message message) {
+    // message 是已删除的消息。
+}
+```

@@ -1,0 +1,65 @@
+---
+title: '获取收到的好友申请'
+description: '使用 getRecvFriendApplicationList() 分页查询当前用户收到的好友申请。'
+sourcePath: '/sdk/android/user/friend-applications/get-recv-friend-application-list'
+---
+
+```java
+GetFriendApplicationListAsRecipientReq request =
+    new GetFriendApplicationListAsRecipientReq(0, 20);
+
+OpenIMClient.getInstance().friendshipManager.getRecvFriendApplicationList(
+    new OnBase<List<FriendApplicationInfo>>() {
+        @Override
+        public void onSuccess(List<FriendApplicationInfo> applications) {
+            // 使用 applications 更新收到的好友申请列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理错误
+        }
+    },
+    request
+);
+```
+
+`offset` 从 `0` 开始，`count` 是页大小。需要筛选处理状态时可通过 `setHandleResults(int[])` 设置服务端约定的状态值。成功 callback 返回当前页 `List<FriendApplicationInfo>`。
+
+| 字段                                          | 说明                                           |
+| --------------------------------------------- | ---------------------------------------------- |
+| `fromUserID` / `fromNickname` / `fromFaceURL` | 申请发起人的 ID、昵称和头像。                  |
+| `toUserID` / `toNickname` / `toFaceURL`       | 申请接收人的 ID、昵称和头像。                  |
+| `reqMsg`                                      | 申请附言。                                     |
+| `handleResult`                                | 处理结果：`0` 待处理，`1` 已同意，`2` 已拒绝。 |
+| `handlerUserID`                               | 执行处理的用户 ID，待处理时可能为空。          |
+| `handleMsg`                                   | 处理附言。                                     |
+| `handleTime`                                  | 处理时间，待处理时不应作为有效时间使用。       |
+| `createTime`                                  | 申请记录创建时间。                             |
+| `ex`                                          | 申请记录扩展字符串。                           |
+
+好友申请新增、接受、拒绝和删除时，可通过 `OnFriendshipListener` 接收以下回调：
+
+```java
+@Override
+public void onFriendApplicationAdded(FriendApplicationInfo application) {
+    // 处理新增或更新的好友申请
+}
+
+@Override
+public void onFriendApplicationAccepted(FriendApplicationInfo application) {
+    // 处理已接受的好友申请
+}
+
+@Override
+public void onFriendApplicationRejected(FriendApplicationInfo application) {
+    // 处理已拒绝的好友申请
+}
+
+@Override
+public void onFriendApplicationDeleted(FriendApplicationInfo application) {
+    // 处理已删除的好友申请
+}
+```
+
+按 `toUserID` 是否等于当前登录用户 ID，将记录分流到收到或发出的列表。申请被接受后，通过 `onFriendAdded` 接收新好友关系通知，详见[分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)。

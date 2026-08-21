@@ -1,0 +1,58 @@
+---
+title: '获取会话列表'
+description: '使用 getConversationListSplit() 分页获取当前账号的会话列表。'
+sourcePath: '/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+会话列表属于当前登录用户。每条 `ConversationInfo` 包含会话标识、未读数、最后一条消息、置顶和草稿等状态。
+
+## 分页获取会话
+
+```java
+OpenIMClient.getInstance().conversationManager.getConversationListSplit(
+    new OnBase<List<ConversationInfo>>() {
+        @Override
+        public void onSuccess(List<ConversationInfo> conversations) {
+            // conversations 是当前页会话列表。
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code 和 error 说明失败原因。
+        }
+    },
+    0,
+    50
+);
+```
+
+| 参数     | 类型   | 说明                                        |
+| -------- | ------ | ------------------------------------------- |
+| `offset` | `long` | 从 `0` 开始的分页偏移量；刷新时重置为 `0`。 |
+| `count`  | `long` | 本页期望返回的会话数量。                    |
+
+成功回调返回当前页 `List<ConversationInfo>`。继续加载时按已经请求的条目数量推进 `offset`；返回数量小于 `count` 时通常表示到达末页。
+
+## 保持列表同步
+
+会话列表发生新增或变化时，可以通过 `OnConversationListener` 接收以下 callback：
+
+```java
+OnConversationListener conversationListener = new OnConversationListener() {
+    @Override
+    public void onNewConversation(List<ConversationInfo> conversations) {
+        // conversations 是新增会话。
+    }
+
+    @Override
+    public void onConversationChanged(List<ConversationInfo> conversations) {
+        // conversations 是发生变化的会话。
+    }
+};
+
+OpenIMClient.getInstance().conversationManager.setOnConversationListener(
+    conversationListener
+);
+```
+
+两个事件都携带 `List<ConversationInfo>`，可按 `conversationID` 更新列表中的对应会话。`setOnConversationListener()` 设置后即可接收会话变化。

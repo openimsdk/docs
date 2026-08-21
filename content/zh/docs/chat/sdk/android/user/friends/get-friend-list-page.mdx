@@ -1,0 +1,62 @@
+---
+title: '分页获取好友列表'
+description: '使用 getFriendListPage() 分页获取当前用户的好友列表。'
+sourcePath: '/sdk/android/user/friends/get-friend-list-page'
+---
+
+```java
+OpenIMClient.getInstance().friendshipManager.getFriendListPage(
+    new OnBase<List<UserInfo>>() {
+        @Override
+        public void onSuccess(List<UserInfo> friends) {
+            // 使用 friends 更新好友列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理错误
+        }
+    },
+    0,
+    40,
+    true
+);
+```
+
+参数依次为 `offset`、`count` 和 `filterBlack`。`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 为 `true` 时过滤黑名单用户。成功 callback 返回当前页 `List<UserInfo>`，好友关系详情可通过 `getFriendInfo()` 读取。继续加载下一页时按实际请求数量增加 `offset`；返回数量小于 `count` 时通常表示到达末页。
+
+## 好友资料字段
+
+好友列表中的 `UserInfo.getFriendInfo()` 返回 `FriendInfo`，常用字段如下：
+
+| 字段             | 说明                                  |
+| ---------------- | ------------------------------------- |
+| `userID`         | 好友用户 ID。                        |
+| `nickname`       | 好友账号昵称。                        |
+| `faceURL`        | 好友账号头像地址。                    |
+| `remark`         | 当前账号设置的好友备注。              |
+| `ex`             | 好友关系扩展字符串。                  |
+| `addSource`      | 好友关系添加来源。                    |
+| `operatorUserID` | 建立或更新关系的操作用户 ID。         |
+| `createTime`     | 好友关系创建时间。                    |
+
+`nickname` 和 `faceURL` 是账号资料，`remark` 和 `ex` 属于好友关系。`UpdateFriendsReq` 支持提交 `isPinned`，但当前 Android `FriendInfo` 模型不提供对应读取字段。
+
+好友新增、资料变化和删除时，可通过 `OnFriendshipListener` 接收以下回调：
+
+```java
+@Override
+public void onFriendAdded(FriendInfo friend) {
+    // 处理新增好友
+}
+
+@Override
+public void onFriendInfoChanged(FriendInfo friend) {
+    // 处理好友资料变化
+}
+
+@Override
+public void onFriendDeleted(FriendInfo friend) {
+    // 处理好友删除
+}
+```

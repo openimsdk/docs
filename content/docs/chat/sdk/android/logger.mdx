@@ -1,18 +1,120 @@
 ---
-title: 'Logger'
-description: 'OpenIM · SDK · Android · v4 documentation scaffold for Logger. Replace this placeholder with OpenIM-specific guidance, examples, and assets.'
+title: 'Logging'
+description: 'Configure Android SDK logging, write application logs, and upload logs.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'scaffold'
-lastUpdated: '2026-06-24'
+status: 'published'
+lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/logger'
 ---
 
-<DocScaffold
-  route="/sdk/android/logger"
-  context="SDKs · Android · v4"
-  sourceTitle="Logger"
-/>
+OpenIM Android SDK logs help diagnose initialization, connection, and business API problems. Development and staging builds can use more detailed output. Production builds should reduce log volume and must avoid recording tokens, complete message bodies, raw file URLs, call room credentials, and private user fields.
+
+## Configure logging during initialization
+
+Configure logging when calling `initSDK()`:
+
+```java
+File dataDirectory = new File(application.getFilesDir(), "openim");
+File logDirectory = new File(application.getFilesDir(), "openim-logs");
+
+InitConfig config = new InitConfig(
+    apiAddr,
+    wsAddr,
+    dataDirectory.getAbsolutePath()
+);
+config.logLevel = BuildConfig.DEBUG ? LogLevel.Debug : LogLevel.Warn;
+config.isLogStandardOutput = BuildConfig.DEBUG;
+config.logFilePath = logDirectory.getAbsolutePath();
+
+boolean initialized = OpenIMClient.getInstance().initSDK(
+    application,
+    config,
+    connectionListener
+);
+```
+
+| Field                 | Description                                                                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `logLevel`            | Controls verbosity with a `LogLevel` constant. Available values include `DebugWithSQL`, `Debug`, `Info`, `Warn`, `Error`, `Panic`, and `Fatal`. |
+| `isLogStandardOutput` | Writes SDK logs to Android standard output when enabled; use it for development diagnostics.                                                    |
+| `logFilePath`         | Optional log directory. Keep it within application-writable storage and manage its size and retention.                                          |
+
+Use `Debug` for ordinary development diagnostics. Enable `DebugWithSQL` temporarily and only when diagnosing database problems. Production builds normally use `Warn` or `Error` and disable unnecessary standard output.
+
+## Write application logs
+
+Use `logs()` to write application logs to the SDK log:
+
+```java
+OpenIMClient.getInstance().logs(
+    LogLevel.Error,
+    ChatRepository.class.getSimpleName(),
+    184,
+    "send_message_failed",
+    errorMessage,
+    "conversationID", conversationID,
+    "clientMsgID", clientMsgID
+);
+```
+
+`currentClassName` and `currentLineNum` identify the call site. `msgStr` is a short action description, and `errStr` is the error information. `Warn`, `Error`, `Panic`, and `Fatal` require a non-empty error string. Pass trailing `extra` values as key-value pairs and include only non-sensitive identifiers needed for diagnosis.
+
+The older `logs()` overload with `OnBase<String>` and `Map` parameters is deprecated and should not be used in new code.
+
+## Upload logs
+
+Use `uploadLogs()` to upload client logs to the server, primarily when a user actively submits diagnostic logs.
+
+```java
+String cancelID = UUID.randomUUID().toString();
+
+OpenIMClient.getInstance().uploadLogs(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // The log upload request completed.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code and error describe the failure.
+        }
+    },
+    new ArrayList<>(),
+    2000, // line
+    cancelID,
+    "support-ticket-42", // ex
+    new UploadLogProgress() {
+        @Override
+        public void onProgress(long current, long total) {
+            // current and total indicate upload progress.
+        }
+    }
+);
+```
+
+| Parameter           | Description                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `params`            | Legacy parameter that the current SDK does not use. Pass an empty list, such as `new ArrayList<>()`.                 |
+| `line`              | Number of log lines configured for this upload.                                                                        |
+| `cancelID`          | Stable identifier for this upload, such as an application-generated UUID.                                              |
+| `ex`                | Diagnostic context attached to the task, such as a support ticket ID. It must not contain credentials or private data. |
+| `UploadLogProgress` | Reports current progress and total work for the upload interface.                                                      |
+
+The success callback means that the log upload request completed.
+
+## Use operationID to locate an SDK call
+
+Public methods in the OpenIM Android SDK do not accept `operationID`. Each SDK call generates an `operationID` automatically. `operationID` identifies only one SDK call; it is not a user identity, permission credential, business idempotency key, or business ID.
+
+When investigating a problem, find the `operationID` near the failed or unexpected call in the client SDK logs. It identifies the related log records for that SDK call. When providing logs to support, also include the time of the issue, user ID, action name, and any relevant `conversationID`, `clientMsgID`, `groupID`, or `roomID` to help locate the records.
+
+## Related pages
+
+- [Implement for the Android environment](/sdk/android/getting-started/environment-specific-implementation)
+- [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session)
+- [Send a message](/sdk/android/message/sending-messages/send-message)

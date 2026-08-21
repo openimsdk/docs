@@ -1,0 +1,45 @@
+---
+title: '发起群聊通话'
+description: '使用 Android SDK 发起群聊音视频通话。'
+sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
+---
+
+`signalingInviteInGroup()` 发起群聊通话，参数类型与[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)相同。群聊通话时，`invitation.groupID` 必须传入群组 ID，`invitation.sessionType` 固定为 `ConversationType.GROUP_CHAT`。
+
+只会邀请 `inviteeUserIDList` 中列出的成员，填写 `groupID` 不会自动邀请全群。`inviteeUserIDList` 列表应排除当前用户、空值和重复成员。示例以群组 ID 作为房间 ID；若自行生成 `roomID`，所有参与者必须使用相同的值。
+
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(selectedGroupMemberIDs);
+invitation.setGroupID(groupID);
+invitation.setRoomID(groupID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.GROUP_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"group-call\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            // credentials 包含加入媒体房间所需凭据。
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code 和 error 说明失败原因。
+        }
+    },
+    info
+);
+```
+
+成功回调返回 `SignalingCertificate`，其中 `roomID` 是媒体房间 ID，`token` 是加入房间使用的短期凭据，`liveURL` 是媒体服务提供的连接地址，`busyLineUserIDList` 是忙线用户列表。忙线用户不影响其余成员的邀请；成功也不表示已有成员接听。
+
+只有取得有效的 `token` 和 `roomID` 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)。

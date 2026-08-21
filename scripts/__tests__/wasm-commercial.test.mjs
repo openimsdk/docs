@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const ownership = JSON.parse(readFileSync('data/structure/wasm-api-ownership.json', 'utf8'));
+const androidAudit = JSON.parse(readFileSync('data/structure/android-content-audit.json', 'utf8'));
 const flutterAudit = JSON.parse(readFileSync('data/structure/flutter-content-audit.json', 'utf8'));
 const iosAudit = JSON.parse(readFileSync('data/structure/ios-content-audit.json', 'utf8'));
 
@@ -82,6 +83,9 @@ const nonCommercialEvents = [
 ];
 
 const platformSymbolAliases = {
+  android: {
+    getConversationPinnedMsgs: 'getConversationPinnedMsg',
+  },
   flutter: {
     getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
     onHangup: 'OnHangUp',
@@ -124,6 +128,11 @@ const partialCommercialConceptSources = {
     '/sdk/ios/calling/managing-calls/handle-call-events',
     '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
   ],
+  '/sdk/android/calling/overview-calling': [
+    '/sdk/android/calling/managing-calls/start-single-call',
+    '/sdk/android/calling/managing-calls/handle-call-events',
+    '/sdk/android/calling/retrieving-call-information/restore-pending-invitation',
+  ],
 };
 
 const fullCommercialConceptPages = new Set([
@@ -143,6 +152,9 @@ const fullCommercialConceptPages = new Set([
   '/sdk/ios/conversation/managing-conversations/set-message-destruct',
   '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
   '/sdk/ios/message/composing-messages/save-local-transcript',
+  '/sdk/android/conversation/managing-conversations/set-private-chat',
+  '/sdk/android/conversation/managing-conversations/set-burn-duration',
+  '/sdk/android/conversation/managing-conversations/set-message-destruct',
 ]);
 
 function applyCommercialConceptOverride(pagePath, info) {
@@ -202,7 +214,7 @@ function getPageCommercialInfo(pagePath) {
     };
   }
 
-  const match = pagePath.match(/^\/sdk\/(wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios)(\/.*)$/);
   if (!match) return { kind: 'none', methods: [], openSourceMethods: [], events: [] };
 
   const platform = match[1];
@@ -211,7 +223,8 @@ function getPageCommercialInfo(pagePath) {
     return applyCommercialConceptOverride(pagePath, getWasmPageCommercialInfo(wasmPath));
   }
 
-  const audit = platform === 'flutter' ? flutterAudit : iosAudit;
+  const audit =
+    platform === 'android' ? androidAudit : platform === 'flutter' ? flutterAudit : iosAudit;
   const page = audit.pages.find(
     (entry) => entry.currentPath === pagePath && entry.disposition !== 'omit',
   );
@@ -416,6 +429,12 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   assert.ok(flutterPinned.methods.includes('setConversationPinnedMsg'));
   assert.ok(flutterPinned.events.includes('onChangedPinnedMsg'));
 
+  const androidPinned = getPageCommercialInfo(
+    '/sdk/android/message/managing-messages/get-pinned-messages',
+  );
+  assert.equal(androidPinned.kind, 'full');
+  assert.ok(androidPinned.methods.includes('getConversationPinnedMsgs'));
+
   const flutterTranscription = getPageCommercialInfo(
     '/sdk/flutter/message/composing-messages/transcribe-audio',
   );
@@ -440,6 +459,11 @@ test('marks calling overviews as mixed while preserving verified platform symbol
   assert.ok(
     iosOverview.methods.includes('getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:'),
   );
+
+  const androidOverview = getPageCommercialInfo('/sdk/android/calling/overview-calling');
+  assert.equal(androidOverview.kind, 'partial');
+  assert.ok(androidOverview.methods.includes('signalingInvite'));
+  assert.ok(androidOverview.methods.includes('getSignalingInvitationInfoStartApp'));
 });
 
 test('does not infer commercial presentation for absent or open-source native capabilities', () => {
@@ -493,6 +517,24 @@ test('classifies mixed commercial pages', () => {
   assert.equal(
     getPageCommercialInfo('/sdk/wasm/group/group-applications/delete-group-requests').kind,
     'full',
+  );
+
+  for (const pagePath of [
+    '/sdk/android/message/managing-messages/delete-saved-messages',
+    '/sdk/android/message/retrieving-messages/load-message-context',
+    '/sdk/android/message/managing-read-status/send-group-read-receipts',
+    '/sdk/android/message/managing-read-status/get-group-message-readers',
+  ]) {
+    assert.equal(getPageCommercialInfo(pagePath).kind, 'full');
+  }
+
+  assert.equal(
+    getPageCommercialInfo('/sdk/android/message/managing-messages/delete-user-messages').kind,
+    'none',
+  );
+  assert.equal(
+    getPageCommercialInfo('/sdk/android/message/composing-messages/update-typing-status').kind,
+    'none',
   );
 });
 

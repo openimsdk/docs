@@ -24,7 +24,7 @@ type ResourceLink = {
   title: string;
 };
 
-export type SdkOverviewPlatform = 'flutter' | 'ios' | 'wasm';
+export type SdkOverviewPlatform = 'android' | 'flutter' | 'ios' | 'wasm';
 
 type OverviewCopy = {
   eyebrow: string;
@@ -211,6 +211,54 @@ const copy = {
 } satisfies Record<Locale, OverviewCopy>;
 
 const mobileCopy = {
+  android: {
+    eyebrow: 'Version 4',
+    intro:
+      'OpenIM Android SDK 为原生 Android 应用提供用户、会话、群组、消息、实时事件和本地存储能力。先完成 Android 工程配置与登录，再通过各 manager 的 API 和 listener 把业务数据接入应用状态。',
+    mostPopular: '热门主题',
+    recommended: '推荐功能',
+    resources: '资源',
+    popular: createMobilePopularCards('android'),
+    features: [
+      {
+        title: '用户认证',
+        description: '使用后端签发的 Token 登录，并处理连接、过期和被踢下线事件。',
+        href: '/sdk/android/getting-started/authenticate-and-manage-session',
+      },
+      {
+        title: '群组',
+        description: '管理群资料、群成员、入群申请、权限和群组事件。',
+        href: '/sdk/android/group/overview-group',
+      },
+      {
+        title: '事件',
+        description: '注册各 manager 的 listener，并按稳定标识合并增量数据。',
+        href: '/sdk/android/events/overview-events',
+      },
+    ],
+    links: [
+      {
+        title: '发送第一条消息',
+        description: '完成接入、初始化、登录、选择目标并发送消息。',
+        href: '/sdk/android/getting-started/send-first-message',
+      },
+      {
+        title: 'Android 环境接入',
+        description: '配置 Android 工程、SDK 初始化、网络权限和应用数据目录。',
+        href: '/sdk/android/getting-started/environment-specific-implementation',
+      },
+      {
+        title: '日志与诊断',
+        description: '配置 SDK 日志，并保留错误码和错误信息用于诊断。',
+        href: '/sdk/android/logger',
+      },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
+      },
+    ],
+  },
   flutter: {
     eyebrow: 'Version 4',
     intro:
@@ -309,6 +357,102 @@ const mobileCopy = {
   },
 } satisfies Record<Exclude<SdkOverviewPlatform, 'wasm'>, OverviewCopy>;
 
+const androidEnglishCopy = {
+  eyebrow: 'Version 4',
+  intro:
+    'OpenIM Android SDK provides users, conversations, groups, messages, realtime events, and local storage for native Android applications. Configure the Android project and sign in first, then connect business data to application state through manager APIs and listeners.',
+  mostPopular: 'Most popular',
+  recommended: 'Recommended features',
+  resources: 'Resources',
+  popular: [
+    {
+      title: 'Manage conversations',
+      description:
+        'Configure conversation state, drafts, unread counts, hiding, and deletion.',
+      href: '/sdk/android/conversation/overview-conversation',
+      visual: 'migration',
+    },
+    {
+      title: 'Unread message count',
+      description:
+        'Read conversation unread counts and synchronize chat lists, badges, and global unread state.',
+      href: '/sdk/android/conversation/managing-conversations/mark-conversation-read',
+      visual: 'unread',
+    },
+    {
+      title: 'Conversation read status',
+      description:
+        'Clear conversation unread counts and handle one-to-one message read receipts.',
+      href: '/sdk/android/conversation/managing-conversations/mark-conversation-read',
+      visual: 'receipt',
+    },
+    {
+      title: 'Send messages',
+      description: 'Create text, file, or custom messages and send them to users or groups.',
+      href: '/sdk/android/message/sending-messages/send-message',
+      visual: 'message',
+    },
+    {
+      title: 'Receive messages',
+      description:
+        'Subscribe to new-message events and merge incremental messages into application state.',
+      href: '/sdk/android/message/receiving-messages/receive-messages',
+      visual: 'events',
+    },
+    {
+      title: 'Message history',
+      description:
+        'Retrieve local and synchronized message history with conversation identifiers and message cursors.',
+      href: '/sdk/android/message/retrieving-messages/load-older-messages',
+      visual: 'history',
+    },
+  ],
+  features: [
+    {
+      title: 'Authentication',
+      description:
+        'Sign in with a backend-issued token and handle connection, expiration, and forced-logout events.',
+      href: '/sdk/android/getting-started/authenticate-and-manage-session',
+    },
+    {
+      title: 'Groups',
+      description:
+        'Manage group profiles, members, applications, permissions, and group events.',
+      href: '/sdk/android/group/overview-group',
+    },
+    {
+      title: 'Events',
+      description:
+        'Register listeners on each manager and merge incremental data by stable identifiers.',
+      href: '/sdk/android/events/overview-events',
+    },
+  ],
+  links: [
+    {
+      title: 'Send your first message',
+      description: 'Complete integration, initialization, sign-in, target selection, and sending.',
+      href: '/sdk/android/getting-started/send-first-message',
+    },
+    {
+      title: 'Android integration',
+      description:
+        'Configure the Android project, SDK initialization, network permissions, and application data directory.',
+      href: '/sdk/android/getting-started/environment-specific-implementation',
+    },
+    {
+      title: 'Logging and diagnostics',
+      description:
+        'Configure SDK logging and retain error codes and messages for diagnosis.',
+      href: '/sdk/android/logger',
+    },
+    {
+      title: 'Client SDK error codes',
+      description: 'Look up common client errors and choose a handling path by error source.',
+      href: '/sdk/error-codes',
+    },
+  ],
+} satisfies OverviewCopy;
+
 function createMobilePopularCards(
   platform: Exclude<SdkOverviewPlatform, 'wasm'>,
 ): OverviewCard[] {
@@ -373,7 +517,12 @@ export function SdkOverviewPage({
   route: RouteRecord;
   showVersion: boolean;
 }) {
-  const text = platform === 'wasm' ? copy[locale] : mobileCopy[platform];
+  const text =
+    platform === 'wasm'
+      ? copy[locale]
+      : platform === 'android' && locale === 'en'
+        ? androidEnglishCopy
+        : mobileCopy[platform];
 
   return (
     <div className="sdk-overview-page">

@@ -1,0 +1,79 @@
+---
+title: '处理通话事件'
+description: '集中设置 Android SDK 的通话邀请、参与者和媒体流 listener。'
+sourcePath: '/sdk/android/calling/managing-calls/handle-call-events'
+---
+
+在应用的通话状态管理处注册一次 `OnSignalingListener`。SDK 通过这些回调通知来电、接听、拒绝、取消、超时、挂断以及成员进出房间；应用据此更新通话界面和本地通话状态。
+
+`SignalingManager` 同时只保留一个 listener，重复调用 `setSignalingListener()` 会替换之前的 listener。退出登录或切换账号时，先停止更新旧账号的通话状态，再为新账号设置 listener。
+
+```java
+OpenIMClient.getInstance().signalingManager.setSignalingListener(
+    new OnSignalingListener() {
+        @Override
+        public void onReceiveNewInvitation(SignalingInfo info) {
+            // info 包含来电邀请信息。
+        }
+
+        @Override
+        public void onInviteeAccepted(SignalingInfo info) {
+            // info 表示通话已接受。
+        }
+
+        @Override
+        public void onInviteeRejected(SignalingInfo info) {
+            // info 表示通话已拒绝。
+        }
+
+        @Override
+        public void onInvitationCancelled(SignalingInfo info) {
+            // info 表示邀请已取消。
+        }
+
+        @Override
+        public void onInvitationTimeout(SignalingInfo info) {
+            // info 表示邀请已超时。
+        }
+
+        @Override
+        public void onInviteeAcceptedByOtherDevice(SignalingInfo info) {
+            // info 表示其他设备已接听。
+        }
+
+        @Override
+        public void onInviteeRejectedByOtherDevice(SignalingInfo info) {
+            // info 表示其他设备已拒绝。
+        }
+
+        @Override
+        public void onHangup(SignalingInfo info) {
+            // info 表示通话已挂断。
+        }
+
+        @Override
+        public void onRoomParticipantConnected(RoomCallingInfo room) {
+            // room 包含加入后的参与者信息。
+        }
+
+        @Override
+        public void onRoomParticipantDisconnected(RoomCallingInfo room) {
+            // room 包含离开后的参与者信息。
+        }
+
+        @Override
+        public void onStreamChange(String streamInfo) {
+            // streamInfo 包含媒体流变化。
+        }
+    }
+);
+```
+
+| 回调 | 何时触发 | 应用应做什么 |
+| --- | --- | --- |
+| `onReceiveNewInvitation` | 收到新的通话邀请。 | 保存 `SignalingInfo`，显示来电界面，并让用户选择接听或拒绝。 |
+| `onInviteeAccepted`、`onInviteeRejected` | 某位被邀请者接听或拒绝。 | 更新该成员的通话状态；群聊中不应影响其他成员。 |
+| `onInvitationCancelled`、`onInvitationTimeout`、`onHangup` | 邀请被取消、超时或任一方挂断。 | 关闭对应通话界面，断开媒体房间并释放本地资源。 |
+| `onInviteeAcceptedByOtherDevice`、`onInviteeRejectedByOtherDevice` | 同一账号的另一台设备已接听或拒绝。 | 结束当前设备上的来电界面，避免两台设备同时处理同一邀请。 |
+| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 成员进入或离开媒体房间。 | 更新群聊中的成员状态。 |
+| `onStreamChange` | 服务端发送媒体流变化信息。 | 按接入服务端实际约定解析字符串，再更新媒体流。 |

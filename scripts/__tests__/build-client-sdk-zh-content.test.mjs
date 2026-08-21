@@ -52,6 +52,13 @@ test('resolves missing native route records from the reviewed WASM suffix baseli
 
 test('native audit seeds and generated packages retain the fixed structural contract', () => {
   const expected = {
+    android: {
+      context: 'chat/sdk/android',
+      root: 'content/zh/docs/chat/sdk/android',
+      sdkKey: 'androidSdk',
+      tag: 'v3.8.4.0',
+      commit: 'f82b142c7d3b4b66ce20586adabc69de9cd61673',
+    },
     ios: {
       context: 'chat/sdk/ios',
       root: 'content/zh/docs/chat/sdk/ios',

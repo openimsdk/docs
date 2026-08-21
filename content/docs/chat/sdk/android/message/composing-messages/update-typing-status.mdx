@@ -1,0 +1,60 @@
+---
+title: 'Update typing status'
+description: 'Report the current conversation typing state with the Android SDK.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-17'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
+---
+
+Set `focus` to `true` when typing starts. Set it to `false` when typing ends, the input field loses focus, or the conversation screen closes.
+
+```java
+conversationManager.changeInputState(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // The typing state has been reported
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code and error describe why the report failed.
+        }
+    },
+    conversationID,
+    true
+);
+```
+
+Clear the state promptly when typing ends:
+
+```java
+conversationManager.changeInputState(callback, conversationID, false);
+```
+
+Avoid repeatedly reporting the same state. A successful callback means that the report request completed.
+
+Other clients receive typing-state changes through `OnConversationListener.onConversationUserInputStatusChanged`. The Android SDK returns the event payload as a string, so validate the JSON before parsing it:
+
+```java
+@Override
+public void onConversationUserInputStatusChanged(String payload) {
+    InputStatesChangedData state = JsonUtil.toObj(
+        payload,
+        InputStatesChangedData.class
+    );
+    if (state == null || state.getConversationID() == null) {
+        return;
+    }
+    // state contains the conversation, user, and active typing platforms.
+}
+```
+
+The callback's `conversationID`, `userID`, and `platformIDs` identify the conversation, user, and platforms on which the user is typing. `ConversationManager` can retain only one `OnConversationListener`. If the application handles other conversation events, implement their callbacks in the same listener.
+
+To query whether a specified user is currently typing, use [Retrieve typing status](/sdk/android/message/composing-messages/get-typing-status).

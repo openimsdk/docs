@@ -1,0 +1,53 @@
+---
+title: 'Delete messages in a batch'
+description: 'Delete multiple messages from one conversation for the current account with the Android SDK.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-17'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/message/managing-messages/delete-saved-messages'
+---
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | ID of the conversation containing the messages to delete. |
+| `clientMsgIDs` | `String[]` | Yes | IDs of the messages to delete. Every ID in one batch must belong to the same conversation. |
+| `isSync` | `boolean` | Yes | Whether to synchronize the deletion to the current account's other clients. |
+
+```java
+DeleteMessagesReq request = new DeleteMessagesReq(
+    true,
+    conversationID,
+    selectedClientMsgIDs.toArray(new String[0])
+);
+
+messageManager.deleteMessages(request, new OnBase<String>() {
+    @Override
+    public void onSuccess(String data) {
+        // The deletion request has completed
+    }
+
+    @Override
+    public void onError(int code, String error) {
+        // Handle the failure
+    }
+});
+```
+
+With `isSync` set to `false`, the operation deletes the current device's copy and the current account's server-side record. With `true`, it also requests deletion synchronization to the account's other clients. It does not delete copies held by other conversation members or display a revocation notice.
+
+The success callback means that the deletion request has completed. When synchronization is enabled, it does not mean that other clients have already received the event or updated their interfaces.
+
+When synchronization is enabled, other clients can receive the deleted message through `OnAdvanceMsgListener.onMsgDeleted`:
+
+```java
+@Override
+public void onMsgDeleted(Message message) {
+    // message is the deleted message.
+}
+```

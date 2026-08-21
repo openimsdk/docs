@@ -1,0 +1,110 @@
+---
+title: '事件概览'
+description: '集中设置 Android SDK listener，并按业务领域分发连接、同步和数据事件。'
+sourcePath: '/sdk/android/events/overview-events'
+---
+
+OpenIM Android SDK 通过 listener 推送连接、同步、用户、好友、会话、群组、消息和通话变化。每个 manager 同时只保留一个 listener；再次设置会覆盖之前设置的 listener。因此应在应用中统一管理这些 listener，并在登录前设置一次，不要在 Activity、Fragment、Compose 页面或各功能组件中重复设置。
+
+IM Server 连接状态由 `OnConnListener` 监听。它不通过 manager 单独设置，而是在调用 `initSDK()` 时传入；完整处理方式见[认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session)。
+
+## 集中设置 listener
+
+以下示例在应用的统一位置注册各类 listener。每个 listener 只处理其所属业务的事件，例如消息、会话、好友和通话。
+
+```java
+public final class OpenIMEventCenter {
+    private final OpenIMClient client = OpenIMClient.getInstance();
+
+    private final OnUserListener userListener = new OnUserListener() {
+        // 处理用户资料和在线状态变化
+    };
+    private final OnFriendshipListener friendshipListener = new OnFriendshipListener() {
+        // 处理好友关系、好友申请和黑名单变化
+    };
+    private final OnConversationListener conversationListener = new OnConversationListener() {
+        // 处理会话、未读数、输入状态和初始化同步
+    };
+    private final OnGroupListener groupListener = new OnGroupListener() {
+        // 处理群组、群成员和群申请变化
+    };
+    private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
+        // 处理新消息、撤回、删除、修改和已读回执
+    };
+    private final OnCustomBusinessListener businessListener = new OnCustomBusinessListener() {
+        // 处理自定义业务消息
+    };
+    private final OnSignalingListener signalingListener = new OnSignalingListener() {
+        // 处理通话邀请、成员状态和自定义通话信令
+    };
+
+    public void registerBeforeLogin() {
+        client.userInfoManager.setOnUserListener(userListener);
+        client.friendshipManager.setOnFriendshipListener(friendshipListener);
+        client.conversationManager.setOnConversationListener(conversationListener);
+        client.groupManager.setOnGroupListener(groupListener);
+        client.messageManager.setAdvancedMsgListener(messageListener);
+        client.messageManager.setCustomBusinessListener(businessListener);
+        client.signalingManager.setSignalingListener(signalingListener);
+    }
+}
+```
+
+Android SDK 不提供移除 listener 的方法。退出登录、切换账号或页面销毁时，应停止用回调更新旧账号数据和已销毁界面，并清理应用自身持有的引用。下次登录前，重新设置新账号使用的各类 listener。
+
+## 事件归属
+
+| 事件范围 | Listener | 对应页面 |
+| --- | --- | --- |
+| 连接、Token 和强制下线 | `OnConnListener` | [认证与管理登录会话](/sdk/android/getting-started/authenticate-and-manage-session) |
+| 当前用户资料 | `OnUserListener` | [更新当前用户资料](/sdk/android/user/user-profile/set-self-info) |
+| 在线状态 | `OnUserListener` | [订阅用户在线状态](/sdk/android/user/online-status/subscribe-users-online-status) |
+| 好友关系与资料 | `OnFriendshipListener` | [分页获取好友列表](/sdk/android/user/friends/get-friend-list-page) |
+| 好友申请 | `OnFriendshipListener` | [获取收到的好友申请](/sdk/android/user/friend-applications/get-recv-friend-application-list) |
+| 黑名单 | `OnFriendshipListener` | [拉黑用户](/sdk/android/user/blacklist/add-blacklist)、[移出黑名单](/sdk/android/user/blacklist/remove-blacklist) |
+| 会话列表 | `OnConversationListener` | [获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) |
+| 总未读数 | `OnConversationListener` | [获取消息总未读数](/sdk/android/conversation/managing-conversations/get-total-unread-count) |
+| 输入状态 | `OnConversationListener` | [上报输入状态](/sdk/android/message/composing-messages/update-typing-status) |
+| 群资料、成员和群申请 | `OnGroupListener` | [群组概览](/sdk/android/group/overview-group) |
+| 新消息、离线消息和在线消息 | `OnAdvanceMsgListener` | [接收消息](/sdk/android/message/receiving-messages/receive-messages) |
+| 消息撤回 | `OnAdvanceMsgListener` | [撤回消息](/sdk/android/message/managing-messages/revoke-a-message) |
+| 消息删除 | `OnAdvanceMsgListener` | [批量删除消息](/sdk/android/message/managing-messages/delete-saved-messages) |
+| 消息修改 | `OnAdvanceMsgListener` | [修改消息](/sdk/android/message/managing-messages/modify-a-message) |
+| 置顶消息 | `OnAdvanceMsgListener` | [置顶或取消置顶消息](/sdk/android/message/managing-messages/set-message-pinned) |
+| 单聊已读回执 | `OnAdvanceMsgListener` | [标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read) |
+| 自定义业务消息 | `OnCustomBusinessListener` | [接收自定义业务消息](/sdk/android/message/receiving-messages/receive-custom-business-messages) |
+| 通话 | `OnSignalingListener` | [处理通话事件](/sdk/android/calling/managing-calls/handle-call-events) |
+| 通话自定义信令 | `OnSignalingListener` | [发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |
+| SDK 数据同步 | `OnConversationListener` | [监听初始化同步](#监听初始化同步) |
+
+## 监听初始化同步
+
+同步生命周期属于 `OnConversationListener`，该 listener 还应包含会话列表、未读数和输入状态回调；下面只展示初始化同步相关的回调：
+
+```java
+private final OnConversationListener conversationListener = new OnConversationListener() {
+    @Override
+    public void onSyncServerStart(boolean reinstall) {
+        // 开始同步：更新同步状态并按需显示加载界面
+    }
+
+    @Override
+    public void onSyncServerProgress(long progress) {
+        // 同步中：更新同步进度
+    }
+
+    @Override
+    public void onSyncServerFinish(boolean reinstall) {
+        // 同步完成：刷新依赖完整数据的页面
+    }
+
+    @Override
+    public void onSyncServerFailed(boolean reinstall) {
+        // 同步失败：更新同步失败状态并等待重试或连接恢复
+    }
+
+    // conversationListener 的其他回调函数...
+};
+```
+
+`reinstall` 表示本次是否为本地数据重建后的同步：`true` 表示应用重装、清除本地数据等场景后的同步，本地通常没有可用缓存；`false` 表示普通登录后的同步。`onSyncServerProgress` 提供当前同步进度；同步完成后重新查询当前界面需要的数据，失败时更新同步失败状态并等待重试或连接恢复。

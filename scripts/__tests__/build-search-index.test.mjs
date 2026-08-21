@@ -28,23 +28,28 @@ function auditPage(path, zh, en) {
   };
 }
 
-test('omits unpublished WASM pages and indexes published manual Chinese content', () => {
-  const nonWasm = route('/sdk/android/overview');
+test('applies publication audits to Android and WASM search content', () => {
+  const android = route('/sdk/android/overview');
   const pending = route('/sdk/wasm/pending', 'chat/sdk/wasm');
   const published = route('/sdk/wasm/published', 'chat/sdk/wasm');
 
   const result = buildSearchIndexes({
-    routes: [nonWasm, pending, published],
+    routes: [android, pending, published],
     sourcePages: new Map([
-      [nonWasm.path, { body: 'Android source body' }],
+      [android.path, { body: 'Android source body' }],
       [pending.path, { body: 'Pending source body' }],
       [published.path, { body: 'Published source body' }],
     ]),
     manualZhPages: new Map([
+      [
+        android.path,
+        { body: 'Android 中文正文', description: 'Android 描述', title: 'Android 标题' },
+      ],
       [pending.path, { body: '待审核正文', description: '待审核', title: '待审核' }],
       [published.path, { body: '已发布中文正文', description: '中文描述', title: '中文标题' }],
     ]),
     auditPages: new Map([
+      [android.path, auditPage(android.path, 'published', 'published')],
       [pending.path, auditPage(pending.path, 'written', 'deferred')],
       [published.path, auditPage(published.path, 'published', 'published')],
     ]),
@@ -52,11 +57,11 @@ test('omits unpublished WASM pages and indexes published manual Chinese content'
 
   assert.deepEqual(
     result.en.map((record) => record.path),
-    [nonWasm.path, published.path],
+    [android.path, published.path],
   );
   assert.deepEqual(
     result.zh.map((record) => record.path),
-    [nonWasm.path, published.path],
+    [android.path, published.path],
   );
   assert.equal(result.zh.at(-1).title, '中文标题');
   assert.equal(result.zh.at(-1).description, '中文描述');

@@ -1,0 +1,53 @@
+---
+title: '上报输入状态'
+description: '使用 Android SDK 上报当前会话的输入状态。'
+sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
+---
+
+进入输入状态时，将 `focus` 设为 `true`；输入结束、输入框失去焦点或退出会话时，将其设为 `false`。
+
+```java
+conversationManager.changeInputState(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 输入状态已上报
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code 和 error 说明上报失败原因。
+        }
+    },
+    conversationID,
+    true
+);
+```
+
+输入结束时及时清除状态：
+
+```java
+conversationManager.changeInputState(callback, conversationID, false);
+```
+
+避免频繁重复上报相同状态。成功回调表示上报请求已经完成。
+
+其他客户端通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化。Android SDK 以字符串形式返回事件载荷，应在校验 JSON 后再解析：
+
+```java
+@Override
+public void onConversationUserInputStatusChanged(String payload) {
+    InputStatesChangedData state = JsonUtil.toObj(
+        payload,
+        InputStatesChangedData.class
+    );
+    if (state == null || state.getConversationID() == null) {
+        return;
+    }
+    // state 包含会话、用户和正在输入的平台。
+}
+```
+
+回调中的 `conversationID`、`userID` 和 `platformIDs` 分别表示会话、用户和正在输入的平台。`ConversationManager` 只能设置一个 `OnConversationListener`；如果应用还需要处理其他会话事件，请在同一个 listener 中实现相应回调。
+
+需要主动查询指定用户是否正在输入时，使用[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)。

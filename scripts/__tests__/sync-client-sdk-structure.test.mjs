@@ -15,7 +15,7 @@ const wasmLabels = readJson('data/structure/wasm-navigation-labels.json');
 
 test('mirrors every supported WASM path for native SDKs', () => {
   const wasmPaths = getClientSdkSidebarPaths(wasmSidebar);
-  for (const platform of ['ios', 'flutter']) {
+  for (const platform of ['android', 'ios', 'flutter']) {
     const mirrored = mirrorClientSdkSidebar(wasmSidebar, platform);
     const omitted = getOmittedClientSdkPaths(wasmSidebar, platform);
     assert.equal(mirrored.sidebarExpansion, wasmSidebar.sidebarExpansion);
@@ -74,6 +74,10 @@ test('retains routes removed from the sidebar as historical omitted records', ()
 });
 
 test('uses current WASM vocabulary with a platform-specific overview label', () => {
+  const androidLabels = buildClientSdkNavigationLabels(wasmLabels, 'android');
+  assert.equal(androidLabels['OpenIM SDK for WASM'], undefined);
+  assert.equal(androidLabels['OpenIM SDK for Android'], 'OpenIM Android SDK 概览');
+
   const labels = buildClientSdkNavigationLabels(wasmLabels, 'flutter');
   assert.equal(labels['OpenIM SDK for WASM'], undefined);
   assert.equal(labels['OpenIM SDK for Flutter'], 'OpenIM Flutter SDK 概览');

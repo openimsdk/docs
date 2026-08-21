@@ -12,6 +12,7 @@ import {
 } from '../../src/lib/client-sdk-publication.ts';
 
 test('detects all registered active SDK routes and excludes legacy native routes', () => {
+  assert.equal(getClientSdkPlatform('/sdk/android/overview'), 'android');
   assert.equal(getClientSdkPlatform('/sdk/ios/overview'), 'ios');
   assert.equal(getClientSdkPlatform('/sdk/flutter/overview/'), 'flutter');
   assert.equal(getClientSdkPlatform('/sdk/wasm/overview'), 'wasm');
@@ -19,6 +20,7 @@ test('detects all registered active SDK routes and excludes legacy native routes
 });
 
 test('reads locale publication state per platform audit', () => {
+  assert.deepEqual(getPublishedClientSdkLocales('/sdk/android/overview'), ['en', 'zh']);
   assert.equal(isClientSdkLocalePublished('/sdk/ios/overview', 'zh'), true);
   assert.deepEqual(getPublishedClientSdkLocales('/sdk/flutter/overview'), ['en', 'zh']);
   assert.equal(isClientSdkLocalePublished('/sdk/flutter/overview', 'en'), true);
@@ -40,14 +42,12 @@ test('creates a platform-specific neutral pending body', () => {
     description: '审核状态说明',
   });
   assert.match(pending?.body ?? '', /OpenIM Flutter SDK/);
-  assert.equal(
-    createClientSdkPendingReviewContent({
-      path: '/sdk/android/overview',
-      title: 'Android',
-      description: 'Android',
-    }),
-    undefined,
-  );
+  const androidPending = createClientSdkPendingReviewContent({
+    path: '/sdk/android/overview',
+    title: 'Android',
+    description: 'Android',
+  });
+  assert.match(androidPending?.body ?? '', /OpenIM Android SDK/);
 });
 
 test('only selects manual client SDK content after its locale is published', () => {

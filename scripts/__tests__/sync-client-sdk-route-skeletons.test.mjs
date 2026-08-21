@@ -63,12 +63,14 @@ test('replaces legacy platform route records with the reviewed active tree', () 
 
 test('resolves every active native suffix against the current WASM routes', () => {
   const routes = readJson('src/generated/routes.json');
-  for (const platformId of ['ios', 'flutter']) {
+  for (const platformId of ['android', 'ios', 'flutter']) {
     const sidebar = readJson(`data/structure/${platformId}-sidebar.json`);
     const resolved = resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes });
     assert.equal(resolved.length, getSidebarPathCount(sidebar));
     assert.equal(resolved[0].path, `/sdk/${platformId}/overview`);
-    assert.equal(resolved[0].title, `OpenIM SDK for ${platformId === 'ios' ? 'iOS' : 'Flutter'}`);
+    const displayName =
+      platformId === 'ios' ? 'iOS' : platformId === 'android' ? 'Android' : 'Flutter';
+    assert.equal(resolved[0].title, `OpenIM SDK for ${displayName}`);
   }
 });
 
@@ -90,6 +92,76 @@ test('uses each native SDK method name while preserving the shared WASM route su
       baselineTitle: 'getConversationGroupIDsByConversationID',
     }),
     'getConversationGroupByConversationID',
+  );
+});
+
+test('uses Flutter-aligned titles for Android media message routes', () => {
+  const expectedTitles = {
+    'message/creating-messages/create-image-message': 'Create an image message',
+    'message/creating-messages/create-image-message-by-file':
+      'Create an image message from a local path',
+    'message/creating-messages/create-image-message-by-url':
+      'Create an image message from URLs',
+    'message/creating-messages/create-sound-message': 'Create an audio message',
+    'message/creating-messages/create-sound-message-by-file':
+      'Create an audio message from a local path',
+    'message/creating-messages/create-sound-message-by-url':
+      'Create an audio message from a URL',
+    'message/creating-messages/create-video-message': 'Create a video message',
+    'message/creating-messages/create-video-message-by-file':
+      'Create a video message from local paths',
+    'message/creating-messages/create-video-message-by-url':
+      'Create a video message from URLs',
+    'message/creating-messages/create-file-message': 'Create a file message',
+    'message/creating-messages/create-file-message-by-file':
+      'Create a file message from a local path',
+    'message/creating-messages/create-file-message-by-url':
+      'Create a file message from a URL',
+  };
+
+  for (const [suffix, expectedTitle] of Object.entries(expectedTitles)) {
+    assert.equal(
+      resolveClientSdkRouteTitle({
+        platformId: 'android',
+        suffix,
+        baselineTitle: 'Create a message from a file',
+      }),
+      expectedTitle,
+    );
+  }
+});
+
+test('uses the batch-message deletion title for Android', () => {
+  assert.equal(
+    resolveClientSdkRouteTitle({
+      platformId: 'android',
+      suffix: 'message/managing-messages/delete-saved-messages',
+      baselineTitle: 'Delete messages in a batch',
+    }),
+    'Delete messages in a batch',
+  );
+});
+
+test('supports reviewed Android extension routes outside the WASM tree', () => {
+  const routes = readJson('src/generated/routes.json');
+  const sidebar = readJson('data/structure/android-sidebar.json');
+  const resolved = resolveClientSdkSkeletonRoutes({ platformId: 'android', sidebar, routes });
+  assert.ok(
+    resolved.some(
+      (route) =>
+        route.path === '/sdk/android/user/user-profile/get-self-local-user-info' &&
+        route.title === 'Get the current user profile',
+    ),
+  );
+
+  const next = replaceClientSdkRouteRecords({ platformId: 'android', sidebar, routes });
+  const extension = next.find(
+    (route) => route.path === '/sdk/android/user/online-status/subscribe-users-online-status',
+  );
+  assert.equal(extension?.template, 'guide');
+  assert.equal(
+    extension?.contentFile,
+    'content/docs/chat/sdk/android/user/online-status/subscribe-users-online-status.mdx',
   );
 });
 

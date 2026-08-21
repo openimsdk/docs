@@ -1,0 +1,80 @@
+---
+title: 'Start a one-to-one call'
+description: 'Start a one-to-one audio or video call with the Android SDK.'
+product: 'sdk'
+context: 'chat/sdk/android'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-10'
+version: 'v4'
+platform: 'android'
+sourcePath: '/sdk/android/calling/managing-calls/start-single-call'
+---
+
+`signalingInvite()` starts a one-to-one call. The Android SDK handles call signaling; your application must connect a real-time audio/video engine with the returned room credentials.
+
+## Parameters
+
+Call signature:
+
+```java
+signalingInvite(OnBase<SignalingCertificate> callback, SignalingInfo info)
+```
+
+All fields below belong to `info`; dot notation represents nested objects. Only parameters shared by the Android and WASM SDKs are listed.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `SignalingInvitationInfo` | Yes | The call invitation. |
+| `invitation.inviterUserID` | `String` | Yes | The inviter; pass the current signed-in user ID. |
+| `invitation.inviteeUserIDList` | `List<String>` | Yes | The invitees; for a one-to-one call, include only the other user. |
+| `invitation.groupID` | `String` | Yes | Group ID. Pass an empty string for a one-to-one call. |
+| `invitation.roomID` | `String` | Yes | The call's unique room identifier and the primary key for subsequent state. |
+| `invitation.timeout` | `long` | Yes | Invitation timeout in seconds. |
+| `invitation.mediaType` | `String` | Yes | The application-defined media type, typically `audio` or `video`. |
+| `invitation.sessionType` | `int` | Yes | Use `ConversationType.SINGLE_CHAT` for one-to-one calls and `ConversationType.SUPER_GROUP_CHAT` for group calls. |
+| `invitation.platformID` | `int` | Yes | The current client platform; pass `Platform.ANDROID`. |
+| `invitation.customData` | `String` | No | Application extra data carried with the invitation. |
+| `invitation.initiateTime` | `long` | No | The invitation start time. It is normally maintained by the signaling flow and does not need to be set manually. |
+| `offlinePushInfo` | `OfflinePushInfo` | No | Push content used when the invitee is offline. |
+| `offlinePushInfo.title` | `String` | Conditionally required | Push title; required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.desc` | `String` | Conditionally required | Push body; required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.ex` | `String` | Conditionally required | Push extension string; pass an empty string when there is no content. |
+| `offlinePushInfo.iOSPushSound` | `String` | Conditionally required | iOS push sound; required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditionally required | Whether to update the iOS badge; required when `offlinePushInfo` is provided. |
+
+```java
+SignalingInvitationInfo invitation = new SignalingInvitationInfo();
+invitation.setInviterUserID(currentUserID);
+invitation.setInviteeUserIDList(Collections.singletonList(peerUserID));
+invitation.setGroupID("");
+invitation.setRoomID(roomID);
+invitation.setTimeout(30);
+invitation.setMediaType("video");
+invitation.setSessionType(ConversationType.SINGLE_CHAT);
+invitation.setPlatformID(Platform.ANDROID);
+invitation.setCustomData("{\"source\":\"contact-card\"}");
+
+SignalingInfo info = new SignalingInfo();
+info.setInvitation(invitation);
+info.setOfflinePushInfo(offlinePushInfo);
+
+OpenIMClient.getInstance().signalingManager.signalingInvite(
+    new OnBase<SignalingCertificate>() {
+        @Override
+        public void onSuccess(SignalingCertificate credentials) {
+            // credentials provides the roomID, token, and liveURL for joining a media room.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // code and error describe the failure.
+        }
+    },
+    info
+);
+```
+
+The success callback returns `SignalingCertificate`. `roomID` identifies the media room, `token` is a short-lived join credential, `liveURL` is the media service address, and `busyLineUserIDList` contains busy users.
+
+Connect the media engine only after receiving a valid `token` and `roomID`. API success does not mean the invitee accepted; merge subsequent state through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

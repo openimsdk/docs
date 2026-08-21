@@ -663,16 +663,19 @@ test('the rendered WASM overview links only to active capability pages', () => {
   assert.match(source, /OpenIM WASM SDK 为浏览器应用/);
 });
 
-test('custom SDK overviews render for Chinese pages and the reviewed English WASM overview', () => {
+test('custom SDK overviews render for Chinese pages and reviewed English WASM and Android overviews', () => {
   const source = readFileSync('src/components/docs/documentation-page.tsx', 'utf8');
+  const overviewSource = readFileSync('src/components/docs/sdk-overview-page.tsx', 'utf8');
   const wasmOverview = readFileSync(
     'content/zh/docs/chat/sdk/wasm/overview.mdx',
     'utf8',
   );
   assert.match(source, /candidateSdkOverviewPlatform === 'wasm'/);
+  assert.match(source, /candidateSdkOverviewPlatform === 'android'/);
   assert.match(source, /'\/sdk\/flutter\/overview': 'flutter'/);
   assert.match(source, /'\/sdk\/ios\/overview': 'ios'/);
   assert.match(source, /'\/sdk\/wasm\/overview': 'wasm'/);
+  assert.match(overviewSource, /OpenIM Android SDK provides users, conversations, groups/);
   assert.equal(wasmOverview.replace(/^---\n[\s\S]*?\n---\n?/, '').trim(), '');
 });
 

@@ -10,6 +10,7 @@ import {
 const root = process.cwd();
 const routesPath = resolve(root, 'src/generated/routes.json');
 const navigationPath = resolve(root, 'src/generated/navigation.json');
+const structurePath = resolve(root, 'data/structure/chat-pages.json');
 const routes = JSON.parse(await readFile(routesPath, 'utf8'));
 const navigation = JSON.parse(await readFile(navigationPath, 'utf8'));
 const clientSdkSidebars = new Map(
@@ -92,7 +93,8 @@ for (const context of navigation.contexts) {
 for (const platformId of clientSdkPlatformIds) {
   if (sidebarDecisions.get(platformId).mode === 'skip') {
     const pageCount = getClientSdkSidebarPaths(clientSdkSidebars.get(platformId)).length;
-    const platformName = platformId === 'ios' ? 'iOS' : 'Flutter';
+    const platformName =
+      platformId === 'ios' ? 'iOS' : platformId === 'android' ? 'Android' : 'Flutter';
     console.log(
       `Skipped ${platformName} client SDK sidebar sync: native route tree has not migrated to all ${pageCount} reviewed paths.`,
     );
@@ -102,6 +104,22 @@ for (const platformId of clientSdkPlatformIds) {
 await Promise.all([
   writeFile(routesPath, `${JSON.stringify(routes, null, 2)}\n`, 'utf8'),
   writeFile(navigationPath, `${JSON.stringify(navigation, null, 2)}\n`, 'utf8'),
+  writeFile(
+    structurePath,
+    `${JSON.stringify(
+      routes.map((route) => ({
+        sourcePath: route.sourcePath,
+        openimPath: route.path,
+        title: route.title,
+        context: route.contextKey,
+        template: route.template,
+        contentFile: route.contentFile,
+      })),
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  ),
 ]);
 console.log(`Synchronized content metadata (${changed.toLocaleString()} changed fields).`);
 

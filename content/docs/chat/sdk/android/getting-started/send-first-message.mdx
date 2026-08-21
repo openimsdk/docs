@@ -1,18 +1,110 @@
 ---
 title: 'Send your first message'
-description: 'OpenIM · SDK · Android · v4 documentation scaffold for Send your first message. Replace this placeholder with OpenIM-specific guidance, examples, and assets.'
+description: 'Send and verify the first one-to-one text message in an Android application.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
-status: 'scaffold'
-lastUpdated: '2026-06-24'
+status: 'published'
+lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/getting-started/send-first-message'
 ---
 
-<DocScaffold
-  route="/sdk/android/getting-started/send-first-message"
-  context="SDKs · Android · v4"
-  sourceTitle="Send your first message"
-/>
+Use one-to-one text messaging to confirm that OpenIM is integrated correctly. Before starting, complete SDK initialization and sign-in in [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
+
+## Before you start
+
+- Prepare a test account for the sender and another for the receiver.
+- Initialize the SDK for both accounts as described in [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session). Register the following listener on the receiver before it signs in.
+- Replace `user_b` in the example with the receiver's actual `userID`.
+
+## Step 1: Listen for incoming messages on the receiver
+
+Register the message listener on the receiver before sign-in. When a message arrives, add it to the chat list or refresh the UI.
+
+```java
+OpenIMClient.getInstance()
+    .messageManager
+    .setAdvancedMsgListener(new OnAdvanceMsgListener() {
+        @Override
+        public void onRecvNewMessage(Message message) {
+            // Display message in the chat UI.
+        }
+    });
+```
+
+## Step 2: Confirm that sending is available
+
+After both accounts sign in, the sender can send only after its login callback succeeds and `OnConnListener.onConnectSuccess()` arrives. Keep the receiver connected so it can receive the new message. If a connection is not ready, wait for it to recover instead of calling `login()` again.
+
+## Step 3: Send a text message
+
+### Send a one-to-one text message
+
+Create the message, then send it. Put the receiver's `userID` in the user destination and leave the group destination empty.
+
+```java
+Message message = OpenIMClient.getInstance()
+    .messageManager
+    .createTextMessage("Hello, OpenIMSDK");
+
+OnMsgSendCallback sendCallback = new OnMsgSendCallback() {
+    @Override
+    public void onProgress(long progress) {
+        // Text messages usually do not need progress handling.
+    }
+
+    @Override
+    public void onError(int code, String error) {
+        // Tell the user that sending failed and allow a retry.
+    }
+
+    @Override
+    public void onSuccess(Message sentMessage) {
+        // Update the sender's chat UI with sentMessage.
+    }
+};
+
+OpenIMClient.getInstance().messageManager.sendMessage(
+    sendCallback,
+    message,
+    "user_b",
+    "",
+    new OfflinePushInfo()
+);
+```
+
+`OfflinePushInfo` configures offline-push content. For this first test, pass an empty object and add a title, summary, or extra data later if needed.
+
+`onSuccess()` means the sender has sent the message successfully. `onRecvNewMessage()` on the receiver means the other side received it. Both callbacks should arrive before considering this one-to-one test complete.
+
+### Send a group text message
+
+To send a group message, leave the receiver `userID` empty and provide the group's `groupID`:
+
+```java
+Message groupMessage = OpenIMClient.getInstance()
+    .messageManager
+    .createTextMessage("Hello, OpenIMSDK");
+
+OpenIMClient.getInstance().messageManager.sendMessage(
+    sendCallback,
+    groupMessage,
+    "",
+    "group_123",
+    new OfflinePushInfo()
+);
+```
+
+Set either `userID` or `groupID` in a single call, never both.
+
+## Verify success
+
+- The sender's `sendMessage()` call triggers the `onSuccess()` callback.
+- The receiver enters `onRecvNewMessage()` and sees the text message.
+
+## Next steps
+
+- [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session)
+- [OpenIM Android SDK overview](/sdk/android/overview)

@@ -1,0 +1,68 @@
+---
+title: '获取指定用户资料'
+description: '按 userID 批量查询应用用户公开资料（PublicUserInfo）。'
+sourcePath: '/sdk/android/user/user-profile/get-users-info'
+---
+
+`getUsersInfo()` 按 `userID` 查询应用用户的公开资料，适合展示好友候选人和陌生人资料卡。
+
+## 查询公开资料
+
+调用 `getUsersInfo()` 并传入要查询的用户 ID 列表，即可获取这些用户的公开资料。调用前应去除空值和重复 ID，并控制单次请求数量。
+
+```java
+List<String> userIDs = Arrays.asList("user_a", "user_b");
+
+OpenIMClient.getInstance().userInfoManager.getUsersInfo(
+    new OnBase<List<PublicUserInfo>>() {
+        @Override
+        public void onSuccess(List<PublicUserInfo> users) {
+            // 使用 users 显示用户资料
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理错误
+        }
+    },
+    userIDs
+);
+```
+
+`userIDs` 是要查询的用户 ID 列表。成功 callback 返回 `List<PublicUserInfo>`。
+
+### 返回结果
+
+| 字段 | 说明 |
+| --- | --- |
+| `userID` | 用户 ID。 |
+| `nickname` | 账号公开昵称。 |
+| `faceURL` | 账号公开头像地址。 |
+| `ex` | 账号公开扩展字符串，格式由业务约定。 |
+| `createTime` | 用户资料创建时间。 |
+
+这里返回的 `ex` 用于读取用户的公开扩展资料。当前用户自己的扩展资料通过[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)修改。
+
+## 搜索添加好友
+
+当业务已经获得候选用户的 `userID` 时，可以先调用 `getUsersInfo()` 展示公开资料，用户确认后再通过[发送好友申请](/sdk/android/user/friend-applications/add-friend)向目标用户发起申请。
+
+`getUsersInfo()` 只按 `userID` 查询公开资料；昵称、手机号等其他条件的用户搜索不属于该 API。
+
+## 按场景选择展示数据
+
+同一个 `userID` 在不同场景中使用不同的资料类型：
+
+| 场景 | 使用的类型 |
+| --- | --- |
+| 用户搜索、陌生人资料卡 | `PublicUserInfo` |
+| 好友列表、联系人页和好友备注 | `FriendInfo` |
+| 群成员列表、群内昵称和群角色 | `GroupMembersInfo` |
+
+好友资料使用[查询指定好友资料](/sdk/android/user/friends/get-friends-info)，群成员资料使用[分页查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)。
+
+## 下一步
+
+- [分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)
+- [查询指定好友资料](/sdk/android/user/friends/get-friends-info)
+- [获取收到的好友申请](/sdk/android/user/friend-applications/get-recv-friend-application-list)

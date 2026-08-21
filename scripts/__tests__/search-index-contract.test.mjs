@@ -14,11 +14,12 @@ function page(path, en, zh) {
 }
 
 test('expects non-client routes and only locale-published client SDK routes', () => {
-  const nonWasm = { path: '/sdk/android/overview', contextKey: 'chat/sdk/android' };
+  const android = { path: '/sdk/android/overview', contextKey: 'chat/sdk/android' };
   const pending = { path: '/sdk/wasm/pending', contextKey: 'chat/sdk/wasm' };
   const enOnly = { path: '/sdk/wasm/en', contextKey: 'chat/sdk/wasm' };
   const zhOnly = { path: '/sdk/wasm/zh', contextKey: 'chat/sdk/wasm' };
   const auditPages = new Map([
+    [android.path, page(android.path, 'published', 'published')],
     [pending.path, page(pending.path, 'deferred', 'written')],
     [enOnly.path, page(enOnly.path, 'published', 'deferred')],
     [zhOnly.path, page(zhOnly.path, 'deferred', 'published')],
@@ -26,11 +27,11 @@ test('expects non-client routes and only locale-published client SDK routes', ()
 
   assert.deepEqual(
     validateSearchIndexPaths({
-      routes: [nonWasm, pending, enOnly, zhOnly],
+      routes: [android, pending, enOnly, zhOnly],
       auditPages,
       indexes: {
-        en: [{ path: nonWasm.path }, { path: enOnly.path }],
-        zh: [{ path: nonWasm.path }, { path: zhOnly.path }],
+        en: [{ path: android.path }, { path: enOnly.path }],
+        zh: [{ path: android.path }, { path: zhOnly.path }],
       },
     }),
     [],
