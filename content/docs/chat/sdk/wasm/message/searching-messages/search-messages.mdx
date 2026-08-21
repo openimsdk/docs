@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/searching-messages/search-messages'
@@ -84,7 +84,7 @@ If the search interface supports images, files, or custom messages, include the 
 | --- | --- | --- | --- |
 | `conversationID` | `string` | Yes | ID of the conversation to search. |
 | `keywordList` | `string[]` | Yes | Search keywords. For a single search box, usually pass one normalized keyword. |
-| `keywordListMatchType` | `number` | No | Match mode for multiple keywords, using the SDK's numeric convention. Omit it when no special matching behavior is needed. |
+| `keywordListMatchType` | `number` | No | Multiple-keyword match mode: `0` matches any keyword (OR), while `1` requires all keywords (AND). Omission is treated as `0`. |
 | `senderUserIDList` | `string[]` | No | Search only messages sent by these users. |
 | `messageTypeList` | `MessageType[]` | No | Search only specified message types, such as text and @ mention messages. |
 | `searchTimePosition` | `number` | No | Search end position as a Unix timestamp in seconds. |
@@ -108,8 +108,8 @@ Each `SearchMessageResultItem` has the following structure:
 | --- | --- | --- |
 | `conversationID` | `string` | ID of the conversation containing the result. |
 | `conversationType` | `SessionType` | Type of the conversation containing the result. |
-| `showName` | `string` | Snapshot of the conversation's display name. |
-| `faceURL` | `string` | Snapshot of the conversation's avatar URL. |
+| `showName` | `string` | Conversation display name recorded in the search result. |
+| `faceURL` | `string` | Conversation avatar URL recorded in the search result. |
 | `messageCount` | `number` | Number of matching messages in this result item. |
 | `messageList` | `MessageItem[]` | Matching messages. For field descriptions, see [Message overview](/sdk/wasm/message/overview-message). |
 
@@ -134,7 +134,7 @@ const toSearchRows = (result: SearchMessageResult) => {
 
 For subsequent pages, keep `conversationID`, `keywordList`, and all filters unchanged and increment only `pageIndex`. If the user changes the keywords, member filter, or time range, reset `pageIndex` to `1` and clear old results so results from different criteria are not mixed.
 
-When the `searchLocalMessages()` Promise resolves, use its return value to establish the search result snapshot. The query does not trigger message events. Within one search view, deduplicate by `conversationID + clientMsgID`; do not persist a selected result by its array position.
+When the `searchLocalMessages()` Promise resolves, use its return value to display the results of that search. The query does not trigger message events. Within one search view, deduplicate by `conversationID + clientMsgID`; do not persist a selected result by its array position.
 
 ## Handle changes to search results
 
@@ -142,7 +142,7 @@ A matched message may be revoked or deleted while the search view is open, and n
 
 When navigating to a search result, use its `conversationID` and `clientMsgID` to locate the target conversation and message. To display the surrounding chat history, use the matched `MessageItem` as the anchor for a context query. For parameters, an example, and the result structure, see [Load message context](/sdk/wasm/message/retrieving-messages/load-message-context). Do not use `findMessageList()` to assemble nearby history.
 
-To refresh results at the current point in time, run the current page again with the same criteria. The search Promise, incremental message events, and a re-query are three independent paths. After a new login, message changes are synchronized through events.
+To refresh results at the current point in time, run the current page again with the same criteria. The search Promise, list changes caused by message events, and running the search again are three independent paths. After a new login or reconnection, first rerun the same search to obtain the current results, then use later message events to update the page.
 
 ## Related pages
 

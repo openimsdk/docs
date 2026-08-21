@@ -11,8 +11,39 @@ platform: 'android'
 sourcePath: '/sdk/android/message/retrieving-messages/load-older-messages'
 ---
 
-Pass `null` for `startMsg` on the first query. For each subsequent page, use the boundary message from the previous page as the starting point. Use `ViewType.History` for ordinary history loading and deduplicate returned messages by `clientMsgID`.
+`getAdvancedHistoryMessageList()` reads earlier messages from a conversation by page. Omit the starting message on the first request. For each subsequent page, use the last message from the previous result as the new starting point.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Conversation whose history is being loaded. |
+| `startMsg` | `Message` | No | Page anchor. Pass `null` initially, then the last message from the previous page. |
+| `count` | `int` | Yes | Maximum number of messages to load; the example uses `20`. |
+| `viewType` | `ViewType` | Yes | Pass `ViewType.History` for ordinary history loading. |
 
 ```java
-messageManager.getAdvancedHistoryMessageList(callback, conversationID, startMessage, 20, ViewType.History);
+OpenIMClient.getInstance().messageManager.getAdvancedHistoryMessageList(
+    new OnBase<AdvancedMessage>() {
+        @Override
+        public void onSuccess(AdvancedMessage result) {
+            List<Message> messages = result.getMessageList();
+            boolean reachedBeginning = result.isEnd();
+            // Deduplicate by clientMsgID, then prepend messages to the current list.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Keep the current list and report that this page failed to load.
+        }
+    },
+    conversationID,
+    startMessage,
+    20,
+    ViewType.History
+);
 ```
+
+## Result
+
+The success callback returns `AdvancedMessage`. `messageList` contains this page of messages, and `isEnd` indicates whether the beginning of the available history has been reached. `errCode` and `errMsg` carry the business status included in the result object. This query does not trigger a new-message event.

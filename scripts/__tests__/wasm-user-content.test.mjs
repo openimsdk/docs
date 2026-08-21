@@ -66,7 +66,7 @@ test('friend search documents required switches and the data type', () => {
   assert.match(source, /当前只使用一个非空关键词/);
   assert.match(source, /结果是 `SearchFriendsResultItem\[\]`/);
   assert.doesNotMatch(source, /WsResponse<SearchFriendsResultItem\[\]>/);
-  assert.match(source, /不要覆盖完整好友列表/);
+  assert.match(source, /不要.*覆盖完整好友列表/);
 });
 
 test('blacklist pages use real fields and explain asymmetric message behavior', () => {
@@ -124,7 +124,7 @@ test('profile updates restrict editable fields and separate refresh errors', () 
   assert.match(source, /nickname.*faceURL.*ex/);
   assert.match(source, /设置全局消息接收方式/);
   assert.match(source, /Promise 成功表示设置请求完成/);
-  assert.match(source, /最终资料通过 `OnSelfInfoUpdated` 或 `getSelfUserInfo\(\)` 校准/);
+  assert.match(source, /等待 `OnSelfInfoUpdated`，或重新调用 `getSelfUserInfo\(\)` 并以查询结果为准/);
 });
 
 test('global message reception omits the reserved NotReceive value', () => {

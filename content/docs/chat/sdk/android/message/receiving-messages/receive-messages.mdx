@@ -11,11 +11,31 @@ platform: 'android'
 sourcePath: '/sdk/android/message/receiving-messages/receive-messages'
 ---
 
-After calling `setAdvancedMsgListener()`, `onRecvNewMessage` receives real-time messages, `onRecvOfflineNewMessage` receives offline batches, and `onRecvOnlineOnlyMessage` receives online-only messages.
+`OnAdvanceMsgListener` receives real-time messages, offline batches, online-only messages, revocations, deletions, and read receipts. The Android SDK retains only one advanced message listener. Set it once in the application-level message state layer before sign-in; do not replace it from an Activity, Fragment, or chat screen.
 
 ```java
-messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
-    @Override public void onRecvNewMessage(Message message) { /* message is the newly received message. */ }
-    @Override public void onRecvOfflineNewMessage(List<Message> messages) { /* messages contains offline messages. */ }
-});
+private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
+    @Override
+    public void onRecvNewMessage(Message message) {
+        mergeMessage(message);
+    }
+
+    @Override
+    public void onRecvOfflineNewMessage(List<Message> messages) {
+        for (Message message : messages) {
+            mergeMessage(message);
+        }
+    }
+
+    @Override
+    public void onRecvOnlineOnlyMessage(Message message) {
+        handleOnlineOnlyMessage(message);
+    }
+};
+
+OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(messageListener);
 ```
+
+For ordinary and offline messages, determine the target conversation from `sessionType`, `sendID`, `recvID`, and `groupID`, then insert or replace by `clientMsgID`. Online-only messages are temporary and should not be inserted into a message list that requires offline recovery.
+
+The Android SDK does not expose a method to remove this listener. On logout or account switch, stop writing old callbacks into UI state and set the complete listener for the new account before its next sign-in. The corresponding operation pages describe revocation, deletion, modification, and read events.

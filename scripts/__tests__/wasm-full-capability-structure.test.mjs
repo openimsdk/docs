@@ -43,6 +43,20 @@ test('active Chinese WASM pages use the operation-level parameter vocabulary', (
   }
 });
 
+test('WASM cross-page links use task descriptions instead of method names', () => {
+  const methodOnlyLink = /\[(?:`)?[A-Za-z_$][A-Za-z0-9_$]*\(\)(?:`)?\]\(\/sdk\/wasm\//;
+
+  for (const path of activePages) {
+    for (const [locale, file] of [
+      ['en', enContentFile(path)],
+      ['zh', zhContentFile(path)],
+    ]) {
+      const source = readFileSync(file, 'utf8');
+      assert.doesNotMatch(source, methodOnlyLink, `${locale}:${path}`);
+    }
+  }
+});
+
 test('speech transcription stores its result in local sound message content', () => {
   const source = readFileSync(
     'content/zh/docs/chat/sdk/wasm/message/composing-messages/save-local-transcript.mdx',
@@ -113,7 +127,7 @@ test('call recovery and logging match the reviewed WASM behavior', () => {
   assert.match(callRetrieval, /参数是群组 ID，不是自定义 `roomID`/);
   assert.match(logger, /operationID/);
   assert.match(logger, /自动生成 UUID/);
-  assert.match(logger, /不是用户身份、权限凭据、会话 ID 或业务幂等键/);
+  assert.match(logger, /不是用户身份、权限凭据、会话 ID，也不是业务侧用于防止重复处理的 ID/);
   assert.match(logger, /LogLevel\.Panic.*回退为 `Debug`|会被当成假值并回退为 `Debug`/);
   assert.doesNotMatch(otherSource, /\boperationID\b/);
   assert.doesNotMatch(logger, /OnUploadLogsProgress|日志上传进度/);

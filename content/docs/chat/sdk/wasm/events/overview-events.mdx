@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/events/overview-events'
@@ -15,9 +15,9 @@ The WASM SDK publishes connection, synchronization, user, friend, conversation, 
 
 ## Register and remove events
 
-Keep stable references to handler functions. When cleaning up, pass the same event enum value and function reference used during registration to `off()`. The complete implementation for each event appears only on its canonical page linked below; this overview does not repeat events from other domains merely to demonstrate the general pattern.
+Keep stable references to handler functions. When cleaning up, pass the same event enum value and function reference used during registration to `off()`. The complete implementation for each event is provided on the corresponding page linked below; this overview does not repeat events from other features merely to demonstrate the general pattern.
 
-An event callback usually contains `data`, `errCode`, and `errMsg`. Validate `errCode`, merge `data` idempotently into application state, and include the event name and necessary business identifiers in error logs.
+An event callback usually contains `data`, `errCode`, and `errMsg`. Validate `errCode`, use the business ID in `data` to find and update the matching record, and ignore duplicate events. Include the event name and necessary business identifiers in error logs.
 
 ## Choose when to register
 
@@ -79,8 +79,8 @@ function removeSyncListeners() {
 }
 ```
 
-`OnSyncServerStart` enters the synchronizing state, and its `data` value indicates whether synchronization follows a reinstall or equivalent local database rebuild. When it is `true`, there is usually no usable local cache, so the interface can show a more complete synchronization guide or full-data loading notice. When it is `false`, synchronization is generally incremental. `OnSyncServerProgress.data` is the current progress value. The finish and failure events do not carry the reinstall boolean in the WASM declarations; they only mark the current synchronization as complete or failed. These events describe the SDK synchronization lifecycle, not the Promise callback of a particular query API, and they have no business-entity merge key. Isolate their state by SDK instance and signed-in user.
+`OnSyncServerStart` enters the synchronizing state, and its `data` value indicates whether synchronization follows a reinstall or equivalent local database rebuild. When it is `true`, there is usually no usable local cache, so the interface can show a more complete synchronization guide or full-data loading notice. When it is `false`, the SDK usually synchronizes only changes made since the previous sign-in. `OnSyncServerProgress.data` is the current progress value. The finish and failure events do not carry the reinstall boolean in the WASM declarations; they only mark the current synchronization as complete or failed. These events describe the SDK's overall synchronization process, not the Promise callback of a particular query API, and they do not correspond to an individual user, conversation, or message record. Isolate their state by SDK instance and signed-in user.
 
-This page is the canonical listener reference for all four synchronization events. Call `removeSyncListeners()` when logging out, changing accounts, or destroying the SDK scope.
+This page provides the complete listener examples for all four synchronization events. Call `removeSyncListeners()` when logging out, changing accounts, or destroying the SDK scope.
 
-Data can continue changing after synchronization completes. Query the snapshots required by the current interface again, then keep the same state layer up to date through the incremental events owned by each domain page.
+Data can continue changing after synchronization completes. Retrieve the data required by the current interface again, then keep the interface current through the events described on each feature page.

@@ -4,8 +4,39 @@ description: '使用 getAdvancedHistoryMessageList 分页加载会话历史消�
 sourcePath: '/sdk/android/message/retrieving-messages/load-older-messages'
 ---
 
-首次查询传 `startMsg` 为 `null`，后续将上一页边界消息作为起点。普通历史消息使用 `ViewType.History`，按返回的 `clientMsgID` 去重。
+`getAdvancedHistoryMessageList()` 从指定会话中向更早的时间方向分页读取消息。首次查询不指定起点；继续加载时，将上一页最后一条消息作为新的起点。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 要读取历史消息的会话 ID。 |
+| `startMsg` | `Message` | 否 | 分页起点。首次传 `null`，后续传上一页最后一条消息。 |
+| `count` | `int` | 是 | 本次最多读取的消息数，示例为 `20`。 |
+| `viewType` | `ViewType` | 是 | 普通历史消息传 `ViewType.History`。 |
 
 ```java
-messageManager.getAdvancedHistoryMessageList(callback, conversationID, startMessage, 20, ViewType.History);
+OpenIMClient.getInstance().messageManager.getAdvancedHistoryMessageList(
+    new OnBase<AdvancedMessage>() {
+        @Override
+        public void onSuccess(AdvancedMessage result) {
+            List<Message> messages = result.getMessageList();
+            boolean reachedBeginning = result.isEnd();
+            // 按 clientMsgID 去重后，将 messages 添加到当前列表前方。
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 保留当前列表，并提示本次加载失败。
+        }
+    },
+    conversationID,
+    startMessage,
+    20,
+    ViewType.History
+);
 ```
+
+## 返回结果
+
+成功回调返回 `AdvancedMessage`。`messageList` 是本页消息，`isEnd` 表示是否已经到达历史消息起点；`errCode` 和 `errMsg` 是结果对象携带的业务状态。历史查询只读取消息，不会触发新消息事件。

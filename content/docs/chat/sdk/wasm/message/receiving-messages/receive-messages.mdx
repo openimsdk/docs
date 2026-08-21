@@ -1,11 +1,11 @@
 ---
 title: 'Receive messages'
-description: 'Listen for online, offline, and online-only messages and merge them into conversations by clientMsgID.'
+description: 'Listen for online, offline, and online-only messages and update the corresponding conversations.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/receiving-messages/receive-messages'
@@ -13,7 +13,7 @@ sourcePath: '/sdk/wasm/message/receiving-messages/receive-messages'
 
 A message view typically handles real-time messages, messages that arrive while the application is in the background, online-only messages, and history loaded when the user first opens a conversation. Incoming messages enter application state through `SdkEvent`; history is loaded page by page for a `conversationID` through `getAdvancedHistoryMessageList()`.
 
-Register event handlers on the same SDK instance. Before a component unmounts, the user logs out, or the active account changes, call `off()` with the same function references to prevent the same messages from being merged more than once.
+Register event handlers on the same SDK instance. Before a component unmounts, the user logs out, or the active account changes, call `off()` with the same function references to prevent the same messages from being processed more than once.
 
 ## Message types
 
@@ -53,13 +53,13 @@ function messagesForCurrentConversation(messages: MessageItem[]) {
 
 ### Image, audio, video, and file messages
 
-The WASM SDK represents images, audio, video, and ordinary files with different message elements. The receiving client does not upload these resources again. Read the existing URL, size, filename, duration, or snapshot fields from the message and render them according to your interface rules.
+The WASM SDK represents images, audio, video, and ordinary files with different message elements. The receiving client does not upload these resources again. Read the existing URL, size, filename, duration, or video-thumbnail fields from the message and render them according to your interface rules.
 
-To send multiple files in one action, an application commonly sends several file messages in sequence or sends a custom message containing a file-group payload. In either case, the receiving client should use each `MessageItem`'s `clientMsgID` as the stable key for rendering and state updates.
+To send multiple files in one action, an application commonly sends several file messages in sequence or sends a custom message containing a file group. In either case, the receiving client should use each `MessageItem`'s `clientMsgID` to find the matching message when rendering or updating it.
 
 ## Event handlers
 
-`SdkEvent.OnRecvNewMessages` is the primary new-message event for a chat view. In its handler, merge messages for the current conversation into the list and decide whether to scroll to the bottom based on the user's current scroll position.
+`SdkEvent.OnRecvNewMessages` is the primary new-message event for a chat view. In its handler, add messages for the current conversation to the list and decide whether to scroll to the bottom based on the user's current scroll position.
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
@@ -104,15 +104,15 @@ function removeMessageListeners() {
 }
 ```
 
-The SDK also exports the singular `OnRecvNewMessage` and `OnRecvOfflineNewMessage` events. For ordinary and offline messages, new code should prefer the plural events, which return `MessageItem[]` and allow one consistent batch-merge flow. Online-only messages use the canonical singular `OnRecvOnlineOnlyMessage` event. When maintaining an older deployment that emits ordinary or offline messages only through singular events, wrap `data` in an array and reuse the same deduplication logic. Do not listen to both singular and plural variants for the same message category, or the application may insert messages twice.
+The SDK also exports the singular `OnRecvNewMessage` and `OnRecvOfflineNewMessage` events. For ordinary and offline messages, new code should prefer the plural events, which return `MessageItem[]` and allow one consistent batch-processing flow. Online-only messages use the supported singular `OnRecvOnlineOnlyMessage` event. When maintaining an older deployment that emits ordinary or offline messages only through singular events, wrap `data` in an array and reuse the same deduplication logic. Do not listen to both singular and plural variants for the same message category, or the application may insert messages twice.
 
-This page is the canonical reference for these receive-message events. The ordinary and offline events provide `MessageItem[]`, while the online-only event provides one `MessageItem`. Determine the target conversation from the message routing fields, then merge idempotently by target conversation and `clientMsgID`. Call `removeMessageListeners()` when the component unmounts, the user logs out, or the active account changes.
+The complete listeners for these receive-message events are provided on this page. The ordinary and offline events provide `MessageItem[]`, while the online-only event provides one `MessageItem`. Determine the target conversation from the message routing fields, then use the target conversation and `clientMsgID` to find and update the matching message. Do not insert a second copy for a duplicate event. Call `removeMessageListeners()` when the component unmounts, the user logs out, or the active account changes.
 
 When a conversation member revokes a message, the receiving client gets the update through `SdkEvent.OnNewRecvMessageRevoked`. Update the corresponding bubble to a revoked state instead of removing it from the list. For the handler and cleanup implementation, see [Revoke a message](/sdk/wasm/message/managing-messages/revoke-a-message).
 
 ## Load history when opening a conversation
 
-Events deliver only newly arrived messages. When a user first opens a conversation, pages upward, or needs to fill a gap created while disconnected, load a separate history snapshot. For pagination parameters, an example, and the `AdvancedMessageListResult` structure, see [Load message history](/sdk/wasm/message/retrieving-messages/load-older-messages).
+Events deliver only newly arrived messages. When a user first opens a conversation, pages upward, or needs to fill a gap created while disconnected, load message history separately. For pagination parameters, an example, and the `AdvancedMessageListResult` structure, see [Load message history](/sdk/wasm/message/retrieving-messages/load-older-messages).
 
 A history query does not trigger a new-message event. Because an event and a paginated result can contain the same message, both paths must use the same `clientMsgID` deduplication rule.
 
@@ -122,7 +122,7 @@ After the user opens a group conversation and sees its latest messages, you can 
 
 For final synchronization of the conversation list and total unread badge, use the event handlers on [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list) and [Maintain the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count), respectively.
 
-If message events are registered in a global state layer, do not register the same global handlers again each time the user opens a group chat view. Load bounded history only when the view needs a current snapshot. After a new login, message changes are synchronized through events; do not treat an event as the completion callback for a particular history query or mark-as-read call.
+If message events are registered in a global state layer, do not register the same global handlers again each time the user opens a group chat view. When a conversation is opened for the first time, or after a new login or reconnection, load the required history pages first, then merge later message changes from events into that list. Do not treat an event as the completion callback for a particular history query or mark-as-read call.
 
 ## Verify the receive flow
 

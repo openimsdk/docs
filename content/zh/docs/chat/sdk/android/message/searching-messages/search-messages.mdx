@@ -4,9 +4,47 @@ description: '使用 searchLocalMessages 搜索当前账号已同步到本地的
 sourcePath: '/sdk/android/message/searching-messages/search-messages'
 ---
 
-可按会话、关键词、发送者、消息类型、时间范围和分页参数搜索。`conversationID` 传 `null` 表示全局搜索。
+`searchLocalMessages()` 搜索当前账号已经同步到本设备的消息，不会请求业务后端的全局索引。可以限定会话、关键词、发送者、消息类型和时间范围；`conversationID` 传 `null` 时搜索全部本地会话。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 否 | 限定会话；传 `null` 表示搜索全部本地会话。 |
+| `keywordList` | `List<String>` | 是 | 非空关键词列表。 |
+| `keywordListMatchType` | `int` | 是 | 关键词匹配方式；按 SDK 枚举选择全部匹配或任一匹配。 |
+| `senderUserIDList` | `List<String>` | 否 | 只搜索这些用户发送的消息；不限制时传空列表。 |
+| `messageTypeList` | `List<Integer>` | 否 | 只搜索指定消息类型；不限制时传空列表。 |
+| `searchTimePosition` | `int` | 是 | 搜索时间起点；`0` 表示不限定起点。 |
+| `searchTimePeriod` | `int` | 是 | 从起点向过去搜索的秒数；`0` 表示不限制时间范围。 |
+| `pageIndex` | `int` | 是 | 页码，第一页传 `0`。 |
+| `count` | `int` | 是 | 每页最多返回的结果数。 |
 
 ```java
-messageManager.searchLocalMessages(callback, conversationID, keywords, 1,
-    senderIDs, messageTypes, 0, 0, 0, 20);
+OpenIMClient.getInstance().messageManager.searchLocalMessages(
+    new OnBase<SearchResult>() {
+        @Override
+        public void onSuccess(SearchResult result) {
+            // result.getSearchResultItems() 按会话组织匹配消息。
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 保留原搜索结果并提示失败。
+        }
+    },
+    conversationID,
+    keywords,
+    1,
+    senderIDs,
+    messageTypes,
+    0,
+    0,
+    0,
+    20
+);
 ```
+
+## 返回结果
+
+成功回调返回 `SearchResult`。`totalCount` 是匹配消息总数，`searchResultItems` 按会话提供 `conversationID`、显示名称、头像、匹配数量和消息列表。搜索结果仅用于当前查询界面，不应覆盖会话中的完整消息列表，也不会触发消息事件。

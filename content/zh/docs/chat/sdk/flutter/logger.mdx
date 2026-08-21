@@ -1,6 +1,6 @@
 ---
 title: '日志'
-description: '配置 OpenIM Flutter SDK 日志，并使用 operationID 定位调用链路。'
+description: '配置 OpenIM Flutter SDK 日志，写入应用诊断信息并上传日志。'
 sourcePath: '/sdk/flutter/logger'
 ---
 
@@ -69,27 +69,3 @@ await OpenIM.iMManager.uploadLogs(ex: 'user initiated diagnostics');
 `setUploadLogsListener()` 保存的是 manager 级 singleton listener，后一次设置会覆盖前一次。固定 SDK 没有 remove 或 unset API，因此应在应用统一的 SDK 绑定层设置一次，并由该层把进度分发给当前界面；不要在每个页面或组件重复设置。退出登录或切换账号时，清空应用层订阅和上一账号的上传状态，避免进度或错误显示到新账号界面。
 
 上传前应向用户说明收集范围，并按隐私与合规要求处理日志。
-
-## 使用 operationID 定位调用
-
-`operationID` 是单次 SDK 调用的链路标识。Flutter SDK 多数方法把它作为可选命名参数；省略时 `Utils.checkOperationID()` 会生成 UUID。仅在需要与 OpenIMServer 日志精确对应时显式传入，每次调用使用新的值。
-
-```dart
-final operationID = createUniqueTraceID();
-try {
-  await OpenIM.iMManager.conversationManager.getConversationListSplit(
-    offset: 0,
-    count: 50,
-    operationID: operationID,
-  );
-} catch (error) {
-  appLogger.error('openim_api_failed', {
-    'operationID': operationID,
-    'action': 'get_conversation_page',
-    'error': error.toString(),
-  });
-  rethrow;
-}
-```
-
-示例中的 `createUniqueTraceID()` 代表应用已有的唯一追踪 ID 生成器；无需为了日志额外引入依赖，也可以直接省略 `operationID`。它不是身份凭据、业务幂等键或 `conversationID`，不能替代 Token 和业务标识。

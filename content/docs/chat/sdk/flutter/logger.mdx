@@ -1,6 +1,6 @@
 ---
 title: 'Logging'
-description: 'Configure OpenIM Flutter SDK logs and use operationID to trace a call.'
+description: 'Configure OpenIM Flutter SDK logs, write application diagnostics, and upload logs.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -76,27 +76,3 @@ await OpenIM.iMManager.uploadLogs(ex: 'user initiated diagnostics');
 `setUploadLogsListener()` stores a manager-level singleton listener, so a later call replaces the earlier one. The pinned SDK does not expose a remove or unset API. Configure it once in the application's shared SDK binding layer and dispatch progress from there to the active UI; do not configure it separately in every screen or component. On sign-out or account switch, clear application-level subscriptions and the previous account's upload state so progress and errors cannot appear in the new account's UI.
 
 Before uploading, explain to the user what is collected and process logs according to applicable privacy and compliance requirements.
-
-## Use `operationID` to trace a call
-
-`operationID` identifies the call chain for one SDK request. Most Flutter SDK methods expose it as an optional named parameter. When omitted, `Utils.checkOperationID()` generates a UUID. Pass one explicitly only when you need to correlate the call precisely with OpenIMServer logs, and use a new value for every call.
-
-```dart
-final operationID = createUniqueTraceID();
-try {
-  await OpenIM.iMManager.conversationManager.getConversationListSplit(
-    offset: 0,
-    count: 50,
-    operationID: operationID,
-  );
-} catch (error) {
-  appLogger.error('openim_api_failed', {
-    'operationID': operationID,
-    'action': 'get_conversation_page',
-    'error': error.toString(),
-  });
-  rethrow;
-}
-```
-
-`createUniqueTraceID()` represents an existing unique trace-ID generator in your application. You do not need to add a dependency solely for logging, and you can simply omit `operationID`. It is not a credential, a business idempotency key, or a `conversationID`, and it cannot replace a token or business identifier.

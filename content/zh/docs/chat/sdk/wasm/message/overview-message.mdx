@@ -14,8 +14,8 @@ WASM SDK 使用 `MessageItem` 表示一条消息。发送消息分为两个阶�
 | --- | --- | --- |
 | 创建 | 调用对应的 `create*Message()` 方法 | 返回待发送的 `MessageItem`，不会写入服务端或触发新消息事件。 |
 | 发送 | 调用 `sendMessage()` 或 `sendMessageNotOss()` | 单聊填写 `recvID`，群聊填写 `groupID`；另一个目标字段传空字符串。 |
-| 接收 | 监听新消息事件 | 根据消息路由字段确定目标会话，再按 `clientMsgID` 幂等合并。 |
-| 查询 | 读取历史、搜索或按 ID 定位消息 | 查询返回调用时的快照，不触发新消息事件。 |
+| 接收 | 监听新消息事件 | 根据消息路由字段确定目标会话，再用 `clientMsgID` 找到并更新对应消息；重复事件不应插入第二条消息。 |
+| 查询 | 读取历史、搜索或按 ID 定位消息 | 查询返回调用时可读取到的数据，不触发新消息事件。 |
 | 更新 | 删除、撤回、修改、置顶或上报已读状态 | 分别处理 Promise 结果、相关事件和必要的重新查询。 |
 
 从浏览器 `File` 创建的图片、音频、视频和文件消息，通过 `sendMessage()` 进入 SDK 内置上传与发送流程。媒体资源已经由业务上传服务取得 URL 时，先使用对应的 `create*MessageByURL()` 创建消息，再通过 `sendMessageNotOss()` 发送，避免重复上传。
@@ -33,14 +33,14 @@ WASM SDK 使用 `MessageItem` 表示一条消息。发送消息分为两个阶�
 | `recvID` | `string`（可选） | 单聊接收方用户 ID；群聊消息通常为空。 |
 | `groupID` | `string`（可选） | 群聊对应的群组 ID；单聊消息通常为空。 |
 | `contentType` | `MessageType` | 消息内容类型，决定应读取哪个内容字段。 |
-| `createTime` | `number` | 消息对象创建时间。 |
-| `sendTime` | `number` | 消息发送时间，用于消息排序。 |
+| `createTime` | `number` | 消息对象创建时间，Unix 毫秒时间戳。 |
+| `sendTime` | `number` | 消息发送时间，Unix 毫秒时间戳，用于消息排序。 |
 | `seq` | `number` | 服务端消息序号；未发送成功的消息可能没有可用序号。 |
 | `senderPlatformID` | `Platform` | 发送消息的客户端平台。 |
-| `senderNickname` | `string`（可选） | 发送者昵称快照。 |
-| `senderFaceUrl` | `string`（可选） | 发送者头像快照。 |
+| `senderNickname` | `string`（可选） | 消息中记录的发送者昵称。 |
+| `senderFaceUrl` | `string`（可选） | 消息中记录的发送者头像地址。 |
 | `status` | `MessageStatus` | 当前发送状态：发送中、成功或失败。 |
-| `isRead` | `boolean` | 当前消息的已读状态快照。 |
+| `isRead` | `boolean` | 查询或接收该消息时记录的已读状态。 |
 | `offlinePush` | `OfflinePush`（可选） | 发送时使用的离线推送配置。 |
 | `content` | `string`（可选） | SDK 保留的序列化消息内容；渲染时优先读取与 `contentType` 对应的内容字段。 |
 | `attachedInfo` | `string`（可选） | SDK 附加信息；只按已确认的业务约定解析。 |
@@ -68,7 +68,7 @@ WASM SDK 使用 `MessageItem` 表示一条消息。发送消息分为两个阶�
 | 文本与 Markdown | [创建文本消息](/sdk/wasm/message/creating-messages/create-text-message)、[创建 Markdown 消息](/sdk/wasm/message/creating-messages/create-markdown-message) | Markdown 内容需要由接收端安全渲染。 |
 | 群聊 @ 消息 | [创建 @ 消息](/sdk/wasm/message/creating-messages/create-text-at-message) | 只能发送到群聊；会话中的 @ 提醒状态由会话数据维护。 |
 | 图片、音频、视频和文件 | [使用文件创建图片消息](/sdk/wasm/message/creating-messages/create-image-message-by-file)、[使用 URL 创建图片消息](/sdk/wasm/message/creating-messages/create-image-message-by-url) | 其他媒体类型采用相同的“本地文件”或“已上传 URL”路径。 |
-| 名片、位置与表情 | [创建名片消息](/sdk/wasm/message/creating-messages/create-card-message)、[创建位置消息](/sdk/wasm/message/creating-messages/create-location-message)、[创建表情消息](/sdk/wasm/message/creating-messages/create-face-message) | 创建时保存内容快照，不会随来源资料自动更新。 |
+| 名片、位置与表情 | [创建名片消息](/sdk/wasm/message/creating-messages/create-card-message)、[创建位置消息](/sdk/wasm/message/creating-messages/create-location-message)、[创建表情消息](/sdk/wasm/message/creating-messages/create-face-message) | 内容在创建消息时写入，不会随来源资料自动更新。 |
 | 回复、转发与合并 | [创建回复消息](/sdk/wasm/message/creating-messages/create-quote-message)、[创建转发消息](/sdk/wasm/message/creating-messages/create-forward-message)、[创建合并消息](/sdk/wasm/message/creating-messages/create-merger-message) | 创建结果仍需显式发送。 |
 | 自定义业务内容 | [创建自定义消息](/sdk/wasm/message/creating-messages/create-custom-message) | 适合承载需要同步给会话成员的结构化业务数据。 |
 
@@ -89,9 +89,9 @@ WASM SDK 使用 `MessageItem` 表示一条消息。发送消息分为两个阶�
 
 ## 状态同步边界
 
-消息事件的完整监听代码只保留在对应的归属页面：
+为避免重复注册同一事件，每类消息变化的完整监听代码集中在下列页面：
 
-| 变化 | 事件归属页面 | 合并方式 |
+| 变化 | 完整监听页面 | 收到事件后的处理方式 |
 | --- | --- | --- |
 | 新消息、离线消息和仅在线消息 | [接收消息](/sdk/wasm/message/receiving-messages/receive-messages) | 确定目标会话后按 `clientMsgID` 合并。 |
 | 消息删除 | [批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages) | 按目标会话和 `clientMsgID` 移除。 |
@@ -103,4 +103,4 @@ WASM SDK 使用 `MessageItem` 表示一条消息。发送消息分为两个阶�
 
 会话未读数、总未读数和群聊 @ 提醒属于会话状态，分别由[标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)、[维护总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)和[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)中的事件处理器维护。
 
-创建消息对象和纯查询操作只使用 Promise 返回值建立快照，不会触发共享消息事件。会改变状态的操作应分别处理 Promise 成功、事件到达和重新查询校准，不能将三个阶段视为同一结果。
+创建消息对象和纯查询操作只返回本次调用的结果，不会触发共享消息事件。对于会改变状态的操作，Promise 成功、相关事件到达，以及必要时重新查询最新数据是三个独立阶段，不能将它们视为同一个结果。

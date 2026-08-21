@@ -1,12 +1,12 @@
 ---
 title: '接收消息'
-description: '监听在线、离线与仅在线消息事件，并按 clientMsgID 合并到会话。'
+description: '监听在线、离线与仅在线消息事件，并将消息更新到对应会话。'
 sourcePath: '/sdk/wasm/message/receiving-messages/receive-messages'
 ---
 
 消息页通常同时处理实时推送的新消息、应用进入后台后到达的消息、只在线投递的消息，以及首次进入会话时主动读取的历史消息。消息到达通过 `SdkEvent` 进入应用状态；历史列表通过 `getAdvancedHistoryMessageList()` 按 `conversationID` 分页读取。
 
-在同一个 SDK 实例上注册事件处理器，并在组件卸载、退出登录或切换账号前用同一个函数引用调用 `off()`，避免同一批消息被重复合并。
+在同一个 SDK 实例上注册事件处理器，并在组件卸载、退出登录或切换账号前用同一个函数引用调用 `off()`，避免同一批消息被重复处理。
 
 ## 消息类型
 
@@ -46,13 +46,13 @@ function messagesForCurrentConversation(messages: MessageItem[]) {
 
 ### 图片、音频、视频和文件消息
 
-WASM SDK 使用不同的消息元素表示图片、音频、视频和普通文件。接收端无需重新上传文件，只需读取消息中已有的文件地址、大小、名称、时长或快照图等字段，并按界面规则展示。
+WASM SDK 使用不同的消息元素表示图片、音频、视频和普通文件。接收端无需重新上传文件，只需读取消息中已有的文件地址、大小、名称、时长或视频封面图等字段，并按界面规则展示。
 
-如果产品需要一次发送多个文件，常见实现是连续发送多条文件消息，或发送一条自定义消息承载文件组数据。接收端仍应以每条 `MessageItem` 的 `clientMsgID` 作为渲染和状态更新的稳定标识。
+如果产品需要一次发送多个文件，常见实现是连续发送多条文件消息，或发送一条自定义消息承载文件组数据。接收端渲染或更新消息时，应使用每条 `MessageItem` 的 `clientMsgID` 找到对应消息。
 
 ## 事件处理器
 
-`SdkEvent.OnRecvNewMessages` 是聊天页面最常用的新消息事件。处理器中把当前会话的消息合并到列表，并根据用户滚动位置决定是否自动滚到底部。
+`SdkEvent.OnRecvNewMessages` 是聊天页面最常用的新消息事件。处理器中把当前会话的消息加入列表，并根据用户滚动位置决定是否自动滚到底部。
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
@@ -97,15 +97,15 @@ function removeMessageListeners() {
 }
 ```
 
-SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。新代码对普通和离线消息优先使用返回 `MessageItem[]` 的复数事件，便于统一批量合并；只在线消息使用正式的单条事件 `OnRecvOnlineOnlyMessage`。维护旧项目时，如果普通或离线消息只触发单条事件，应把 `data` 包装成数组，再复用相同的去重流程；不要同时监听同类消息的单数和复数事件名称，以免重复插入消息。
+SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。新代码对普通和离线消息优先使用返回 `MessageItem[]` 的复数事件，便于统一批量处理；只在线消息使用正式的单条事件 `OnRecvOnlineOnlyMessage`。维护旧项目时，如果普通或离线消息只触发单条事件，应把 `data` 包装成数组，再复用相同的去重流程；不要同时监听同类消息的单数和复数事件名称，以免重复插入消息。
 
-本页是这些消息接收事件的归属页。普通和离线消息事件的 `data` 是 `MessageItem[]`，只在线消息事件的 `data` 是单个 `MessageItem`；都应先根据消息路由字段确定目标会话，再使用“目标会话 + `clientMsgID`”幂等合并。组件卸载、退出登录或切换账号时调用 `removeMessageListeners()`。
+这些消息接收事件的完整监听示例集中在本页。普通和离线消息事件的 `data` 是 `MessageItem[]`，只在线消息事件的 `data` 是单个 `MessageItem`；都应先根据消息路由字段确定目标会话，再用“目标会话 + `clientMsgID`”找到并更新对应消息。重复事件不应插入第二条消息。组件卸载、退出登录或切换账号时调用 `removeMessageListeners()`。
 
 当会话成员撤回消息时，接收端通过 `SdkEvent.OnNewRecvMessageRevoked` 得到更新。建议把对应气泡更新为撤回态，而不是直接从列表中删除；事件处理器和清理方式见[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)。
 
 ## 首次进入会话时读取历史
 
-事件只负责推送新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史快照。分页参数、调用示例和 `AdvancedMessageListResult` 结构见[加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)。
+事件只负责推送新到达的消息。首次进入会话、向上翻页或需要补齐断线期间的列表时，应另外读取历史消息。分页参数、调用示例和 `AdvancedMessageListResult` 结构见[加载历史消息](/sdk/wasm/message/retrieving-messages/load-older-messages)。
 
 历史查询不会触发新消息事件；事件和分页结果可能包含同一条消息，因此两条路径都必须使用相同的 `clientMsgID` 去重规则。
 
@@ -115,7 +115,7 @@ SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。
 
 会话列表和总未读角标分别通过[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)和[维护总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)中的事件处理器做最终同步。
 
-如果事件注册在全局消息状态层，不要在每次进入同一个群聊页面时重复注册全局处理器。需要显示当前会话的历史快照时，再读取边界历史；重新登录后的消息变化由事件同步，不要把事件到达视为某次历史查询或已读调用的完成回调。
+如果事件注册在全局消息状态层，不要在每次进入同一个群聊页面时重复注册全局处理器。首次进入会话、重新登录或重连后，先分页读取当前已有的历史消息，再把后续事件带来的消息变化合并到列表中；不要把事件到达视为某次历史查询或已读调用的完成回调。
 
 ## 验证接收流程
 

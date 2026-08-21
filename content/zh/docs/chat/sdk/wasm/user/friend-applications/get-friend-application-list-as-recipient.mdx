@@ -10,7 +10,7 @@ sourcePath: '/sdk/wasm/user/friend-applications/get-friend-application-list-as-r
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `handleResults` | `number[]` | 是 | 要查询的申请处理结果。 |
+| `handleResults` | `number[]` | 是 | 要查询的申请处理结果；传空数组表示不限制处理结果。 |
 | `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
 | `count` | `number` | 是 | 本次请求的申请数量。 |
 
@@ -41,25 +41,25 @@ Promise 成功后，`data` 是当前页 `FriendApplicationItem[]`；查询不会
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `fromUserID` | `string` | 申请发起人的用户 ID。 |
-| `fromNickname` | `string` | 申请发起人的昵称快照。 |
-| `fromFaceURL` | `string` | 申请发起人的头像快照。 |
+| `fromNickname` | `string` | 申请记录中保存的发起人昵称。 |
+| `fromFaceURL` | `string` | 申请记录中保存的发起人头像。 |
 | `toUserID` | `string` | 申请接收人的用户 ID。 |
-| `toNickname` | `string` | 申请接收人的昵称快照。 |
-| `toFaceURL` | `string` | 申请接收人的头像快照。 |
+| `toNickname` | `string` | 申请记录中保存的接收人昵称。 |
+| `toFaceURL` | `string` | 申请记录中保存的接收人头像。 |
 | `reqMsg` | `string` | 申请附言。 |
 | `handleResult` | `ApplicationHandleResult` | 当前处理结果：待处理、已同意或已拒绝。 |
 | `handlerUserID` | `string` | 执行处理的用户 ID；未处理时可能为空。 |
 | `handleMsg` | `string` | 处理时填写的说明。 |
-| `handleTime` | `number` | 处理时间；未处理时不应作为有效时间使用。 |
-| `createTime` | `number` | 申请记录创建时间。 |
+| `handleTime` | `number` | 处理时间，Unix 毫秒时间戳；未处理时不应作为有效时间使用。 |
+| `createTime` | `number` | 申请记录创建时间，Unix 毫秒时间戳。 |
 | `ex` | `string` | 申请记录扩展字符串。 |
 | `attachedInfo` | `string`（可选） | SDK 附加信息；只按已确认的业务约定解析。 |
 
-申请记录使用 `fromUserID:toUserID` 作为合并标识。昵称和头像是申请创建或同步时的快照，需要展示最新账号资料时再按 `userID` 查询。
+使用 `fromUserID:toUserID` 识别一条好友申请。昵称和头像记录的是申请创建或同步时的资料；需要展示最新账号资料时，再按 `userID` 查询。
 
 ## 同步好友申请变化
 
-好友申请按 `fromUserID:toUserID` 定位。本页是 `OnFriendApplicationAdded`、`OnFriendApplicationAccepted`、`OnFriendApplicationRejected` 和 `OnFriendApplicationDeleted` 的完整监听归属页。
+使用 `fromUserID:toUserID` 找到对应的好友申请。本页集中提供 `OnFriendApplicationAdded`、`OnFriendApplicationAccepted`、`OnFriendApplicationRejected` 和 `OnFriendApplicationDeleted` 的完整监听示例。
 
 ```ts
 const handleApplicationChanged = ({ data }) =>
@@ -104,4 +104,4 @@ function removeFriendApplicationListeners() {
 }
 ```
 
-按当前用户是否为 `toUserID`，将事件分流到收到或发出的列表。分页期间收到变化时重置分页；申请被同意后，新好友关系由[分页获取好友列表](/sdk/wasm/user/friends/get-friend-list-page)归属的 `OnFriendAdded` 合并。
+根据当前用户是否为 `toUserID`，将事件更新到收到或发出的申请列表。分页期间收到变化时应重置分页；申请被同意后，通过[分页获取好友列表](/sdk/wasm/user/friends/get-friend-list-page)说明的 `OnFriendAdded` 更新好友列表。

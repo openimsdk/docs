@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-recipient'
@@ -17,8 +17,8 @@ Group owners and administrators can call `getGroupApplicationListAsRecipient()` 
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `groupIDs` | `string[]` | Yes | IDs of the groups to query. |
-| `handleResults` | `number[]` | Yes | Application processing results to include. |
+| `groupIDs` | `string[]` | Yes | IDs of the groups to query. Pass an empty array to query every group the current user is authorized to manage. |
+| `handleResults` | `number[]` | Yes | Application processing results to include. Pass an empty array to include every result. |
 | `offset` | `number` | Yes | Starting offset. Pass `0` for the first page. |
 | `count` | `number` | Yes | Maximum number of applications to retrieve. |
 
@@ -49,35 +49,35 @@ When the Promise resolves, `data` is a `GroupApplicationItem[]` containing appli
 | Field | Type | Description |
 | --- | --- | --- |
 | `groupID` | `string` | ID of the group the user applied to join. |
-| `userID` | `string` | Applicant's user ID. Together with `groupID`, it forms the merge key for the application record. |
-| `nickname` | `string` | Snapshot of the applicant's nickname. |
-| `userFaceURL` | `string` | Snapshot of the applicant's avatar URL. |
+| `userID` | `string` | Applicant's user ID. Together with `groupID`, it identifies one application record. |
+| `nickname` | `string` | Applicant nickname stored with the application record. |
+| `userFaceURL` | `string` | Applicant avatar stored with the application record. |
 | `reqMsg` | `string` | Message included with the application. |
-| `reqTime` | `number` | Time when the application was submitted. |
+| `reqTime` | `number` | Time when the application was submitted, as a Unix timestamp in milliseconds. |
 | `joinSource` | `GroupJoinSource` | Source of the application, such as search or a QR code. |
 | `inviterUserID` | `string` (optional) | User ID of the inviter for invitation-based joins. It may be empty for a self-submitted application. |
 | `handleResult` | `ApplicationHandleResult` | Current result: pending, accepted, or rejected. |
 | `handleUserID` | `string` | User ID of the owner or administrator who processed the application. It may be empty while the application is pending. |
 | `handledMsg` | `string` | Message provided when the application was processed. |
-| `handledTime` | `number` | Processing time. Do not treat it as valid while the application is pending. |
-| `groupName` | `string` | Snapshot of the target group's name. |
-| `groupFaceURL` | `string` | Snapshot of the target group's avatar URL. |
+| `handledTime` | `number` | Processing time as a Unix timestamp in milliseconds. Do not treat it as valid while the application is pending. |
+| `groupName` | `string` | Target group name stored with the application record. |
+| `groupFaceURL` | `string` | Target group avatar stored with the application record. |
 | `groupType` | `GroupType` | Type of the target group. |
 | `ownerUserID` | `string` | User ID of the target group's owner. |
 | `creatorUserID` | `string` | User ID of the target group's creator. |
-| `introduction` | `string` | Snapshot of the target group's introduction. |
-| `notification` | `string` | Snapshot of the target group's announcement. |
-| `memberCount` | `number` | Snapshot of the target group's member count. |
-| `status` | `GroupStatus` | Snapshot of the target group's status. |
-| `createTime` | `number` | Time when the application record was created. |
+| `introduction` | `string` | Target group introduction stored with the application record. |
+| `notification` | `string` | Target group announcement stored with the application record. |
+| `memberCount` | `number` | Target group member count stored with the application record. |
+| `status` | `GroupStatus` | Target group status stored with the application record. |
+| `createTime` | `number` | Time when the application record was created, as a Unix timestamp in milliseconds. |
 | `ex` | `string` | Extension string stored with the application record. |
 | `attachedInfo` | `string` (optional) | SDK attachment data. Parse it only according to a confirmed application contract. |
 
-The applicant and group profiles are snapshots stored with the application. If you need to display current information, query the user profile and group profile separately. Do not write the nickname, avatar, or member count from an application back to the corresponding entity cache.
+The applicant and group details are stored with the application record and may not be current. If you need to display the latest information, query the user profile and group profile separately. Do not overwrite the current user or group profile with the nickname, avatar, or member count from an application.
 
 ## Listen for application changes
 
-This page is the canonical reference for group application event listeners. Use `groupID:userID` as the merge key for an application record:
+This page provides the complete group application event listeners. Use `groupID:userID` to identify an application record:
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';

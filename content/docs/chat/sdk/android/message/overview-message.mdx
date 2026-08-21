@@ -22,34 +22,10 @@ Use `clientMsgID` as the client-side deduplication and update key, together with
 | Create  | `MessageManager.create*Message()`                           | Creates a `Message` object ready to be sent, without writing it to the server or triggering a new-message callback. |
 | Send    | `sendMessage()` or `sendMessageNotOss()`                    | Pass `recvUid` for a one-to-one chat or `recvGid` for a group chat.                                       |
 | Receive | `OnAdvanceMsgListener`                                      | Handles live, offline, online-only, revoked, deleted, and read-receipt changes.                            |
-| Query   | History, ID lookup, or search APIs                          | Queries return a message snapshot and do not replace real-time message listening.                          |
+| Query   | History, ID lookup, or search APIs                          | Queries return the messages read by that request and do not replace real-time message listening.           |
 | Update  | Revoke, delete, modify, pin, read, and local-extension APIs | Handle API results, related events, and any necessary list re-query separately.                            |
 
-```java
-messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
-    @Override
-    public void onRecvNewMessage(Message message) {
-        // message is the newly received message.
-    }
-
-    @Override
-    public void onRecvOfflineNewMessage(List<Message> messages) {
-        // messages contains messages received while offline.
-    }
-
-    @Override
-    public void onRecvMessageRevokedV2(RevokedInfo info) {
-        // info identifies the revoked message.
-    }
-
-    @Override
-    public void onMsgDeleted(Message message) {
-        // message is the deleted message.
-    }
-});
-```
-
-Calling `setAdvancedMsgListener()` on the same `MessageManager` replaces the current listener. Register it in the shared message state layer and dispatch the resulting changes to screens.
+[Receive messages](/sdk/android/message/receiving-messages/receive-messages) is the owning page for message events. Set `OnAdvanceMsgListener` once in the shared message state layer, then dispatch new, offline, revoked, and deleted message changes to screens. This overview does not register the listener again.
 
 ## Message fields
 
@@ -98,28 +74,28 @@ The message body is stored in the element field selected by `contentType`. Do no
 Sending a message has two steps:
 
 1. Call the `create*Message()` method for the desired content to obtain a pending `Message`.
-2. Pass that `Message` to [`sendMessage()`](/sdk/android/message/sending-messages/send-message). For a one-to-one chat, set `recvUid`; for a group chat, set `recvGid`.
+2. Pass that `Message` to [Send a message](/sdk/android/message/sending-messages/send-message). For a one-to-one chat, set `recvUid`; for a group chat, set `recvGid`.
 
 The available message types and creation methods are:
 
 | Message content | Creation API                                                                                                                                                                                                                                                                                        |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text            | [`createTextMessage()`](/sdk/android/message/creating-messages/create-text-message)                                                                                                                                                                                                                 |
-| Rich text       | [`createAdvancedTextMessage()`](/sdk/android/message/creating-messages/create-advanced-text-message)                                                                                                                                                                                                |
-| @ mention       | [`createTextAtMessage()`](/sdk/android/message/creating-messages/create-text-at-message)                                                                                                                                                                                                            |
-| Image           | [`createImageMessage()`](/sdk/android/message/creating-messages/create-image-message), [`createImageMessageFromFullPath()`](/sdk/android/message/creating-messages/create-image-message-by-file), [`createImageMessageByURL()`](/sdk/android/message/creating-messages/create-image-message-by-url) |
-| Audio           | [`createSoundMessage()`](/sdk/android/message/creating-messages/create-sound-message), [`createSoundMessageFromFullPath()`](/sdk/android/message/creating-messages/create-sound-message-by-file), [`createSoundMessageByURL()`](/sdk/android/message/creating-messages/create-sound-message-by-url) |
-| Video           | [`createVideoMessage()`](/sdk/android/message/creating-messages/create-video-message), [`createVideoMessageFromFullPath()`](/sdk/android/message/creating-messages/create-video-message-by-file), [`createVideoMessageByURL()`](/sdk/android/message/creating-messages/create-video-message-by-url) |
-| File            | [`createFileMessage()`](/sdk/android/message/creating-messages/create-file-message), [`createFileMessageFromFullPath()`](/sdk/android/message/creating-messages/create-file-message-by-file), [`createFileMessageByURL()`](/sdk/android/message/creating-messages/create-file-message-by-url)       |
-| Contact card    | [`createCardMessage()`](/sdk/android/message/creating-messages/create-card-message)                                                                                                                                                                                                                 |
-| Location        | [`createLocationMessage()`](/sdk/android/message/creating-messages/create-location-message)                                                                                                                                                                                                         |
-| Emoji           | [`createFaceMessage()`](/sdk/android/message/creating-messages/create-face-message)                                                                                                                                                                                                                 |
-| Reply           | [`createQuoteMessage()`](/sdk/android/message/creating-messages/create-quote-message), [`createAdvancedQuoteMessage()`](/sdk/android/message/creating-messages/create-advanced-quote-message)                                                                                                       |
-| Forward         | [`createForwardMessage()`](/sdk/android/message/creating-messages/create-forward-message)                                                                                                                                                                                                           |
-| Merged forward  | [`createMergerMessage()`](/sdk/android/message/creating-messages/create-merger-message)                                                                                                                                                                                                             |
-| Custom message  | [`createCustomMessage()`](/sdk/android/message/creating-messages/create-custom-message)                                                                                                                                                                                                             |
+| Text            | [Create a text message](/sdk/android/message/creating-messages/create-text-message)                                                                                                                                                                                                                  |
+| Rich text       | [Create an advanced text message](/sdk/android/message/creating-messages/create-advanced-text-message)                                                                                                                                                                                              |
+| @ mention       | [Create an @ mention message](/sdk/android/message/creating-messages/create-text-at-message)                                                                                                                                                                                                        |
+| Image           | [From a platform path](/sdk/android/message/creating-messages/create-image-message), [from a full local path](/sdk/android/message/creating-messages/create-image-message-by-file), or [from an uploaded URL](/sdk/android/message/creating-messages/create-image-message-by-url)             |
+| Audio           | [From a platform path](/sdk/android/message/creating-messages/create-sound-message), [from a full local path](/sdk/android/message/creating-messages/create-sound-message-by-file), or [from an uploaded URL](/sdk/android/message/creating-messages/create-sound-message-by-url)             |
+| Video           | [From a platform path](/sdk/android/message/creating-messages/create-video-message), [from a full local path](/sdk/android/message/creating-messages/create-video-message-by-file), or [from an uploaded URL](/sdk/android/message/creating-messages/create-video-message-by-url)             |
+| File            | [From a platform path](/sdk/android/message/creating-messages/create-file-message), [from a full local path](/sdk/android/message/creating-messages/create-file-message-by-file), or [from an uploaded URL](/sdk/android/message/creating-messages/create-file-message-by-url)                   |
+| Contact card    | [Create a contact card message](/sdk/android/message/creating-messages/create-card-message)                                                                                                                                                                                                         |
+| Location        | [Create a location message](/sdk/android/message/creating-messages/create-location-message)                                                                                                                                                                                                         |
+| Emoji           | [Create an emoji message](/sdk/android/message/creating-messages/create-face-message)                                                                                                                                                                                                                |
+| Reply           | [Create a reply message](/sdk/android/message/creating-messages/create-quote-message) or [create an advanced reply message](/sdk/android/message/creating-messages/create-advanced-quote-message)                                                                                                    |
+| Forward         | [Create a forwarded message](/sdk/android/message/creating-messages/create-forward-message)                                                                                                                                                                                                         |
+| Merged forward  | [Create a merged-forward message](/sdk/android/message/creating-messages/create-merger-message)                                                                                                                                                                                                      |
+| Custom message  | [Create a custom message](/sdk/android/message/creating-messages/create-custom-message)                                                                                                                                                                                                              |
 
-Choose the send method based on the media source. For a message created from a local path or local file, call `sendMessage()` so the SDK uploads the media during sending. For a message created from an existing remote URL with `create*MessageByURL()`, call [`sendMessageNotOss()`](/sdk/android/message/sending-messages/send-message-not-oss) to send the message without uploading the media again.
+Choose the send method based on the media source. For a message created from a local path or local file, call `sendMessage()` so the SDK uploads the media during sending. For a message created from an existing remote URL with `create*MessageByURL()`, follow [Send an uploaded media message](/sdk/android/message/sending-messages/send-message-not-oss) to avoid uploading it again.
 
 ## Find a page by task
 

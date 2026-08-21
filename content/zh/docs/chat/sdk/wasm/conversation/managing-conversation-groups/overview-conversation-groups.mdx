@@ -1,6 +1,6 @@
 ---
 title: '会话分组概览'
-description: '了解 WASM SDK 会话分组的数据模型、能力边界和增量事件。'
+description: '了解 WASM SDK 会话分组的数据模型、能力边界和状态变化事件。'
 sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups'
 ---
 
@@ -20,7 +20,7 @@ sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conver
 
 ## 分组数据
 
-`ConversationGroup` 表示一个会话分组。客户端合并分组快照和事件增量时，应使用 `conversationGroupID` 作为稳定标识。
+`ConversationGroup` 表示一个会话分组。使用 `conversationGroupID` 识别同一分组，以便在收到事件后更新正确的记录。
 
 | 字段                    | 类型                    | 说明                       |
 | ----------------------- | ----------------------- | -------------------------- |
@@ -31,7 +31,7 @@ sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conver
 | `ex`                    | `string`                | 应用约定的扩展字符串。     |
 | `conversationGroupType` | `ConversationGroupType` | 分组类型。                 |
 | `hidden`                | `boolean`               | 分组是否隐藏。             |
-| `unreadCount`           | `number`                | 分组内会话的未读总数快照。 |
+| `unreadCount`           | `number`                | 查询时分组内会话的未读总数。 |
 | `conversationIDs`       | `string[]`              | 当前属于该分组的会话 ID。  |
 
 ## 可用操作
@@ -48,14 +48,14 @@ sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conver
 
 ## 监听分组变化
 
-查询操作用于建立调用时的快照，事件用于合并后续增量。主动调用的 Promise 成功、相关事件到达和重新查询校准是三个不同阶段。
+查询操作返回调用时的分组数据，事件用于通知后续变化。主动调用的 Promise 成功、相关事件到达，以及重新查询得到最新数据，是三个不同阶段。
 
 | 事件                               | `data` 类型                                  | 处理方式                            |
 | ---------------------------------- | -------------------------------------------- | ----------------------------------- |
-| `OnConversationGroupAdded`         | `ConversationGroup[]`                        | 合并新增分组。                      |
+| `OnConversationGroupAdded`         | `ConversationGroup[]`                        | 添加尚未存在的分组。                |
 | `OnConversationGroupChanged`       | `ConversationGroup[]`                        | 按 `conversationGroupID` 更新分组。 |
 | `OnConversationGroupDeleted`       | `ConversationGroup[]`                        | 移除已删除分组。                    |
-| `OnConversationGroupMemberAdded`   | `ConversationGroupMemberChangedCallbackData` | 合并新增的会话关联和会话详情。      |
+| `OnConversationGroupMemberAdded`   | `ConversationGroupMemberChangedCallbackData` | 添加新的会话关联和会话详情。        |
 | `OnConversationGroupMemberDeleted` | `ConversationGroupMemberChangedCallbackData` | 移除对应的会话关联。                |
 
 ```ts
@@ -102,4 +102,4 @@ function disposeConversationGroupEvents() {
 }
 ```
 
-事件可能在主动调用完成后再次到达，状态层应按 ID 幂等合并，不能简单追加数组。
+事件可能在主动调用完成后再次到达。更新状态时应先用 ID 判断记录是否已经存在，避免把同一个分组或会话重复追加到数组中。

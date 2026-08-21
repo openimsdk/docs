@@ -4,11 +4,42 @@ description: '使用 sendMessage 将 Message 发送到单聊或群聊。'
 sourcePath: '/sdk/android/message/sending-messages/send-message'
 ---
 
-单聊填写 `recvUid`，群聊填写 `recvGid`。通过 `OnMsgSendCallback` 处理发送成功、失败和媒体进度。
+`sendMessage()` 发送已经创建的 `Message`。单聊只填写 `recvUid`，群聊只填写 `recvGid`；两个目标不能同时填写。通过 `OnMsgSendCallback` 分别处理发送成功、失败和媒体上传进度。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `message` | `Message` | 是 | 通过对应创建方法得到的待发送消息。 |
+| `recvUid` | `String` | 条件必填 | 单聊接收方用户 ID；发送群消息时传空值。 |
+| `recvGid` | `String` | 条件必填 | 群聊的群组 ID；发送单聊消息时传空值。 |
+| `offlinePushInfo` | `OfflinePushInfo` | 是 | 接收方离线时使用的推送配置；没有自定义内容时传空对象。 |
 
 ```java
-messageManager.sendMessage(new OnMsgSendCallback() {
-    @Override public void onSuccess(Message sentMessage) { /* sentMessage 是发送成功的消息。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, message, peerUserID, null, offlinePushInfo);
+OpenIMClient.getInstance().messageManager.sendMessage(
+    new OnMsgSendCallback() {
+        @Override
+        public void onProgress(long progress) {
+            // 更新媒体消息的上传进度。
+        }
+
+        @Override
+        public void onSuccess(Message sentMessage) {
+            // 按 clientMsgID 替换本地待发送消息。
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 标记发送失败并允许重试。
+        }
+    },
+    message,
+    peerUserID,
+    null,
+    offlinePushInfo
+);
 ```
+
+## 返回结果
+
+成功回调提供发送后的 `Message`，其中包含服务端补充的 ID、时间和发送状态。发送回调成功只表示当前请求完成；接收方是否已经收到消息，以其[接收消息](/sdk/android/message/receiving-messages/receive-messages)事件为准。

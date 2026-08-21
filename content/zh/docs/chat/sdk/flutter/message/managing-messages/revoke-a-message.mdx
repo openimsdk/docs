@@ -22,7 +22,7 @@ await OpenIM.iMManager.messageManager.revokeMessage(
 );
 ```
 
-Flutter `Message` 没有 `conversationID` 字段，因此调用处应使用当前消息页面或路由保存的 `conversationID`。如果只持有事件或查询返回的消息，可按[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)中的路由 helper 解析并通过 `getConversationIDBySessionType()` 校准。
+Flutter `Message` 没有 `conversationID` 字段，因此调用处应使用当前消息页面或路由保存的 `conversationID`。如果只持有事件或查询返回的消息，可按[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)中的路由 helper 解析，并通过 `getConversationIDBySessionType()` 取得对应会话 ID。
 
 ```dart
 void handleMessageRevoked(RevokedInfo info) {
@@ -37,13 +37,13 @@ void handleMessageRevoked(RevokedInfo info) {
 
 `onNewRecvMessageRevoked` 携带 `RevokedInfo`，包含 `clientMsgID`、撤回者和时间等信息。先在当前账号的消息索引中解析所属 `conversationID`，再按 `conversationID:clientMsgID` 更新；不要按列表位置替换。该函数应纳入唯一的 `OnAdvancedMsgListener`，设置入口见[事件概览](/sdk/flutter/events/overview-events)。
 
-接收端应把对应气泡更新为撤回态，而不是直接从列表删除。这样可以保留消息时间线与撤回提示，也能避免后续历史快照重新带回原消息时出现状态跳动。
+接收端应把对应气泡更新为撤回态，而不是直接从列表删除。这样可以保留消息时间线与撤回提示，也能避免后续读取历史消息时原消息再次出现而造成状态跳动。
 
 ## 返回结果
 
-Future 成功表示服务端完成撤回请求，不等于所有端事件已经到达。调用端可以更新本地同一 `conversationID:clientMsgID` 的气泡；其他客户端再通过撤回 callback 合并增量。
+Future 成功表示服务端完成撤回请求，不等于所有端事件已经到达。当前客户端可以更新本地同一 `conversationID:clientMsgID` 的气泡；其他客户端再通过撤回 callback 更新对应消息。
 
-消息不存在或不允许撤回时，应保留原状态并展示错误，不要只在本地留下撤回提示。需要校准时重新读取历史快照；Future 成功、撤回 callback 到达和重新查询校准是三个不同阶段。
+消息不存在或不允许撤回时，应保留原状态并展示错误，不要只在本地留下撤回提示。需要确认最终状态时重新读取历史消息；Future 成功、撤回 callback 到达和重新查询是三个不同阶段。
 
 ## 相关页面
 

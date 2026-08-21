@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/managing-messages/revoke-a-message'
@@ -34,11 +34,11 @@ The SDK also retains `SdkEvent.OnRecvMessageRevoked`, the legacy singular revoca
 
 ## Return result
 
-Promise completion means that the current revocation request has completed; it does not mean every client interface has already updated. Other clients merge the incremental change through the revocation event.
+Promise completion means that the current revocation request has completed; it does not mean every client interface has already updated. When another client receives the revocation event, it should use `clientMsgID` to find and update the matching message.
 
 ## Listen for revocation events
 
-This page is the canonical reference for `OnNewRecvMessageRevoked`. For synchronized deletion, see [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages). For deleting every message sent by one group member, see [Delete all messages from a user in a group chat](/sdk/wasm/message/managing-messages/delete-user-messages).
+The complete listener for `OnNewRecvMessageRevoked` is provided on this page. For synchronized deletion, see [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages). For deleting every message sent by one group member, see [Delete all messages from a user in a group chat](/sdk/wasm/message/managing-messages/delete-user-messages).
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
@@ -54,7 +54,7 @@ function removeRevokeListener() {
 }
 ```
 
-`OnNewRecvMessageRevoked` provides a `RevokedInfo` in `data`. Merge the message by `clientMsgID`. `isAdminRevoke` indicates whether an administrator performed the revocation and can be used to select the appropriate system notice. Call `removeRevokeListener()` when the component unmounts, the user logs out, or the active account changes. After a new login, revocation changes are synchronized through message events.
+`OnNewRecvMessageRevoked` provides a `RevokedInfo` in `data`. Use `clientMsgID` to find and update the matching message. `isAdminRevoke` indicates whether an administrator performed the revocation and can be used to select the appropriate system notice. Call `removeRevokeListener()` when the component unmounts, the user logs out, or the active account changes. After a new login or reconnection, reload the messages currently available first, then apply later revocation events to the matching messages.
 
 ## Related pages
 

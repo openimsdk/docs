@@ -4,8 +4,39 @@ description: '使用 getAdvancedHistoryMessageListReverse 加载起点之后的�
 sourcePath: '/sdk/android/message/retrieving-messages/load-newer-messages'
 ---
 
-该方法用于从消息定位点向后读取下一页历史消息。此类方向历史分页使用 `ViewType.History`。
+`getAdvancedHistoryMessageListReverse()` 从指定消息之后向较新的时间方向读取历史消息，适合从搜索结果或定位消息继续向下浏览。它与普通的历史消息分页方向相反，不是实时接收新消息的接口。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 要读取历史消息的会话 ID。 |
+| `startMsg` | `Message` | 是 | 反向读取的起点消息。 |
+| `count` | `int` | 是 | 本次最多读取的消息数，示例为 `20`。 |
+| `viewType` | `ViewType` | 是 | 浏览历史消息时传 `ViewType.History`。 |
 
 ```java
-messageManager.getAdvancedHistoryMessageListReverse(callback, conversationID, startMessage, 20, ViewType.History);
+OpenIMClient.getInstance().messageManager.getAdvancedHistoryMessageListReverse(
+    new OnBase<AdvancedMessage>() {
+        @Override
+        public void onSuccess(AdvancedMessage result) {
+            List<Message> messages = result.getMessageList();
+            boolean reachedLatest = result.isEnd();
+            // 按 clientMsgID 去重后，将 messages 添加到当前列表后方。
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 保留当前列表，并提示本次加载失败。
+        }
+    },
+    conversationID,
+    startMessage,
+    20,
+    ViewType.History
+);
 ```
+
+## 返回结果
+
+成功回调返回 `AdvancedMessage`。`messageList` 是起点之后读取到的消息，`isEnd` 表示是否已经到达当前历史记录的较新一端；`errCode` 和 `errMsg` 是结果对象携带的业务状态。后续实时消息仍通过[接收消息](/sdk/android/message/receiving-messages/receive-messages)处理。

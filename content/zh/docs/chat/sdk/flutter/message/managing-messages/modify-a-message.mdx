@@ -43,7 +43,7 @@ try {
 
 ## 返回结果
 
-Flutter SDK 将 `modifyMessage()` 声明为未具体化的 `Future`，不能按 WASM 的返回模型把完成值当作修改后的 `Message`。Future 成功表示当前修改请求已经完成；调用端可以先按 `conversationID:clientMsgID` 展示提交的完整消息，再以 `onMessageModified` 或重新查询校准。
+Flutter SDK 将 `modifyMessage()` 声明为未具体化的 `Future`，不能按 WASM 的返回模型把完成值当作修改后的 `Message`。Future 成功表示当前修改请求已经完成；当前客户端可以先按 `conversationID:clientMsgID` 展示提交的完整消息，再根据 `onMessageModified` 更新，必要时重新查询确认最终内容。
 
 Future 成功不代表所有客户端界面已经更新。事件也可能来自其他设备或其他有权限的操作，不能假设每次 callback 都对应当前页面刚完成的调用。
 
@@ -66,11 +66,11 @@ Future<void> handleMessageModified(Message message) async {
 }
 ```
 
-`resolveMessageConversationID()` 根据 `sessionType`、`groupID`、`sendID`、`recvID` 和当前登录用户确定消息来源，再调用 `getConversationIDBySessionType()` 校准。完整 helper 见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。不要按数组位置、显示文本或当前分页长度匹配消息。
+`resolveMessageConversationID()` 根据 `sessionType`、`groupID`、`sendID`、`recvID` 和当前登录用户确定消息来源，再调用 `getConversationIDBySessionType()` 取得对应会话 ID。完整 helper 见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。不要按数组位置、显示文本或当前分页长度匹配消息。
 
 该 handler 应纳入应用唯一的 `OnAdvancedMsgListener`，集中设置入口见[事件概览](/sdk/flutter/events/overview-events)。固定 SDK 没有 remove 或 unset API；退出登录或切换账号时，应停止向旧账号状态分发事件，并用新账号的完整 listener 覆盖。
 
-Future 成功、`onMessageModified` 到达和重新查询历史是三个独立阶段。需要确认最终快照时重新读取消息；重新查询失败不应被误报为修改请求失败。
+Future 成功、`onMessageModified` 到达和重新查询历史是三个独立阶段。需要确认最终内容时重新读取消息；重新查询失败不应被误报为修改请求失败。
 
 ## 相关页面
 

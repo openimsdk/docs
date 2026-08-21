@@ -10,8 +10,8 @@ sourcePath: '/sdk/wasm/group/group-applications/get-group-application-list-as-re
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `groupIDs` | `string[]` | 是 | 要查询的群组 ID 数组。 |
-| `handleResults` | `number[]` | 是 | 要查询的申请处理结果。 |
+| `groupIDs` | `string[]` | 是 | 要查询的群组 ID 数组；传空数组表示查询当前用户有权管理的全部群组。 |
+| `handleResults` | `number[]` | 是 | 要查询的申请处理结果；传空数组表示不限制处理结果。 |
 | `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
 | `count` | `number` | 是 | 本次读取数量。 |
 
@@ -42,35 +42,35 @@ Promise 成功后，`data` 是当前用户有权处理的 `GroupApplicationItem[
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `groupID` | `string` | 申请加入的群组 ID。 |
-| `userID` | `string` | 申请人的用户 ID；与 `groupID` 共同组成申请记录的合并标识。 |
-| `nickname` | `string` | 申请人的昵称快照。 |
-| `userFaceURL` | `string` | 申请人的头像快照。 |
+| `userID` | `string` | 申请人的用户 ID；与 `groupID` 共同用于识别一条申请记录。 |
+| `nickname` | `string` | 申请记录中保存的申请人昵称。 |
+| `userFaceURL` | `string` | 申请记录中保存的申请人头像。 |
 | `reqMsg` | `string` | 入群申请附言。 |
-| `reqTime` | `number` | 申请时间。 |
+| `reqTime` | `number` | 申请时间，Unix 毫秒时间戳。 |
 | `joinSource` | `GroupJoinSource` | 入群申请来源，例如搜索或二维码。 |
 | `inviterUserID` | `string`（可选） | 邀请入群场景中的邀请人用户 ID；自主申请时可能为空。 |
 | `handleResult` | `ApplicationHandleResult` | 当前处理结果：待处理、已同意或已拒绝。 |
 | `handleUserID` | `string` | 处理申请的群主或管理员用户 ID；未处理时可能为空。 |
 | `handledMsg` | `string` | 处理申请时填写的说明。 |
-| `handledTime` | `number` | 处理时间；未处理时不应作为有效时间使用。 |
-| `groupName` | `string` | 目标群组名称快照。 |
-| `groupFaceURL` | `string` | 目标群组头像快照。 |
+| `handledTime` | `number` | 处理时间，Unix 毫秒时间戳；未处理时不应作为有效时间使用。 |
+| `groupName` | `string` | 申请记录中保存的目标群组名称。 |
+| `groupFaceURL` | `string` | 申请记录中保存的目标群组头像。 |
 | `groupType` | `GroupType` | 目标群组类型。 |
 | `ownerUserID` | `string` | 目标群组的群主用户 ID。 |
 | `creatorUserID` | `string` | 目标群组的创建者用户 ID。 |
-| `introduction` | `string` | 目标群组简介快照。 |
-| `notification` | `string` | 目标群组公告快照。 |
-| `memberCount` | `number` | 目标群组成员数量快照。 |
-| `status` | `GroupStatus` | 目标群组状态快照。 |
-| `createTime` | `number` | 申请记录创建时间。 |
+| `introduction` | `string` | 申请记录中保存的目标群组简介。 |
+| `notification` | `string` | 申请记录中保存的目标群组公告。 |
+| `memberCount` | `number` | 申请记录中保存的目标群组成员数量。 |
+| `status` | `GroupStatus` | 申请记录中保存的目标群组状态。 |
+| `createTime` | `number` | 申请记录创建时间，Unix 毫秒时间戳。 |
 | `ex` | `string` | 申请记录扩展字符串。 |
 | `attachedInfo` | `string`（可选） | SDK 附加信息；只按已确认的业务约定解析。 |
 
-申请人和群组资料是申请记录携带的快照。需要展示最新资料时，应分别查询用户资料或群资料，不要把申请中的昵称、头像和成员数写回对应实体缓存。
+这些申请人和群组资料保存在申请记录中，不一定是当前最新值。需要展示最新资料时，应分别查询用户资料或群资料；不要用申请中的昵称、头像和成员数覆盖当前用户或群组资料。
 
 ## 监听申请变化
 
-本页是入群申请事件的完整监听归属页。申请记录使用 `groupID:userID` 作为合并标识：
+本页集中提供入群申请事件的完整监听示例。使用 `groupID:userID` 识别一条申请记录：
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';

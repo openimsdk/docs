@@ -4,11 +4,31 @@ description: '使用 OnAdvanceMsgListener 接收新消息、离线消息和在�
 sourcePath: '/sdk/android/message/receiving-messages/receive-messages'
 ---
 
-设置 `setAdvancedMsgListener()` 后，`onRecvNewMessage` 接收实时消息，`onRecvOfflineNewMessage` 接收离线批次，`onRecvOnlineOnlyMessage` 仅接收在线消息。
+`OnAdvanceMsgListener` 统一接收实时消息、离线批次、仅在线消息以及撤回、删除和已读回执等变化。Android SDK 同时只保留一个高级消息 listener；应在登录前由应用级消息状态层设置一次，不要在 Activity、Fragment 或聊天页面重复设置。
 
 ```java
-messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
-    @Override public void onRecvNewMessage(Message message) { /* message 是新收到的消息。 */ }
-    @Override public void onRecvOfflineNewMessage(List<Message> messages) { /* messages 是离线消息。 */ }
-});
+private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
+    @Override
+    public void onRecvNewMessage(Message message) {
+        mergeMessage(message);
+    }
+
+    @Override
+    public void onRecvOfflineNewMessage(List<Message> messages) {
+        for (Message message : messages) {
+            mergeMessage(message);
+        }
+    }
+
+    @Override
+    public void onRecvOnlineOnlyMessage(Message message) {
+        handleOnlineOnlyMessage(message);
+    }
+};
+
+OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(messageListener);
 ```
+
+普通消息和离线消息应先根据 `sessionType`、`sendID`、`recvID` 与 `groupID` 确定目标会话，再按 `clientMsgID` 去重或替换。`onRecvOnlineOnlyMessage` 只适合不需要离线补偿的临时业务；不要直接写入需要持久化的普通消息列表。
+
+Android SDK 不提供移除该 listener 的方法。退出登录或切换账号时，停止把旧回调写入页面状态，并在下次登录前设置新账号使用的完整 listener。消息撤回、删除、修改和已读事件分别在对应操作页面说明。

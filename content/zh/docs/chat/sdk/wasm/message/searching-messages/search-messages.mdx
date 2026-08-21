@@ -77,7 +77,7 @@ const { data } = await openimsdk.searchLocalMessages({
 | ---------------------- | --------------- | -------- | --------------------------------------------------------------- |
 | `conversationID`       | `string`        | 是       | 要搜索的会话 ID。                                               |
 | `keywordList`          | `string[]`      | 是       | 关键词列表；单个搜索框通常传入一个清理后的关键词。              |
-| `keywordListMatchType` | `number`        | 否       | 多关键词匹配方式，使用 SDK 的数字约定；不需要特殊匹配时可省略。 |
+| `keywordListMatchType` | `number`        | 否       | 多关键词匹配方式：`0` 表示命中任意关键词（OR），`1` 表示同时命中全部关键词（AND）；省略时按 `0` 处理。 |
 | `senderUserIDList`     | `string[]`      | 否       | 只搜索这些用户发送的消息。                                      |
 | `messageTypeList`      | `MessageType[]` | 否       | 只搜索指定类型的消息，例如文本消息和 @ 文本消息。               |
 | `searchTimePosition`   | `number`        | 否       | 搜索结束位置，Unix 时间戳，单位为秒。                           |
@@ -101,8 +101,8 @@ const { data } = await openimsdk.searchLocalMessages({
 | --- | --- | --- |
 | `conversationID` | `string` | 结果所属的会话 ID。 |
 | `conversationType` | `SessionType` | 结果所属的会话类型。 |
-| `showName` | `string` | 会话展示名称快照。 |
-| `faceURL` | `string` | 会话展示头像快照。 |
+| `showName` | `string` | 搜索结果中记录的会话展示名称。 |
+| `faceURL` | `string` | 搜索结果中记录的会话头像地址。 |
 | `messageCount` | `number` | 当前结果项中的匹配消息数量。 |
 | `messageList` | `MessageItem[]` | 匹配消息，字段含义见[消息概览](/sdk/wasm/message/overview-message)。 |
 
@@ -127,7 +127,7 @@ const toSearchRows = (result: SearchMessageResult) => {
 
 分页时继续传入相同的 `conversationID`、`keywordList` 和筛选条件，只递增 `pageIndex`。如果用户修改关键词、成员筛选或时间范围，应把 `pageIndex` 重置为 `1`，并清空旧结果，避免不同条件的结果混在一起。
 
-`searchLocalMessages()` 的 Promise 成功后，使用返回值建立搜索结果快照。查询不会触发消息事件；同一搜索页内按 `conversationID + clientMsgID` 去重，不要按结果位置保存选中项。
+`searchLocalMessages()` 的 Promise 成功后，使用返回值显示本次搜索结果。查询不会触发消息事件；同一搜索页内按 `conversationID + clientMsgID` 去重，不要按结果位置保存选中项。
 
 ## 处理搜索结果变化
 
@@ -135,7 +135,7 @@ const toSearchRows = (result: SearchMessageResult) => {
 
 跳转到某条搜索结果时，使用结果中的 `conversationID` 和 `clientMsgID` 定位目标会话与消息。需要展示该消息前后的聊天记录时，把搜索命中的 `MessageItem` 作为起点读取上下文；参数、示例和返回结构见[读取消息上下文](/sdk/wasm/message/retrieving-messages/load-message-context)。不要用 `findMessageList()` 拼接附近的聊天记录。
 
-需要显示当前时刻的搜索结果时，可以用相同条件重新执行当前页搜索。搜索 Promise、消息事件增量和重新查询是三条独立路径，重新登录后的消息变化由事件同步。
+需要显示当前时刻的搜索结果时，可以用相同条件重新执行当前页搜索。搜索 Promise、消息事件带来的列表变化，以及重新执行搜索是三条独立路径。重新登录或重连后，应先用相同条件重新搜索当前结果，再根据后续消息事件更新页面。
 
 ## 相关页面
 

@@ -6,7 +6,7 @@ sourcePath: '/sdk/flutter/message/overview-message'
 
 OpenIM Flutter SDK 的消息能力围绕 `Message` 展开。普通消息以及由本地路径或字节创建的媒体消息，使用对应的 `create*Message()` 创建，再通过 `sendMessage()` 发送。媒体文件已经由业务侧上传并取得 URL 时，使用 `create*MessageByURL()` 创建消息，再通过 `sendMessageNotOss()` 发送。两条路径都可以发送到单聊或群聊；新消息、撤回、删除、已读回执、上传进度和会话变化通过对应 listener 同步到应用状态。
 
-Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和会话状态使用的 `conversationID` 来自当前会话上下文；全局 listener 收到跨会话消息时，应根据 `sessionType`、`groupID`、`sendID`、`recvID` 和当前登录用户解析会话目标，再用 `getConversationIDBySessionType()` 校准。
+Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和会话状态使用的 `conversationID` 来自当前会话上下文；全局 listener 收到跨会话消息时，应根据 `sessionType`、`groupID`、`sendID`、`recvID` 和当前登录用户解析会话目标，再用 `getConversationIDBySessionType()` 取得对应会话 ID。
 
 消息页通常需要长期保存以下标识：
 
@@ -55,14 +55,14 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 | `offlinePush`                                                   | 当前消息的离线推送配置。                           |
 | `ex` / `localEx`                                                | 服务端扩展与当前设备本地扩展。                     |
 
-`clientMsgID`、`sendID`、`recvID`、`groupID` 和 `sessionType` 在 Dart 模型中都是 nullable。写入索引前必须检查必要字段，不能用 `!` 把异常载荷变成运行时崩溃。
+`clientMsgID`、`sendID`、`recvID`、`groupID` 和 `sessionType` 在 Dart 模型中都是 nullable。写入索引前必须检查必要字段，不能用 `!` 把异常消息变成运行时崩溃。
 
 ### 消息生命周期与会话归属
 
 1. 使用 `createTextMessage()`、`createImageMessage()` 等工厂创建 `Message`；创建本身不发送，也不触发新消息事件。
 2. 使用 `sendMessage()` 发送，或在自定义上传后使用 `sendMessageNotOss()`。
-3. Future 成功后使用返回的 `Message` 更新发送端状态；其他端通过消息 listener 接收增量。
-4. 历史读取、搜索和按 ID 查询返回当前本地快照，不触发新消息事件。
+3. Future 成功后使用返回的 `Message` 更新发送端状态；其他端通过消息 listener 接收新消息。
+4. 历史读取、搜索和按 ID 查询返回当前本地数据，不触发新消息事件。
 
 当前聊天页已经持有 `conversationID` 时，直接把查询结果和发送结果合并到该会话。全局接收事件没有这一上下文，应先解析 `sourceID`：群聊使用非空 `groupID`；单聊根据 `sendID` 是否等于当前登录用户，在 `recvID` 与 `sendID` 中选择对端用户 ID。随后把 `sourceID` 和 `sessionType` 传给 `getConversationIDBySessionType()`。
 
@@ -82,7 +82,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 普通实时消息、登录后的离线同步消息和只在线消息分别由 `onRecvNewMessage`、`onRecvOfflineNewMessage` 与 `onRecvOnlineOnlyMessage` 处理。全局 listener 应先解析消息所属会话，再按 `conversationID:clientMsgID` 幂等合并；只在线消息不进入本地历史。
 
-完整接收和异常载荷处理见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。
+完整接收和异常消息处理见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。
 
 ### 获取消息
 
@@ -136,6 +136,6 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 消息事件按职责分散在对应能力页，概览页只说明导航和归属：新消息和离线同步见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)，删除见[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)，撤回见[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)，修改见[修改消息](/sdk/flutter/message/managing-messages/modify-a-message)，置顶见[置顶或取消置顶消息](/sdk/flutter/message/managing-messages/set-message-pinned)，单聊已读回执见[标记会话已读](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)，输入状态见[上报输入状态](/sdk/flutter/message/composing-messages/update-typing-status)。会话变化的完整监听见[获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)。
 
-创建消息对象和纯查询 API 直接使用 Future 返回值建立对象或快照，不应描述为触发共享事件。会改变状态的调用应分别处理 Future 结果、事件增量与重新查询校准。
+创建消息对象和纯查询 API 直接使用 Future 返回的对象或列表，不应描述为触发共享事件。会改变状态的调用应分别处理 Future 结果、后续事件，并在需要时重新查询确认最终状态。
 
 Flutter enterprise SDK 公开消息修改、置顶会话消息和音频转写能力；这些页面的 API、model 与 listener 以固定 enterprise SDK commit 核对。当前 SDK 没有公开定向群消息创建 API，不应在客户端文档中模拟该能力。

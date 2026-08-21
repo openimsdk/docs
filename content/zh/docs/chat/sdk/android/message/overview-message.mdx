@@ -15,34 +15,10 @@ Android SDK 使用 `Message` 表示一条消息。消息创建、发送、接收
 | 创建 | `MessageManager.create*Message()`          | 创建待发送的 `Message` 对象，不写入服务端，也不会触发新消息回调。 |
 | 发送 | `sendMessage()` 或 `sendMessageNotOss()`   | 单聊传入 `recvUid`，群聊传入 `recvGid`。                          |
 | 接收 | `OnAdvanceMsgListener`                     | 处理实时、离线、在线消息以及撤回、删除和已读回执等变化。          |
-| 查询 | 历史消息、按 ID 查找或搜索 API             | 查询结果是调用时的消息快照，不代替实时消息监听。                  |
+| 查询 | 历史消息、按 ID 查找或搜索 API             | 查询返回当次读取到的消息，不代替实时消息监听。                    |
 | 更新 | 撤回、删除、修改、置顶、已读和本地扩展 API | 分别处理 API 结果、对应事件和必要的列表重新查询。                 |
 
-```java
-messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
-    @Override
-    public void onRecvNewMessage(Message message) {
-        // message 是新收到的消息。
-    }
-
-    @Override
-    public void onRecvOfflineNewMessage(List<Message> messages) {
-        // messages 是离线期间收到的消息。
-    }
-
-    @Override
-    public void onRecvMessageRevokedV2(RevokedInfo info) {
-        // info 包含被撤回消息的信息。
-    }
-
-    @Override
-    public void onMsgDeleted(Message message) {
-        // message 是已删除的消息。
-    }
-});
-```
-
-重复调用 `MessageManager` 的 `setAdvancedMsgListener()` 会覆盖之前设置的 listener。应用应在统一的消息状态层注册一次，再把回调中的消息变化分发给页面。
+消息事件由[接收消息](/sdk/android/message/receiving-messages/receive-messages)页面统一说明。应用应在共享消息状态层设置一次 `OnAdvanceMsgListener`，再把新消息、离线消息、撤回和删除等变化分发给各页面；本概览页不重复设置 listener。
 
 ## Message 字段
 
@@ -64,8 +40,8 @@ messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
 | `status`         | `int`             | 发送状态，使用 `MessageStatus` 常量判断。           |
 | `isRead`         | `boolean`         | 当前客户端保存的已读状态。                          |
 | `platformID`     | `int`             | 发送消息的客户端平台。                              |
-| `senderNickname` | `String`          | 发送者昵称快照。                                    |
-| `senderFaceUrl`  | `String`          | 发送者头像 URL 快照。                               |
+| `senderNickname` | `String`          | 消息创建或发送时记录的发送者昵称。                  |
+| `senderFaceUrl`  | `String`          | 消息创建或发送时记录的发送者头像 URL。              |
 | `offlinePush`    | `OfflinePushInfo` | 离线推送内容。                                      |
 | `attachedInfo`   | `String`          | SDK 附加信息。                                      |
 | `ext`            | `Object`          | Android 消息附加字段。                              |
@@ -89,7 +65,7 @@ messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
 发送一条消息分为两个步骤：
 
 1. 调用对应内容类型的 `create*Message()` 方法，获得待发送的 `Message`。
-2. 将该 `Message` 传给 [`sendMessage()`](/sdk/android/message/sending-messages/send-message)。单聊设置 `recvUid`，群聊设置 `recvGid`。
+2. 将该 `Message` 传给[发送消息](/sdk/android/message/sending-messages/send-message)。单聊设置 `recvUid`，群聊设置 `recvGid`。
 
 下表列出了可创建的消息类型及其对应页面：
 
@@ -102,7 +78,7 @@ messageManager.setAdvancedMsgListener(new OnAdvanceMsgListener() {
 | 回复、转发和合并转发   | [创建回复消息](/sdk/android/message/creating-messages/create-quote-message)、[创建转发消息](/sdk/android/message/creating-messages/create-forward-message)、[创建合并转发消息](/sdk/android/message/creating-messages/create-merger-message) |
 | 自定义业务内容         | [创建自定义消息](/sdk/android/message/creating-messages/create-custom-message)                                                                                                                                                               |
 
-发送本地路径或本地文件创建的媒体消息时，调用 `sendMessage()`，SDK 会在发送过程中上传媒体文件。使用已有远端 URL 创建媒体消息时，调用对应的 `create*MessageByURL()` 方法，再通过 [`sendMessageNotOss()`](/sdk/android/message/sending-messages/send-message-not-oss) 发送，无需再次上传媒体文件。
+发送本地路径或本地文件创建的媒体消息时，调用 `sendMessage()`，SDK 会在发送过程中上传媒体文件。使用已有远端 URL 创建媒体消息时，调用对应的 `create*MessageByURL()` 方法，再按[发送已上传的媒体消息](/sdk/android/message/sending-messages/send-message-not-oss)发送，无需再次上传媒体文件。
 
 ## 按任务查找页面
 

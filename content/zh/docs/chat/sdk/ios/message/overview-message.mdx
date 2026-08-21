@@ -27,7 +27,7 @@ OpenIM iOS SDK 的消息能力围绕 `OIMMessageInfo` 展开。普通消息以�
 | @ 文本     | `createTextAtMessage:atUsersID:atUsersInfo:message:`                                                     | 群聊中提醒指定成员。                                                      |
 | 图片       | `createImageMessageFromFullPath:` 或 `createImageMessageByURL:sourcePicture:bigPicture:snapshotPicture:` | 从本地文件或已上传 URL 创建图片消息。                                     |
 | 音频       | `createSoundMessage:duration:` 或 `createSoundMessageByURL:duration:size:`                               | 创建语音或音频消息。                                                      |
-| 视频       | `createVideoMessage:videoType:duration:snapshotPath:` 或 URL 版本                                        | 创建视频与快照消息。                                                      |
+| 视频       | `createVideoMessage:videoType:duration:snapshotPath:` 或 URL 版本                                        | 创建带封面图的视频消息。                                                   |
 | 文件       | `createFileMessage:fileName:` 或 `createFileMessageByURL:fileName:size:`                                 | 创建普通附件。                                                            |
 | 自定义消息 | `createCustomMessage:extension:description:`                                                             | 承载卡片、邀请、订单等结构化业务数据。                                    |
 | Markdown   | OpenIMCore `Open_im_sdkCreateMarkdownMessage`                                                            | 创建 Markdown 文本消息；高阶 `OIMMessageInfo` 没有对应 factory selector。 |
@@ -57,8 +57,8 @@ OpenIM iOS SDK 的消息能力围绕 `OIMMessageInfo` 展开。普通消息以�
 
 1. 使用 `createTextMessage:`、`createImageMessageFromFullPath:` 等类方法创建本地 `OIMMessageInfo`。
 2. 使用 `sendMessage:recvID:groupID:isOnlineOnly:offlinePushInfo:onSuccess:onProgress:onFailure:` 发送。
-3. 发送端在成功回调中按 `clientMsgID` 合并最终消息；接收端通过 `OIMAdvancedMsgListener` 接收增量。
-4. 进入聊天页时使用历史查询建立快照，再持续合并消息、撤回、删除与已读回执事件。
+3. 发送端在成功回调中按 `clientMsgID` 更新最终消息；接收端通过 `OIMAdvancedMsgListener` 接收新消息。
+4. 进入聊天页时先查询历史消息，再持续处理消息、撤回、删除与已读回执事件。
 
 消息创建方法只在内存中创建对象，不会发送消息，也不会触发接收事件。发送成功、远端收到事件与重新查询历史是三个独立阶段。
 
@@ -82,7 +82,7 @@ OpenIM iOS SDK 的消息能力围绕 `OIMMessageInfo` 展开。普通消息以�
 
 ### 获取消息
 
-历史消息通过 `getAdvancedHistoryMessageList:onSuccess:onFailure:` 按 `conversationID` 和 `startClientMsgID` 分页读取。第一页令 `startClientMsgID` 为 `nil`，后续使用边界消息的 `clientMsgID`；历史结果和 delegate 增量使用同一标识去重。
+历史消息通过 `getAdvancedHistoryMessageList:onSuccess:onFailure:` 按 `conversationID` 和 `startClientMsgID` 分页读取。第一页令 `startClientMsgID` 为 `nil`，后续使用边界消息的 `clientMsgID`；历史结果和后续 delegate 事件使用同一标识去重。
 
 读取列表见[加载历史消息](/sdk/ios/message/retrieving-messages/load-older-messages)，定位单条消息见[按 ID 查找消息](/sdk/ios/message/retrieving-messages/find-messages-by-id)。
 
@@ -130,14 +130,14 @@ OpenIM iOS SDK 的消息能力围绕 `OIMMessageInfo` 展开。普通消息以�
 
 ### 修改与置顶消息
 
-`modifyMessageWithConversationID:message:onSuccess:onFailure:` 更新指定会话中的消息内容，其他客户端通过 `onMessageModified:` 按 `conversationID + clientMsgID` 合并。`setConversationPinnedMsgWithConversationID:clientMsgID:pinned:onSuccess:onFailure:` 设置或取消会话消息置顶，`getConversationPinnedMsgWithConversationID:onSuccess:onFailure:` 建立置顶列表快照，后续通过 `onChangedPinnedMsg:` 更新。
+`modifyMessageWithConversationID:message:onSuccess:onFailure:` 更新指定会话中的消息内容，其他客户端通过 `onMessageModified:` 按 `conversationID + clientMsgID` 合并。`setConversationPinnedMsgWithConversationID:clientMsgID:pinned:onSuccess:onFailure:` 设置或取消会话消息置顶，`getConversationPinnedMsgWithConversationID:onSuccess:onFailure:` 返回当前置顶列表，后续通过 `onChangedPinnedMsg:` 更新。
 
-完整权限、结果阶段和事件载荷见[修改消息](/sdk/ios/message/managing-messages/modify-a-message)与[置顶或取消置顶消息](/sdk/ios/message/managing-messages/set-message-pinned)。
+完整权限、请求结果与事件数据见[修改消息](/sdk/ios/message/managing-messages/modify-a-message)与[置顶或取消置顶消息](/sdk/ios/message/managing-messages/set-message-pinned)。
 
 ### 事件归属
 
 消息事件按职责分散在对应能力页，概览页只说明导航和归属：新消息见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)，删除见[批量删除消息](/sdk/ios/message/managing-messages/delete-saved-messages)，撤回见[撤回消息](/sdk/ios/message/managing-messages/revoke-a-message)，单聊已读回执见[标记会话已读](/sdk/ios/conversation/managing-conversations/mark-conversation-read)，群聊已读回执见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)，输入状态见[上报输入状态](/sdk/ios/message/composing-messages/update-typing-status)。会话变化的完整监听见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。
 
-消息创建和纯查询直接使用 callback 返回值建立对象或快照，不应描述为触发共享事件。会改变状态的调用应分别处理成功 callback、delegate 增量与重新查询校准。
+消息创建和纯查询直接使用 callback 返回的对象或列表，不应描述为触发共享事件。会改变状态的调用应分别处理成功 callback、后续 delegate 事件，并在需要时重新查询确认最终状态。
 
 消息修改、置顶会话消息和音频转写来自 enterprise SDK，并在对应页面标为商业版。当前 iOS 高阶 API 没有与 WASM 定向群消息创建完全对等的 `OIMMessageInfo` factory selector；不要用普通群消息或本地插入模拟该能力。

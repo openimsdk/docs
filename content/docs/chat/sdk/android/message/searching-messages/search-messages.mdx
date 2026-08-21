@@ -11,9 +11,47 @@ platform: 'android'
 sourcePath: '/sdk/android/message/searching-messages/search-messages'
 ---
 
-Search by conversation, keywords, senders, message types, time range, and pagination parameters. Pass `null` for `conversationID` to search across all local conversations.
+`searchLocalMessages()` searches messages already synchronized to the current account on this device. It does not query a global application backend. Limit the search by conversation, keywords, senders, message types, and time range. Pass `null` for `conversationID` to search all local conversations.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | No | Conversation restriction; pass `null` for all local conversations. |
+| `keywordList` | `List<String>` | Yes | Non-empty search terms. |
+| `keywordListMatchType` | `int` | Yes | SDK match mode for requiring all terms or any term. |
+| `senderUserIDList` | `List<String>` | No | Sender filter; pass an empty list for no restriction. |
+| `messageTypeList` | `List<Integer>` | No | Message-type filter; pass an empty list for no restriction. |
+| `searchTimePosition` | `int` | Yes | Time anchor; `0` means no anchor restriction. |
+| `searchTimePeriod` | `int` | Yes | Seconds searched backward from the anchor; `0` means no time restriction. |
+| `pageIndex` | `int` | Yes | Page index, starting at `0`. |
+| `count` | `int` | Yes | Maximum results per page. |
 
 ```java
-messageManager.searchLocalMessages(callback, conversationID, keywords, 1,
-    senderIDs, messageTypes, 0, 0, 0, 20);
+OpenIMClient.getInstance().messageManager.searchLocalMessages(
+    new OnBase<SearchResult>() {
+        @Override
+        public void onSuccess(SearchResult result) {
+            // result.getSearchResultItems() groups matching messages by conversation.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Keep previous results and report the failure.
+        }
+    },
+    conversationID,
+    keywords,
+    1,
+    senderIDs,
+    messageTypes,
+    0,
+    0,
+    0,
+    20
+);
 ```
+
+## Result
+
+The success callback returns `SearchResult`. `totalCount` is the number of matched messages. `searchResultItems` groups the conversation ID, display name, avatar, match count, and message list for each conversation. Search results belong to the current search UI and do not replace a conversation's complete message list or trigger message events.

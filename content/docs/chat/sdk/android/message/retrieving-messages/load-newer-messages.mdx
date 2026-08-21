@@ -11,8 +11,39 @@ platform: 'android'
 sourcePath: '/sdk/android/message/retrieving-messages/load-newer-messages'
 ---
 
-Use this method to read forward from a message anchor when loading the following page of history. Use `ViewType.History` for this directional history paging.
+`getAdvancedHistoryMessageListReverse()` reads toward newer messages after a specified message. Use it to continue downward from a search result or another located message. It runs in the opposite direction from ordinary history loading and does not receive live messages.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Conversation whose history is being loaded. |
+| `startMsg` | `Message` | Yes | Message after which loading begins. |
+| `count` | `int` | Yes | Maximum number of messages to load; the example uses `20`. |
+| `viewType` | `ViewType` | Yes | Pass `ViewType.History` when browsing message history. |
 
 ```java
-messageManager.getAdvancedHistoryMessageListReverse(callback, conversationID, startMessage, 20, ViewType.History);
+OpenIMClient.getInstance().messageManager.getAdvancedHistoryMessageListReverse(
+    new OnBase<AdvancedMessage>() {
+        @Override
+        public void onSuccess(AdvancedMessage result) {
+            List<Message> messages = result.getMessageList();
+            boolean reachedLatest = result.isEnd();
+            // Deduplicate by clientMsgID, then append messages to the current list.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Keep the current list and report that this page failed to load.
+        }
+    },
+    conversationID,
+    startMessage,
+    20,
+    ViewType.History
+);
 ```
+
+## Result
+
+The success callback returns `AdvancedMessage`. `messageList` contains messages read after the anchor, and `isEnd` indicates whether the newer end of the available history has been reached. `errCode` and `errMsg` carry the business status included in the result object. Continue handling live messages through [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

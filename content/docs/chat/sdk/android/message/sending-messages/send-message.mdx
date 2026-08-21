@@ -11,11 +11,42 @@ platform: 'android'
 sourcePath: '/sdk/android/message/sending-messages/send-message'
 ---
 
-For a one-to-one message, set `recvUid`. For a group message, set `recvGid`. `OnMsgSendCallback` reports success, failure, and media upload progress.
+`sendMessage()` sends a previously created `Message`. Set only `recvUid` for a one-to-one chat or only `recvGid` for a group chat. `OnMsgSendCallback` reports success, failure, and media upload progress separately.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `Message` | Yes | Pending message returned by a creation method. |
+| `recvUid` | `String` | Conditionally required | Recipient user ID for a one-to-one message; leave empty for a group message. |
+| `recvGid` | `String` | Conditionally required | Group ID for a group message; leave empty for a one-to-one message. |
+| `offlinePushInfo` | `OfflinePushInfo` | Yes | Offline-push configuration; pass an empty object when no custom content is needed. |
 
 ```java
-messageManager.sendMessage(new OnMsgSendCallback() {
-    @Override public void onSuccess(Message sentMessage) { /* sentMessage is the successfully sent message. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, message, peerUserID, null, offlinePushInfo);
+OpenIMClient.getInstance().messageManager.sendMessage(
+    new OnMsgSendCallback() {
+        @Override
+        public void onProgress(long progress) {
+            // Update media upload progress.
+        }
+
+        @Override
+        public void onSuccess(Message sentMessage) {
+            // Replace the pending item by clientMsgID.
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Mark the item as failed and allow retry.
+        }
+    },
+    message,
+    peerUserID,
+    null,
+    offlinePushInfo
+);
 ```
+
+## Result
+
+The success callback provides the sent `Message`, including server-assigned identifiers, timestamps, and send state. It means this request completed, not that the recipient has already received the message. The recipient uses [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

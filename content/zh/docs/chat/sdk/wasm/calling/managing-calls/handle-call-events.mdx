@@ -4,23 +4,74 @@ description: '集中监听 WASM SDK 的通话邀请、参与者和媒体流事�
 sourcePath: '/sdk/wasm/calling/managing-calls/handle-call-events'
 ---
 
-通话状态层集中监听邀请生命周期、参与者连接状态和媒体流变化，并按 `roomID` 合并到同一份本地状态。
+通话状态层集中监听邀请生命周期、参与者连接状态和媒体流变化。大多数事件的房间 ID 位于 `data.invitation.roomID`，媒体流事件则直接提供 `data.roomID`。参与者进出事件在 `invitation` 为空时可能只提供 `groupID`，此时应先从当前群通话状态中查找房间；仍无法确定时，再按群组查询当前房间并更新本地状态。
+
+## 事件数据
+
+| 事件 | `data` 类型 | 定位和处理所需字段 |
+| --- | --- | --- |
+| `OnReceiveNewInvitation` | `SignalingInvitationEvent` | `invitation.roomID`、`invitation.groupID`、`participant`、`userID`。 |
+| `OnInviteeAccepted` | `SignalingActionEvent` | `invitation.roomID`、`userID`、`participant`、`opUserPlatformID`。 |
+| `OnInviteeRejected` | `SignalingActionEvent` | `invitation.roomID`、`userID`、`opUserPlatformID`。 |
+| `OnInvitationCancelled` | `SignalingInvitationEvent` | `invitation.roomID`、`userID`。 |
+| `OnInvitationTimeout` | `SignalingInvitationEvent` | `invitation.roomID`、`userID`。 |
+| `OnInviteeAcceptedByOtherDevice` | `SignalingActionEvent` | `invitation.roomID`、`userID`、`opUserPlatformID`。 |
+| `OnInviteeRejectedByOtherDevice` | `SignalingActionEvent` | `invitation.roomID`、`userID`、`opUserPlatformID`。 |
+| `OnHangUp` | `SignalingHungUpEvent` | `invitation.roomID`、`userID`。 |
+| `OnRoomParticipantConnected` | `SignalingRoomParticipantChangedEvent` | `invitation?.roomID`、`groupID`、`participant`。 |
+| `OnRoomParticipantDisconnected` | `SignalingRoomParticipantChangedEvent` | `invitation?.roomID`、`groupID`、`participant`。 |
+| `OnStreamChange` | `SignalingStreamChangeEvent` | 直接使用 `roomID`，并读取 `streamType` 与 `mute`。 |
+
+邀请类事件的 `data` 不是 `SignalingInvitation` 本身；应从 `data.invitation` 读取邀请。参与者列表中的每个用户使用 `participant.userInfo.userID` 标识，并与 `roomID` 组合成参与者状态主键。
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
 
+function getCallRoomID(data) {
+  return (
+    data.roomID ??
+    data.invitation?.roomID ??
+    (data.groupID ? getActiveRoomIDByGroupID(data.groupID) : undefined)
+  );
+}
+
+function mergeParticipantEvent(data, action) {
+  const roomID = getCallRoomID(data);
+
+  if (!roomID) {
+    refreshGroupCall(data.groupID);
+    return;
+  }
+
+  action(roomID, data.participant ?? []);
+}
+
 const handlers = {
-  invitation: ({ data }) => upsertCall({ invitation: data, state: 'ringing' }),
-  accepted: ({ data }) => mergeCallEvent('accepted', data),
-  rejected: ({ data }) => mergeCallEvent('rejected', data),
-  cancelled: ({ data }) => mergeCallEvent('cancelled', data),
-  timeout: ({ data }) => mergeCallEvent('timeout', data),
-  acceptedByOtherDevice: ({ data }) => mergeCallEvent('accepted-by-other-device', data),
-  rejectedByOtherDevice: ({ data }) => mergeCallEvent('rejected-by-other-device', data),
-  hangUp: ({ data }) => finishCall(getCallRoomID(data)),
-  participantConnected: ({ data }) => addParticipant(data),
-  participantDisconnected: ({ data }) => removeParticipant(data),
-  streamChanged: ({ data }) => updateParticipantStream(data),
+  invitation: ({ data }) =>
+    upsertCall({
+      roomID: data.invitation.roomID,
+      invitation: data.invitation,
+      participant: data.participant,
+      state: 'ringing',
+    }),
+  accepted: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'accepted', data),
+  rejected: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'rejected', data),
+  cancelled: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'cancelled', data),
+  timeout: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'timeout', data),
+  acceptedByOtherDevice: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'accepted-by-other-device', data),
+  rejectedByOtherDevice: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'rejected-by-other-device', data),
+  hangUp: ({ data }) => finishCall(data.invitation.roomID, data.userID),
+  participantConnected: ({ data }) =>
+    mergeParticipantEvent(data, addParticipants),
+  participantDisconnected: ({ data }) =>
+    mergeParticipantEvent(data, removeParticipants),
+  streamChanged: ({ data }) => updateRoomStream(data.roomID, data),
 };
 
 openimsdk.on(SdkEvent.OnReceiveNewInvitation, handlers.invitation);
@@ -50,4 +101,4 @@ function removeCallListeners() {
 }
 ```
 
-本页是以上 11 个通话事件的唯一完整监听归属页。参与者状态还要结合用户 ID 更新；不要按事件顺序、展示名称或数组下标合并。退出登录、切换账号或销毁通话状态层时调用 `removeCallListeners()`。
+本页集中提供以上 11 个通话事件的完整监听示例。`refreshGroupCall(groupID)` 应调用[查询群组通话房间](/sdk/wasm/calling/retrieving-call-information/get-room-by-group-id)，并用查询结果刷新该群组的当前通话状态。更新参与者时按 `roomID:userID` 合并；不要使用事件顺序、展示名称或数组下标识别通话或参与者。退出登录、切换账号或销毁通话状态层时调用 `removeCallListeners()`。

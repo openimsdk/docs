@@ -5,29 +5,80 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/managing-calls/handle-call-events'
 ---
 
-Register invitation lifecycle, participant connection, and media-stream listeners in a central call-state layer, and merge them into one local state object by `roomID`.
+Register invitation lifecycle, participant connection, and media-stream listeners in a central call-state layer. Most events expose the room ID as `data.invitation.roomID`; stream events expose it directly as `data.roomID`. A participant event can have a null `invitation` and provide only `groupID`. In that case, look up the room in the current group-call state and query the room by group ID if the local state cannot resolve it.
+
+## Event data
+
+| Event | `data` type | Fields used to locate and process the update |
+| --- | --- | --- |
+| `OnReceiveNewInvitation` | `SignalingInvitationEvent` | `invitation.roomID`, `invitation.groupID`, `participant`, and `userID`. |
+| `OnInviteeAccepted` | `SignalingActionEvent` | `invitation.roomID`, `userID`, `participant`, and `opUserPlatformID`. |
+| `OnInviteeRejected` | `SignalingActionEvent` | `invitation.roomID`, `userID`, and `opUserPlatformID`. |
+| `OnInvitationCancelled` | `SignalingInvitationEvent` | `invitation.roomID` and `userID`. |
+| `OnInvitationTimeout` | `SignalingInvitationEvent` | `invitation.roomID` and `userID`. |
+| `OnInviteeAcceptedByOtherDevice` | `SignalingActionEvent` | `invitation.roomID`, `userID`, and `opUserPlatformID`. |
+| `OnInviteeRejectedByOtherDevice` | `SignalingActionEvent` | `invitation.roomID`, `userID`, and `opUserPlatformID`. |
+| `OnHangUp` | `SignalingHungUpEvent` | `invitation.roomID` and `userID`. |
+| `OnRoomParticipantConnected` | `SignalingRoomParticipantChangedEvent` | `invitation?.roomID`, `groupID`, and `participant`. |
+| `OnRoomParticipantDisconnected` | `SignalingRoomParticipantChangedEvent` | `invitation?.roomID`, `groupID`, and `participant`. |
+| `OnStreamChange` | `SignalingStreamChangeEvent` | Direct `roomID`, plus `streamType` and `mute`. |
+
+For invitation events, `data` is not a `SignalingInvitation` itself; read the invitation from `data.invitation`. Identify each user in a participant list by `participant.userInfo.userID`, combined with `roomID` for the participant-state key.
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
 
+function getCallRoomID(data) {
+  return (
+    data.roomID ??
+    data.invitation?.roomID ??
+    (data.groupID ? getActiveRoomIDByGroupID(data.groupID) : undefined)
+  );
+}
+
+function mergeParticipantEvent(data, action) {
+  const roomID = getCallRoomID(data);
+
+  if (!roomID) {
+    refreshGroupCall(data.groupID);
+    return;
+  }
+
+  action(roomID, data.participant ?? []);
+}
+
 const handlers = {
-  invitation: ({ data }) => upsertCall({ invitation: data, state: 'ringing' }),
-  accepted: ({ data }) => mergeCallEvent('accepted', data),
-  rejected: ({ data }) => mergeCallEvent('rejected', data),
-  cancelled: ({ data }) => mergeCallEvent('cancelled', data),
-  timeout: ({ data }) => mergeCallEvent('timeout', data),
-  acceptedByOtherDevice: ({ data }) => mergeCallEvent('accepted-by-other-device', data),
-  rejectedByOtherDevice: ({ data }) => mergeCallEvent('rejected-by-other-device', data),
-  hangUp: ({ data }) => finishCall(getCallRoomID(data)),
-  participantConnected: ({ data }) => addParticipant(data),
-  participantDisconnected: ({ data }) => removeParticipant(data),
-  streamChanged: ({ data }) => updateParticipantStream(data),
+  invitation: ({ data }) =>
+    upsertCall({
+      roomID: data.invitation.roomID,
+      invitation: data.invitation,
+      participant: data.participant,
+      state: 'ringing',
+    }),
+  accepted: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'accepted', data),
+  rejected: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'rejected', data),
+  cancelled: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'cancelled', data),
+  timeout: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'timeout', data),
+  acceptedByOtherDevice: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'accepted-by-other-device', data),
+  rejectedByOtherDevice: ({ data }) =>
+    mergeCallEvent(data.invitation.roomID, 'rejected-by-other-device', data),
+  hangUp: ({ data }) => finishCall(data.invitation.roomID, data.userID),
+  participantConnected: ({ data }) =>
+    mergeParticipantEvent(data, addParticipants),
+  participantDisconnected: ({ data }) =>
+    mergeParticipantEvent(data, removeParticipants),
+  streamChanged: ({ data }) => updateRoomStream(data.roomID, data),
 };
 
 openimsdk.on(SdkEvent.OnReceiveNewInvitation, handlers.invitation);
@@ -57,4 +108,4 @@ function removeCallListeners() {
 }
 ```
 
-This page is the sole canonical reference for the 11 call events above. Combine `roomID` with the user ID when updating participant state. Do not merge by event order, display name, or array index. Call `removeCallListeners()` when the user logs out, the active account changes, or the call-state layer is destroyed.
+This page provides the complete listener examples for the 11 call events above. `refreshGroupCall(groupID)` should call [Get a group call room](/sdk/wasm/calling/retrieving-call-information/get-room-by-group-id) and refresh the current call state for that group from the query result. Merge participant state by `roomID:userID`. Do not identify calls or participants by event order, display name, or array index. Call `removeCallListeners()` when the user logs out, the active account changes, or the call-state layer is destroyed.

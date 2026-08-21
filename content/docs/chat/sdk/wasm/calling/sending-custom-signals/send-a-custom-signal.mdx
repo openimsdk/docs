@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/sending-custom-signals/send-a-custom-signal'
@@ -32,7 +32,7 @@ await openimsdk.signalingSendCustomSignal({
 });
 ```
 
-Promise completion means that OpenIMServer accepted the custom signal for sending; it does not mean other participants have processed it. Keep custom signals compact and include a protocol version and business idempotency ID so old and new clients can interoperate without applying an event twice. Do not place large files, chat history, long-term state, or sensitive credentials in `customInfo`.
+Promise completion means that OpenIMServer accepted the custom signal for sending; it does not mean other participants have processed it. Keep custom signals compact and include a protocol version and unique event ID so old and new clients can interoperate and ignore duplicate events. Do not place large files, chat history, long-term state, or sensitive credentials in `customInfo`.
 
 ## Receive a signal
 
@@ -59,6 +59,6 @@ function removeCustomSignalListener() {
 }
 ```
 
-`parseAndValidateCallSignal()` should validate the JSON structure, protocol version, `eventID`, `type`, and business fields before returning an application object. This page is the canonical listener reference for the event. Process business signals idempotently by `roomID:eventID`, and combine that key with the protocol's user ID for participant state. Do not depend on event order. Call `removeCustomSignalListener()` when leaving the call view, logging out, or changing accounts.
+`parseAndValidateCallSignal()` should validate the JSON structure, protocol version, `eventID`, `type`, and business fields before returning an application object. This page provides the complete listener example for the event. Use `roomID:eventID` to identify and ignore duplicate signals, and combine it with the protocol's user ID when updating participant state. Do not depend on event order. Call `removeCustomSignalListener()` when leaving the call view, logging out, or changing accounts.
 
-Do not trust client-provided custom signals to grant host, paid-feature, or privacy permissions. State requiring authoritative validation must be stored and evaluated by a trusted backend. After reconnecting, reconcile long-term state through a room query or the business backend; custom signals are not a replayable authoritative record.
+Do not trust client-provided custom signals to grant host, paid-feature, or privacy permissions. State requiring authoritative validation must be stored and evaluated by a trusted backend. After reconnecting, query the room or business backend again and use the returned result; custom signals are not a replayable authoritative record.

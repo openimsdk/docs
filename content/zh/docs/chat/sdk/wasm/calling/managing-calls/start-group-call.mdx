@@ -20,7 +20,7 @@ sourcePath: '/sdk/wasm/calling/managing-calls/start-group-call'
 | `invitation.sessionType` | `SessionType` | 是 | 群聊使用 `SessionType.WorkingGroup`。 |
 | `invitation.platformID` | `Platform` | 是 | 发起端平台，网页端使用 `Platform.Web`。 |
 | `invitation.customData` | `string` | 否 | 随邀请携带的业务扩展字符串。 |
-| `invitation.initiateTime` | `number` | 否 | 邀请发起时间。通常由信令链路维护，无需手动填写。 |
+| `invitation.initiateTime` | `number` | 否 | 邀请发起时间，Unix 毫秒时间戳。通常由 SDK 的通话流程维护，无需手动填写。 |
 | `invitation.busyLineUserIDList` | `string[]` | 否 | 忙线用户列表。发起新邀请时通常不填写。 |
 | `offlinePushInfo` | `OfflinePush` | 否 | 被邀请人离线时使用的推送内容。 |
 | `offlinePushInfo.title` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写推送标题。 |
@@ -38,7 +38,7 @@ const { data: roomCredentials } = await openimsdk.signalingInviteInGroup({
     inviteeUserIDList: selectedGroupMemberIDs,
     customData: JSON.stringify({ source: 'group-call' }),
     groupID,
-    roomID: groupID,
+    roomID: crypto.randomUUID(),
     timeout: 30,
     mediaType: 'video',
     sessionType: SessionType.WorkingGroup,
@@ -48,7 +48,7 @@ const { data: roomCredentials } = await openimsdk.signalingInviteInGroup({
 });
 ```
 
-示例沿用群组 ID 作为房间 ID；若业务自行生成 `roomID`，所有参与端必须使用同一个值。发起前应排除当前用户、空值和重复成员。
+每次群通话都应生成新的 `roomID`，不要直接复用 `groupID`，否则同一群组的不同通话可能被错误合并。被邀请方从邀请事件取得该值，后续接受、拒绝、取消和挂断操作都继续使用同一个 `roomID`。发起前还应排除当前用户、空值和重复成员。
 
 Promise 成功后，`data` 是 `SignalingInviteResult`，字段含义见[发起单聊通话](/sdk/wasm/calling/managing-calls/start-single-call)。
 

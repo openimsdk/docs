@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/group/retrieving-group-members/get-group-member-list'
@@ -40,19 +40,19 @@ const { data: members } = await openimsdk.getGroupMemberList({
 });
 ```
 
-When the Promise resolves, `data` is the current page of `GroupMemberItem[]`. For the next page, increase `offset` by the number of items requested, not by the length of an array that may already contain event-driven updates.
+When the Promise resolves, `data` is the current page of `GroupMemberItem[]`. For the next page, increase `offset` by the number of items requested, not by a list length that may already have changed after member events arrived.
 
 ### Group member fields
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `groupID` | `string` | ID of the group to which the member belongs. |
-| `userID` | `string` | Member's user ID. Together with `groupID`, it forms the stable identifier for the member record. |
+| `userID` | `string` | Member's user ID. When a member event arrives, use it together with `groupID` to find the matching member. |
 | `nickname` | `string` | User's nickname within this group. |
-| `faceURL` | `string` | Snapshot of the group member's avatar URL. |
+| `faceURL` | `string` | Avatar URL stored in the current group member profile. |
 | `roleLevel` | `GroupMemberRole` | Role in the group: regular member, administrator, or owner. |
-| `muteEndTime` | `number` | Time when the member's mute period ends. Compare it with the current time to determine whether the member is muted. |
-| `joinTime` | `number` | Time when the member joined the group. |
+| `muteEndTime` | `number` | End of the member's mute period as a Unix timestamp in milliseconds. Compare it with the current time to determine whether the member is muted. |
+| `joinTime` | `number` | Time when the member joined the group, as a Unix timestamp in milliseconds. |
 | `joinSource` | `GroupJoinSource` | How the member joined, such as by invitation, search, or QR code. |
 | `inviterUserID` | `string` | User ID of the member who sent the invitation. It may be empty when there was no inviter. |
 | `operatorUserID` | `string` | User ID of the operator who most recently created or updated the member record. |
@@ -65,7 +65,7 @@ The SDK does not provide a separate API for listing muted members. If needed, re
 
 ## Listen for member changes
 
-This page is the canonical reference for group member event listeners. Use `groupID:userID` as the merge key for member profiles:
+This page provides the complete group member event listeners. Use `groupID:userID` to identify a group member record:
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';

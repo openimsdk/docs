@@ -1,11 +1,11 @@
 ---
 title: 'Conversation group overview'
-description: 'Understand the WASM SDK conversation-group model, capability boundaries, and incremental events.'
+description: 'Understand the WASM SDK conversation-group model, capability boundaries, and state-change events.'
 product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups'
@@ -27,7 +27,7 @@ Use `ConversationGroupTypeNormal` for ordinary user-defined categories. The acti
 
 ## Group data
 
-`ConversationGroup` represents a conversation group. Merge snapshots and event increments by the stable `conversationGroupID`.
+`ConversationGroup` represents a conversation group. Use `conversationGroupID` to identify the same group so that an event updates the correct record.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -38,7 +38,7 @@ Use `ConversationGroupTypeNormal` for ordinary user-defined categories. The acti
 | `ex` | `string` | Application-defined extension string. |
 | `conversationGroupType` | `ConversationGroupType` | Group type. |
 | `hidden` | `boolean` | Whether the group is hidden. |
-| `unreadCount` | `number` | Snapshot of the total unread count for conversations in the group. |
+| `unreadCount` | `number` | Total unread count for conversations in the group at query time. |
 | `conversationIDs` | `string[]` | Conversation IDs that currently belong to the group. |
 
 ## Available operations
@@ -55,14 +55,14 @@ Use `ConversationGroupTypeNormal` for ordinary user-defined categories. The acti
 
 ## Listen for group changes
 
-Queries establish a snapshot at call time; events merge subsequent increments. An active-call Promise succeeding, a related event arriving, and a reconciliation query are three separate stages.
+Queries return the group data available at call time, while events report later changes. An operation Promise succeeding, a related event arriving, and a later query returning the latest data are three separate stages.
 
 | Event | `data` type | Handling |
 | --- | --- | --- |
-| `OnConversationGroupAdded` | `ConversationGroup[]` | Merge newly added groups. |
+| `OnConversationGroupAdded` | `ConversationGroup[]` | Add groups that are not already present. |
 | `OnConversationGroupChanged` | `ConversationGroup[]` | Update groups by `conversationGroupID`. |
 | `OnConversationGroupDeleted` | `ConversationGroup[]` | Remove deleted groups. |
-| `OnConversationGroupMemberAdded` | `ConversationGroupMemberChangedCallbackData` | Merge newly associated conversations and conversation details. |
+| `OnConversationGroupMemberAdded` | `ConversationGroupMemberChangedCallbackData` | Add newly associated conversations and their details. |
 | `OnConversationGroupMemberDeleted` | `ConversationGroupMemberChangedCallbackData` | Remove the corresponding conversation associations. |
 
 ```ts
@@ -109,4 +109,4 @@ function disposeConversationGroupEvents() {
 }
 ```
 
-An event may arrive after the active call completes. Merge state idempotently by ID instead of simply appending arrays.
+An event may arrive after the operation completes. Before updating state, use the ID to check whether the record already exists so that the same group or conversation is not appended twice.

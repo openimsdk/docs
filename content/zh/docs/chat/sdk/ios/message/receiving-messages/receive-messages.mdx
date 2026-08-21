@@ -1,6 +1,6 @@
 ---
 title: '接收消息'
-description: '注册 iOS 消息监听器，并把新消息增量合并到会话状态。'
+description: '注册 iOS 消息监听器，并把新消息合并到对应会话。'
 sourcePath: '/sdk/ios/message/receiving-messages/receive-messages'
 ---
 
@@ -8,7 +8,7 @@ iOS SDK 通过 `OIMAdvancedMsgListener` 推送普通新消息、在线消息、�
 
 ## 消息类型
 
-普通事件每次返回一个 `OIMMessageInfo`。根据消息元素选择文本、@ 文本、自定义、图片、音频、视频、文件或降级渲染；不要假设所有消息都有 `textElem`。媒体消息只读取元素中的远端地址、大小、名称、时长与快照，不需要重新上传。
+普通事件每次返回一个 `OIMMessageInfo`。根据消息元素选择文本、@ 文本、自定义、图片、音频、视频、文件或降级渲染；不要假设所有消息都有 `textElem`。媒体消息只读取元素中的远端地址、大小、名称、时长与封面图，不需要重新上传。
 
 消息可能属于当前未打开的会话。先根据 `sessionType`、`sendID`、`recvID` 与 `groupID` 确定目标会话，再按 `clientMsgID` 幂等合并。
 
@@ -70,13 +70,13 @@ iOS SDK 通过 `OIMAdvancedMsgListener` 推送普通新消息、在线消息、�
 
 先根据消息路由字段确定会话，再按 `clientMsgID` 幂等合并。新消息事件可能和发送成功回调、历史查询结果重叠，不能直接追加数组。
 
-历史查询负责建立当前快照；`onRecvNewMessage:` 负责在线增量；重新登录后的离线变化由 SDK 同步。同步完成后，可重新查询当前会话历史校准列表。
+历史查询负责加载当前已有消息；`onRecvNewMessage:` 负责加入在线到达的新消息；重新登录后的离线变化由 SDK 同步。同步完成后，可重新查询当前会话历史，以查询结果确认列表状态。
 
 ## 首次进入会话时读取历史
 
 事件只负责新到达的消息。首次进入会话、向上翻页或补齐同步后的列表时，使用 `getAdvancedHistoryMessageList:onSuccess:onFailure:` 读取历史。第一页把 `startClientMsgID` 设为 `nil`，后续使用边界消息的 `clientMsgID`；完整处理见[加载历史消息](/sdk/ios/message/retrieving-messages/load-older-messages)。
 
-查询 callback 直接建立消息快照，不会触发新消息 listener。分页与事件可能包含同一条消息，因此两条路径必须使用相同的会话路由与 `clientMsgID` 去重规则。
+查询 callback 直接返回当前消息列表，不会触发新消息 listener。分页与事件可能包含同一条消息，因此两条路径必须使用相同的会话路由与 `clientMsgID` 去重规则。
 
 ## 标记会话已读
 

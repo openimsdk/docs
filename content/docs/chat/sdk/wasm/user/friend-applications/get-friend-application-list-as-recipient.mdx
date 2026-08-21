@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-11'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/user/friend-applications/get-friend-application-list-as-recipient'
@@ -17,7 +17,7 @@ Call `getFriendApplicationListAsRecipient()` with `handleResults`, `offset`, and
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `handleResults` | `number[]` | Yes | Application results to query. |
+| `handleResults` | `number[]` | Yes | Application results to query. Pass an empty array to include every processing result. |
 | `offset` | `number` | Yes | Pagination offset. Pass `0` for the first page. |
 | `count` | `number` | Yes | Number of applications to request. |
 
@@ -48,25 +48,25 @@ After the Promise succeeds, `data` contains the current page of `FriendApplicati
 | Field | Type | Description |
 | --- | --- | --- |
 | `fromUserID` | `string` | User ID of the applicant. |
-| `fromNickname` | `string` | Snapshot of the applicant's nickname. |
-| `fromFaceURL` | `string` | Snapshot of the applicant's avatar. |
+| `fromNickname` | `string` | Applicant nickname stored with the application record. |
+| `fromFaceURL` | `string` | Applicant avatar stored with the application record. |
 | `toUserID` | `string` | User ID of the recipient. |
-| `toNickname` | `string` | Snapshot of the recipient's nickname. |
-| `toFaceURL` | `string` | Snapshot of the recipient's avatar. |
+| `toNickname` | `string` | Recipient nickname stored with the application record. |
+| `toFaceURL` | `string` | Recipient avatar stored with the application record. |
 | `reqMsg` | `string` | Message included with the application. |
 | `handleResult` | `ApplicationHandleResult` | Current result: pending, accepted, or rejected. |
 | `handlerUserID` | `string` | User ID that processed the application. It can be empty while pending. |
 | `handleMsg` | `string` | Explanation entered while processing the application. |
-| `handleTime` | `number` | Processing time. Do not treat it as valid while the application is pending. |
-| `createTime` | `number` | Time when the application record was created. |
+| `handleTime` | `number` | Processing time as a Unix timestamp in milliseconds. Do not treat it as valid while the application is pending. |
+| `createTime` | `number` | Time when the application record was created, as a Unix timestamp in milliseconds. |
 | `ex` | `string` | Extension string for the application record. |
 | `attachedInfo` | `string` (optional) | SDK attachment data. Parse it only according to a confirmed application contract. |
 
-Use `fromUserID:toUserID` as the merge key for application records. Nicknames and avatars are snapshots captured when the application was created or synchronized. Query the latest account profile by `userID` when required.
+Use `fromUserID:toUserID` to identify a friend application. The nicknames and avatars are the profile data stored when the application was created or synchronized. Query the latest account profile by `userID` when required.
 
 ## Synchronize friend application changes
 
-Locate a friend application by `fromUserID:toUserID`. This page owns the complete listeners for `OnFriendApplicationAdded`, `OnFriendApplicationAccepted`, `OnFriendApplicationRejected`, and `OnFriendApplicationDeleted`.
+Locate a friend application by `fromUserID:toUserID`. This page provides the complete listeners for `OnFriendApplicationAdded`, `OnFriendApplicationAccepted`, `OnFriendApplicationRejected`, and `OnFriendApplicationDeleted`.
 
 ```ts
 const handleApplicationChanged = ({ data }) =>
@@ -111,4 +111,4 @@ function removeFriendApplicationListeners() {
 }
 ```
 
-Route each event to the received or sent list according to whether the current user is `toUserID`. Reset pagination if a change arrives while paging. After an application is accepted, merge the new friendship through `OnFriendAdded`, which is owned by [Get the friend list](/sdk/wasm/user/friends/get-friend-list-page).
+Route each event to the received or sent list according to whether the current user is `toUserID`. Reset pagination if a change arrives while paging. After an application is accepted, use the `OnFriendAdded` event described in [Get the friend list](/sdk/wasm/user/friends/get-friend-list-page) to update the friend list.

@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/message/overview-message'
@@ -21,8 +21,8 @@ Receiving new messages, loading history, searching, and managing messages are al
 | --- | --- | --- |
 | Create | Call the corresponding `create*Message()` method | Returns a pending `MessageItem`; it does not write to the server or trigger a new-message event. |
 | Send | Call `sendMessage()` or `sendMessageNotOss()` | For a one-to-one chat, set `recvID`; for a group chat, set `groupID`. Pass an empty string for the other target field. |
-| Receive | Listen for new-message events | Determine the target conversation from the message routing fields, then merge idempotently by `clientMsgID`. |
-| Query | Load history, search, or locate messages by ID | Queries return a snapshot at call time and do not trigger new-message events. |
+| Receive | Listen for new-message events | Determine the target conversation from the message routing fields, then use `clientMsgID` to find and update the matching message. Do not insert a second copy for a duplicate event. |
+| Query | Load history, search, or locate messages by ID | Queries return the data available when the call runs and do not trigger new-message events. |
 | Update | Delete, revoke, modify, pin, or report message read status | Handle Promise results, related events, and any necessary re-query separately. |
 
 For image, audio, video, and file messages created from a browser `File`, `sendMessage()` uses the SDK's built-in upload and send flow. If your application has already obtained a media URL from its upload service, create the message with the corresponding `create*MessageByURL()` method and send it with `sendMessageNotOss()` to avoid uploading the resource again.
@@ -40,14 +40,14 @@ Whether a message is created, sent, received, or queried, the message object in 
 | `recvID` | `string` (optional) | Recipient's user ID for a one-to-one message; usually empty for a group message. |
 | `groupID` | `string` (optional) | Group ID for a group message; usually empty for a one-to-one message. |
 | `contentType` | `MessageType` | Message content type, which determines which content field to read. |
-| `createTime` | `number` | Time when the message object was created. |
-| `sendTime` | `number` | Time when the message was sent, used for message ordering. |
+| `createTime` | `number` | Time when the message object was created, as a Unix timestamp in milliseconds. |
+| `sendTime` | `number` | Time when the message was sent, as a Unix timestamp in milliseconds, used for message ordering. |
 | `seq` | `number` | Server-side message sequence number. A message that has not been sent successfully may not have a usable sequence number. |
 | `senderPlatformID` | `Platform` | Client platform from which the message was sent. |
-| `senderNickname` | `string` (optional) | Snapshot of the sender's nickname. |
-| `senderFaceUrl` | `string` (optional) | Snapshot of the sender's avatar URL. |
+| `senderNickname` | `string` (optional) | Sender nickname recorded in the message. |
+| `senderFaceUrl` | `string` (optional) | Sender avatar URL recorded in the message. |
 | `status` | `MessageStatus` | Current send state: sending, succeeded, or failed. |
-| `isRead` | `boolean` | Snapshot of the message's current read state. |
+| `isRead` | `boolean` | Read state recorded when the message was queried or received. |
 | `offlinePush` | `OfflinePush` (optional) | Offline push configuration used when sending. |
 | `content` | `string` (optional) | Serialized message content retained by the SDK. Prefer the content field selected by `contentType` when rendering. |
 | `attachedInfo` | `string` (optional) | SDK attachment data. Parse it only according to a confirmed application contract. |
@@ -75,7 +75,7 @@ The message body is stored in the content field corresponding to `contentType`. 
 | Text and Markdown | [Create a text message](/sdk/wasm/message/creating-messages/create-text-message), [Create a Markdown message](/sdk/wasm/message/creating-messages/create-markdown-message) | Render Markdown safely on the receiving client. |
 | Group @ mentions | [Create an @ message](/sdk/wasm/message/creating-messages/create-text-at-message) | Available only in group chats. Conversation data maintains the @ alert state. |
 | Image, audio, video, and file | [Create an image message from a file](/sdk/wasm/message/creating-messages/create-image-message-by-file), [Create an image message from a URL](/sdk/wasm/message/creating-messages/create-image-message-by-url) | Other media types use the same local-file or uploaded-URL paths. |
-| Contact card, location, and emoji | [Create a contact card message](/sdk/wasm/message/creating-messages/create-card-message), [Create a location message](/sdk/wasm/message/creating-messages/create-location-message), [Create an emoji message](/sdk/wasm/message/creating-messages/create-face-message) | Creation stores a content snapshot; it does not update automatically when the source data changes. |
+| Contact card, location, and emoji | [Create a contact card message](/sdk/wasm/message/creating-messages/create-card-message), [Create a location message](/sdk/wasm/message/creating-messages/create-location-message), [Create an emoji message](/sdk/wasm/message/creating-messages/create-face-message) | The content is written when the message is created and does not update automatically when the source data changes. |
 | Reply, forward, and merged forward | [Create a reply message](/sdk/wasm/message/creating-messages/create-quote-message), [Create a forwarded message](/sdk/wasm/message/creating-messages/create-forward-message), [Create a merged message](/sdk/wasm/message/creating-messages/create-merger-message) | The created object must still be sent explicitly. |
 | Custom business content | [Create a custom message](/sdk/wasm/message/creating-messages/create-custom-message) | Suitable for structured application data that must be synchronized to conversation members. |
 
@@ -96,9 +96,9 @@ Store state that affects only the current client's presentation in `localEx`; do
 
 ## State synchronization boundaries
 
-The complete listener implementation for each message event is maintained only on its canonical page:
+To avoid registering the same event more than once, the complete listener for each type of message change is maintained on the following page:
 
-| Change | Canonical event page | Merge strategy |
+| Change | Complete listener page | How to handle the event |
 | --- | --- | --- |
 | New, offline, and online-only messages | [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages) | Determine the target conversation, then merge by `clientMsgID`. |
 | Message deletion | [Delete messages in a batch](/sdk/wasm/message/managing-messages/delete-saved-messages) | Remove by target conversation and `clientMsgID`. |
@@ -110,4 +110,4 @@ The complete listener implementation for each message event is maintained only o
 
 Conversation unread counts, total unread count, and group @ alerts are conversation state. Their event handlers are maintained on [Mark a conversation as read](/sdk/wasm/conversation/managing-conversations/mark-conversation-read), [Maintain the total unread count](/sdk/wasm/conversation/managing-conversations/get-total-unread-count), and [Get the conversation list](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list), respectively.
 
-Creating a message object and performing a read-only query use the Promise result only to establish a snapshot; they do not trigger shared message events. For state-changing operations, treat Promise completion, event arrival, and re-query reconciliation as separate stages.
+Creating a message object and performing a read-only query return only the result of that call; they do not trigger shared message events. For state-changing operations, Promise completion, arrival of the related event, and any later query for the latest data are separate stages.

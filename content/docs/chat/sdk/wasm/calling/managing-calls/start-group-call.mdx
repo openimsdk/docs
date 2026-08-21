@@ -5,7 +5,7 @@ product: 'sdk'
 context: 'chat/sdk/wasm'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
+lastUpdated: '2026-08-21'
 version: 'v4'
 platform: 'wasm'
 sourcePath: '/sdk/wasm/calling/managing-calls/start-group-call'
@@ -27,7 +27,7 @@ sourcePath: '/sdk/wasm/calling/managing-calls/start-group-call'
 | `invitation.sessionType` | `SessionType` | Yes | Use `SessionType.WorkingGroup` for a group call. |
 | `invitation.platformID` | `Platform` | Yes | Caller's platform. Use `Platform.Web` in a web application. |
 | `invitation.customData` | `string` | No | Business extension string carried with the invitation. |
-| `invitation.initiateTime` | `number` | No | Invitation start time. The signaling flow normally maintains it, so it does not need to be set manually. |
+| `invitation.initiateTime` | `number` | No | Invitation start time as a Unix timestamp in milliseconds. The signaling flow normally maintains it, so it does not need to be set manually. |
 | `invitation.busyLineUserIDList` | `string[]` | No | Busy-user list. Normally omit it when starting a new invitation. |
 | `offlinePushInfo` | `OfflinePush` | No | Push content used when an invitee is offline. |
 | `offlinePushInfo.title` | `string` | Conditional | Push title, required when `offlinePushInfo` is provided. |
@@ -45,7 +45,7 @@ const { data: roomCredentials } = await openimsdk.signalingInviteInGroup({
     inviteeUserIDList: selectedGroupMemberIDs,
     customData: JSON.stringify({ source: 'group-call' }),
     groupID,
-    roomID: groupID,
+    roomID: crypto.randomUUID(),
     timeout: 30,
     mediaType: 'video',
     sessionType: SessionType.WorkingGroup,
@@ -55,7 +55,7 @@ const { data: roomCredentials } = await openimsdk.signalingInviteInGroup({
 });
 ```
 
-The example reuses the group ID as the room ID. If your application generates its own `roomID`, every participant must use the same value. Remove the current user, empty values, and duplicates from the invitee list before starting the call.
+Generate a new `roomID` for every group call instead of reusing `groupID`; otherwise, separate calls in the same group can be merged incorrectly. Invitees obtain this value from the invitation event, and subsequent accept, reject, cancel, and hang-up operations must keep using the same `roomID`. Remove the current user, empty values, and duplicates from the invitee list before starting the call.
 
 When the Promise resolves, `data` is `SignalingInviteResult`. For field descriptions, see [Start a one-to-one call](/sdk/wasm/calling/managing-calls/start-single-call).
 
