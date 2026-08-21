@@ -1,0 +1,84 @@
+---
+title: '获取收到的好友申请'
+description: 'OpenIM React Native SDK 获取收到的好友申请。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+调用 `getFriendApplicationListAsRecipient()` 分页查询当前用户收到的好友申请。
+
+```ts
+const applications = await OpenIMSDK.getFriendApplicationListAsRecipient({
+  handleResults: [ApplicationHandleResult.Unprocessed],
+  offset: 0,
+  count: 20,
+});
+```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `handleResults` | `number[]` | 是 | 要查询的申请处理结果。 |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次请求的申请数量。 |
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ApplicationHandleResult.Unprocessed` | `0` | 待处理。 |
+| `ApplicationHandleResult.Agree` | `1` | 已同意。 |
+| `ApplicationHandleResult.Reject` | `-1` | 已拒绝。 |
+
+返回当前页的 `FriendApplicationItem[]`。
+
+### 好友申请字段
+
+`FriendApplicationItem` 类型字段说明：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `fromUserID` | `string` | 申请发起人的用户 ID。 |
+| `fromNickname` | `string` | 申请发起人的昵称。 |
+| `fromFaceURL` | `string` | 申请发起人的头像地址。 |
+| `toUserID` | `string` | 申请接收人的用户 ID。 |
+| `toNickname` | `string` | 申请接收人的昵称。 |
+| `toFaceURL` | `string` | 申请接收人的头像地址。 |
+| `reqMsg` | `string` | 申请附言。 |
+| `handleResult` | `ApplicationHandleResult` | 当前处理结果。 |
+| `handlerUserID` | `string` | 执行处理的用户 ID。 |
+| `handleMsg` | `string` | 处理时填写的说明。 |
+| `handleTime` | `number` | 处理时间。 |
+| `createTime` | `number` | 申请记录创建时间。 |
+| `ex` | `string` | 申请记录扩展字符串。 |
+
+## 监听好友申请变化
+
+好友申请变化时，触发 `OnFriendApplicationAdded`、`OnFriendApplicationAccepted`、`OnFriendApplicationRejected` 或 `OnFriendApplicationDeleted` 事件。事件直接携带 `FriendApplicationItem`：
+
+```ts
+const handleApplicationChanged = (application: FriendApplicationItem) => {
+  // 按 fromUserID 和 toUserID 更新申请记录
+};
+const handleApplicationDeleted = (application: FriendApplicationItem) => {
+  // 按 fromUserID 和 toUserID 移除申请记录
+};
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnFriendApplicationAdded, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnFriendApplicationAccepted, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnFriendApplicationRejected, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnFriendApplicationDeleted, handleApplicationDeleted);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnFriendApplicationAdded, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnFriendApplicationAccepted, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnFriendApplicationRejected, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnFriendApplicationDeleted, handleApplicationDeleted);
+```
+
+申请记录使用 `fromUserID` 和 `toUserID` 共同定位。退出登录、切换账号或销毁申请列表状态时，取消这些监听。

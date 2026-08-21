@@ -1,0 +1,79 @@
+---
+title: 'Get the friend list'
+description: 'Get the friend list with the OpenIM React Native SDK.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'published'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/user/friends/get-friend-list-page'
+---
+
+Call `getFriendListPage()` to retrieve the current user's friends page by page.
+
+```ts
+const friends = await OpenIMSDK.getFriendListPage({
+  offset: 0,
+  count: 50,
+  filterBlack: true,
+});
+```
+
+## Parameter description
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Pagination offset. Use `0` for the first page. |
+| `count` | `number` | Yes | Number of friends to request. |
+| `filterBlack` | `boolean` | No | Whether to filter out blocked users. |
+
+The method returns the current page as `FriendUserItem[]`. Increase `offset` by the number of returned items to load the next page. Query the list again after friends are added or deleted.
+
+### Friend fields
+
+`FriendUserItem` contains the following fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | Friend user ID. |
+| `nickname` | `string` | Friend nickname. |
+| `faceURL` | `string` | Friend avatar URL. |
+| `remark` | `string` | Remark set for the friend by the current user. |
+| `isPinned` | `boolean` | Whether the friend is pinned. |
+| `ownerUserID` | `string` | User ID that owns the friendship. |
+| `operatorUserID` | `string` | User ID that most recently changed the relationship. |
+| `addSource` | `number` | Source from which the friendship was added. |
+| `createTime` | `number` | Time when the friendship was created. |
+| `ex` | `string` | Friendship extension field. |
+| `attachedInfo` | `string` | Information attached by the SDK. |
+
+`remark`, `isPinned`, and `ex` belong to the friendship and are not account-level user information.
+
+## Listen for friend changes
+
+When a friendship changes, `OnFriendAdded`, `OnFriendInfoChanged`, or `OnFriendDeleted` is emitted with the corresponding friend information:
+
+```ts
+const handleFriendAdd = (friend: FriendUserItem) => {
+  // Add the friend
+};
+const handleFriendChanged = (friend: FriendUserItem) => {
+  // Update the friend by friend.userID
+};
+const handleFriendDeleted = (friend: FriendUserItem) => {
+  // Remove the friend by friend.userID
+};
+
+// Add listeners
+OpenIMSDK.on(OpenIMEvent.OnFriendAdded, handleFriendAdd);
+OpenIMSDK.on(OpenIMEvent.OnFriendInfoChanged, handleFriendChanged);
+OpenIMSDK.on(OpenIMEvent.OnFriendDeleted, handleFriendDeleted);
+
+// Remove listeners
+OpenIMSDK.off(OpenIMEvent.OnFriendAdded, handleFriendAdd);
+OpenIMSDK.off(OpenIMEvent.OnFriendInfoChanged, handleFriendChanged);
+OpenIMSDK.off(OpenIMEvent.OnFriendDeleted, handleFriendDeleted);
+```
+
+Remove these listeners when logging out, switching accounts, or tearing down the friend-list state.

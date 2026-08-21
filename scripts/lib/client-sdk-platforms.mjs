@@ -48,6 +48,19 @@ const clientSdkPlatforms = {
     sidebarPath: 'data/structure/wasm-sidebar.json',
     localizedOutputPath: 'src/generated/wasm-sdk-zh-content.json',
   },
+  'react-native': {
+    id: 'react-native',
+    contextKey: 'chat/sdk/react-native',
+    routePrefix: '/sdk/react-native',
+    manualRoot: 'content/zh/docs/chat/sdk/react-native',
+    auditPath: 'data/structure/react-native-content-audit.json',
+    labelsPath: 'data/structure/react-native-navigation-labels.json',
+    sidebarPath: 'data/structure/react-native-sidebar.json',
+    localizedOutputPath: 'src/generated/react-native-sdk-zh-content.json',
+    sdkSourceKey: 'reactNativeSdk',
+    sdkTag: '3.8.5',
+    sdkCommit: 'fa1e4084a374d381bd2b3e45abc43447b296894c',
+  },
 };
 
 export const clientSdkPlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));

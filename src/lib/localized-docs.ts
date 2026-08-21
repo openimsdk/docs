@@ -6,6 +6,7 @@ import androidSdkData from '@/src/generated/android-sdk-zh-content.json';
 import flutterSdkData from '@/src/generated/flutter-sdk-zh-content.json';
 import iosSdkData from '@/src/generated/ios-sdk-zh-content.json';
 import wasmSdkData from '@/src/generated/wasm-sdk-zh-content.json';
+import reactNativeSdkData from '@/src/generated/react-native-sdk-zh-content.json';
 import localizedPlatformApiData from '@/src/generated/platform-api-zh-content.json';
 import { extractMarkdownHeadings } from '@/src/lib/heading-ids';
 import type { Locale } from '@/src/lib/i18n';
@@ -34,6 +35,7 @@ const sdkZhByContext: Record<string, LocalizedSdkData> = {
   'chat/sdk/flutter': flutterSdkData as LocalizedSdkData,
   'chat/sdk/ios': iosSdkData as LocalizedSdkData,
   'chat/sdk/wasm': wasmSdkData as LocalizedSdkData,
+  'chat/sdk/react-native': reactNativeSdkData as LocalizedSdkData,
 };
 const platformApiZh = localizedPlatformApiData as { navigationLabels: Record<string, string> };
 const localizedPageCache = new Map<string, LocalizedDocPage | undefined>();
