@@ -1,0 +1,81 @@
+---
+title: '会话分组概览'
+description: '会话分组概览。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组用于将当前账号的会话列表按业务场景分类，例如工作、待处理或自定义类别。
+
+## 分组类型
+
+`ConversationGroupType` 包含以下类型：
+
+| 枚举值                                              | 数值 | 说明                 |
+| --------------------------------------------------- | ---- | -------------------- |
+| `ConversationGroupType.ConversationGroupTypeNormal` | `0`  | 普通自定义分组。     |
+| `ConversationGroupType.ConversationGroupTypeFilter` | `1`  | 按规则筛选的分组。   |
+| `ConversationGroupType.ConversationGroupTypeAll`    | `2`  | 查询全部类型的分组。 |
+
+## 分组字段
+
+`ConversationGroup` 通过 `conversationGroupID` 作为分组标识：
+
+| 字段                    | 类型                    | 说明                      |
+| ----------------------- | ----------------------- | ------------------------- |
+| `conversationGroupID`   | `string`                | 会话分组 ID。             |
+| `name`                  | `string`                | 分组名称。                |
+| `serial`                | `number`                | 分组排序值。              |
+| `version`               | `number`                | 分组数据版本。            |
+| `conversationGroupType` | `ConversationGroupType` | 分组类型。                |
+| `hidden`                | `boolean`               | 分组是否隐藏。            |
+| `unreadCount`           | `number`                | 分组内会话的未读总数。    |
+| `conversationIDs`       | `string[]`              | 当前属于该分组的会话 ID。 |
+| `ex`                    | `string`（可选）        | 业务扩展字符串。          |
+
+## 监听分组变化
+
+分组操作完成后，相关事件会返回新增、更新或删除的分组；分组成员变化事件会返回分组、会话 ID 和会话详情。事件回调参数直接传递实体，不包含 `data` 字段。应用应按 `conversationGroupID` 更新分组，按事件中的 `conversationIDs` 更新成员关系。
+
+```ts
+const handleGroupAdded = (groups: ConversationGroup[]) => {
+  // ...
+};
+
+const handleGroupChanged = (groups: ConversationGroup[]) => {
+  // ...
+};
+
+const handleGroupDeleted = (groups: ConversationGroup[]) => {
+  // ...
+};
+
+const handleGroupMemberAdded = (payload: ConversationGroupMemberChangedCallbackData) => {
+  // ...
+};
+
+const handleGroupMemberDeleted = (payload: ConversationGroupMemberChangedCallbackData) => {
+  // ...
+};
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnConversationGroupAdded, handleGroupAdded);
+OpenIMSDK.on(OpenIMEvent.OnConversationGroupChanged, handleGroupChanged);
+OpenIMSDK.on(OpenIMEvent.OnConversationGroupDeleted, handleGroupDeleted);
+OpenIMSDK.on(OpenIMEvent.OnConversationGroupMemberAdded, handleGroupMemberAdded);
+OpenIMSDK.on(OpenIMEvent.OnConversationGroupMemberDeleted, handleGroupMemberDeleted);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnConversationGroupAdded, handleGroupAdded);
+OpenIMSDK.off(OpenIMEvent.OnConversationGroupChanged, handleGroupChanged);
+OpenIMSDK.off(OpenIMEvent.OnConversationGroupDeleted, handleGroupDeleted);
+OpenIMSDK.off(OpenIMEvent.OnConversationGroupMemberAdded, handleGroupMemberAdded);
+OpenIMSDK.off(OpenIMEvent.OnConversationGroupMemberDeleted, handleGroupMemberDeleted);
+```
+
+组件销毁、退出登录或切换账号时，取消监听。

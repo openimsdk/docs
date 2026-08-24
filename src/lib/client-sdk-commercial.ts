@@ -74,7 +74,9 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
     Open_im_sdkUpdateConversationGroup: 'updateConversationGroup',
     setConversationPinnedMsgWithConversationID: 'setConversationPinnedMsg',
   },
-  'react-native': {},
+  'react-native': {
+    getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
+  },
 };
 
 const partialCommercialConceptSources: Record<string, string[]> = {
@@ -124,6 +126,11 @@ const fullCommercialConceptPages = new Set([
   '/sdk/android/conversation/managing-conversations/set-message-destruct',
   '/sdk/android/user/user-profile/set-friend-add-permission',
   '/sdk/react-native/user/profile/set-friend-add-permission',
+  '/sdk/react-native/conversation/managing-conversations/mark-conversation',
+  '/sdk/react-native/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/react-native/conversation/managing-conversations/set-private-chat',
+  '/sdk/react-native/conversation/managing-conversations/set-burn-duration',
+  '/sdk/react-native/conversation/managing-conversations/set-message-destruct',
 ]);
 
 function applyCommercialConceptOverride(

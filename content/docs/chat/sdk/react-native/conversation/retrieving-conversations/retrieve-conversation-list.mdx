@@ -1,0 +1,85 @@
+---
+title: 'Retrieve the conversation list'
+description: 'Retrieve the current user's conversation list with pagination.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'published'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+Use `getConversationListSplit()` to retrieve the conversation list page by page.
+
+```ts
+const conversations = await OpenIMSDK.getConversationListSplit({
+  offset: 0,
+  count: 50,
+});
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Pagination offset. Use `0` for the first page and increase it by the number of items already requested. |
+| `count` | `number` | Yes | Number of conversations to request. |
+
+## Return result
+
+The call returns the current page as `ConversationItem[]`. When fewer than `count` items are returned, the current list has reached its end.
+
+### Conversation fields
+
+`ConversationItem` contains the chat target, list presentation data, and settings for the current account:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | Conversation ID. |
+| `conversationType` | `SessionType` | Conversation type, such as one-to-one or group. |
+| `userID` | `string` | The other user's ID in a one-to-one conversation; usually empty for group conversations. |
+| `groupID` | `string` | Group ID for a group conversation; usually empty for one-to-one conversations. |
+| `showName` | `string` | Display name of the conversation. |
+| `faceURL` | `string` | Display avatar URL of the conversation. |
+| `recvMsgOpt` | `MessageReceiveOptType` | Message reception setting for the conversation. |
+| `unreadCount` | `number` | Number of unread messages in the conversation. |
+| `groupAtType` | `GroupAtType` | Mention status for a group conversation; not used for one-to-one conversations. |
+| `latestMsg` | `string` | JSON-serialized content of the latest message. |
+| `latestMsgSendTime` | `number` | Time when the latest message was sent. |
+| `draftText` | `string` | Draft saved on the current device. |
+| `draftTextTime` | `number` | Time when the draft was updated. |
+| `isPrivateChat` | `boolean` | Whether burn-after-reading is enabled for the one-to-one conversation. |
+| `burnDuration` | `number` | Burn-after-reading duration for the one-to-one conversation. |
+| `isMsgDestruct` | `boolean` | Whether scheduled server-side message deletion is enabled. |
+| `msgDestructTime` | `number` | Server-side message deletion period. |
+| `isPinned` | `boolean` | Whether the conversation is pinned. |
+| `isMarked` <span className="enterprise-field-badge">Enterprise</span> | `boolean` | Whether the conversation is marked. |
+| `isNotInGroup` | `boolean` | Whether the current account is no longer in the group. |
+| `attachedInfo` | `string` | Additional information attached by the SDK. |
+| `ex` | `string` (optional) | Conversation extension string. |
+| `remark` <span className="enterprise-field-badge">Enterprise</span> | `string` (optional) | Conversation remark. |
+
+When loading multiple pages, deduplicate them by `conversationID`. Start again from `offset: 0` when refreshing the list.
+
+## Listen for conversation changes
+
+`OnNewConversation` is emitted when a conversation is created. `OnConversationChanged` is emitted when an existing conversation changes. Both callbacks receive `ConversationItem[]`.
+
+```ts
+function handleNewConversation(conversations: ConversationItem[]) {
+  // ...
+}
+
+function handleConversationChanged(conversations: ConversationItem[]) {
+  // ...
+}
+
+OpenIMSDK.on(OpenIMEvent.OnNewConversation, handleNewConversation);
+OpenIMSDK.on(OpenIMEvent.OnConversationChanged, handleConversationChanged);
+
+OpenIMSDK.off(OpenIMEvent.OnNewConversation, handleNewConversation);
+OpenIMSDK.off(OpenIMEvent.OnConversationChanged, handleConversationChanged);
+```
+
+Remove the listeners when logging out, switching accounts, or tearing down the conversation-list state.
