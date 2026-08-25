@@ -1,0 +1,98 @@
+---
+title: '群组概览'
+description: '了解 React Native SDK 中的群组资料、成员、入群申请和群组事件。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/group/overview-group'
+---
+
+OpenIM 的多人聊天由群组承载。在群组相关 API 中，使用 `groupID` 标识目标群组，例如查询群资料、管理群成员和处理入群申请。创建群组后，可从返回的群组信息中获取 `groupID`。群聊会话使用 `conversationID` 标识，用于会话设置、消息历史和未读状态等操作。`conversationID` 与 `groupID` 分别表示会话和群组，调用时不要混淆。
+
+## 核心数据类型
+
+| 类型 | 用途 |
+| --- | --- |
+| `GroupItem` | 群名称、头像、公告、群主、入群验证方式、成员数和扩展字段。 |
+| `GroupMemberItem` | 用户在指定群内的昵称、角色、禁言状态和入群信息。 |
+
+群成员角色由 `GroupMemberRole` 表示：`Normal` 为普通成员，`Admin` 为管理员，`Owner` 为群主。
+
+## `GroupItem` 常用字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 群组 ID。 |
+| `groupName` | `string` | 群组名称。 |
+| `notification` | `string` | 群组公告。 |
+| `friendUserIDs` | `string` | 群组好友用户 ID 信息。 |
+| `remark` | `string` | 当前账号设置的群组备注。 |
+
+## `GroupMemberItem` 常用字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 成员所属的群组 ID。 |
+| `userID` | `string` | 成员用户 ID。 |
+| `nickname` | `string` | 用户在当前群内的昵称。 |
+| `faceURL` | `string` | 用户在当前群内的头像地址。 |
+| `roleLevel` | `GroupMemberRole` | 成员角色。 |
+| `muteEndTime` | `number` | 禁言结束时间。 |
+| `joinTime` | `number` | 加入群组的时间。 |
+| `joinSource` | `GroupJoinSource` | 入群来源。 |
+| `inviterUserID` | `string` | 邀请该成员入群的用户 ID。 |
+| `operatorUserID` | `string` | 最近操作该成员资料的用户 ID。 |
+| `ex` | `string` | 群成员扩展字符串。 |
+
+`nickname`、`faceURL` 和 `roleLevel` 均属于当前群组中的成员资料；同一用户在其他群组中可能不同。
+
+## 按任务查找页面
+
+| 任务 | 页面 |
+| --- | --- |
+| 创建和维护群资料 | [创建群组](/sdk/react-native/group/create-group)、[更新群名称、简介和头像](/sdk/react-native/group/update-group-profile)、[发布或更新群公告](/sdk/react-native/group/set-group-announcement)、[设置群组扩展字段](/sdk/react-native/group/set-group-extension) |
+| 设置入群和成员权限 | [设置入群验证方式](/sdk/react-native/group/set-group-join-verification)、[设置成员资料查看权限](/sdk/react-native/group/set-group-member-profile-access)、[设置群内添加好友权限](/sdk/react-native/group/set-group-member-friend-permission) |
+| 加入、退出或解散群组 | [申请加入群组](/sdk/react-native/group/join-group)、[退出群组](/sdk/react-native/group/quit-group)、[解散群组](/sdk/react-native/group/dismiss-group) |
+| 查询群组 | [查询指定群组资料](/sdk/react-native/group/retrieving-groups/get-specified-groups-info)、[分页获取已加入群组](/sdk/react-native/group/retrieving-groups/get-joined-group-list-page)、[搜索群组](/sdk/react-native/group/retrieving-groups/search-groups) |
+| 查询和处理入群申请 | [获取收到的入群申请](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient)、[获取发出的入群申请](/sdk/react-native/group/group-applications/get-group-application-list-as-applicant) |
+| 查询和管理群成员 | [分页查询群成员](/sdk/react-native/group/retrieving-group-members/get-group-member-list)、[邀请用户加入群组](/sdk/react-native/group/managing-group-members/invite-user-to-group)、[移除群成员](/sdk/react-native/group/managing-group-members/kick-group-member)、[设置管理员](/sdk/react-native/group/managing-group-members/set-group-member-role-level)、[转让群主](/sdk/react-native/group/managing-group-members/transfer-group-owner) |
+| 管理群聊发言权限 | [设置群组全员禁言](/sdk/react-native/group/change-group-mute)、[设置群成员禁言](/sdk/react-native/group/managing-group-members/change-group-member-mute) |
+
+## 监听群组变化
+
+当前账号加入或退出群组、群资料变化以及群组解散时，分别触发 `OnJoinedGroupAdded`、`OnJoinedGroupDeleted`、`OnGroupInfoChanged` 和 `OnGroupDismissed`。这些事件回调直接接收 `GroupItem`：
+
+```ts
+const handleJoinedGroupAdded = (group: GroupItem) => {
+  // 将 group 添加到已加入群组列表
+};
+
+const handleJoinedGroupDeleted = (group: GroupItem) => {
+  // 根据 group.groupID 从已加入群组列表删除群组
+};
+
+const handleGroupInfoChanged = (group: GroupItem) => {
+  // 根据 group.groupID 更新群组资料
+};
+
+const handleGroupDismissed = (group: GroupItem) => {
+  // 根据 group.groupID 关闭或移除已解散的群组
+};
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnJoinedGroupAdded, handleJoinedGroupAdded);
+OpenIMSDK.on(OpenIMEvent.OnJoinedGroupDeleted, handleJoinedGroupDeleted);
+OpenIMSDK.on(OpenIMEvent.OnGroupInfoChanged, handleGroupInfoChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupDismissed, handleGroupDismissed);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnJoinedGroupAdded, handleJoinedGroupAdded);
+OpenIMSDK.off(OpenIMEvent.OnJoinedGroupDeleted, handleJoinedGroupDeleted);
+OpenIMSDK.off(OpenIMEvent.OnGroupInfoChanged, handleGroupInfoChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupDismissed, handleGroupDismissed);
+```
+
+退出登录、切换账号或销毁群组相关状态时，取消这些监听。群成员变化的监听见[分页查询群成员](/sdk/react-native/group/retrieving-group-members/get-group-member-list)，入群申请变化的监听见[获取收到的入群申请](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient)。

@@ -1,0 +1,96 @@
+---
+title: 'Group overview'
+description: 'OpenIM React Native SDK guide for group overview.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/group/overview-group'
+---
+
+In OpenIM, group chats are organized as groups. In group APIs, use `groupID` to identify the target group, for example when querying group profiles, managing members, or handling group applications. After you create a group, obtain its `groupID` from the returned group information. A group chat session uses `conversationID` for conversation settings, message history, and unread status. `conversationID` identifies a conversation, whereas `groupID` identifies a group; do not confuse them when supplying API parameters.
+
+## Core data types
+
+| Type | Purpose |
+| --- | --- |
+| `GroupItem` | A group's name, avatar, announcement, owner, join-verification setting, member count, and extension data. |
+| `GroupMemberItem` | A user's nickname, role, mute state, and join information in a specific group. |
+
+Member roles use `GroupMemberRole`: `Normal` is a regular member, `Admin` is an administrator, and `Owner` is the group owner.
+
+## Common `GroupItem` fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | Group ID. |
+| `groupName` | `string` | Group name. |
+| `notification` | `string` | Group announcement. |
+| `friendUserIDs` | `string` | Group friend user ID information. |
+| `remark` | `string` | Group remark set by the current account. |
+
+## Common `GroupMemberItem` fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | ID of the group that the member belongs to. |
+| `userID` | `string` | Member user ID. |
+| `nickname` | `string` | The user's nickname in the current group. |
+| `faceURL` | `string` | The user's avatar URL in the current group. |
+| `roleLevel` | `GroupMemberRole` | Member role. |
+| `muteEndTime` | `number` | Time when the mute ends. |
+| `joinTime` | `number` | Time when the member joined the group. |
+| `joinSource` | `GroupJoinSource` | How the member joined the group. |
+| `inviterUserID` | `string` | User ID of the member who invited this user. |
+| `operatorUserID` | `string` | User ID of the user who last updated this member profile. |
+| `ex` | `string` | Group member extension string. |
+
+`nickname`, `faceURL`, and `roleLevel` belong to the member profile in the current group. They can differ for the same user in another group.
+
+## Find a page by task
+
+| Task | Pages |
+| --- | --- |
+| Create and maintain group profiles | [Create a group](/sdk/react-native/group/create-group), [Update group profile](/sdk/react-native/group/update-group-profile), [Publish a group announcement](/sdk/react-native/group/set-group-announcement), [Set group extra data](/sdk/react-native/group/set-group-extension) |
+| Configure join and member permissions | [Set group join verification](/sdk/react-native/group/set-group-join-verification), [Set member profile access](/sdk/react-native/group/set-group-member-profile-access), [Set group member friend-request permissions](/sdk/react-native/group/set-group-member-friend-permission) |
+| Join, leave, or dismiss groups | [Apply to join a group](/sdk/react-native/group/join-group), [Leave a group](/sdk/react-native/group/quit-group), [Dismiss a group](/sdk/react-native/group/dismiss-group) |
+| Retrieve groups | [Get group information](/sdk/react-native/group/retrieving-groups/get-specified-groups-info), [Get joined groups by page](/sdk/react-native/group/retrieving-groups/get-joined-group-list-page), [Search groups](/sdk/react-native/group/retrieving-groups/search-groups) |
+| Retrieve and handle group applications | [Get received group applications](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient), [Get sent group applications](/sdk/react-native/group/group-applications/get-group-application-list-as-applicant) |
+| Retrieve and manage group members | [Get group members](/sdk/react-native/group/retrieving-group-members/get-group-member-list), [Invite users to a group](/sdk/react-native/group/managing-group-members/invite-user-to-group), [Remove group members](/sdk/react-native/group/managing-group-members/kick-group-member), [Manage group administrators](/sdk/react-native/group/managing-group-members/set-group-member-role-level), [Transfer group ownership](/sdk/react-native/group/managing-group-members/transfer-group-owner) |
+| Manage group chat messaging permissions | [Change group mute status](/sdk/react-native/group/change-group-mute), [Mute or unmute a group member](/sdk/react-native/group/managing-group-members/change-group-member-mute) |
+
+## Listen for group changes
+
+When the current account joins or leaves a group, when group profile information changes, or when a group is dismissed, `OnJoinedGroupAdded`, `OnJoinedGroupDeleted`, `OnGroupInfoChanged`, and `OnGroupDismissed` are triggered respectively. Each callback receives a `GroupItem` directly:
+
+```ts
+const handleJoinedGroupAdded = (group: GroupItem) => {
+  // Add group to the joined group list
+};
+
+const handleJoinedGroupDeleted = (group: GroupItem) => {
+  // Remove the group from the joined group list by group.groupID
+};
+
+const handleGroupInfoChanged = (group: GroupItem) => {
+  // Update the group profile by group.groupID
+};
+
+const handleGroupDismissed = (group: GroupItem) => {
+  // Close or remove the dismissed group by group.groupID
+};
+
+OpenIMSDK.on(OpenIMEvent.OnJoinedGroupAdded, handleJoinedGroupAdded);
+OpenIMSDK.on(OpenIMEvent.OnJoinedGroupDeleted, handleJoinedGroupDeleted);
+OpenIMSDK.on(OpenIMEvent.OnGroupInfoChanged, handleGroupInfoChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupDismissed, handleGroupDismissed);
+
+OpenIMSDK.off(OpenIMEvent.OnJoinedGroupAdded, handleJoinedGroupAdded);
+OpenIMSDK.off(OpenIMEvent.OnJoinedGroupDeleted, handleJoinedGroupDeleted);
+OpenIMSDK.off(OpenIMEvent.OnGroupInfoChanged, handleGroupInfoChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupDismissed, handleGroupDismissed);
+```
+
+Remove these listeners when signing out, switching accounts, or discarding group-related state. For member-change listeners, see [Get group members](/sdk/react-native/group/retrieving-group-members/get-group-member-list). For group application change listeners, see [Get received group applications](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient).

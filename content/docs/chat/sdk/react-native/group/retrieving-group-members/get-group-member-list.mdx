@@ -1,0 +1,76 @@
+---
+title: 'Get group members'
+description: 'OpenIM React Native SDK guide for get group members.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/group/retrieving-group-members/get-group-member-list'
+---
+
+Call `getGroupMemberList()` to retrieve members of a group in pages and filter them by role.
+
+```ts
+const members = await OpenIMSDK.getGroupMemberList({
+  groupID: 'group-001',
+  filter: GroupMemberFilter.All,
+  offset: 0,
+  count: 50,
+});
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- |
+| `groupID` | `string` | Yes | ID of the target group. |
+| `filter` | `GroupMemberFilter` | Yes | Member role filter. |
+| `offset` | `number` | Yes | Pagination offset. Use `0` for the first page. |
+| `count` | `number` | Yes | Number of members to retrieve. |
+
+`GroupMemberFilter` values are:
+
+| Enum value | Value | Description |
+| --- | --- | --- |
+| `GroupMemberFilter.All` | `0` | All members. |
+| `GroupMemberFilter.Owner` | `1` | Group owner only. |
+| `GroupMemberFilter.Admin` | `2` | Administrators only. |
+| `GroupMemberFilter.Normal` | `3` | Regular members only. |
+| `GroupMemberFilter.AdminAndNormal` | `4` | Administrators and regular members. |
+| `GroupMemberFilter.AdminAndOwner` | `5` | Administrators and the group owner. |
+
+To retrieve the next page, set `offset` to the number of members already retrieved.
+
+## Return value
+
+When the call completes, it returns `GroupMemberItem[]` for the current page. See [Group overview](/sdk/react-native/group/overview-group) for field descriptions.
+
+## Listen for group member changes
+
+When a member joins, leaves, or has profile information changed, `OnGroupMemberAdded`, `OnGroupMemberDeleted`, and `OnGroupMemberInfoChanged` are triggered respectively. Each callback receives a `GroupMemberItem` directly:
+
+```ts
+const handleMemberAdded = (member: GroupMemberItem) => {
+  // Add the member to the corresponding group member list
+};
+
+const handleMemberDeleted = (member: GroupMemberItem) => {
+  // Delete the member by member.groupID and member.userID
+};
+
+const handleMemberChanged = (member: GroupMemberItem) => {
+  // Update the member profile by member.groupID and member.userID
+};
+
+OpenIMSDK.on(OpenIMEvent.OnGroupMemberAdded, handleMemberAdded);
+OpenIMSDK.on(OpenIMEvent.OnGroupMemberDeleted, handleMemberDeleted);
+OpenIMSDK.on(OpenIMEvent.OnGroupMemberInfoChanged, handleMemberChanged);
+
+OpenIMSDK.off(OpenIMEvent.OnGroupMemberAdded, handleMemberAdded);
+OpenIMSDK.off(OpenIMEvent.OnGroupMemberDeleted, handleMemberDeleted);
+OpenIMSDK.off(OpenIMEvent.OnGroupMemberInfoChanged, handleMemberChanged);
+```
+
+Remove these listeners when signing out, switching accounts, or discarding member-list state.

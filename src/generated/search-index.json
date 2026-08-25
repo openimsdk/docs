@@ -7134,5 +7134,285 @@
     "context": "SDKs · React Native · v4",
     "keywords": "sdk react-native v4 sdk react-native conversation managing-conversation-groups delete-conversation-group",
     "content": "Call deleteConversationGroup to delete a conversation group and its conversation membership. await OpenIMSDK.deleteConversationGroup conversationGroupID ; conversationGroupID is the ID of the conversation group. Return result After the call completes, the group deletion request is complete. The operation does not delete conversations or messages. Group changes are delivered through OnConversationGroupDeleted ; see Conversation group overview /sdk/react native/conversation/managing conversation groups/overview conversation groups ."
+  },
+  {
+    "path": "/sdk/react-native/group/overview-group",
+    "title": "Group overview",
+    "description": "OpenIM React Native SDK guide for group overview.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group overview-group",
+    "content": "In OpenIM, group chats are organized as groups. In group APIs, use groupID to identify the target group, for example when querying group profiles, managing members, or handling group applications. After you create a group, obtain its groupID from the returned group information. A group chat session uses conversationID for conversation settings, message history, and unread status. conversationID identifies a conversation, whereas groupID identifies a group; do not confuse them when supplying API parameters. Core data types | Type | Purpose | | | | | GroupItem | A group's name, avatar, announcement, owner, join verification setting, member count, and extension data. | | GroupMemberItem | A user's nickname, role, mute state, and join information in a specific group. | Member roles use GroupMemberRole : Normal is a regular member, Admin is an administrator, and Owner is the group owner. Common GroupItem fields | Field | Type | Description | | | | | | groupID | string | Group ID. | | groupName | string | Group name. | | notification | string | Group announcement. | | friendUserIDs | string | Group friend user ID information. | | remark | string | Group remark set by the current account. | Common GroupMemberItem fields | Field | Type | Description | | | | | | groupID | string | ID of the group that the member belongs to. | | userID | string | Member user ID. | | nickname | string | The user's nickname in the current group. | | faceURL | string | The user's avatar URL in the current group. | | roleLevel | GroupMemberRole | Member role. | | muteEndTime | number | Time when the mute ends. | | joinTime | number | Time when the member joined the group. | | joinSource | GroupJoinSource | How the member joined the group. | | inviterUserID | string | User ID of the member who invited this user. | | operatorUserID | string | User ID of the user who last updated this member profile. | | ex | string | Group member extension string. | nickname , faceURL , and roleLevel belong to the member profile in the current group. They can differ for the same user in another group. Find a page by task | Task | Pages | | | | | Create and maintain group profiles | Create a group /sdk/react native/group/create group , Update group profile /sdk/react native/group/update group profile , Publish a group announcement /sdk/react native/group/set group announcement , Set group extra data /sdk/react native/group/set group extension | | Configure join and member permissions | Set group join verification /sdk/react native/group/set group join verification , Set member profile access /sdk/react native/group/set group member profile access , Set group member friend request permissions /sdk/react native/group/set group member friend permission | | Join, leave, or dismiss groups | Apply to join a group /sdk/react native/group/join group , Leave a group /sdk/react native/group/quit group , Dismiss a group /sdk/react native/group/dismiss group | | Retrieve groups | Get group information /sdk/react native/group/retrieving groups/get specified groups info , Get joined groups by page /sdk/react native/group/retrieving groups/get joined group list page , Search groups /sdk/react native/group/retrieving groups/search groups | | Retrieve and handle group applications | Get received group applications /sdk/react native/group/group applications/get group application list as recipient , Get sent group applications /sdk/react native/group/group applications/get group application list as applicant | | Retrieve and manage group members | Get group members /sdk/react native/group/retrieving group members/get group member list , Invite users to a group /sdk/react native/group/managing group members/invite user to group , Remove group members /sdk/react native/group/managing group members/kick group member , Manage group administrators /sdk/react native/group/managing group members/set group member role level , Transfer group ownership /sdk/react native/group/managing group members/transfer group owner | | Manage group chat messaging permissions | Change group mute status /sdk/react native/group/change group mute , Mute or unmute a group member /sdk/react native/group/managing group members/change group member mute | Listen for group changes When the current account joins or leaves a group, when group profile information changes, or when a group is dismissed, OnJoinedGroupAdded , OnJoinedGroupDeleted , OnGroupInfoChanged , and OnGroupDismissed are triggered respectively. Each callback receives a GroupItem directly: const handleJoinedGroupAdded = group: GroupItem = // Add group to the joined group list ; const handleJoinedGroupDeleted = group: GroupItem = // Remove the group from the joined group list by group.groupID ; const handleGroupInfoChanged = group: GroupItem = // Update the group profile by group.groupID ; const handleGroupDismissed = group: GroupItem = // Close or remove the dismissed group by group.groupID ; OpenIMSDK.on OpenIMEvent.OnJoinedGroupAdded, handleJoinedGroupAdded ; OpenIMSDK.on OpenIMEvent.OnJoinedGroupDeleted, handleJoinedGroupDeleted ; OpenIMSDK.on OpenIMEvent.OnGroupInfoChanged, handleGroupInfoChanged ; OpenIMSDK.on OpenIMEvent.OnGroupDismissed, handleGroupDismissed ; OpenIMSDK.off OpenIMEvent.OnJoinedGroupAdded, handleJoinedGroupAdded ; OpenIMSDK.off OpenIMEvent.OnJoinedGroupDeleted, handleJoinedGroupDeleted ; OpenIMSDK.off OpenIMEvent.OnGroupInfoChanged, handleGroupInfoChanged ; OpenIMSDK.off OpenIMEvent.OnGroupDismissed, handleGroupDismissed ; Remove these listeners when signing out, switching accounts, or discarding group related state. For member change listeners, see Get group members /sdk/react native/group/retrieving group members/get group member list . For group application change listeners, see Get received group applications /sdk/react native/group/group applications/get group application list as recipient ."
+  },
+  {
+    "path": "/sdk/react-native/group/create-group",
+    "title": "Create a group",
+    "description": "OpenIM React Native SDK guide for create a group.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group create-group",
+    "content": "Call createGroup to create a group and set its initial members, administrators, and owner. const group = await OpenIMSDK.createGroup memberUserIDs: 'user 003', 'user 004' , adminUserIDs: 'user 002' , ownerUserID: currentUserID, groupInfo: groupName: 'Project discussion group', groupType: GroupType.WorkingGroup, faceURL: 'https://example.com/group.png', , ; Parameters | Parameter | Type | Required | Description | | | | | | memberUserIDs | string | Yes | User IDs of the initial regular members. | | adminUserIDs | string | No | User IDs of the initial administrators. | | ownerUserID | string | No | User ID of the group owner. The current user is used when omitted. | | groupInfo | Partial | Yes | Initial group profile. Common fields include groupName , groupType , and faceURL . | A regular member, administrator, and owner cannot be the same user. Use GroupType.WorkingGroup for groupInfo.groupType to create a regular group. Return value When the call completes, it returns the newly created GroupItem . Use the returned groupID to open the group profile or group chat. When the current account joins the group, OnJoinedGroupAdded returns the group information; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/update-group-profile",
+    "title": "Update group profile",
+    "description": "OpenIM React Native SDK guide for update group profile.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group update-group-profile",
+    "content": "Call setGroupInfo to update a group name, description, or avatar. Provide only the fields that need to change. await OpenIMSDK.setGroupInfo groupID, groupName: groupName.trim , introduction: introduction.trim , faceURL, ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the group to update. | | groupName | string | No | New group name. | | introduction | string | No | New group description. | | faceURL | string | No | URL of the new group avatar. | In addition to groupID , provide at least one group profile field to update. Fields that are not provided keep their current values. Return value When the call completes, the group profile is updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/set-group-announcement",
+    "title": "Publish a group announcement",
+    "description": "OpenIM React Native SDK guide for publish a group announcement.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group set-group-announcement",
+    "content": "Call setGroupInfo to set or update a group announcement. await OpenIMSDK.setGroupInfo groupID, notification: announcement, ; groupID is the target group ID and notification is the announcement content. Pass an empty string to clear the announcement. The announcement and the group description, introduction , are separate fields. Return value When the call completes, the group announcement is updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/set-group-extension",
+    "title": "Set group extra data",
+    "description": "OpenIM React Native SDK guide for set group extra data.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group set-group-extension",
+    "content": "Call setGroupInfo to set the group's ex extension field. await OpenIMSDK.setGroupInfo groupID, ex: JSON.stringify projectID: 'project 42', , ; groupID is the target group ID. ex is a string and can contain JSON or another string format for business specific data. Return value When the call completes, the group extension field is updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/set-group-join-verification",
+    "title": "Set group join verification",
+    "description": "OpenIM React Native SDK guide for set group join verification.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group set-group-join-verification",
+    "content": "Call setGroupInfo to configure verification for group applications and invitations. await OpenIMSDK.setGroupInfo groupID, needVerification: GroupVerificationType.AllNeed, ; Parameters groupID is the target group ID. needVerification uses GroupVerificationType : | Enum value | Value | Description | | | | | | GroupVerificationType.ApplyNeedInviteNot | 0 | Applications require approval, while member invitations let users join directly. | | GroupVerificationType.AllNeed | 1 | Applications and regular member invitations require approval. Invitations from the owner or an administrator are excluded. | | GroupVerificationType.AllNot | 2 | Applications and invitations let users join directly. | Return value When the call completes, the group join verification setting is updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/set-group-member-profile-access",
+    "title": "Set member profile access",
+    "description": "OpenIM React Native SDK guide for set member profile access.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group set-group-member-profile-access",
+    "content": "Call setGroupInfo to configure whether group members can view other members' profiles. This setting controls only member profile visibility and is independent of setting group member friend request permissions /sdk/react native/group/set group member friend permission . await OpenIMSDK.setGroupInfo groupID, lookMemberInfo: AllowType.NotAllowed, ; Parameters groupID is the target group ID. lookMemberInfo uses AllowType : | Enum value | Value | Description | | | | | | AllowType.Allowed | 0 | Members can view other members' profiles. | | AllowType.NotAllowed | 1 | Members cannot view other members' profiles. | Return value When the call completes, member profile visibility is updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/set-group-member-friend-permission",
+    "title": "Set member friend request permission",
+    "description": "OpenIM React Native SDK guide for set member friend request permission.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group set-group-member-friend-permission",
+    "content": "Call setGroupInfo to configure whether members can send friend requests to other members through the group. This setting controls only friend requests initiated from the member relationship and is independent of setting member profile visibility /sdk/react native/group/set group member profile access . await OpenIMSDK.setGroupInfo groupID, applyMemberFriend: AllowType.NotAllowed, ; Parameters groupID is the target group ID. applyMemberFriend uses AllowType : | Enum value | Value | Description | | | | | | AllowType.Allowed | 0 | Members can send friend requests through the group member relationship. | | AllowType.NotAllowed | 1 | Members cannot send friend requests through the group member relationship. | Return value When the call completes, group member friend request permissions are updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/change-group-mute",
+    "title": "Change group mute status",
+    "description": "OpenIM React Native SDK guide for change group mute status.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group change-group-mute",
+    "content": "Call changeGroupMute to enable or disable group wide muting. await OpenIMSDK.changeGroupMute groupID, isMute: true, muteBypassUserIDs: serviceAccountUserID , ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | isMute | boolean | Yes | Use true to enable group wide muting or false to disable it. | | muteBypassUserIDs Enterprise | string | No | User IDs that can still send messages while the group is muted. | Do not add every member to muteBypassUserIDs . The server controls whether the group owner and administrators can send messages. Return value When the call completes, the group wide mute setting is updated. Group profile changes trigger OnGroupInfoChanged ; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/join-group",
+    "title": "Apply to join a group",
+    "description": "OpenIM React Native SDK guide for apply to join a group.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group join-group",
+    "content": "Call joinGroup with a group ID, application message, and join source to apply to join a group. await OpenIMSDK.joinGroup groupID, reqMsg: 'Request to join the project discussion group', joinSource: GroupJoinSource.Search, ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | reqMsg | string | Yes | Application message. Pass an empty string when no message is needed. | | joinSource | GroupJoinSource | Yes | How the user initiated joining the group. | | ex | string | No | Business specific extension string. | Common joinSource values are: | Enum value | Value | Description | | | | | | GroupJoinSource.Invitation | 2 | Joined through an invitation. | | GroupJoinSource.Search | 3 | Joined through search. | | GroupJoinSource.QrCode | 4 | Joined through a QR code. | joinSource records how the user joined; it does not determine whether approval is required. Return value When the call completes, the join request is submitted. After the current account joins the group successfully, OnJoinedGroupAdded returns the group information; see Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/quit-group",
+    "title": "Leave a group",
+    "description": "OpenIM React Native SDK guide for leave a group.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group quit-group",
+    "content": "Call quitGroup to leave a group that the current account has joined. await OpenIMSDK.quitGroup groupID ; groupID is the ID of the group to leave. A group owner must transfer ownership before leaving the group. Return value When the call completes, the current account has left the target group. After the current account leaves successfully, OnJoinedGroupDeleted is triggered and its callback receives the corresponding group information. See Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/dismiss-group",
+    "title": "Dismiss a group",
+    "description": "OpenIM React Native SDK guide for dismiss a group.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group dismiss-group",
+    "content": "Call dismissGroup to dismiss a group. await OpenIMSDK.dismissGroup groupID ; groupID is the ID of the group to dismiss. Dismissing a group affects every member, and the server validates whether the caller has permission. Return value When the call completes, the group is dismissed. After a group is dismissed, relevant clients receive OnGroupDismissed ; its callback receives the dismissed group information. See Group overview /sdk/react native/group/overview group for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-groups/get-specified-groups-info",
+    "title": "Get group information",
+    "description": "OpenIM React Native SDK guide for get group information.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-groups get-specified-groups-info",
+    "content": "Call getSpecifiedGroupsInfo to retrieve information for specific groups by group ID. const groups = await OpenIMSDK.getSpecifiedGroupsInfo 'group 001', 'group 002', ; Parameters | Parameter | Type | Required | Description | | | | | | groupIDs | string | Yes | IDs of the groups to retrieve. | Return value When the call completes, it returns matching GroupItem entries. See Group overview /sdk/react native/group/overview group for field descriptions."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-groups/get-joined-group-list",
+    "title": "Get joined groups",
+    "description": "OpenIM React Native SDK guide for get joined groups.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-groups get-joined-group-list",
+    "content": "Call getJoinedGroupList to retrieve every group that the current account has joined. const groups = await OpenIMSDK.getJoinedGroupList ; Return value When the call completes, it returns GroupItem . For many groups, use Get joined groups by page /sdk/react native/group/retrieving groups/get joined group list page to retrieve them in batches."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-groups/get-joined-group-list-page",
+    "title": "Get joined groups by page",
+    "description": "OpenIM React Native SDK guide for get joined groups by page.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-groups get-joined-group-list-page",
+    "content": "Call getJoinedGroupListPage to retrieve groups joined by the current account in pages. const groups = await OpenIMSDK.getJoinedGroupListPage offset: 0, count: 50, ; Parameters | Parameter | Type | Required | Description | | | | | | offset | number | Yes | Pagination offset. Use 0 for the first page. | | count | number | Yes | Number of groups to retrieve. | To retrieve the next page, set offset to the number of groups already retrieved. Return value When the call completes, it returns GroupItem for the current page. See Group overview /sdk/react native/group/overview group for field descriptions."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-groups/is-join-group",
+    "title": "Check group membership",
+    "description": "OpenIM React Native SDK guide for check group membership.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-groups is-join-group",
+    "content": "Call isJoinGroup to check whether the current account has joined a group. const isJoined = await OpenIMSDK.isJoinGroup 'group 001' ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the group to check. | Return value When the call completes, it returns a boolean : true if the current account has joined the group, or false otherwise."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-groups/search-groups",
+    "title": "Search groups",
+    "description": "OpenIM React Native SDK guide for search groups.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-groups search-groups",
+    "content": "Call searchGroups to search groups by group ID or group name. const groups = await OpenIMSDK.searchGroups keywordList: 'project' , isSearchGroupID: false, isSearchGroupName: true, ; Parameters | Parameter | Type | Required | Description | | | | | | keywordList | string | Yes | Search keywords. | | isSearchGroupID | boolean | Yes | Whether to match group IDs. | | isSearchGroupName | boolean | Yes | Whether to match group names. | Return value When the call completes, it returns matching GroupItem entries. See Group overview /sdk/react native/group/overview group for field descriptions."
+  },
+  {
+    "path": "/sdk/react-native/group/group-applications/get-group-application-list-as-recipient",
+    "title": "Get received group applications",
+    "description": "OpenIM React Native SDK guide for get received group applications.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group group-applications get-group-application-list-as-recipient",
+    "content": "Group owners and administrators can call getGroupApplicationListAsRecipient to retrieve received group applications. const applications = await OpenIMSDK.getGroupApplicationListAsRecipient groupIDs: 'group 001' , handleResults: ApplicationHandleResult.Unprocessed , offset: 0, count: 20, ; Parameters | Parameter | Type | Required | Description | | | | | | groupIDs | string | Yes | Group IDs to retrieve applications for. Pass an empty array to skip filtering by group. | | handleResults | number | Yes | Application results to retrieve. Pass an empty array to skip filtering by result. | | offset | number | Yes | Pagination offset. Use 0 for the first page. | | count | number | Yes | Number of applications to retrieve. | Common ApplicationHandleResult values are: | Enum value | Value | Meaning | | | | | | ApplicationHandleResult.Unprocessed | 0 | Pending. | | ApplicationHandleResult.Agree | 1 | Accepted. | | ApplicationHandleResult.Reject | 1 | Rejected. | Return value When the call completes, it returns GroupApplicationItem that the current account can handle. Group application fields | Field | Type | Description | | | | | | groupID | string | ID of the group that the user applied to join. | | userID | string | User ID of the applicant. | | nickname | string | Applicant nickname recorded in the application. | | userFaceURL | string | Applicant avatar URL recorded in the application. | | reqMsg | string | Application message. | | reqTime | number | Application time. | | joinSource | GroupJoinSource | Source of the group application. | | handleResult | ApplicationHandleResult | Current handling result. | | handleUserID | string | User ID of the person who handled the application. | | handledMsg | string | Message entered while handling the application. | | handledTime | number | Time when the application was handled. | | groupName | string | Group name recorded in the application. | | groupFaceURL | string | Group avatar URL recorded in the application. | | groupType | GroupType | Group type. | | ownerUserID | string | Group owner user ID. | | creatorUserID | string | Group creator user ID. | | introduction | string | Group description recorded in the application. | | notification | string | Group announcement recorded in the application. | | memberCount | number | Group member count recorded in the application. | | status | GroupStatus | Group status. | | createTime | number | Application record creation time as a Unix timestamp in milliseconds. | | ex | string | Application record extension string. | The nickname, avatar, and group information in an application record reflect the values when the record was created. Query the current user profile or group profile to show the latest information. Listen for group application changes When a group application is added, handled, or deleted, OnGroupApplicationAdded , OnGroupApplicationAccepted , OnGroupApplicationRejected , or OnGroupApplicationDeleted is triggered respectively. Each callback receives a GroupApplicationItem directly: const handleApplicationChanged = application: GroupApplicationItem = // Update the application record by groupID and userID ; const handleApplicationDeleted = application: GroupApplicationItem = // Delete the application record by groupID and userID ; OpenIMSDK.on OpenIMEvent.OnGroupApplicationAdded, handleApplicationChanged ; OpenIMSDK.on OpenIMEvent.OnGroupApplicationAccepted, handleApplicationChanged ; OpenIMSDK.on OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged ; OpenIMSDK.on OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted ; OpenIMSDK.off OpenIMEvent.OnGroupApplicationAdded, handleApplicationChanged ; OpenIMSDK.off OpenIMEvent.OnGroupApplicationAccepted, handleApplicationChanged ; OpenIMSDK.off OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged ; OpenIMSDK.off OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted ; Remove these listeners when signing out, switching accounts, or discarding application list state."
+  },
+  {
+    "path": "/sdk/react-native/group/group-applications/get-group-application-list-as-applicant",
+    "title": "Get sent group applications",
+    "description": "OpenIM React Native SDK guide for get sent group applications.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group group-applications get-group-application-list-as-applicant",
+    "content": "Call getGroupApplicationListAsApplicant to retrieve group applications sent by the current account. const applications = await OpenIMSDK.getGroupApplicationListAsApplicant groupIDs: 'group 001' , handleResults: ApplicationHandleResult.Unprocessed, ApplicationHandleResult.Agree, ApplicationHandleResult.Reject, , offset: 0, count: 20, ; Parameters | Parameter | Type | Required | Description | | | | | | groupIDs | string | Yes | Group IDs to retrieve applications for. Pass an empty array to skip filtering by group. | | handleResults | number | Yes | Application results to retrieve. Pass an empty array to skip filtering by result. | | offset | number | Yes | Pagination offset. Use 0 for the first page. | | count | number | Yes | Number of applications to retrieve. | For ApplicationHandleResult values, see Get received group applications /sdk/react native/group/group applications/get group application list as recipient . Return value When the call completes, it returns GroupApplicationItem sent by the current account. See Get received group applications /sdk/react native/group/group applications/get group application list as recipient for application fields and application change event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/group-applications/get-group-application-unhandled-count",
+    "title": "Get pending group application count",
+    "description": "OpenIM React Native SDK guide for get pending group application count.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group group-applications get-group-application-unhandled-count",
+    "content": "Call getGroupApplicationUnhandledCount to retrieve the number of group applications that remain unhandled after a specified time. const count = await OpenIMSDK.getGroupApplicationUnhandledCount time: 0, ; Parameters | Parameter | Type | Required | Description | | | | | | time | number | Yes | Start time as a Unix timestamp in milliseconds. Pass 0 to count every pending application. | Return value When the call completes, it returns a number representing the number of pending group applications after the specified time."
+  },
+  {
+    "path": "/sdk/react-native/group/group-applications/accept-group-application",
+    "title": "Accept a group application",
+    "description": "OpenIM React Native SDK guide for accept a group application.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group group-applications accept-group-application",
+    "content": "Call acceptGroupApplication to accept a user's group application. await OpenIMSDK.acceptGroupApplication groupID: application.groupID, fromUserID: application.userID, handleMsg: 'Approved', ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the group in the application. | | fromUserID | string | Yes | Applicant user ID, corresponding to userID in the application record. | | handleMsg | string | Yes | Handling message. Pass an empty string when no message is needed. | When the call completes, the group application is accepted. Application status changes trigger OnGroupApplicationAccepted ; see Get received group applications /sdk/react native/group/group applications/get group application list as recipient for complete event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/group-applications/refuse-group-application",
+    "title": "Reject a group application",
+    "description": "OpenIM React Native SDK guide for reject a group application.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group group-applications refuse-group-application",
+    "content": "Call refuseGroupApplication to reject a user's group application. await OpenIMSDK.refuseGroupApplication groupID: application.groupID, fromUserID: application.userID, handleMsg: 'The application cannot be accepted at this time', ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the group in the application. | | fromUserID | string | Yes | Applicant user ID, corresponding to userID in the application record. | | handleMsg | string | Yes | Rejection reason. Pass an empty string when no reason is needed. | When the call completes, the group application is rejected. Application status changes trigger OnGroupApplicationRejected ; see Get received group applications /sdk/react native/group/group applications/get group application list as recipient for complete event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/group-applications/delete-group-requests",
+    "title": "Delete group applications",
+    "description": "OpenIM React Native SDK guide for delete group applications.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group group-applications delete-group-requests",
+    "content": "Call deleteGroupRequests to delete specified group application records in batches. await OpenIMSDK.deleteGroupRequests fromUserID: application.userID, groupID: application.groupID, , ; Parameters Each item in the array contains the following fields: | Parameter | Type | Required | Description | | | | | | fromUserID | string | Yes | Applicant user ID, corresponding to userID in the application record. | | groupID | string | Yes | ID of the group in the application. | Deleting an application record does not handle a pending application. To accept or reject an application, use Accept a group application /sdk/react native/group/group applications/accept group application or Reject a group application /sdk/react native/group/group applications/refuse group application , respectively. When the call completes, the request to delete the records is complete. Deleting an application record triggers OnGroupApplicationDeleted ; see Get received group applications /sdk/react native/group/group applications/get group application list as recipient for complete event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-group-members/get-group-member-list",
+    "title": "Get group members",
+    "description": "OpenIM React Native SDK guide for get group members.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-group-members get-group-member-list",
+    "content": "Call getGroupMemberList to retrieve members of a group in pages and filter them by role. const members = await OpenIMSDK.getGroupMemberList groupID: 'group 001', filter: GroupMemberFilter.All, offset: 0, count: 50, ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | filter | GroupMemberFilter | Yes | Member role filter. | | offset | number | Yes | Pagination offset. Use 0 for the first page. | | count | number | Yes | Number of members to retrieve. | GroupMemberFilter values are: | Enum value | Value | Description | | | | | | GroupMemberFilter.All | 0 | All members. | | GroupMemberFilter.Owner | 1 | Group owner only. | | GroupMemberFilter.Admin | 2 | Administrators only. | | GroupMemberFilter.Normal | 3 | Regular members only. | | GroupMemberFilter.AdminAndNormal | 4 | Administrators and regular members. | | GroupMemberFilter.AdminAndOwner | 5 | Administrators and the group owner. | To retrieve the next page, set offset to the number of members already retrieved. Return value When the call completes, it returns GroupMemberItem for the current page. See Group overview /sdk/react native/group/overview group for field descriptions. Listen for group member changes When a member joins, leaves, or has profile information changed, OnGroupMemberAdded , OnGroupMemberDeleted , and OnGroupMemberInfoChanged are triggered respectively. Each callback receives a GroupMemberItem directly: const handleMemberAdded = member: GroupMemberItem = // Add the member to the corresponding group member list ; const handleMemberDeleted = member: GroupMemberItem = // Delete the member by member.groupID and member.userID ; const handleMemberChanged = member: GroupMemberItem = // Update the member profile by member.groupID and member.userID ; OpenIMSDK.on OpenIMEvent.OnGroupMemberAdded, handleMemberAdded ; OpenIMSDK.on OpenIMEvent.OnGroupMemberDeleted, handleMemberDeleted ; OpenIMSDK.on OpenIMEvent.OnGroupMemberInfoChanged, handleMemberChanged ; OpenIMSDK.off OpenIMEvent.OnGroupMemberAdded, handleMemberAdded ; OpenIMSDK.off OpenIMEvent.OnGroupMemberDeleted, handleMemberDeleted ; OpenIMSDK.off OpenIMEvent.OnGroupMemberInfoChanged, handleMemberChanged ; Remove these listeners when signing out, switching accounts, or discarding member list state."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-group-members/get-specified-group-members-info",
+    "title": "Get group member profiles",
+    "description": "OpenIM React Native SDK guide for get group member profiles.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-group-members get-specified-group-members-info",
+    "content": "Call getSpecifiedGroupMembersInfo to retrieve member profiles for specified users in a group. const members = await OpenIMSDK.getSpecifiedGroupMembersInfo groupID: 'group 001', userIDList: 'user 001', 'user 002' , ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userIDList | string | Yes | User IDs of the members to retrieve. | Return value When the call completes, it returns matching GroupMemberItem entries. See Group overview /sdk/react native/group/overview group for field descriptions."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-group-members/get-users-in-group",
+    "title": "Check users in a group",
+    "description": "OpenIM React Native SDK guide for check users in a group.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-group-members get-users-in-group",
+    "content": "Call getUsersInGroup to retrieve the user IDs from a specified set that have joined a group. const userIDs = await OpenIMSDK.getUsersInGroup groupID: 'group 001', userIDList: 'user 001', 'user 002', 'user 003' , ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userIDList | string | Yes | User IDs to check. | Return value When the call completes, it returns string containing the user IDs that have joined the target group."
+  },
+  {
+    "path": "/sdk/react-native/group/retrieving-group-members/search-group-members",
+    "title": "Search group members",
+    "description": "OpenIM React Native SDK guide for search group members.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group retrieving-group-members search-group-members",
+    "content": "Call searchGroupMembers to search members of a group by user ID or group nickname. const members = await OpenIMSDK.searchGroupMembers groupID: 'group 001', keywordList: 'Zhang' , isSearchUserID: false, isSearchMemberNickname: true, offset: 0, count: 50, ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | keywordList | string | Yes | Search keywords. | | isSearchUserID | boolean | Yes | Whether to match user IDs. | | isSearchMemberNickname | boolean | Yes | Whether to match group nicknames. | | offset | number | Yes | Pagination offset. Use 0 for the first page. | | count | number | Yes | Number of members to retrieve. | Return value When the call completes, it returns matching GroupMemberItem entries for the current page. See Group overview /sdk/react native/group/overview group for field descriptions."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/invite-user-to-group",
+    "title": "Invite users to a group",
+    "description": "OpenIM React Native SDK guide for invite users to a group.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members invite-user-to-group",
+    "content": "Call inviteUserToGroup to invite one or more users to a group. await OpenIMSDK.inviteUserToGroup groupID: 'group 001', reason: 'Invitation to join the project discussion group', userIDList: 'user 002', 'user 003' , ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | reason | string | Yes | Invitation message. Pass an empty string when no message is needed. | | userIDList | string | Yes | User IDs to invite. | When the call completes, the invitation request is submitted. When a user actually joins the group, OnGroupMemberAdded is triggered; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/kick-group-member",
+    "title": "Remove group members",
+    "description": "OpenIM React Native SDK guide for remove group members.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members kick-group-member",
+    "content": "Call kickGroupMember to remove one or more members from a group. await OpenIMSDK.kickGroupMember groupID: 'group 001', reason: 'No longer involved in the project', userIDList: 'user 002' , ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | reason | string | Yes | Removal reason. Pass an empty string when no reason is needed. | | userIDList | string | Yes | User IDs of the members to remove. | When the call completes, the specified members are removed from the group. Removing a member triggers OnGroupMemberDeleted ; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/set-group-member-nickname",
+    "title": "Update a group nickname",
+    "description": "OpenIM React Native SDK guide for update a group nickname.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members set-group-member-nickname",
+    "content": "Call setGroupMemberInfo to update a member's group nickname. await OpenIMSDK.setGroupMemberInfo groupID: 'group 001', userID: 'user 002', nickname: 'Project owner', ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userID | string | Yes | User ID of the member whose nickname to update. | | nickname | string | Yes | New nickname for the member in the group. | A group nickname applies only to this group and does not change the user's account nickname. When the call completes, the group nickname is updated. Member profile changes trigger OnGroupMemberInfoChanged ; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/set-group-member-role-level",
+    "title": "Manage group administrators",
+    "description": "OpenIM React Native SDK guide for manage group administrators.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members set-group-member-role-level",
+    "content": "Call setGroupMemberInfo to make a member an administrator or remove administrator status. await OpenIMSDK.setGroupMemberInfo groupID: 'group 001', userID: 'user 002', roleLevel: GroupMemberRole.Admin, ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userID | string | Yes | User ID of the member whose role to set. | | roleLevel | GroupMemberRole | Yes | Member role to set. | | Enum value | Value | Description | | | | | | GroupMemberRole.Normal | 20 | Regular member. Pass this value to remove administrator status. | | GroupMemberRole.Admin | 60 | Administrator. | | GroupMemberRole.Owner | 100 | Group owner role, used only to identify the current role. | You cannot transfer group ownership by setting GroupMemberRole.Owner . Use Transfer group ownership /sdk/react native/group/managing group members/transfer group owner instead. When the call completes, the member role is updated. Member profile changes trigger OnGroupMemberInfoChanged ; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/set-group-member-avatar",
+    "title": "Update a group member avatar",
+    "description": "OpenIM React Native SDK guide for update a group member avatar.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members set-group-member-avatar",
+    "content": "Call setGroupMemberInfo to update a member's group avatar. await OpenIMSDK.setGroupMemberInfo groupID: 'group 001', userID: 'user 002', faceURL: 'https://example.com/avatar.png', ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userID | string | Yes | User ID of the member whose avatar to update. | | faceURL | string | Yes | Member avatar URL for this group. | A group avatar applies only to the specified group. To update an account avatar, use Update your profile /sdk/react native/user/profile/set self info . When the call completes, the group avatar is updated. Member profile changes trigger OnGroupMemberInfoChanged ; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/set-group-member-extension",
+    "title": "Set group member extra data",
+    "description": "OpenIM React Native SDK guide for set group member extra data.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members set-group-member-extension",
+    "content": "Call setGroupMemberInfo to set a member's ex extension field. await OpenIMSDK.setGroupMemberInfo groupID: 'group 001', userID: 'user 002', ex: JSON.stringify title: 'maintainer', , ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userID | string | Yes | User ID of the member whose extension data to set. | | ex | string | Yes | Group member extension string. It can contain JSON or another string format for business specific data. | When the call completes, the member extension field is updated. Member profile changes trigger OnGroupMemberInfoChanged ; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/transfer-group-owner",
+    "title": "Transfer group ownership",
+    "description": "OpenIM React Native SDK guide for transfer group ownership.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members transfer-group-owner",
+    "content": "Call transferGroupOwner to transfer group ownership to another member. await OpenIMSDK.transferGroupOwner groupID: 'group 001', newOwnerUserID: 'user 002', ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | newOwnerUserID | string | Yes | User ID of the new group owner. This user must already be a member of the group. | When the call completes, group ownership is transferred. The member roles of the former and new owners change through OnGroupMemberInfoChanged ; see Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
+  },
+  {
+    "path": "/sdk/react-native/group/managing-group-members/change-group-member-mute",
+    "title": "Mute or unmute a group member",
+    "description": "OpenIM React Native SDK guide for mute or unmute a group member.",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native group managing-group-members change-group-member-mute",
+    "content": "Call changeGroupMemberMute to set a mute duration for a member. Pass 0 to remove the mute. await OpenIMSDK.changeGroupMemberMute groupID: 'group 001', userID: 'user 002', mutedSeconds: 3600, ; Parameters | Parameter | Type | Required | Description | | | | | | groupID | string | Yes | ID of the target group. | | userID | string | Yes | User ID of the member to mute or unmute. | | mutedSeconds | number | Yes | Mute duration in seconds. Pass 0 to remove the mute. | When the call completes, the member mute state is updated. Member profile changes trigger OnGroupMemberInfoChanged ; read muteEndTime from the event parameter to get the mute end time. See Get group members /sdk/react native/group/retrieving group members/get group member list for event handling."
   }
 ]

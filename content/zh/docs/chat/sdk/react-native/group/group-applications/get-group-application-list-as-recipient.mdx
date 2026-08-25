@@ -1,0 +1,100 @@
+---
+title: '获取收到的入群申请'
+description: '查询当前账号收到的入群申请。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/group/group-applications/get-group-application-list-as-recipient'
+---
+
+群主或管理员可以调用 `getGroupApplicationListAsRecipient()` 查询收到的入群申请。
+
+```ts
+const applications = await OpenIMSDK.getGroupApplicationListAsRecipient({
+  groupIDs: ['group-001'],
+  handleResults: [ApplicationHandleResult.Unprocessed],
+  offset: 0,
+  count: 20,
+});
+```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupIDs` | `string[]` | 是 | 要查询的群组 ID 数组；传空数组表示不按群组筛选。 |
+| `handleResults` | `number[]` | 是 | 要查询的申请处理结果；传空数组表示不按处理结果筛选。 |
+| `offset` | `number` | 是 | 分页偏移量，第一页传 `0`。 |
+| `count` | `number` | 是 | 本次读取的申请数量。 |
+
+`ApplicationHandleResult` 的常用值如下：
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ApplicationHandleResult.Unprocessed` | `0` | 待处理。 |
+| `ApplicationHandleResult.Agree` | `1` | 已同意。 |
+| `ApplicationHandleResult.Reject` | `-1` | 已拒绝。 |
+
+## 返回结果
+
+调用完成后返回当前账号有权处理的 `GroupApplicationItem[]`。
+
+### 入群申请字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 申请加入的群组 ID。 |
+| `userID` | `string` | 申请人的用户 ID。 |
+| `nickname` | `string` | 申请记录中的申请人昵称。 |
+| `userFaceURL` | `string` | 申请记录中的申请人头像地址。 |
+| `reqMsg` | `string` | 入群申请附言。 |
+| `reqTime` | `number` | 申请时间。 |
+| `joinSource` | `GroupJoinSource` | 入群申请来源。 |
+| `handleResult` | `ApplicationHandleResult` | 当前处理结果。 |
+| `handleUserID` | `string` | 处理申请的用户 ID。 |
+| `handledMsg` | `string` | 处理申请时填写的说明。 |
+| `handledTime` | `number` | 处理时间。 |
+| `groupName` | `string` | 申请记录中的群组名称。 |
+| `groupFaceURL` | `string` | 申请记录中的群组头像地址。 |
+| `groupType` | `GroupType` | 群组类型。 |
+| `ownerUserID` | `string` | 群主用户 ID。 |
+| `creatorUserID` | `string` | 群组创建者用户 ID。 |
+| `introduction` | `string` | 申请记录中的群组简介。 |
+| `notification` | `string` | 申请记录中的群组公告。 |
+| `memberCount` | `number` | 申请记录中的群成员数量。 |
+| `status` | `GroupStatus` | 申请记录中的群组状态。 |
+| `createTime` | `number` | 申请记录创建时间，Unix 毫秒时间戳。 |
+| `ex` | `string` | 申请记录扩展字符串。 |
+
+申请记录中的昵称、头像和群组资料以记录创建时的内容为准。需要展示最新资料时，分别查询当前用户资料或群组资料。
+
+## 监听入群申请变化
+
+新增、处理或删除入群申请时，分别触发 `OnGroupApplicationAdded`、`OnGroupApplicationAccepted`、`OnGroupApplicationRejected` 或 `OnGroupApplicationDeleted`。事件回调直接接收 `GroupApplicationItem`：
+
+```ts
+const handleApplicationChanged = (application: GroupApplicationItem) => {
+  // 按 groupID 和 userID 更新申请记录
+};
+
+const handleApplicationDeleted = (application: GroupApplicationItem) => {
+  // 按 groupID 和 userID 删除申请记录
+};
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationAdded, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationAccepted, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationAdded, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationAccepted, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted);
+```
+
+退出登录、切换账号或销毁申请列表状态时，取消这些监听。
