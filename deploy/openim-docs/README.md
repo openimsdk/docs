@@ -9,7 +9,7 @@ The server alternates between two local slots:
 
 `deploy-openim-docs.sh` starts the inactive slot, waits for the container health check, verifies the home page and dynamic APIs, switches the Nginx include atomically, and then gives the previous container time to drain before stopping it. A failed candidate never replaces the active slot.
 
-The deployment key is attached to the `openim-docs-deploy` account with an OpenSSH forced command. The account can invoke only the checked deployment entry point; it does not receive an interactive shell. The workflow passes its short-lived `GITHUB_TOKEN` over SSH so the server can pull a private GHCR image without storing registry credentials.
+The deployment key is attached to the `openim-docs-deploy` account with an OpenSSH forced command. The account can invoke only the checked deployment entry point; it does not receive an interactive shell. The GHCR package inherits the public repository visibility, while the workflow still passes its short-lived `GITHUB_TOKEN` over SSH for an authenticated pull. The temporary Docker configuration is removed after each deployment, so the server does not retain registry credentials.
 
 `nginx-http.conf` is used while DNS still points to the previous provider and while the ACME challenge is being completed. Install `nginx-https.conf` only after `/etc/letsencrypt/live/docs.openim.io` exists.
 
