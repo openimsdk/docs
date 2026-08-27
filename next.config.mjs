@@ -7,10 +7,18 @@ import wasmLegacyRedirectEntries from './data/structure/wasm-legacy-redirects.js
 import { buildClientSdkLegacyRedirects } from './scripts/lib/client-sdk-legacy-redirects.mjs';
 import { buildWasmLegacyRedirects } from './scripts/lib/wasm-legacy-redirects.mjs';
 
+const deploymentVersion = process.env.DEPLOYMENT_VERSION?.trim();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Keep standalone for Docker/self-host; managed platforms use their own Next.js runtime.
   ...(process.env.VERCEL || process.env.NETLIFY ? {} : { output: 'standalone' }),
+  ...(deploymentVersion
+    ? {
+        deploymentId: deploymentVersion,
+        generateBuildId: async () => deploymentVersion,
+      }
+    : {}),
   distDir: process.env.NODE_ENV === 'development' ? '.next-local' : '.next',
   reactStrictMode: true,
   allowedDevOrigins: ['127.0.0.1'],

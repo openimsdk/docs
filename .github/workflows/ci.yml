@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -20,3 +21,107 @@ jobs:
       - run: pnpm audit --prod
       - run: pnpm check
       - run: pnpm build
+
+  publish-image:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish the production image
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/openimsdk/docs:sha-${{ github.sha }}
+            ghcr.io/openimsdk/docs:main
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=https://docs.openim.io
+            DEPLOYMENT_VERSION=${{ github.sha }}
+          cache-from: type=gha,scope=openim-docs-production
+          cache-to: type=gha,mode=max,scope=openim-docs-production
+          provenance: mode=max
+          sbom: true
+
+  deploy-production:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: publish-image
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://docs.openim.io
+    concurrency:
+      group: openim-docs-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Configure restricted SSH access
+        env:
+          DEPLOY_KEY: ${{ secrets.DOCS_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DOCS_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/openim-docs"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/openim-docs" "$HOME/.ssh/known_hosts"
+
+      - name: Deploy the verified image digest
+        env:
+          DEPLOY_HOST: ${{ vars.DOCS_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DOCS_DEPLOY_USER }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ghcr.io/openimsdk/docs@${{ needs.publish-image.outputs.digest }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$IMAGE"
+          printf '%s\n' "$GHCR_TOKEN" | ssh \
+            -i "$HOME/.ssh/openim-docs" \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            -o IdentitiesOnly=yes \
+            -o ServerAliveCountMax=3 \
+            -o ServerAliveInterval=10 \
+            -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "deploy $IMAGE $GITHUB_ACTOR"
+
+      - name: Verify the public endpoint
+        env:
+          PUBLIC_HEALTHCHECK_URL: ${{ vars.DOCS_PUBLIC_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$PUBLIC_HEALTHCHECK_URL" ]; then
+            echo 'Public endpoint verification is deferred until DNS cutover.'
+            exit 0
+          fi
+          curl --fail --show-error --silent \
+            --retry 5 --retry-all-errors --retry-delay 3 \
+            "$PUBLIC_HEALTHCHECK_URL"
