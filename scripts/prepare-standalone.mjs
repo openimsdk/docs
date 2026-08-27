@@ -1,7 +1,7 @@
 import { cp, mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-if (process.env.VERCEL || process.env.NETLIFY) {
+if (process.env.VERCEL) {
   console.log('Skipping standalone prepare on a managed Next.js platform.');
   process.exit(0);
 }

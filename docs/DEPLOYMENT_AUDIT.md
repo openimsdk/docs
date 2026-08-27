@@ -1,91 +1,94 @@
 # docs.openim.io 部署审计
 
-核查与修复日期：2026-08-04
+核查与切换日期：2026-08-27
 
 ## 结论
 
-`docs.openim.io` 由 **Netlify** 托管。生产站点现已从旧 Docusaurus 文档切换为 `openimsdk/docs` 当前 `main` 分支中的 Next.js/Fumadocs 文档。
+`docs.openim.io` 已切换到 OpenIMSDK 自有服务器 `43.129.81.231`。生产站点以 Next.js standalone 容器运行，由 Nginx 提供 HTTPS 入口；`openimsdk/docs` 的 `main` 分支通过 GitHub Actions 自动验证、构建、发布和部署。
 
-仓库迁移后，Netlify 仍监听 `main`，但旧项目配置无法构建新站点。第一轮仓库配置修复使构建恢复成功，随后域名验收发现 Next.js Runtime 未运行，所有路由仍返回 `404`。补充显式 Runtime 配置后，Netlify 成功部署服务端函数、重定向和响应头规则，生产域名的关键路径均已通过验证。
+生产 DNS 已由 Netlify CNAME 改为服务器 A 记录。仓库不再依赖 Netlify Runtime、插件或构建配置，原 Netlify 项目不作为生产来源或回滚链路。仓库仅保留最小退役哨兵 `netlify.toml`，通过 `ignore = "exit 0"` 阻止仍与仓库关联的历史 Netlify 项目执行 Git 触发构建；该文件不包含构建命令、发布目录或插件配置。
 
 ## 当前生产链路
 
-1. `docs.openim.io` 的 CNAME 指向 `apex-loadbalancer.netlify.com`。[DNS 查询结果](https://dns.google/resolve?name=docs.openim.io&type=CNAME)
-2. 线上响应包含 `server: Netlify`、`cache-status` 和 `x-nf-request-id`，实际流量由 Netlify Edge 提供。[生产站点](https://docs.openim.io/)
-3. Netlify 站点名称为 `openimdocs`，Site ID 为 `4f231446-b290-4e4a-95c7-193e0ec555b9`。[Netlify 站点记录](https://api.netlify.com/api/v1/sites/docs.openim.io)
-4. 首个通过完整验收的修复 deploy 为 `6a71a995a90caa00096c4be0`，对应提交 `00cb193d0f55ca9a40002010f5876b48dabc1266`，发布时间为 2026-08-04 08:58:46 UTC。[修复验证 deploy](https://api.netlify.com/api/v1/deploys/6a71a995a90caa00096c4be0)
-5. 部署摘要确认已处理 3 条重定向、1 条响应头规则，并部署 1 个 Next.js 服务端函数。
-
-当前发布链路为：
-
 ```text
 openimsdk/docs main
-        ↓ Netlify Git 集成自动构建
-Netlify Next.js Runtime
-        ↓ Published deploy
-docs.openim.io
+        │
+        ▼
+GitHub Actions: verify
+├── frozen-lockfile 安装
+├── 生产依赖审计
+├── pnpm check
+└── pnpm build
+        │
+        ▼
+GHCR 不可变镜像
+ghcr.io/openimsdk/docs@sha256:...
+        │
+        ▼
+受限 SSH 部署账号
+        │
+        ▼
+blue : 127.0.0.1:3101
+green: 127.0.0.1:3102
+        │ 候选槽健康检查通过后原子切换
+        ▼
+Nginx + Let's Encrypt
+        │
+        ▼
+https://docs.openim.io
 ```
 
-## 故障经过与根因
+GitHub Actions 只部署构建步骤返回的镜像摘要，不使用可变标签决定生产版本。Production 环境保存受限部署密钥、服务器主机信息和公网健康检查地址；同一时间只允许一个生产部署执行。
 
-仓库切换为新版文档后，以下 Production 部署均为 `error`：
+## 服务器部署控制
 
-| 提交       | 时间（UTC）      | Netlify 状态 |
-| ---------- | ---------------- | ------------ |
-| `a49496f5` | 2026-08-04 08:21 | `error`      |
-| `a3646471` | 2026-08-04 08:23 | `error`      |
-| `4df14827` | 2026-08-04 08:29 | `error`      |
+- 部署账号 `openim-docs-deploy` 使用 OpenSSH forced command，不提供交互式 Shell、端口转发或任意远程命令能力。
+- 服务器入口只接受 `ghcr.io/openimsdk/docs@sha256:<digest>` 格式的镜像，并使用工作流的短期 `GITHUB_TOKEN` 完成认证拉取。
+- Registry 配置写入临时目录，部署结束后删除；服务器不长期保存 GHCR 凭据。
+- 新镜像始终启动在非活动槽位。容器健康检查、`/api/health`、中文首页和搜索接口全部通过后，才切换 Nginx upstream。
+- Nginx 配置先执行 `nginx -t`。校验或重载失败时恢复原 upstream，并删除失败候选容器。
+- 切换成功后保留短暂排空时间，再停止旧槽位。容器具有内存、CPU、PID 和日志轮转限制。
 
-匿名 API 不公开失败构建日志，但仓库和公开部署状态足以定位两层问题：
+版本化实现位于 [`deploy/openim-docs`](../deploy/openim-docs)；自动化流程位于 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)。
 
-1. 旧站曾使用 `build-ignore-errors.sh` 构建并发布 Docusaurus 的 `build` 目录。新版仓库没有 `netlify.toml` 覆盖项目后台遗留设置，同时保留了与 `pnpm-lock.yaml` 不一致的旧 `package-lock.json`。提交 `05c4281b71` 固定 `pnpm build`、`.next` 发布目录和 Node.js 版本，并移除旧 npm 锁文件后，Netlify 构建从 `error` 恢复为 `ready`。
-2. 该次部署摘要同时显示 `No functions deployed`。Netlify 只是上传了原始 `.next` 文件，没有运行 Next.js 适配器，因此域名上的所有应用路由仍返回 `404`。提交 `00cb193d0f` 显式启用 `@netlify/plugin-nextjs` 后，部署生成服务端函数和路由规则，页面恢复正常。
+## DNS 与 TLS
 
-Netlify 的文件配置会覆盖冲突的项目后台设置，因此上述修复可以在没有账号权限的情况下由仓库接管。[文件配置说明](https://docs.netlify.com/build/configure-builds/file-based-configuration/) Next.js Runtime 负责把 App Router、服务端渲染和相关平台能力转换为 Netlify 可运行的产物。[Next.js on Netlify](https://docs.netlify.com/build/frameworks/framework-setup-guides/nextjs/overview/)
+- `docs.openim.io` 的 A 记录指向 `43.129.81.231`，已通过权威 DNS、Cloudflare DNS、Google Public DNS 和阿里公共 DNS 核对。
+- HTTP 请求会以 `301` 跳转到 HTTPS；ACME HTTP-01 路径保留独立的 webroot，不受跳转影响。
+- `docs.openim.io` 使用独立的 Let's Encrypt 证书，首次签发证书有效期至 2026-11-25。
+- 服务器只保留 snap Certbot 5.7 的自动续期定时器，重复的 apt Certbot 1.21 定时器已停用。
+- `docs.openim.io` 已完成 Let's Encrypt staging 模拟续期，结果成功。
 
-## 仓库中的部署约束
+## 生产验收
 
-- [`netlify.toml`](../netlify.toml) 固定生产构建命令、发布目录、Node.js 版本和 Next.js Runtime。
-- [`next.config.mjs`](../next.config.mjs) 只在 Docker 或普通 Node.js 自托管环境生成 standalone 产物；Netlify 和 Vercel 使用各自的托管 Runtime。
-- 仓库只保留 `pnpm-lock.yaml`，并通过 `packageManager` 固定 pnpm 版本，避免不同包管理器解析出不同依赖树。
-- [`scripts/__tests__/netlify-deployment.test.mjs`](../scripts/__tests__/netlify-deployment.test.mjs) 防止 Netlify 构建配置、Runtime 和包管理器约束被意外移除。
+切换完成后，以下检查均直接针对 `https://docs.openim.io` 执行：
 
-## GitHub 当前承担的职责
+| 检查项                    | 结果                      |
+| ------------------------- | ------------------------- |
+| `/`、`/zh`                | `200`，中英文首页正常     |
+| WASM SDK 中英文概览       | `200`                     |
+| Guides 与客户端错误码页面 | `200`                     |
+| `/api/health`             | `200`，返回当前镜像摘要   |
+| `/api/search`             | `200`，动态搜索正常       |
+| `/_next/static/**`        | `200`，版本化静态资源正常 |
+| HTTP 到 HTTPS             | `301`                     |
+| TLS 主机名与证书链        | 校验通过                  |
+| Nginx 5xx                 | 切换验收时为 `0`          |
+| 活动容器错误日志          | 切换验收时为 `0`          |
 
-[`CI` 工作流](https://github.com/openimsdk/docs/blob/main/.github/workflows/ci.yml) 在 `main` 推送和 Pull Request 时执行安装、依赖审计、内容检查与生产构建。工作流本身不上传站点；生产发布由 Netlify 的 Git 集成在 `main` 更新后自动触发。
+首次完整自动部署由提交 `57ce0b575a` 触发；提交 `49db37b6af` 首次完成 HTTPS 与响应头加固，并验证了蓝绿切换、公开 HTTPS 健康检查和 Node.js 24 版 Docker Actions。
 
-GitHub Pages 不是当前线上来源：
+## 发布与回滚
 
-- GitHub Pages API 对该仓库返回 `404`，没有启用中的 Pages site。[GitHub Pages API](https://api.github.com/repos/openimsdk/docs/pages)
-- 仓库仍保留 `gh-pages` 分支，但生产域名 DNS 指向 Netlify。
-- `bak` 分支中的历史工作流曾把 Docusaurus 的 `build` 目录推送到 `gh-pages`，该流程不再用于当前站点。[历史工作流](https://github.com/openimsdk/docs/blob/bak/.github/workflows/build-ci.yaml)
+正常发布只需合并或推送到 `main`。部署必须依次通过验证、镜像发布、服务器候选槽检查和公网 HTTPS 检查；任一阶段失败都会阻止后续阶段。
 
-## 其他保留的部署方式
+首选回滚方式是在 `main` 上回退有问题的改动，由同一流水线重新构建并部署。紧急情况下，服务器管理员也可以通过受限部署入口重新部署仍保留在 GHCR 中的已知镜像摘要。不要通过手工替换容器文件或修改活动 upstream 绕过健康检查。
 
-### Vercel
+每次调整构建、容器、Nginx、证书或部署脚本后，至少执行：
 
-仓库包含 [`vercel.json`](../vercel.json)，并兼容 Vercel 的 Next.js Runtime，但 `docs.openim.io` 当前未使用 Vercel。GitHub Deployments 中最后一批 Vercel Production 记录停留在 2024-04-25，属于旧仓库历史。[历史 Vercel deployment](https://api.github.com/repos/openimsdk/docs/deployments/1474301770)
+```bash
+pnpm check
+pnpm build
+```
 
-### Standalone Node.js / Docker
-
-[`next.config.mjs`](../next.config.mjs) 为非托管平台生成 standalone 输出，[`Dockerfile`](../Dockerfile) 可以运行该产物。该方式继续作为自托管能力保留，但不是生产域名当前的流量来源。
-
-### AWS Amplify
-
-旧 `bak` 分支保留 `amplify.yml`，当前 `main` 已无此配置，DNS 也未指向 Amplify。它属于历史方案。
-
-## 生产验收结果
-
-修复后已直接对 `https://docs.openim.io` 完成以下检查：
-
-| 检查项                        | 结果                                   |
-| ----------------------------- | -------------------------------------- |
-| `/`、`/zh`                    | `200`，中英文首页正常                  |
-| WASM SDK 中英文概览           | `200`                                  |
-| Platform API 中英文概览       | `200`                                  |
-| `/api/search`                 | `200`，返回按语言筛选的搜索结果        |
-| `/robots.txt`、`/sitemap.xml` | `200`，内容类型正确                    |
-| 不存在的地址                  | `404`                                  |
-| WASM 旧地址                   | `308` 到对应的新地址，中英文路径均正常 |
-
-后续每次调整构建配置时，至少应运行 `pnpm check`、Netlify 本地构建，并在 Production deploy 进入 `ready` 后复查上述关键路径。Netlify 仍保留历史 deploy，可用于必要时回滚。
+合并后还必须确认 GitHub Actions 的 `verify`、`publish-image`、`deploy-production` 三个任务成功，并复查公网健康检查返回的镜像摘要与该次部署一致。

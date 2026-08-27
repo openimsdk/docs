@@ -11,8 +11,8 @@ const deploymentVersion = process.env.DEPLOYMENT_VERSION?.trim();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Keep standalone for Docker/self-host; managed platforms use their own Next.js runtime.
-  ...(process.env.VERCEL || process.env.NETLIFY ? {} : { output: 'standalone' }),
+  // Keep standalone for Docker/self-host; Vercel uses its managed Next.js runtime.
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   ...(deploymentVersion
     ? {
         deploymentId: deploymentVersion,

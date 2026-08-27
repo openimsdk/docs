@@ -15,6 +15,20 @@ test('publishes immutable production images after verification', () => {
   assert.match(workflow, /environment:\s+name: production/);
 });
 
+test('keeps the production deployment independent from Netlify', () => {
+  const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
+  const netlifyConfig = readFileSync('netlify.toml', 'utf8');
+  const nextConfig = readFileSync('next.config.mjs', 'utf8');
+  const prepareStandalone = readFileSync('scripts/prepare-standalone.mjs', 'utf8');
+
+  assert.match(netlifyConfig, /^\[build\]\n\s+ignore = "exit 0"$/m);
+  assert.doesNotMatch(netlifyConfig, /^\s*(command|publish)\s*=/m);
+  assert.doesNotMatch(netlifyConfig, /^\[\[plugins\]\]$/m);
+  assert.equal(packageJson.devDependencies['@netlify/plugin-nextjs'], undefined);
+  assert.doesNotMatch(nextConfig, /NETLIFY/);
+  assert.doesNotMatch(prepareStandalone, /NETLIFY/);
+});
+
 test('keeps deployment access restricted and validates a candidate before switching', () => {
   const entry = readFileSync('deploy/openim-docs/openim-docs-deploy-entry', 'utf8');
   const deploy = readFileSync('deploy/openim-docs/deploy-openim-docs.sh', 'utf8');

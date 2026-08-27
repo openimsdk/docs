@@ -6,14 +6,13 @@ import test from 'node:test';
 test('keeps local caches and competing lockfiles out of version control', () => {
   const trackedArtifacts = execFileSync(
     'git',
-    ['ls-files', '--', '.pnpm-store', '.netlify', 'package-lock.json'],
+    ['ls-files', '--', '.pnpm-store', 'package-lock.json'],
     { encoding: 'utf8' },
   ).trim();
   const gitignore = readFileSync('.gitignore', 'utf8');
 
   assert.equal(trackedArtifacts, '');
   assert.match(gitignore, /^\/\.pnpm-store\/$/m);
-  assert.match(gitignore, /^\/\.netlify\/$/m);
   assert.doesNotMatch(gitignore, /^src\/generated\//m);
 });
 

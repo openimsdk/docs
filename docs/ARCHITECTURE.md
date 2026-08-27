@@ -73,7 +73,7 @@ DocumentationPage
 
 `source.config.ts` 使用 Fumadocs 的动态内容源。安装或显式执行 `pnpm source:generate` 时，`fumadocs-mdx` 会在 `.source-local` 中生成类型与动态加载入口；该目录是本地产物，不进入版本控制。页面在请求或构建时按路由加载对应 MDX。
 
-Docker 与普通 Node.js 环境使用 Next.js `standalone` 输出，`scripts/prepare-standalone.mjs` 会把静态资源整理到自包含产物。Netlify 和 Vercel 使用各自的 Next.js Runtime，不生成或整理 standalone 目录。生产部署配置分别位于 `netlify.toml` 与 `vercel.json`。
+Docker 与普通 Node.js 环境使用 Next.js `standalone` 输出，`scripts/prepare-standalone.mjs` 会把静态资源整理到自包含产物。生产站点由 GitHub Actions 构建不可变 GHCR 镜像，并通过受限 SSH 账号部署到 Nginx 后方的蓝绿容器槽位；相关配置位于 `.github/workflows/ci.yml` 与 `deploy/openim-docs`。Vercel 作为可选托管环境使用其 Next.js Runtime，不生成或整理 standalone 目录。
 
 `outputFileTracingIncludes` 必须继续覆盖 `content/docs/**/*.mdx`，否则 standalone 运行时可能找不到动态页面。
 

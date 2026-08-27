@@ -119,7 +119,7 @@ pnpm check
 pnpm build
 ```
 
-`pnpm check` includes linting, TypeScript validation, content integrity checks, SDK publication audits, example checks, OpenAPI linting, and Platform API tests. `pnpm build` validates the production application. Local and Docker builds also prepare the standalone server output; managed platforms use their own Next.js runtime.
+`pnpm check` includes linting, TypeScript validation, content integrity checks, SDK publication audits, example checks, OpenAPI linting, and Platform API tests. `pnpm build` validates the production application. Local and Docker builds also prepare the standalone server output; Vercel builds use its managed Next.js runtime.
 
 Frequently used commands:
 
@@ -151,13 +151,13 @@ NEXT_PUBLIC_EDIT_BASE_URL=https://github.com/openimsdk/docs/edit/main
 
 ## Deployment
 
-### Netlify
+### Production
 
-The production site at [docs.openim.io](https://docs.openim.io) is deployed from `main` through Netlify. [`netlify.toml`](netlify.toml) fixes the build command, publish directory, Node.js version, and Next.js Runtime in version control.
+The production site at [docs.openim.io](https://docs.openim.io) is self-hosted as a Next.js standalone container behind Nginx. Every push to `main` runs the complete verification suite, publishes an immutable image to GitHub Container Registry, and deploys that image by digest through a restricted SSH account.
 
-Every production deployment must reach `ready` and pass smoke tests for the home pages, SDK and Platform API routes, search, redirects, Sitemap, and Robots. See the [deployment audit](docs/DEPLOYMENT_AUDIT.md) for the verified production chain.
+Production uses two local container slots. A candidate must pass container health checks and smoke tests for the home page and dynamic APIs before Nginx switches traffic atomically. After the switch, GitHub Actions verifies the public HTTPS health endpoint. See the [deployment audit](docs/DEPLOYMENT_AUDIT.md) and [server deployment reference](deploy/openim-docs/README.md) for the verified chain and operational controls.
 
-### Vercel
+### Vercel preview or alternative deployment
 
 The repository includes `vercel.json`. Configure the production environment variables, import the repository into Vercel, and use the committed pnpm lockfile. Vercel runs:
 
