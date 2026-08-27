@@ -35,11 +35,14 @@ test('builds a revision-aware standalone image with a health check', () => {
   const dockerfile = readFileSync('Dockerfile', 'utf8');
   const nextConfig = readFileSync('next.config.mjs', 'utf8');
   const healthRoute = readFileSync('app/api/health/route.ts', 'utf8');
+  const nginxConfig = readFileSync('deploy/openim-docs/nginx-https.conf', 'utf8');
 
   assert.match(dockerfile, /ARG NEXT_PUBLIC_SITE_URL=https:\/\/docs\.openim\.io/);
   assert.match(dockerfile, /HEALTHCHECK[\s\S]*\/api\/health/);
   assert.match(nextConfig, /deploymentId: deploymentVersion/);
   assert.match(nextConfig, /generateBuildId: async \(\) => deploymentVersion/);
+  assert.match(nextConfig, /poweredByHeader: false/);
+  assert.match(nginxConfig, /server_tokens off/);
   assert.match(healthRoute, /status: 'ok'/);
   assert.match(healthRoute, /'Cache-Control': 'no-store'/);
 });
