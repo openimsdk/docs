@@ -78,7 +78,12 @@ export function SearchDialog({ locale = 'en' }: { locale?: Locale }) {
 
   return (
     <>
-      <button className="search-trigger" onClick={openDialog} type="button">
+      <button
+        aria-label={text.search.trigger}
+        className="search-trigger"
+        onClick={openDialog}
+        type="button"
+      >
         <SearchIcon />
         <span>{text.search.trigger}</span>
         <kbd>⌘K</kbd>
