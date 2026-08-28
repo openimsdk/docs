@@ -7814,5 +7814,101 @@
     "context": "SDKs · React Native · v4",
     "keywords": "sdk react-native v4 sdk react-native file-uploads upload-file",
     "content": "uploadFile 用于独立上传本地文件，可用于头像、群头像、资料附件或其他业务文件。 const url = await OpenIMSDK.uploadFile name: 'avatar.png', contentType: 'image/png', uuid: 'avatar upload 20260827', cause: 'user avatar', filepath, ; 参数说明 | 参数 | 类型 | 是否必填 | 说明 | | | | | | | name | string | 是 | 上传使用的文件名。 | | contentType | string | 是 | 文件的 MIME 类型。 | | uuid | string | 是 | 本次上传的业务标识。 | | cause | string | 否 | 业务约定的上传原因。 | | filepath | string | 是 | 应用可读取的本地文件路径。 | 调用完成后返回远端资源地址 url 。可将该地址用于更新头像、保存业务附件，或创建 URL 类型的媒体消息后再发送。 监听上传状态 上传过程中触发 UploadOnProgress 事件，回调参数包含当前已上传量 current 和文件总量 size 。上传完成时触发 UploadComplete 事件，回调参数的 data 包含 fileSize 、 streamSize 和 storageSize 。 function handleUploadProgress current, size // ... function handleUploadComplete data // ... // 设置监听 OpenIMSDK.on OpenIMEvent.UploadOnProgress, handleUploadProgress ; OpenIMSDK.on OpenIMEvent.UploadComplete, handleUploadComplete ; // 取消监听 OpenIMSDK.off OpenIMEvent.UploadOnProgress, handleUploadProgress ; OpenIMSDK.off OpenIMEvent.UploadComplete, handleUploadComplete ; 组件销毁、退出登录或切换账号时，应取消监听。"
+  },
+  {
+    "path": "/sdk/react-native/calling/overview-calling",
+    "title": "音视频通话概览",
+    "description": "OpenIM React Native SDK 音视频通话概览。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling overview-calling",
+    "content": "OpenIM React Native SDK 提供音视频通话的信令 API，用于发起和处理通话邀请、查询房间信息及同步通话状态。它只处理通话业务信令，不负责音视频采集与播放、媒体房间连接或通话界面渲染。 发起或接受通话后，SDK 返回 roomID 、 token 和 liveURL 等房间凭据。应用需要将这些凭据交给实时音视频媒体引擎加入通话房间，并自行处理设备权限、媒体轨道、弱网策略和界面状态。 通话流程 1. 调用 signalingInvite 发起单聊通话，或调用 signalingInviteInGroup 发起群聊通话。 2. 被邀请用户通过 OnReceiveNewInvitation 收到通话邀请，选择接受或拒绝。 3. 接受邀请后调用 signalingAccept ，使用返回的房间凭据加入通话房间。 4. 通话期间根据邀请状态、参与者状态、媒体流状态和自定义信令更新通话界面。 5. 发起方可取消尚未接通的邀请；通话参与者可挂断已建立的通话。 核心数据 | 数据 | 说明 | | | | | RtcInvite | 通话邀请，包含邀请人、被邀请人、群组、房间、媒体类型、超时时间和会话类型。 | | RtcInviteResults | 发起、接受通话或查询房间凭据后返回的 roomID 、 token 和 liveURL 。 | | CallingRoomData | 按群组查询得到的房间 ID、邀请信息和参与者资料。 | | OnReceiveNewInvitationPayload | 收到通话邀请时的事件参数，包含 invitation 、可选的 offlinePushInfo 和参与者资料。 | customData 和自定义信令均为业务自定义字符串，可按业务协议传递 JSON 或其他格式的数据。 通话状态 调用发起、接受、拒绝、取消或挂断 API 后，可根据对应调用结果更新当前操作的界面。其他用户或设备的通话状态通过事件接收。使用 roomID 区分通话；参与者状态同时使用 roomID 和 userID 区分。 邀请生命周期、参与者进出房间和媒体流变化的监听方式见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。自定义信令的监听方式见 发送自定义信令 /sdk/react native/calling/sending custom signals/send a custom signal 。 按任务查找页面 | 任务 | 页面 | | | | | 发起单聊或群聊通话 | 发起单聊通话 /sdk/react native/calling/managing calls/start single call 、 发起群聊通话 /sdk/react native/calling/managing calls/start group call | | 接受或拒绝邀请 | 接受通话 /sdk/react native/calling/managing calls/accept call 、 拒绝通话 /sdk/react native/calling/managing calls/reject call | | 取消邀请或挂断通话 | 取消通话邀请 /sdk/react native/calling/managing calls/cancel call 、 挂断通话 /sdk/react native/calling/managing calls/hang up call | | 查询房间或恢复待处理邀请 | 查询群组通话房间 /sdk/react native/calling/retrieving call information/get room by group id 、 获取通话房间 Token /sdk/react native/calling/retrieving call information/get token by room id 、 恢复待处理的通话邀请 /sdk/react native/calling/retrieving call information/restore pending invitation | | 处理事件和自定义信令 | 处理通话事件 /sdk/react native/calling/managing calls/handle call events 、 发送自定义信令 /sdk/react native/calling/sending custom signals/send a custom signal |"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/start-single-call",
+    "title": "发起单聊通话",
+    "description": "使用 OpenIM React Native SDK 发起单聊音视频通话。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls start-single-call",
+    "content": "调用 signalingInvite 发起单聊音视频通话。调用完成后返回房间凭据，应用可使用其中的 roomID 、 token 和 liveURL 接入实时音视频媒体引擎。 const roomCredentials = await OpenIMSDK.signalingInvite invitation: inviterUserID: currentUserID, inviteeUserIDList: peerUserID , groupID: '', roomID, timeout: 30, mediaType: 'video', sessionType: SessionType.Single, platformID: currentPlatform, , ; 参数说明 | 参数 | 类型 | 是否必填 | 说明 | | | | | | | invitation | RtcInvite | 是 | 本次通话邀请。 | | invitation.inviterUserID | string | 是 | 发起通话的当前用户 ID。 | | invitation.inviteeUserIDList | string | 是 | 被邀请用户 ID 列表；单聊时传入对方用户 ID。 | | invitation.groupID | string | 是 | 单聊传空字符串。 | | invitation.roomID | string | 是 | 本次通话的房间 ID，后续通话操作和状态处理使用该值识别通话。 | | invitation.timeout | number | 是 | 邀请等待时长，单位为秒。 | | invitation.mediaType | string | 是 | 媒体类型，例如 audio 或 video 。 | | invitation.sessionType | SessionType | 是 | 单聊传入 SessionType.Single 。 | | invitation.platformID | Platform | 是 | 发起端平台；传入当前客户端对应的 Platform 枚举值。 | | invitation.customData | string | 否 | 随邀请传递的业务扩展字符串。 | | invitation.initiateTime | number | 否 | 邀请发起时间，Unix 毫秒时间戳。通常由通话流程维护，无需手动填写。 | | invitation.busyLineUserIDList | string | 否 | 忙线用户列表。发起新邀请时通常不填写。 | | offlinePushInfo | OfflinePush | 否 | 被邀请用户离线时使用的推送内容。 | | offlinePushInfo.title | string | 条件必填 | 提供 offlinePushInfo 时填写推送标题。 | | offlinePushInfo.desc | string | 条件必填 | 提供 offlinePushInfo 时填写推送正文。 | | offlinePushInfo.ex | string | 条件必填 | 提供 offlinePushInfo 时填写扩展字符串；没有内容时传空字符串。 | | offlinePushInfo.iOSPushSound | string | 条件必填 | 提供 offlinePushInfo 时填写 iOS 推送声音。 | | offlinePushInfo.iOSBadgeCount | boolean | 条件必填 | 提供 offlinePushInfo 时说明是否更新 iOS 角标。 | 返回结果 调用完成后返回 RtcInviteResults ： | 字段 | 类型 | 说明 | | | | | | roomID | string | 通话房间 ID。 | | token | string | 加入通话房间使用的凭据。 | | liveURL | string | 通话服务返回的房间地址。 | | busyLineUserIDList | string | 处于忙线状态的被邀请用户 ID 列表。 | 被邀请用户会通过 OnReceiveNewInvitation 收到 OnReceiveNewInvitationPayload 。接受、拒绝、取消和挂断等状态变化见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/start-group-call",
+    "title": "发起群聊通话",
+    "description": "使用 OpenIM React Native SDK 发起群聊音视频通话。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls start-group-call",
+    "content": "调用 signalingInviteInGroup 发起群聊音视频通话。 groupID 用于标识发起通话的群组。 inviteeUserIDList 指定本次邀请的群成员，不会自动邀请群内全部成员。 const roomCredentials = await OpenIMSDK.signalingInviteInGroup invitation: inviterUserID: currentUserID, inviteeUserIDList: memberUserIDs, groupID, roomID, timeout: 30, mediaType: 'video', sessionType: SessionType.Group, platformID: currentPlatform, , ; 参数说明 | 参数 | 类型 | 是否必填 | 说明 | | | | | | | invitation | RtcInvite | 是 | 本次通话邀请。 | | invitation.inviterUserID | string | 是 | 发起通话的当前用户 ID。 | | invitation.inviteeUserIDList | string | 是 | 本次邀请的群成员用户 ID 列表。 | | invitation.groupID | string | 是 | 目标群组 ID。 | | invitation.roomID | string | 是 | 本次群聊通话的房间 ID。 | | invitation.timeout | number | 是 | 邀请等待时长，单位为秒。 | | invitation.mediaType | string | 是 | 媒体类型，例如 audio 或 video 。 | | invitation.sessionType | SessionType | 是 | 群聊传入 SessionType.Group 。 | | invitation.platformID | Platform | 是 | 发起端平台；传入当前客户端对应的 Platform 枚举值。 | | invitation.customData | string | 否 | 随邀请传递的业务扩展字符串。 | | invitation.initiateTime | number | 否 | 邀请发起时间，Unix 毫秒时间戳。通常由通话流程维护，无需手动填写。 | | invitation.busyLineUserIDList | string | 否 | 忙线用户列表。发起新邀请时通常不填写。 | | offlinePushInfo | OfflinePush | 否 | 被邀请用户离线时使用的推送内容。 | | offlinePushInfo.title | string | 条件必填 | 提供 offlinePushInfo 时填写推送标题。 | | offlinePushInfo.desc | string | 条件必填 | 提供 offlinePushInfo 时填写推送正文。 | | offlinePushInfo.ex | string | 条件必填 | 提供 offlinePushInfo 时填写扩展字符串；没有内容时传空字符串。 | | offlinePushInfo.iOSPushSound | string | 条件必填 | 提供 offlinePushInfo 时填写 iOS 推送声音。 | | offlinePushInfo.iOSBadgeCount | boolean | 条件必填 | 提供 offlinePushInfo 时说明是否更新 iOS 角标。 | 调用完成后返回 RtcInviteResults ，其中包含 roomID 、 token 、 liveURL 和可选的 busyLineUserIDList 。字段说明见 发起单聊通话 /sdk/react native/calling/managing calls/start single call 。 被邀请成员会通过 OnReceiveNewInvitation 收到 OnReceiveNewInvitationPayload 。成员的接受、拒绝和离开状态见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/accept-call",
+    "title": "接受通话",
+    "description": "使用 OpenIM React Native SDK 接受通话邀请。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls accept-call",
+    "content": "收到 OnReceiveNewInvitation 事件后，调用 signalingAccept 接受通话邀请。 const roomCredentials = await OpenIMSDK.signalingAccept opUserID: currentUserID, invitation, ; opUserID 是当前接受邀请的用户 ID。 invitation 应使用 OnReceiveNewInvitation 事件回调提供的完整 invitation 对象。 调用完成后返回 RtcInviteResults ，包含通话房间的 roomID 、 token 和 liveURL 。其他参与者会通过 OnInviteeAccepted 事件收到接受结果，事件回调中的 invitation.roomID 用于识别本次通话。事件监听方式见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/reject-call",
+    "title": "拒绝通话",
+    "description": "使用 OpenIM React Native SDK 拒绝通话邀请。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls reject-call",
+    "content": "收到通话邀请后，如不接受，调用 signalingReject 拒绝邀请。 await OpenIMSDK.signalingReject opUserID: currentUserID, invitation, ; opUserID 是当前拒绝邀请的用户 ID。 invitation 使用 OnReceiveNewInvitation 事件回调提供的完整 invitation 对象。 调用完成后，拒绝请求已完成。发起方会通过 OnInviteeRejected 事件收到拒绝结果，事件回调中的 invitation.roomID 用于识别本次通话。事件参数和监听方式见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/cancel-call",
+    "title": "取消通话邀请",
+    "description": "使用 OpenIM React Native SDK 取消通话邀请。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls cancel-call",
+    "content": "发起方在通话尚未接通时，调用 signalingCancel 取消邀请。 await OpenIMSDK.signalingCancel opUserID: currentUserID, invitation, ; opUserID 是当前发起取消操作的用户 ID。 invitation 使用发起通话时保存的完整 RtcInvite 对象。 调用完成后，取消邀请请求已完成。被邀请用户会通过 OnInvitationCancelled 事件收到取消结果，事件回调中的 invitation.roomID 用于识别本次通话。事件参数和监听方式见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/hang-up-call",
+    "title": "挂断通话",
+    "description": "使用 OpenIM React Native SDK 挂断通话。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls hang-up-call",
+    "content": "通话建立后，调用 signalingHungUp 挂断通话。 await OpenIMSDK.signalingHungUp opUserID: currentUserID, invitation, ; opUserID 是当前挂断通话的用户 ID。 invitation 使用本次通话的完整 RtcInvite 对象，其中的 roomID 应与当前通话房间一致。 调用完成后，挂断请求已完成。其他参与者会通过 OnHangUp 事件收到通话结束信息；事件回调中的 invitation.roomID 用于识别本次通话。事件参数和监听方式见 处理通话事件 /sdk/react native/calling/managing calls/handle call events 。"
+  },
+  {
+    "path": "/sdk/react-native/calling/managing-calls/handle-call-events",
+    "title": "处理通话事件",
+    "description": "使用 OpenIM React Native SDK 监听通话事件。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling managing-calls handle-call-events",
+    "content": "通话相关事件用于接收邀请状态、参与者状态和媒体流状态。邀请类事件从回调参数的 invitation 读取房间信息；媒体流变化直接提供 roomID 。发送和接收自定义信令见 发送自定义信令 /sdk/react native/calling/sending custom signals/send a custom signal 。 事件参数 | 事件 | 回调参数类型 | 常用字段 | | | | | | OnReceiveNewInvitation | OnReceiveNewInvitationPayload | invitation 、 userID 、 participant 、 offlinePushInfo 。 | | OnInviteeAccepted | OnInviteeAcceptedPayload | invitation 、 userID 、 participant 、 opUserPlatformID 。 | | OnInviteeRejected | OnInviteeRejectedPayload | invitation 、 userID 、 participant 、 opUserPlatformID 。 | | OnInvitationCancelled | OnInvitationCancelledPayload | invitation 、 userID 、 participant 、 offlinePushInfo 。 | | OnInvitationTimeout | OnReceiveNewInvitationPayload | invitation 、 userID 、 participant 、 offlinePushInfo 。 | | OnInviteeAcceptedByOtherDevice | OnInviteeAcceptedPayload | invitation 、 userID 、 participant 、 opUserPlatformID 。 | | OnInviteeRejectedByOtherDevice | OnInviteeRejectedPayload | invitation 、 userID 、 participant 、 opUserPlatformID 。 | | OnHangUp | OnHangUpPayload | invitation 、 userID 、 offlinePushInfo 。 | | OnRoomParticipantConnected | OnRoomParticipantConnectedPayload | invitation 、 groupID 、 participant 。 | | OnRoomParticipantDisconnected | OnRoomParticipantDisconnectedPayload | invitation 、 groupID 、 participant 。 | | OnStreamChange | OnStreamChangePayload | roomID 、 streamType 、 mute 。 | 使用 invitation.roomID 或 roomID 区分通话；参与者信息中使用 participant.userInfo.userID 区分用户。 function handleReceiveNewInvitation payload: OnReceiveNewInvitationPayload // ... function handleInviteeAccepted payload: OnInviteeAcceptedPayload // ... function handleInviteeRejected payload: OnInviteeRejectedPayload // ... function handleInvitationCancelled payload: OnInvitationCancelledPayload // ... function handleInvitationTimeout payload: OnReceiveNewInvitationPayload // ... function handleInviteeAcceptedByOtherDevice payload: OnInviteeAcceptedPayload // ... function handleInviteeRejectedByOtherDevice payload: OnInviteeRejectedPayload // ... function handleHangUp payload: OnHangUpPayload // ... function handleRoomParticipantConnected payload: OnRoomParticipantConnectedPayload // ... function handleRoomParticipantDisconnected payload: OnRoomParticipantDisconnectedPayload // ... function handleStreamChange payload: OnStreamChangePayload // ... // 设置监听 OpenIMSDK.on OpenIMEvent.OnReceiveNewInvitation, handleReceiveNewInvitation ; OpenIMSDK.on OpenIMEvent.OnInviteeAccepted, handleInviteeAccepted ; OpenIMSDK.on OpenIMEvent.OnInviteeRejected, handleInviteeRejected ; OpenIMSDK.on OpenIMEvent.OnInvitationCancelled, handleInvitationCancelled ; OpenIMSDK.on OpenIMEvent.OnInvitationTimeout, handleInvitationTimeout ; OpenIMSDK.on OpenIMEvent.OnInviteeAcceptedByOtherDevice, handleInviteeAcceptedByOtherDevice ; OpenIMSDK.on OpenIMEvent.OnInviteeRejectedByOtherDevice, handleInviteeRejectedByOtherDevice ; OpenIMSDK.on OpenIMEvent.OnHangUp, handleHangUp ; OpenIMSDK.on OpenIMEvent.OnRoomParticipantConnected, handleRoomParticipantConnected ; OpenIMSDK.on OpenIMEvent.OnRoomParticipantDisconnected, handleRoomParticipantDisconnected ; OpenIMSDK.on OpenIMEvent.OnStreamChange, handleStreamChange ; // 取消监听 OpenIMSDK.off OpenIMEvent.OnReceiveNewInvitation, handleReceiveNewInvitation ; OpenIMSDK.off OpenIMEvent.OnInviteeAccepted, handleInviteeAccepted ; OpenIMSDK.off OpenIMEvent.OnInviteeRejected, handleInviteeRejected ; OpenIMSDK.off OpenIMEvent.OnInvitationCancelled, handleInvitationCancelled ; OpenIMSDK.off OpenIMEvent.OnInvitationTimeout, handleInvitationTimeout ; OpenIMSDK.off OpenIMEvent.OnInviteeAcceptedByOtherDevice, handleInviteeAcceptedByOtherDevice ; OpenIMSDK.off OpenIMEvent.OnInviteeRejectedByOtherDevice, handleInviteeRejectedByOtherDevice ; OpenIMSDK.off OpenIMEvent.OnHangUp, handleHangUp ; OpenIMSDK.off OpenIMEvent.OnRoomParticipantConnected, handleRoomParticipantConnected ; OpenIMSDK.off OpenIMEvent.OnRoomParticipantDisconnected, handleRoomParticipantDisconnected ; OpenIMSDK.off OpenIMEvent.OnStreamChange, handleStreamChange ; 组件销毁、退出登录或切换账号时，应取消监听。"
+  },
+  {
+    "path": "/sdk/react-native/calling/retrieving-call-information/restore-pending-invitation",
+    "title": "恢复待处理的通话邀请",
+    "description": "恢复待处理的通话邀请。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling retrieving-call-information restore-pending-invitation",
+    "content": "应用启动或恢复到前台时，调用 getSignalingInvitationInfoStartApp 获取仍待处理的通话邀请。 const invitation, offlinePushInfo = await OpenIMSDK.getSignalingInvitationInfoStartApp ; 返回结果 | 字段 | 类型 | 说明 | | | | | | invitation | RtcInvite 或 null | 待处理的通话邀请；没有待处理邀请时为 null 。 | | offlinePushInfo | OfflinePush | 邀请携带的离线推送内容。 | 当 invitation 不为 null 时，可使用其中的邀请信息恢复来电展示。后续取消、超时、接受和挂断等状态通过 处理通话事件 /sdk/react native/calling/managing calls/handle call events 接收。"
+  },
+  {
+    "path": "/sdk/react-native/calling/retrieving-call-information/get-room-by-group-id",
+    "title": "查询群组通话房间",
+    "description": "按群组 ID 查询通话房间。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling retrieving-call-information get-room-by-group-id",
+    "content": "调用 signalingGetRoomByGroupID 按群组 ID 获取群聊通话房间信息； groupID 是目标群组 ID。 const room = await OpenIMSDK.signalingGetRoomByGroupID groupID ; 返回结果 调用完成后返回 CallingRoomData ： | 字段 | 类型 | 说明 | | | | | | roomID | string | 通话房间 ID。 | | invitation | RtcInvite （可选） | 房间对应的通话邀请信息。 | | participant | ParticipantInfo （可选） | 当前房间的参与者资料。 | participant 中的 userInfo 是用户资料；群聊场景还可能包含 groupMemberInfo 和 groupInfo 。调用后可使用 roomID 查询房间凭据或处理对应的通话状态。"
+  },
+  {
+    "path": "/sdk/react-native/calling/retrieving-call-information/get-token-by-room-id",
+    "title": "获取通话房间 Token",
+    "description": "按房间 ID 获取通话凭据。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling retrieving-call-information get-token-by-room-id",
+    "content": "已知通话房间 ID、需要获取房间凭据时，调用 signalingGetTokenByRoomID ； roomID 是目标通话房间 ID。 const roomCredentials = await OpenIMSDK.signalingGetTokenByRoomID roomID ; 返回结果 调用完成后返回 RtcInviteResults ，包含 roomID 、 token 、 liveURL 和可选的 busyLineUserIDList 。将返回的房间凭据交给实时音视频媒体引擎加入通话房间。"
+  },
+  {
+    "path": "/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal",
+    "title": "发送自定义信令",
+    "description": "在通话房间中发送自定义信令。",
+    "context": "SDKs · React Native · v4",
+    "keywords": "sdk react-native v4 sdk react-native calling sending-custom-signals send-a-custom-signal",
+    "content": "调用 signalingSendCustomSignal 向通话房间发送业务自定义信令，例如举手或切换布局。 customInfo 是字符串；需要传递结构化数据时，可传入 JSON 字符串。 await OpenIMSDK.signalingSendCustomSignal roomID, customInfo: JSON.stringify type: 'hand raised', , ; 参数说明 | 参数 | 类型 | 说明 | | | | | | roomID | string | 目标通话房间 ID。 | | customInfo | string | 业务自定义信令内容。 | 调用完成后，自定义信令发送请求已完成。 接收自定义信令 其他参与者发送自定义信令时触发 OnReceiveCustomSignal 事件，回调参数类型为 OnReceiveCustomSignalPayload ，包含 roomID 和 customInfo 。 function handleCustomSignal payload: OnReceiveCustomSignalPayload // ... // 设置监听 OpenIMSDK.on OpenIMEvent.OnReceiveCustomSignal, handleCustomSignal ; // 取消监听 OpenIMSDK.off OpenIMEvent.OnReceiveCustomSignal, handleCustomSignal ; 组件销毁、退出登录或切换账号时，应取消监听。接收 customInfo 后，按业务协议解析并处理其中的数据。"
   }
 ]
