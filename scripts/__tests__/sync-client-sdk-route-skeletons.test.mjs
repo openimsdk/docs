@@ -36,6 +36,16 @@ test('recognizes only generator-owned deferred English skeletons', () => {
     ),
     false,
   );
+  assert.equal(
+    isGeneratedClientSdkSkeleton(
+      buildClientSdkSkeleton({
+        path: '/sdk/react-native/overview',
+        platformId: 'react-native',
+        title: 'OpenIM SDK for React Native',
+      }),
+    ),
+    true,
+  );
 });
 
 test('replaces legacy platform route records with the reviewed active tree', () => {
@@ -63,13 +73,19 @@ test('replaces legacy platform route records with the reviewed active tree', () 
 
 test('resolves every active native suffix against the current WASM routes', () => {
   const routes = readJson('src/generated/routes.json');
-  for (const platformId of ['android', 'ios', 'flutter']) {
+  for (const platformId of ['android', 'ios', 'flutter', 'react-native']) {
     const sidebar = readJson(`data/structure/${platformId}-sidebar.json`);
     const resolved = resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes });
     assert.equal(resolved.length, getSidebarPathCount(sidebar));
     assert.equal(resolved[0].path, `/sdk/${platformId}/overview`);
     const displayName =
-      platformId === 'ios' ? 'iOS' : platformId === 'android' ? 'Android' : 'Flutter';
+      platformId === 'ios'
+        ? 'iOS'
+        : platformId === 'android'
+          ? 'Android'
+          : platformId === 'react-native'
+            ? 'React Native'
+            : 'Flutter';
     assert.equal(resolved[0].title, `OpenIM SDK for ${displayName}`);
   }
 });
