@@ -1,11 +1,15 @@
 {
   "sourceContext": "chat/sdk/react-native",
   "sourceRoot": "content/zh/docs/chat/sdk/react-native",
-  "pageCount": 155,
-  "manualPageCount": 155,
+  "pageCount": 161,
+  "manualPageCount": 161,
   "pendingPaths": [],
   "reviewStates": {
     "/sdk/react-native/overview": "published",
+    "/sdk/react-native/getting-started/before-you-start": "published",
+    "/sdk/react-native/getting-started/environment-specific-implementation": "published",
+    "/sdk/react-native/getting-started/authenticate-and-manage-session": "published",
+    "/sdk/react-native/getting-started/send-first-message": "published",
     "/sdk/react-native/user/overview-user": "published",
     "/sdk/react-native/user/profile/get-users-info": "published",
     "/sdk/react-native/user/profile/get-self-user-info": "published",
@@ -159,9 +163,24 @@
     "/sdk/react-native/calling/retrieving-call-information/restore-pending-invitation": "published",
     "/sdk/react-native/calling/retrieving-call-information/get-room-by-group-id": "published",
     "/sdk/react-native/calling/retrieving-call-information/get-token-by-room-id": "published",
-    "/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal": "published"
+    "/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal": "published",
+    "/sdk/react-native/events/overview-events": "published",
+    "/sdk/react-native/logger": "published"
   },
   "navigationLabels": {
+    "Overview": "概览",
+    "Getting started": "快速开始",
+    "getting-started": "快速开始",
+    "Before you start": "开始之前",
+    "before-you-start": "开始之前",
+    "Environment-specific implementation": "按 React Native 环境接入",
+    "environment-specific-implementation": "按 React Native 环境接入",
+    "Authenticate and manage session": "认证与管理登录会话",
+    "Authenticate and manage a session": "认证与管理登录会话",
+    "authenticate-and-manage-session": "认证与管理登录会话",
+    "Send first message": "发送第一条消息",
+    "Send your first message": "发送第一条消息",
+    "send-first-message": "发送第一条消息",
     "OpenIM SDK for React Native": "OpenIM React Native SDK 概览",
     "User": "用户",
     "User profile": "用户资料",
@@ -359,36 +378,154 @@
     "Retrieving messages": "查询消息",
     "Composing messages": "输入状态与语音转写",
     "Managing messages": "管理消息",
-    "Group message read status": "群聊消息已读"
+    "Group message read status": "群聊消息已读",
+    "Events": "事件",
+    "events": "事件",
+    "Events overview": "事件概览",
+    "overview-events": "事件概览",
+    "Logging": "日志",
+    "Logger": "日志",
+    "logger": "日志"
   },
   "pages": {
     "/sdk/react-native/overview": {
-      "body": "## 概览\n\n当聊天体验基于 React Native 构建，并且需要处理移动端连接、本地缓存、媒体选择、文件上传和推送通知交接时，可以从 React Native SDK 开始。\n\n## 接入模型\n\n客户端应在拿到后端为当前 `userID` 签发的 token 后初始化 SDK。登录前先注册连接事件和消息事件，再把会话状态同步到应用自己的状态管理中，保证前后台切换后界面可以稳定恢复。\n\n## 移动端注意事项\n\n- 验证应用前后台切换后的登录、重连和消息接收。\n- 文件消息需要结合 iOS 和 Android 的媒体选择、上传权限和文件路径策略测试。\n- 推送 token 注册应通过可信后端和对应平台通知服务完成。\n- 排查移动端问题时记录发生时间、用户 ID、操作名称、`errCode` 和 `errMsg`，但不要记录 Token 或消息正文。\n\n## 相关 SDK\n\n- [iOS SDK](/sdk/ios/overview)\n- [Android SDK](/sdk/android/overview)\n- [Flutter SDK](/sdk/flutter/overview)",
+      "body": "",
       "description": "OpenIM React Native SDK 入口，用于移动端应用。",
+      "headings": [],
+      "sourcePath": "/sdk/react-native/overview",
+      "title": "OpenIM React Native SDK 概览"
+    },
+    "/sdk/react-native/getting-started/before-you-start": {
+      "body": "在 React Native 应用中接入 OpenIM SDK 前，需要准备可访问的 OpenIMServer、可信的用户认证流程，以及能够正常编译原生模块的 React Native 工程。\n\n## 准备 OpenIMServer\n\n如果还没有可用的 OpenIMServer，先按 [Docker 部署指南](/docs/guides/quick-deployment/docker)完成部署，并确认目标设备可以访问以下地址：\n\n| 字段 | 说明 |\n| --- | --- |\n| `apiAddr` | OpenIMServer HTTP API 地址，用于登录、同步和资源请求。 |\n| `wsAddr` | OpenIMServer WebSocket 地址，用于建立长连接和接收实时事件。 |\n\n不要只验证服务在开发电脑本机可以访问。Android 模拟器、iOS 模拟器和真机的网络环境可能不同；生产环境还应检查 DNS、TLS 证书、防火墙、反向代理和 WebSocket 升级是否正常。\n\n## 准备用户和 Token\n\n`userID` 标识 OpenIM 用户，Token 用于认证该用户。创建或绑定用户、签发 Token 和校验业务权限都应由可信后端完成。React Native 应用不能保存管理员 Token、secret 或其他服务端凭据。\n\n后端接入 OpenIMServer REST API 前，可阅读[准备使用 Platform API](/platform-api/prepare-to-use-api)和[签发会话 Token](/platform-api/user/managing-session-tokens/issue-a-session-token)。业务后端完成自身账号认证后，只向客户端返回 SDK 登录所需的以下数据：\n\n| 数据 | 说明 |\n| --- | --- |\n| `userID` | 当前登录用户的 OpenIM 用户 ID。 |\n| `token` | 与该用户对应的登录 Token。 |\n| `apiAddr` | OpenIMServer HTTP API 地址。 |\n| `wsAddr` | OpenIMServer WebSocket 地址。 |\n\n`userID` 必须与 Token 对应。\n\n## 准备 React Native 工程\n\n接入前确认：\n\n- 工程已经完成 React Native CLI 或 Expo 自定义开发客户端的原生配置。\n- Android 和 iOS 工程能够分别编译并运行。\n- 确认 Android 和 iOS 的网络配置可用，目标设备能够正常访问 `apiAddr` 和 `wsAddr`。\n\nReact Native SDK 通过原生模块运行，不适用 Expo Go。Expo 项目需要使用 `expo prebuild` 生成或更新包含 SDK 原生模块的 Android 和 iOS 工程，再构建自定义开发客户端。具体安装方式见[按 React Native 环境接入](/sdk/react-native/getting-started/environment-specific-implementation)。\n\n## 继续接入\n\n准备完成后，先根据[**按 React Native 环境接入**](/sdk/react-native/getting-started/environment-specific-implementation)完成依赖和原生工程配置，再按[**认证与管理登录会话**](/sdk/react-native/getting-started/authenticate-and-manage-session)初始化 SDK 并登录，最后尝试[**发送第一条消息**](/sdk/react-native/getting-started/send-first-message)。",
+      "description": "准备 OpenIMServer、用户登录信息和 React Native 工程环境，再开始初始化和登录。",
       "headings": [
         {
           "depth": 2,
-          "title": "概览",
-          "url": "#概览"
+          "title": "准备 OpenIMServer",
+          "url": "#准备-openimserver"
         },
         {
           "depth": 2,
-          "title": "接入模型",
-          "url": "#接入模型"
+          "title": "准备用户和 Token",
+          "url": "#准备用户和-token"
         },
         {
           "depth": 2,
-          "title": "移动端注意事项",
-          "url": "#移动端注意事项"
+          "title": "准备 React Native 工程",
+          "url": "#准备-react-native-工程"
         },
         {
           "depth": 2,
-          "title": "相关 SDK",
-          "url": "#相关-sdk"
+          "title": "继续接入",
+          "url": "#继续接入"
         }
       ],
-      "sourcePath": "/sdk/react-native/overview",
-      "title": "OpenIM React Native SDK 概览"
+      "sourcePath": "/sdk/react-native/getting-started/before-you-start",
+      "title": "开始之前"
+    },
+    "/sdk/react-native/getting-started/environment-specific-implementation": {
+      "body": "本页说明 React Native 工程的依赖和原生环境配置。\n\n## 添加依赖\n\n### 在 React Native CLI 项目中安装\n\n在项目根目录安装 OpenIM React Native SDK：\n\n```bash\nnpm install @openim/rn-client-sdk\ncd ios && pod install && cd ..\n```\n\n也可以使用项目现有的包管理器执行等价命令。安装后分别构建 Android 和 iOS 工程，确认原生模块已正确链接。\n\n### 在 Expo 项目中安装\n\nOpenIM React Native SDK 包含 Android 和 iOS 原生模块，Expo Go 未包含这些模块，因此不能直接在 Expo Go 中使用。Expo 项目应先安装 OpenIM React Native SDK，再使用 `expo prebuild --clean` 根据 Expo 配置生成或更新 `android` 和 `ios` 原生工程，最后在该原生工程中构建自定义开发客户端：\n\n```bash\nnpm install @openim/rn-client-sdk\nnpx expo prebuild --clean\nnpx expo run:android\nnpx expo run:ios\n```\n\n修改 Expo 配置或新增需要原生支持的依赖后，应重新执行 `expo prebuild --clean`，再重新构建开发客户端。可以安装 `expo-dev-client`，获得适合 Expo 项目的开发客户端体验，但运行时仍使用自定义开发客户端，不要使用 Expo Go。\n\n## 验证原生环境\n\n完成安装和原生工程配置后，在 Android 和 iOS 工程中构建应用，确认 SDK 原生模块可以完成编译和加载。\n\n## 下一步\n\n- [认证与管理登录会话](/sdk/react-native/getting-started/authenticate-and-manage-session)",
+      "description": "在 React Native CLI 或 Expo 自定义开发客户端中安装 OpenIM React Native SDK。",
+      "headings": [
+        {
+          "depth": 2,
+          "title": "添加依赖",
+          "url": "#添加依赖"
+        },
+        {
+          "depth": 3,
+          "title": "在 React Native CLI 项目中安装",
+          "url": "#在-react-native-cli-项目中安装"
+        },
+        {
+          "depth": 3,
+          "title": "在 Expo 项目中安装",
+          "url": "#在-expo-项目中安装"
+        },
+        {
+          "depth": 2,
+          "title": "验证原生环境",
+          "url": "#验证原生环境"
+        },
+        {
+          "depth": 2,
+          "title": "下一步",
+          "url": "#下一步"
+        }
+      ],
+      "sourcePath": "/sdk/react-native/getting-started/environment-specific-implementation",
+      "title": "按 React Native 环境接入"
+    },
+    "/sdk/react-native/getting-started/authenticate-and-manage-session": {
+      "body": "开始本页操作前，请先完成[开始之前](/sdk/react-native/getting-started/before-you-start)和[按 React Native 环境接入](/sdk/react-native/getting-started/environment-specific-implementation)中的准备工作。OpenIM React Native SDK 使用 `initSDK()` 初始化 SDK，再使用 `login()` 登录当前用户并建立与服务器的连接。\n\n完整流程如下：\n\n1. 调用 `initSDK()` 初始化 SDK。\n2. 设置 `onConnecting`、`onConnectSuccess` 和 `onConnectFailed` 事件监听。\n3. 调用 `login()` 登录当前用户。\n4. 等待 `onConnectSuccess` 触发，表示登录成功并已连接服务器。\n5. 主动退出或切换账号时调用 `logout()`。\n\n## 初始化 SDK\n\n调用 `initSDK()` 传入服务地址、本地数据目录和日志配置。`dataDir` 和 `logFilePath` 应使用应用可写的持久化目录。\n\n### React Native CLI\n\n```ts\nimport RNFS from 'react-native-fs';\n\nconst dataDir = RNFS.DocumentDirectoryPath;\n\nawait OpenIMSDK.initSDK({\n  apiAddr: 'http://your-server-ip:10002',\n  wsAddr: 'ws://your-server-ip:10001',\n  dataDir,\n  logFilePath: dataDir,\n  logLevel: 5,\n  isLogStandardOutput: true,\n});\n```\n\n### Expo\n\nExpo 项目使用 `expo-file-system` 提供的应用文档目录，再调用 `initSDK()`。`documentDirectory` 返回的 URI 包含 `file://` 前缀，传给 SDK 前需要移除该前缀：\n\n```ts\nimport * as FileSystem from \"expo-file-system/legacy\";\n\nconst dataDir = FileSystem.documentDirectory.replace(/^file:\\/\\//, '').replace(/\\/$/, '');\n\nawait OpenIMSDK.initSDK({\n  apiAddr: 'http://your-server-ip:10002',\n  wsAddr: 'ws://your-server-ip:10001',\n  dataDir,\n  logFilePath: dataDir,\n  logLevel: 5,\n  isLogStandardOutput: true,\n});\n```\n\n`initSDK()` 的参数如下：\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `apiAddr` | `string` | OpenIMServer HTTP API 地址。 |\n| `wsAddr` | `string` | OpenIMServer WebSocket 地址。 |\n| `dataDir` | `string` | SDK 本地数据目录，必须位于应用可写路径。 |\n| `logFilePath` | `string` | SDK 日志目录，必须位于应用可写路径。 |\n| `logLevel` | `LogLevel` | 日志级别，可选 `Debug`、`Info`、`Warn`、`Error`、`Fatal` 和 `Panic`。 |\n| `isLogStandardOutput` | `boolean` | 是否输出 SDK 日志到平台标准日志。 |\n\n## 注册连接事件\n\n调用 `login()` 前设置连接事件监听。可以使用 `OpenIMEvent` 中的事件枚举值，也可以直接使用事件字符串；这里使用字符串展示登录流程：\n\n```ts\nconst handleConnecting = () => {\n  console.log(\"onConnecting\")\n};\n\nconst handleConnectSuccess = () => {\n  console.log(\"onConnectSuccess\")\n};\n\nconst handleConnectFailed = (error: OpenIMEventBaseErrorType) => {\n  console.log(\"onConnectFailed\", error.errCode, error.errMsg)\n};\n\n// 设置监听\nOpenIMSDK.on('onConnecting', handleConnecting);\nOpenIMSDK.on('onConnectSuccess', handleConnectSuccess);\nOpenIMSDK.on('onConnectFailed', handleConnectFailed);\n```\n\n## 登录当前用户\n\n调用 `login()` 传入可信后端返回的 `userID` 和 Token：\n\n```ts\nawait OpenIMSDK.login({\n  userID,\n  token,\n});\n```\n\n调用 `login()` 后等待 `onConnectSuccess` 事件。该事件触发表示登录成功，SDK 连接服务器成功，业务 API 应在此之后调用。\n\n## 查询登录状态\n\n`getLoginStatus()` 查询当前登录状态：\n\n```ts\nconst loginStatus = await OpenIMSDK.getLoginStatus();\n```\n\n`LoginStatus` 包含以下状态：\n\n| 状态 | 说明 |\n| --- | --- |\n| `LoginStatus.Logout` | 当前 SDK 实例未登录。 |\n| `LoginStatus.Logging` | 登录流程正在进行。 |\n| `LoginStatus.Logged` | 当前 SDK 实例已登录。 |\n\n## 退出登录和切换账号\n\n主动退出或切换账号时调用 `logout()`，并清理应用中保存的当前账号数据：\n\n```ts\nawait OpenIMSDK.logout();\n```\n\n切换账号时先完成旧账号退出，再使用新账号的参数调用 `login()`，无需重复 `initSDK`。不应在旧账号仍处于登录状态时登录新账号。\n\n## 取消事件监听\n\n退出登录、切换账号或销毁相关状态时，使用注册时的同一事件名称和函数引用调用 `off()`：\n\n```ts\n// 取消监听\nOpenIMSDK.off('onConnecting', handleConnecting);\nOpenIMSDK.off('onConnectSuccess', handleConnectSuccess);\nOpenIMSDK.off('onConnectFailed', handleConnectFailed);\n```\n\n## 下一步\n\n- [发送第一条消息](/sdk/react-native/getting-started/send-first-message)",
+      "description": "使用 OpenIM React Native SDK 初始化、登录、查询登录状态并退出当前账号。",
+      "headings": [
+        {
+          "depth": 2,
+          "title": "初始化 SDK",
+          "url": "#初始化-sdk"
+        },
+        {
+          "depth": 3,
+          "title": "React Native CLI",
+          "url": "#react-native-cli"
+        },
+        {
+          "depth": 3,
+          "title": "Expo",
+          "url": "#expo"
+        },
+        {
+          "depth": 2,
+          "title": "注册连接事件",
+          "url": "#注册连接事件"
+        },
+        {
+          "depth": 2,
+          "title": "登录当前用户",
+          "url": "#登录当前用户"
+        },
+        {
+          "depth": 2,
+          "title": "查询登录状态",
+          "url": "#查询登录状态"
+        },
+        {
+          "depth": 2,
+          "title": "退出登录和切换账号",
+          "url": "#退出登录和切换账号"
+        },
+        {
+          "depth": 2,
+          "title": "取消事件监听",
+          "url": "#取消事件监听"
+        },
+        {
+          "depth": 2,
+          "title": "下一步",
+          "url": "#下一步"
+        }
+      ],
+      "sourcePath": "/sdk/react-native/getting-started/authenticate-and-manage-session",
+      "title": "认证与管理登录会话"
+    },
+    "/sdk/react-native/getting-started/send-first-message": {
+      "body": "本页用一条单聊文本消息验证 OpenIM React Native SDK 已完成接入。开始前，先按[认证与管理登录会话](/sdk/react-native/getting-started/authenticate-and-manage-session)完成 SDK 初始化和登录，并准备两个用户账号：一个作为发送方，一个作为接收方。两个账号都需要完成登录。\n\n## 创建文本消息并发送\n\n发送方调用 `createTextMessage()` 创建待发送的 `MessageItem`，再调用 `sendMessage()` 将消息发送给接收方。将示例中的 `user_b` 替换为接收方的真实用户 ID；单聊填写 `recvID`，`groupID` 传空字符串。\n\n```ts\nconst message = await OpenIMSDK.createTextMessage('你好，OpenIMSDK');\n\nawait OpenIMSDK.sendMessage({\n  recvID: 'user_b',\n  groupID: '',\n  message,\n});\n```\n\n## 接收消息\n\n接收方应在发送方发送消息前设置 `onRecvNewMessage` 监听；发送方发送消息后，该监听函数会收到对应的 `MessageItem`：\n\n```ts\nfunction handleNewMessage(message: MessageItem) {\n  console.log(\"onRecvNewMessage\", message)\n}\n\n// 设置监听\nOpenIMSDK.on('onRecvNewMessage', handleNewMessage);\n```\n\n完整的消息事件和消息状态处理方式见[接收消息](/sdk/react-native/message/receiving-messages/receive-messages)。",
+      "description": "在 React Native 应用中发送并验证第一条单聊文本消息。",
+      "headings": [
+        {
+          "depth": 2,
+          "title": "创建文本消息并发送",
+          "url": "#创建文本消息并发送"
+        },
+        {
+          "depth": 2,
+          "title": "接收消息",
+          "url": "#接收消息"
+        }
+      ],
+      "sourcePath": "/sdk/react-native/getting-started/send-first-message",
+      "title": "发送第一条消息"
     },
     "/sdk/react-native/user/overview-user": {
       "body": "OpenIM React Native SDK 使用 `userID` 标识用户。用户相关 API 用于读取和更新当前账号资料、查询公开用户资料，以及订阅用户在线状态。\n\n好友、好友申请和黑名单属于用户之间的关系链能力，见[关系链概览](/sdk/react-native/user/overview-relationships)。\n\n## 用户相关类型\n\nReact Native SDK 会根据使用场景返回不同的用户对象：\n\n| 类型 | 适用场景 | 主要 API |\n| --- | --- | --- |\n| `SelfUserInfo` | 当前登录用户的资料、头像、昵称和账号级消息接收设置 | `getSelfUserInfo()`、`setSelfInfo()` |\n| `PublicUserItem` | 查询应用用户和展示公开资料卡 | `getUsersInfo()` |\n| `UserOnlineState` | 用户在线状态和在线平台列表 | `subscribeUsersStatus()`、`getSubscribeUsersStatus()`、`unsubscribeUsersStatus()` |\n\n`SelfUserInfo` 表示当前登录用户，`PublicUserItem` 表示可查询的公开用户信息。好友资料、黑名单关系和群成员资料分别使用关系链或群组能力中的对象。\n\n## 功能入口\n\n| 需求 | 推荐页面 |\n| --- | --- |\n| 按 `userID` 查询公开资料，用于展示资料卡 | [获取用户资料](/sdk/react-native/user/profile/get-users-info) |\n| 读取或更新当前用户的昵称、头像和扩展信息 | [获取当前用户资料](/sdk/react-native/user/profile/get-self-user-info)、[更新当前用户资料](/sdk/react-native/user/profile/set-self-info) |\n| 设置账号级消息接收方式 | [设置全局消息接收方式](/sdk/react-native/user/profile/set-global-message-reception) |\n| 设置其他用户添加当前账号时的处理策略 | [设置好友添加权限](/sdk/react-native/user/profile/set-friend-add-permission) |\n| 订阅、读取和取消订阅在线状态 | [订阅用户在线状态](/sdk/react-native/user/online-status/subscribe-users-status)、[获取已订阅用户状态](/sdk/react-native/user/online-status/get-subscribe-users-status)、[取消订阅用户状态](/sdk/react-native/user/online-status/unsubscribe-users-status) |\n| 管理好友、好友申请或黑名单 | [关系链概览](/sdk/react-native/user/overview-relationships) |\n\n## 事件监听\n\n用户状态变化会触发事件，具体的事件监听详见：\n\n- 当前用户资料变化见[更新当前用户资料](/sdk/react-native/user/profile/set-self-info)。\n- 用户在线状态变化见[订阅用户在线状态](/sdk/react-native/user/online-status/subscribe-users-status)。\n- 好友、好友申请和黑名单变化见[关系链概览](/sdk/react-native/user/overview-relationships)。",
@@ -2721,6 +2858,62 @@
       ],
       "sourcePath": "/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal",
       "title": "发送自定义信令"
+    },
+    "/sdk/react-native/events/overview-events": {
+      "body": "## 事件机制概览\n\nOpenIM React Native SDK 通过 `OpenIMEvent` 定义事件名称，并使用统一的事件监听接口通知连接状态、数据变化和业务信令。\n\n调用 `OpenIMSDK.on()` 设置监听，调用 `OpenIMSDK.off()` 取消监听。事件名称既可以使用 `OpenIMEvent` 中的枚举值，也可以直接传入对应的事件字符串，直接使用字符串时，必须与 SDK 定义的事件名完全一致。\n\n```ts\nfunction handleEvent(payload: unknown) {\n  // 根据事件参数更新应用状态\n}\n\n// 设置监听\nOpenIMSDK.on(OpenIMEvent.OnConversationChanged, handleEvent);\n// 或者\nOpenIMSDK.on(\"onConversationChanged\", handleEvent);\n\n// 取消监听\nOpenIMSDK.off(OpenIMEvent.OnConversationChanged, handleEvent);\n// 或者\nOpenIMSDK.off(\"onConversationChanged\", handleEvent);\n```\n\n每个事件的回调参数由 SDK 的事件声明决定，可能是实体对象、数组、进度值或错误信息。具体事件的参数格式和处理示例见对应功能页面。\n\n## 事件分类\n\nReact Native SDK 的事件按业务领域分为以下类别：\n\n| 事件类别 | 典型事件 | 说明 |\n| --- | --- | --- |\n| 连接与登录状态 | `OnConnecting`、`OnConnectSuccess`、`OnConnectFailed`、`OnKickedOffline`、`OnUserTokenExpired`、`OnUserTokenInvalid` | 连接建立、连接失败、强制下线和 Token 状态变化。 |\n| 初始化同步 | `OnSyncServerStart`、`OnSyncServerProgress`、`OnSyncServerFinish`、`OnSyncServerFailed` | 登录后 SDK 同步服务端数据的生命周期。 |\n| 用户与在线状态 | `OnSelfInfoUpdated`、`OnUserStatusChanged` | 当前用户资料和用户在线状态变化。 |\n| 好友与黑名单 | `OnFriendAdded`、`OnFriendDeleted`、`OnFriendInfoChanged`、`OnFriendApplicationAdded`、`OnBlackAdded` | 好友关系、好友申请和黑名单变化。 |\n| 会话与未读状态 | `OnNewConversation`、`OnConversationChanged`、`OnTotalUnreadMessageCountChanged`、`OnInputStatusChanged` | 会话列表、未读数和输入状态变化。 |\n| 会话分组 | `OnConversationGroupAdded`、`OnConversationGroupChanged`、`OnConversationGroupDeleted` | 会话分组及分组成员变化。 |\n| 群组与群成员 | `OnGroupInfoChanged`、`OnGroupMemberAdded`、`OnGroupMemberDeleted`、`OnGroupApplicationAdded`、`OnJoinedGroupAdded` | 群资料、群成员、入群申请和已加入群组变化。 |\n| 消息 | `OnRecvNewMessage`、`OnMsgDeleted`、`OnNewRecvMessageRevoked`、`OnMessageModified`、`OnRecvC2CReadReceipt` | 新消息、消息删除、撤回、修改和单聊已读回执。 |\n| 文件上传 | `UploadOnProgress`、`UploadComplete` | 文件上传进度和上传完成。 |\n| 音视频通话 | `OnReceiveNewInvitation`、`OnInviteeAccepted`、`OnInvitationCancelled`、`OnHangUp`、`OnReceiveCustomSignal` | 通话邀请、参与者状态和通话信令变化。 |\n| 自定义业务消息 | `OnRecvCustomBusinessMessage` | 自定义业务消息。 |\n\n## 注册时机与生命周期\n\nReact Native SDK 可以在任意时机注册全局事件监听。完成 `initSDK()` 并登录后，SDK 才会触发连接、同步及业务数据等事件回调；如果需要接收这些事件，应在对应操作前完成监听注册。\n\nReact Native SDK 支持对同一事件同时注册多个监听函数，事件触发时，所有监听函数都会收到回调，这与 Flutter 和 Android SDK 的单一 listener 机制不同。虽然 React Native SDK 允许同一事件注册多个监听，但仍建议在应用中集中注册和管理回调，避免页面渲染或组件重复进入时注册相同的业务处理逻辑。\n\n监听函数应保持稳定引用。退出登录、切换账号或销毁相关状态时，使用注册时的同一事件名称和函数引用调用 `off()` 取消监听。\n\n## 连接与初始化同步事件\n\n连接事件用于反映 SDK 与服务端的连接状态：\n\n| 事件 | 说明 |\n| --- | --- |\n| `OnConnecting` | SDK 开始连接服务端。 |\n| `OnConnectSuccess` | SDK 连接成功。 |\n| `OnConnectFailed` | 连接失败及错误信息。 |\n| `OnKickedOffline` | 当前账号在其他端登录或被服务端强制下线。 |\n| `OnUserTokenExpired` | 当前登录 Token 已过期。 |\n| `OnUserTokenInvalid` | 当前登录 Token 无效。 |\n\n登录后，SDK 通过以下事件通知初始化同步状态：\n\n| 事件 | 说明 |\n| --- | --- |\n| `OnSyncServerStart` | 开始同步。 |\n| `OnSyncServerProgress` | 当前同步进度。 |\n| `OnSyncServerFinish` | 本轮同步完成。 |\n| `OnSyncServerFailed` | 本轮同步失败。 |\n\n同步完成后，应用可重新查询当前界面需要的数据；后续用户、好友、会话、群组、消息和通话变化由对应业务事件通知。\n\n## 按业务领域处理事件\n\n各业务页面提供对应事件的完整参数说明和监听示例：\n\n| 事件范围 | 参考页面 |\n| --- | --- |\n| 用户资料和在线状态 | [更新当前用户资料](/sdk/react-native/user/profile/set-self-info)、[订阅用户在线状态](/sdk/react-native/user/online-status/subscribe-users-status) |\n| 好友关系、好友申请和黑名单 | [分页获取好友列表](/sdk/react-native/user/friends/get-friend-list-page)、[获取收到的好友申请](/sdk/react-native/user/friend-applications/get-friend-application-list-as-recipient)、[获取黑名单](/sdk/react-native/user/blacklist/get-black-list) |\n| 会话、未读数和会话分组 | [获取会话列表](/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list)、[获取消息总未读数](/sdk/react-native/conversation/managing-conversations/get-total-unread-count)、[会话分组概览](/sdk/react-native/conversation/managing-conversation-groups/overview-conversation-groups) |\n| 群组、群成员和入群申请 | [群组概览](/sdk/react-native/group/overview-group)、[获取收到的入群申请](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient)、[分页查询群成员](/sdk/react-native/group/retrieving-group-members/get-group-member-list) |\n| 消息和消息状态 | [接收消息](/sdk/react-native/message/receiving-messages/receive-messages)、[接收自定义业务消息](/sdk/react-native/message/receiving-messages/receive-custom-business-messages)、[批量删除消息](/sdk/react-native/message/managing-messages/delete-saved-messages)、[撤回消息](/sdk/react-native/message/managing-messages/revoke-a-message)、[修改消息](/sdk/react-native/message/managing-messages/modify-a-message)、[上报群消息已读](/sdk/react-native/message/managing-read-status/send-group-read-receipts) |\n| 文件上传 | [上传文件](/sdk/react-native/file-uploads/upload-file) |\n| 音视频通话和自定义信令 | [处理通话事件](/sdk/react-native/calling/managing-calls/handle-call-events)、[发送自定义信令](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal) |",
+      "description": "了解 OpenIM React Native SDK 的事件模型、事件分类和监听生命周期。",
+      "headings": [
+        {
+          "depth": 2,
+          "title": "事件机制概览",
+          "url": "#事件机制概览"
+        },
+        {
+          "depth": 2,
+          "title": "事件分类",
+          "url": "#事件分类"
+        },
+        {
+          "depth": 2,
+          "title": "注册时机与生命周期",
+          "url": "#注册时机与生命周期"
+        },
+        {
+          "depth": 2,
+          "title": "连接与初始化同步事件",
+          "url": "#连接与初始化同步事件"
+        },
+        {
+          "depth": 2,
+          "title": "按业务领域处理事件",
+          "url": "#按业务领域处理事件"
+        }
+      ],
+      "sourcePath": "/sdk/react-native/events/overview-events",
+      "title": "事件概览"
+    },
+    "/sdk/react-native/logger": {
+      "body": "OpenIM React Native SDK 日志用于定位初始化、连接和业务 API 调用问题。开发和预发布环境可以输出较详细的日志；生产环境应降低日志级别，并避免记录 Token、完整消息正文、原始文件 URL、通话房间凭据和用户隐私字段。\n\n## 初始化日志配置\n\n调用 `initSDK()` 时配置日志目录和日志级别：\n\n```ts\nawait OpenIMSDK.initSDK({\n  apiAddr,\n  wsAddr,\n  dataDir,\n  logFilePath,\n  logLevel: LogLevel.Debug,\n  isLogStandardOutput: true,\n});\n```\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `apiAddr` | `string` | OpenIM 服务端 API 地址。 |\n| `wsAddr` | `string` | OpenIM WebSocket 长连接地址。 |\n| `dataDir` | `string` | SDK 本地数据目录，应位于应用可写目录。 |\n| `logFilePath` | `string` | SDK 日志目录，应位于应用可写目录。 |\n| `logLevel` | `LogLevel` | 日志详细程度，可选 `Debug`、`Info`、`Warn`、`Error`、`Fatal` 和 `Panic`。 |\n| `isLogStandardOutput` | `boolean` | 是否输出 SDK 日志到平台标准日志；开发诊断时可开启。 |\n\n开发诊断可使用 `LogLevel.Debug`。生产环境通常使用 `LogLevel.Warn` 或 `LogLevel.Error`，并关闭不必要的标准输出。\n\n## 写入应用日志\n\n调用 `logs()` 将业务诊断信息写入 SDK 日志：\n\n```ts\nawait OpenIMSDK.logs({\n  logLevel: LogLevel.Error,\n  file: 'chatRepository.ts',\n  line: 184,\n  msgs: 'send_message_failed',\n  err: error.message,\n  keyAndValue: [\n    'conversationID',\n    conversationID,\n    'clientMsgID',\n    clientMsgID,\n  ],\n});\n```\n\n| 参数 | 类型 | 说明 |\n| --- | --- | --- |\n| `logLevel` | `number` | 本条日志的级别。 |\n| `file` | `string` | 调用位置所在的文件名或模块名。 |\n| `line` | `number` | 调用位置的行号。 |\n| `msgs` | `string` | 简短的业务动作或诊断描述。 |\n| `err` | `string` | 错误信息；没有错误信息时传空字符串。 |\n| `keyAndValue` | `string[]` | 附加诊断字段，按“键、值”成对传入。 |\n\n`keyAndValue` 只记录排查所需的非敏感标识，例如 `conversationID`、`clientMsgID`、`groupID` 或 `roomID`。\n\n## 上传日志\n\n用户主动提交诊断日志时，调用 `uploadLogs()` 上传客户端日志：\n\n```ts\nawait OpenIMSDK.uploadLogs({\n  line: 2000,\n  cancelID: 'support-ticket-42',\n  ex: 'user-initiated-diagnostics',\n});\n```\n\n| 参数 | 类型 | 是否必填 | 说明 |\n| --- | --- | --- | --- |\n| `line` | `number` | 是 | 本次上传读取的日志行数配置。 |\n| `cancelID` | `string` | 否 | 本次上传的标识。 |\n| `ex` | `string` | 否 | 附加诊断说明，不能包含凭据或隐私数据。 |\n\n调用返回后，日志上传请求已完成。上传前应向用户说明日志收集范围，并按隐私与合规要求处理日志。",
+      "description": "配置 OpenIM React Native SDK 日志，写入应用诊断信息并上传日志。",
+      "headings": [
+        {
+          "depth": 2,
+          "title": "初始化日志配置",
+          "url": "#初始化日志配置"
+        },
+        {
+          "depth": 2,
+          "title": "写入应用日志",
+          "url": "#写入应用日志"
+        },
+        {
+          "depth": 2,
+          "title": "上传日志",
+          "url": "#上传日志"
+        }
+      ],
+      "sourcePath": "/sdk/react-native/logger",
+      "title": "日志"
     }
   }
 }

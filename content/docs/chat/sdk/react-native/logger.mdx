@@ -1,0 +1,91 @@
+---
+title: 'Logging'
+description: 'Configure OpenIM React Native SDK logging, write diagnostic information, and upload logs.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-28'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/logger'
+---
+
+OpenIM React Native SDK logs help diagnose initialization, connection, and business API problems. Development and staging environments can use more detailed logs. Production should reduce the log level and avoid recording tokens, complete message bodies, raw file URLs, call room credentials, or private user fields.
+
+## Configure logging during initialization
+
+Configure the log directory and level when calling `initSDK()`:
+
+```ts
+await OpenIMSDK.initSDK({
+  apiAddr,
+  wsAddr,
+  dataDir,
+  logFilePath,
+  logLevel: LogLevel.Debug,
+  isLogStandardOutput: true,
+});
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `apiAddr` | `string` | OpenIMServer API address. |
+| `wsAddr` | `string` | OpenIMServer WebSocket address. |
+| `dataDir` | `string` | SDK local data directory in an application-writable path. |
+| `logFilePath` | `string` | SDK log directory in an application-writable path. |
+| `logLevel` | `LogLevel` | Log verbosity: `Debug`, `Info`, `Warn`, `Error`, `Fatal`, or `Panic`. |
+| `isLogStandardOutput` | `boolean` | Whether SDK logs are written to the platform standard log. Enable it for development diagnostics. |
+
+Use `LogLevel.Debug` for development diagnostics. Production applications usually use `LogLevel.Warn` or `LogLevel.Error` and disable unnecessary standard output.
+
+## Write application logs
+
+Call `logs()` to write business diagnostic information to the SDK log:
+
+```ts
+await OpenIMSDK.logs({
+  logLevel: LogLevel.Error,
+  file: 'chatRepository.ts',
+  line: 184,
+  msgs: 'send_message_failed',
+  err: error.message,
+  keyAndValue: [
+    'conversationID',
+    conversationID,
+    'clientMsgID',
+    clientMsgID,
+  ],
+});
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `logLevel` | `number` | Log level for this entry. |
+| `file` | `string` | File or module name at the call site. |
+| `line` | `number` | Line number at the call site. |
+| `msgs` | `string` | Short business action or diagnostic description. |
+| `err` | `string` | Error information; pass an empty string when there is no error. |
+| `keyAndValue` | `string[]` | Additional diagnostic fields passed as key and value pairs. |
+
+Use `keyAndValue` only for non-sensitive identifiers needed for diagnosis, such as `conversationID`, `clientMsgID`, `groupID`, or `roomID`.
+
+## Upload logs
+
+When a user actively submits diagnostic logs, call `uploadLogs()` to upload the client logs:
+
+```ts
+await OpenIMSDK.uploadLogs({
+  line: 2000,
+  cancelID: 'support-ticket-42',
+  ex: 'user-initiated-diagnostics',
+});
+```
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `line` | `number` | Yes | Number of log lines to read for this upload. |
+| `cancelID` | `string` | No | Identifier for this upload. |
+| `ex` | `string` | No | Additional diagnostic description; it must not contain credentials or private data. |
+
+When the call returns, the log upload request has completed. Before uploading, explain the log collection scope to the user and follow privacy and compliance requirements.

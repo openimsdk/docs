@@ -1,0 +1,99 @@
+---
+title: '事件概览'
+description: '了解 OpenIM React Native SDK 的事件模型、事件分类和监听生命周期。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/events/overview-events'
+---
+
+## 事件机制概览
+
+OpenIM React Native SDK 通过 `OpenIMEvent` 定义事件名称，并使用统一的事件监听接口通知连接状态、数据变化和业务信令。
+
+调用 `OpenIMSDK.on()` 设置监听，调用 `OpenIMSDK.off()` 取消监听。事件名称既可以使用 `OpenIMEvent` 中的枚举值，也可以直接传入对应的事件字符串，直接使用字符串时，必须与 SDK 定义的事件名完全一致。
+
+```ts
+function handleEvent(payload: unknown) {
+  // 根据事件参数更新应用状态
+}
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnConversationChanged, handleEvent);
+// 或者
+OpenIMSDK.on("onConversationChanged", handleEvent);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnConversationChanged, handleEvent);
+// 或者
+OpenIMSDK.off("onConversationChanged", handleEvent);
+```
+
+每个事件的回调参数由 SDK 的事件声明决定，可能是实体对象、数组、进度值或错误信息。具体事件的参数格式和处理示例见对应功能页面。
+
+## 事件分类
+
+React Native SDK 的事件按业务领域分为以下类别：
+
+| 事件类别 | 典型事件 | 说明 |
+| --- | --- | --- |
+| 连接与登录状态 | `OnConnecting`、`OnConnectSuccess`、`OnConnectFailed`、`OnKickedOffline`、`OnUserTokenExpired`、`OnUserTokenInvalid` | 连接建立、连接失败、强制下线和 Token 状态变化。 |
+| 初始化同步 | `OnSyncServerStart`、`OnSyncServerProgress`、`OnSyncServerFinish`、`OnSyncServerFailed` | 登录后 SDK 同步服务端数据的生命周期。 |
+| 用户与在线状态 | `OnSelfInfoUpdated`、`OnUserStatusChanged` | 当前用户资料和用户在线状态变化。 |
+| 好友与黑名单 | `OnFriendAdded`、`OnFriendDeleted`、`OnFriendInfoChanged`、`OnFriendApplicationAdded`、`OnBlackAdded` | 好友关系、好友申请和黑名单变化。 |
+| 会话与未读状态 | `OnNewConversation`、`OnConversationChanged`、`OnTotalUnreadMessageCountChanged`、`OnInputStatusChanged` | 会话列表、未读数和输入状态变化。 |
+| 会话分组 | `OnConversationGroupAdded`、`OnConversationGroupChanged`、`OnConversationGroupDeleted` | 会话分组及分组成员变化。 |
+| 群组与群成员 | `OnGroupInfoChanged`、`OnGroupMemberAdded`、`OnGroupMemberDeleted`、`OnGroupApplicationAdded`、`OnJoinedGroupAdded` | 群资料、群成员、入群申请和已加入群组变化。 |
+| 消息 | `OnRecvNewMessage`、`OnMsgDeleted`、`OnNewRecvMessageRevoked`、`OnMessageModified`、`OnRecvC2CReadReceipt` | 新消息、消息删除、撤回、修改和单聊已读回执。 |
+| 文件上传 | `UploadOnProgress`、`UploadComplete` | 文件上传进度和上传完成。 |
+| 音视频通话 | `OnReceiveNewInvitation`、`OnInviteeAccepted`、`OnInvitationCancelled`、`OnHangUp`、`OnReceiveCustomSignal` | 通话邀请、参与者状态和通话信令变化。 |
+| 自定义业务消息 | `OnRecvCustomBusinessMessage` | 自定义业务消息。 |
+
+## 注册时机与生命周期
+
+React Native SDK 可以在任意时机注册全局事件监听。完成 `initSDK()` 并登录后，SDK 才会触发连接、同步及业务数据等事件回调；如果需要接收这些事件，应在对应操作前完成监听注册。
+
+React Native SDK 支持对同一事件同时注册多个监听函数，事件触发时，所有监听函数都会收到回调，这与 Flutter 和 Android SDK 的单一 listener 机制不同。虽然 React Native SDK 允许同一事件注册多个监听，但仍建议在应用中集中注册和管理回调，避免页面渲染或组件重复进入时注册相同的业务处理逻辑。
+
+监听函数应保持稳定引用。退出登录、切换账号或销毁相关状态时，使用注册时的同一事件名称和函数引用调用 `off()` 取消监听。
+
+## 连接与初始化同步事件
+
+连接事件用于反映 SDK 与服务端的连接状态：
+
+| 事件 | 说明 |
+| --- | --- |
+| `OnConnecting` | SDK 开始连接服务端。 |
+| `OnConnectSuccess` | SDK 连接成功。 |
+| `OnConnectFailed` | 连接失败及错误信息。 |
+| `OnKickedOffline` | 当前账号在其他端登录或被服务端强制下线。 |
+| `OnUserTokenExpired` | 当前登录 Token 已过期。 |
+| `OnUserTokenInvalid` | 当前登录 Token 无效。 |
+
+登录后，SDK 通过以下事件通知初始化同步状态：
+
+| 事件 | 说明 |
+| --- | --- |
+| `OnSyncServerStart` | 开始同步。 |
+| `OnSyncServerProgress` | 当前同步进度。 |
+| `OnSyncServerFinish` | 本轮同步完成。 |
+| `OnSyncServerFailed` | 本轮同步失败。 |
+
+同步完成后，应用可重新查询当前界面需要的数据；后续用户、好友、会话、群组、消息和通话变化由对应业务事件通知。
+
+## 按业务领域处理事件
+
+各业务页面提供对应事件的完整参数说明和监听示例：
+
+| 事件范围 | 参考页面 |
+| --- | --- |
+| 用户资料和在线状态 | [更新当前用户资料](/sdk/react-native/user/profile/set-self-info)、[订阅用户在线状态](/sdk/react-native/user/online-status/subscribe-users-status) |
+| 好友关系、好友申请和黑名单 | [分页获取好友列表](/sdk/react-native/user/friends/get-friend-list-page)、[获取收到的好友申请](/sdk/react-native/user/friend-applications/get-friend-application-list-as-recipient)、[获取黑名单](/sdk/react-native/user/blacklist/get-black-list) |
+| 会话、未读数和会话分组 | [获取会话列表](/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list)、[获取消息总未读数](/sdk/react-native/conversation/managing-conversations/get-total-unread-count)、[会话分组概览](/sdk/react-native/conversation/managing-conversation-groups/overview-conversation-groups) |
+| 群组、群成员和入群申请 | [群组概览](/sdk/react-native/group/overview-group)、[获取收到的入群申请](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient)、[分页查询群成员](/sdk/react-native/group/retrieving-group-members/get-group-member-list) |
+| 消息和消息状态 | [接收消息](/sdk/react-native/message/receiving-messages/receive-messages)、[接收自定义业务消息](/sdk/react-native/message/receiving-messages/receive-custom-business-messages)、[批量删除消息](/sdk/react-native/message/managing-messages/delete-saved-messages)、[撤回消息](/sdk/react-native/message/managing-messages/revoke-a-message)、[修改消息](/sdk/react-native/message/managing-messages/modify-a-message)、[上报群消息已读](/sdk/react-native/message/managing-read-status/send-group-read-receipts) |
+| 文件上传 | [上传文件](/sdk/react-native/file-uploads/upload-file) |
+| 音视频通话和自定义信令 | [处理通话事件](/sdk/react-native/calling/managing-calls/handle-call-events)、[发送自定义信令](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal) |

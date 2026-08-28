@@ -306,6 +306,7 @@ async function readJson(relativePath) {
 function getPlatformDisplayName(platformId) {
   if (platformId === 'ios') return 'iOS';
   if (platformId === 'android') return 'Android';
+  if (platformId === 'react-native') return 'React Native';
   return 'Flutter';
 }
 
