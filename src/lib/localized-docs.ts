@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import androidSdkData from '@/src/generated/android-sdk-zh-content.json';
 import flutterSdkData from '@/src/generated/flutter-sdk-zh-content.json';
+import harmonySdkData from '@/src/generated/harmony-sdk-zh-content.json';
 import iosSdkData from '@/src/generated/ios-sdk-zh-content.json';
 import uniappSdkData from '@/src/generated/uniapp-sdk-zh-content.json';
 import wasmSdkData from '@/src/generated/wasm-sdk-zh-content.json';
@@ -33,6 +34,7 @@ type LocalizedSdkData = {
 const sdkZhByContext: Record<string, LocalizedSdkData> = {
   'chat/sdk/android': androidSdkData as LocalizedSdkData,
   'chat/sdk/flutter': flutterSdkData as LocalizedSdkData,
+  'chat/sdk/harmony': harmonySdkData as LocalizedSdkData,
   'chat/sdk/ios': iosSdkData as LocalizedSdkData,
   'chat/sdk/uniapp': uniappSdkData as LocalizedSdkData,
   'chat/sdk/wasm': wasmSdkData as LocalizedSdkData,
@@ -97,7 +99,8 @@ export function localizeRouteRecord(route: RouteRecord, locale: Locale): RouteRe
 export function localizeNavNodeTitle(node: NavNode, locale: Locale): string {
   if (node.navigationTitle) return localizeDocLabel(node.navigationTitle, locale);
   if (locale !== 'zh') return node.title;
-  if (node.href) return getLocalizedDocTitle(node.href, locale) ?? localizeDocLabel(node.title, locale);
+  if (node.href)
+    return getLocalizedDocTitle(node.href, locale) ?? localizeDocLabel(node.title, locale);
 
   const labels = navigationLabelsForNode(node);
   const fromTitle = labels[node.title];

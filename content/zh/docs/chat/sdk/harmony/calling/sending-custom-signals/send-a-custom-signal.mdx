@@ -1,0 +1,41 @@
+---
+title: '发送自定义信令'
+description: '在指定通话房间内发送轻量级业务协商数据。'
+sourcePath: '/sdk/harmony/calling/sending-custom-signals/send-a-custom-signal'
+---
+
+自定义信令适合举手、布局切换提示或产品自定义状态，不是聊天消息接口，也不能替代媒体引擎数据通道。
+
+```ts
+import sdk, {
+  EventOnReceiveCustomSignalingData,
+  OpenIMSDKEvent,
+  SignalingSendCustomSignalingReq,
+} from '@openimsdk/imsdk';
+
+const request: SignalingSendCustomSignalingReq = {
+  roomID: roomID,
+  customInfo: JSON.stringify({
+    version: 1,
+    eventID: createBusinessEventID(),
+    type: 'hand-raised',
+    userID: currentUserID,
+  }),
+};
+await sdk.signalingSendCustomSignaling(request);
+
+const handleCustomSignal = (data: EventOnReceiveCustomSignalingData): void => {
+  const signal = parseAndValidateCallSignal(data.customInfo);
+  applyCallSignal(data.roomID, signal);
+};
+const unsubscribeCustomSignal = sdk.on(
+  OpenIMSDKEvent.EventOnReceiveCustomSignaling,
+  handleCustomSignal,
+);
+
+export function removeCustomSignalListener(): void {
+  unsubscribeCustomSignal();
+}
+```
+
+Promise 成功不表示其他参与者已经处理。载荷应精简并包含协议版本和唯一事件 ID，不能放入大文件、长期权威状态或敏感凭据。接收端校验房间上下文和协议后再更新界面；离开通话功能时移除监听。

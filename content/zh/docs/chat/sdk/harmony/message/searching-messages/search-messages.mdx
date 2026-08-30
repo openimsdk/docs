@@ -1,0 +1,44 @@
+---
+title: '搜索消息'
+description: '在当前设备已同步的本地消息中按关键词和条件搜索。'
+sourcePath: '/sdk/harmony/message/searching-messages/search-messages'
+---
+
+本地搜索不会请求业务后端全量索引。`conversationID` 为空字符串时搜索全部本地会话；群聊应使用会话 ID，而不是 `groupID`。
+
+## 参数说明
+
+| 参数                 | 类型                   | 说明                                 |
+| -------------------- | ---------------------- | ------------------------------------ |
+| `conversationID`     | `string`               | 限定会话；空字符串表示全部本地会话。 |
+| `keywords`           | `string[]`             | 非空关键词列表。                     |
+| `keywordMatchType`   | `KeywordListMatchType` | 命中任一或同时命中全部。             |
+| `senderUserIDs`      | `string[]`             | 发送者筛选；不限制时传空数组。       |
+| `messageTypes`       | `ContentType[]`        | 消息类型筛选；不限制时传空数组。     |
+| `searchTimePosition` | `number`               | UTC 秒级搜索起点；`0` 表示当前时间。 |
+| `searchTimePeriod`   | `number`               | 向过去搜索的秒数；`0` 表示不限制。   |
+| `pagination`         | `RequestPagination`    | 页码和每页数量。                     |
+
+```ts
+import sdk, {
+  ContentType,
+  KeywordListMatchType,
+  SearchLocalMessagesReq,
+  SearchLocalMessagesResp,
+} from '@openimsdk/imsdk';
+
+const request: SearchLocalMessagesReq = {
+  conversationID: conversationID,
+  keywords: [searchText.trim()],
+  keywordMatchType: KeywordListMatchType.KeywordMatchOr,
+  senderUserIDs: [],
+  messageTypes: [ContentType.Text, ContentType.AtText],
+  searchTimePosition: 0,
+  searchTimePeriod: 0,
+  pagination: { pageNumber: 1, showNumber: 20 },
+};
+const response: SearchLocalMessagesResp = await sdk.searchLocalMessages(request);
+renderSearchResults(response.searchResultItems, response.count);
+```
+
+搜索结果按会话组织。跳转时使用结果项的 `conversationID` 与消息的 `clientMsgID`，修改任一条件时重置为第 1 页。跨用户审计和服务端全量检索应由业务后端处理。

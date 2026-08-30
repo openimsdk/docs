@@ -68,10 +68,7 @@ export function validateClientSdkAudit({
     }
 
     if (page.locales?.zh?.reviewStatus !== 'structure-only') {
-      const acceptedSdkCommits = [
-        platform.sdkCommit,
-        ...(platform.previousSdkCommits ?? []),
-      ];
+      const acceptedSdkCommits = [platform.sdkCommit, ...(platform.previousSdkCommits ?? [])];
       if (
         !(page.openimSources ?? []).some((source) =>
           acceptedSdkCommits.some((commit) => source.includes(commit)),
@@ -195,6 +192,53 @@ function validateManualPage({ platform, page, path, source, errors }) {
     if (/\.\.\.[A-Za-z_][A-Za-z0-9_.]*/.test(utsExamples)) {
       errors.push(`${path}: UTS examples must not use object spread syntax`);
     }
+  } else if (platform.id === 'harmony') {
+    const arktsExamples = extractArktsCodeBlocks(source).join('\n');
+    if ((page.sdkMethods?.length ?? 0) > 0 && !source.includes('```ts')) {
+      errors.push(`${path}: HarmonyOS SDK method page requires an ArkTS example`);
+    }
+    if (/```(?:uts|java|objc|dart)\n/.test(source)) {
+      errors.push(`${path}: HarmonyOS SDK examples must use ArkTS code fences`);
+    }
+    if (/\b(?:any|unknown)\b/.test(arktsExamples)) {
+      errors.push(`${path}: ArkTS examples must not use TypeScript any or unknown`);
+    }
+    if (/\.\.\.[A-Za-z_][A-Za-z0-9_.]*/.test(arktsExamples)) {
+      errors.push(`${path}: ArkTS examples must not use object spread syntax`);
+    }
+    validateHarmonyListeners({ path, source: arktsExamples, errors });
+  }
+}
+
+function validateHarmonyListeners({ path, source, errors }) {
+  const registrations = [...source.matchAll(/sdk\.on\s*\(/g)].length;
+  const stableRegistrations = [
+    ...source.matchAll(
+      /sdk\.on\s*\(\s*OpenIMSDKEvent\.[A-Za-z0-9_]+\s*,\s*[A-Za-z_][A-Za-z0-9_]*\s*,?\s*\)/g,
+    ),
+  ].length;
+  if (registrations !== stableRegistrations) {
+    errors.push(`${path}: every sdk.on example must use a stable named handler`);
+  }
+
+  const directUnsubscribes = [
+    ...source.matchAll(/const\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*sdk\.on\s*\(/g),
+  ].map((match) => match[1]);
+  const unsubscribeArrays = [
+    ...source.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\.push\s*\(\s*sdk\.on\s*\(/g),
+  ].map((match) => match[1]);
+  if (registrations !== directUnsubscribes.length + unsubscribeArrays.length) {
+    errors.push(`${path}: every sdk.on example must retain its unsubscribe function`);
+  }
+  for (const name of directUnsubscribes) {
+    if (!new RegExp(`\\b${name}\\s*\\(\\s*\\)`).test(source)) {
+      errors.push(`${path}: ${name} must be called during listener cleanup`);
+    }
+  }
+  for (const name of new Set(unsubscribeArrays)) {
+    if (!new RegExp(`\\b${name}\\s*\\[[^\\]]+\\]\\s*\\(\\s*\\)`).test(source)) {
+      errors.push(`${path}: ${name} must be iterated during listener cleanup`);
+    }
   }
 }
 
@@ -220,9 +264,14 @@ function extractUtsCodeBlocks(source) {
   return [...source.matchAll(/```uts\n([\s\S]*?)\n```/g)].map((match) => match[1]);
 }
 
+function extractArktsCodeBlocks(source) {
+  return [...source.matchAll(/```ts\n([\s\S]*?)\n```/g)].map((match) => match[1]);
+}
+
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'uniapp'];
+  const platformIds =
+    requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'uniapp', 'harmony'];
   let failed = false;
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);

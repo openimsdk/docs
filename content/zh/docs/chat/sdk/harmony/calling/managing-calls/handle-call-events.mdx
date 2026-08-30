@@ -1,0 +1,83 @@
+---
+title: '处理通话事件'
+description: '集中监听邀请、接听、参与者和挂断等通话状态变化。'
+sourcePath: '/sdk/harmony/calling/managing-calls/handle-call-events'
+---
+
+通话状态层应集中注册信令生命周期和参与者事件。所有事件都带有结构化载荷，可按 `invitation.roomID` 识别通话。
+
+```ts
+import sdk, {
+  EventOnHangUpData,
+  EventOnInvitationCancelledData,
+  EventOnInvitationTimeoutData,
+  EventOnInviteeAcceptedByOtherDeviceData,
+  EventOnInviteeAcceptedData,
+  EventOnInviteeRejectedByOtherDeviceData,
+  EventOnInviteeRejectedData,
+  EventOnReceiveNewInvitationData,
+  EventOnRoomParticipantConnectedData,
+  EventOnRoomParticipantDisconnectedData,
+  OpenIMSDKEvent,
+  OpenIMSDKUnsubscribe,
+} from '@openimsdk/imsdk';
+
+const unsubscribes: OpenIMSDKUnsubscribe[] = [];
+const handleIncoming = (data: EventOnReceiveNewInvitationData): void => {
+  showIncomingCall(data.invitation, data.offlinePush, data.participant);
+};
+const handleAccepted = (data: EventOnInviteeAcceptedData): void => {
+  markInviteeAccepted(data.invitation.roomID, data.userID);
+};
+const handleAcceptedElsewhere = (data: EventOnInviteeAcceptedByOtherDeviceData): void => {
+  finishLocalIncomingState(data.invitation.roomID);
+};
+const handleRejected = (data: EventOnInviteeRejectedData): void => {
+  markInviteeRejected(data.invitation.roomID, data.userID);
+};
+const handleRejectedElsewhere = (data: EventOnInviteeRejectedByOtherDeviceData): void => {
+  finishLocalIncomingState(data.invitation.roomID);
+};
+const handleCancelled = (data: EventOnInvitationCancelledData): void => {
+  closeCallAndReleaseMedia(data.invitation.roomID);
+};
+const handleTimeout = (data: EventOnInvitationTimeoutData): void => {
+  closeCallAndReleaseMedia(data.invitation.roomID);
+};
+const handleHangUp = (data: EventOnHangUpData): void => {
+  closeCallAndReleaseMedia(data.invitation.roomID);
+};
+const handleParticipantConnected = (data: EventOnRoomParticipantConnectedData): void => {
+  replaceCallParticipants(data.invitation.roomID, data.participants);
+};
+const handleParticipantDisconnected = (data: EventOnRoomParticipantDisconnectedData): void => {
+  replaceCallParticipants(data.invitation.roomID, data.participants);
+};
+
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnReceiveNewInvitation, handleIncoming));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInviteeAccepted, handleAccepted));
+unsubscribes.push(
+  sdk.on(OpenIMSDKEvent.EventOnInviteeAcceptedByOtherDevice, handleAcceptedElsewhere),
+);
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInviteeRejected, handleRejected));
+unsubscribes.push(
+  sdk.on(OpenIMSDKEvent.EventOnInviteeRejectedByOtherDevice, handleRejectedElsewhere),
+);
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInvitationCancelled, handleCancelled));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInvitationTimeout, handleTimeout));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnHangUp, handleHangUp));
+unsubscribes.push(
+  sdk.on(OpenIMSDKEvent.EventOnRoomParticipantConnected, handleParticipantConnected),
+);
+unsubscribes.push(
+  sdk.on(OpenIMSDKEvent.EventOnRoomParticipantDisconnected, handleParticipantDisconnected),
+);
+
+export function removeCallListeners(): void {
+  for (let index = 0; index < unsubscribes.length; index += 1) {
+    unsubscribes[index]();
+  }
+}
+```
+
+其他设备接听或拒绝时，当前设备应关闭重复来电入口。取消、超时和挂断的本地清理必须可重复执行。参与者事件返回当前房间相关参与者资料，但媒体轨道状态仍以所接入媒体引擎为准。退出账号或销毁通话状态层时移除监听。

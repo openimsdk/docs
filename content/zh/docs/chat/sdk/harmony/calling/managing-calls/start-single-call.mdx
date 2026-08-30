@@ -1,0 +1,54 @@
+---
+title: '发起单聊通话'
+description: '向一个用户发起音频或视频通话邀请。'
+sourcePath: '/sdk/harmony/calling/managing-calls/start-single-call'
+---
+
+每次通话应使用新的 `roomID`，并保存完整邀请，供取消、挂断和恢复状态复用。
+
+```ts
+import sdk, {
+  OfflinePushInfo,
+  Platform,
+  SessionType,
+  SignalingInvitationInfo,
+  SignalingInviteReq,
+  SignalingInviteResp,
+  SignalingMediaType,
+  SignalingParticipantMetaData,
+} from '@openimsdk/imsdk';
+
+const invitation: SignalingInvitationInfo = {
+  inviterUserID: currentUserID,
+  inviteeUserIDList: [peerUserID],
+  customData: JSON.stringify({ source: 'contact-card' }),
+  groupID: '',
+  roomID: createCallRoomID(),
+  timeout: 30,
+  mediaType: SignalingMediaType.SignalingMediaTypeVideo,
+  platformID: Platform.HarmonyOS,
+  sessionType: SessionType.Single,
+  initiateTime: Date.now(),
+  busyLineUserIDList: [],
+};
+const offlinePush: OfflinePushInfo = {
+  title: '视频通话',
+  desc: '你收到一个视频通话邀请',
+  ex: '',
+  iOSPushSound: 'default',
+  iOSBadgeCount: true,
+  SignalingInfo: '',
+};
+const participant: SignalingParticipantMetaData = { user: selfUser };
+const request: SignalingInviteReq = {
+  invitation: invitation,
+  offlinePush: offlinePush,
+  participant: participant,
+  userID: peerUserID,
+};
+const response: SignalingInviteResp = await sdk.signalingInvite(request);
+```
+
+成功响应包含 `token`、`roomID`、`liveURL` 和 `busyLineUserIDList`。取得有效房间 ID 与 Token 后再连接媒体引擎；忙线列表只表示对应用户当前无法接听。Promise 成功不表示对方已经接听。
+
+`SignalingInfo` 是离线推送中的信令扩展字符串；没有与推送服务约定额外内容时传空字符串。目标用户由 `request.userID` 和 `invitation.inviteeUserIDList` 确定，不应在 `OfflinePushInfo` 中添加其他 SDK 的目标用户字段。

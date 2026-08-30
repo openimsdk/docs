@@ -37,23 +37,19 @@ const androidRouteTitles = {
   'message/creating-messages/create-image-message': 'Create an image message',
   'message/creating-messages/create-image-message-by-file':
     'Create an image message from a local path',
-  'message/creating-messages/create-image-message-by-url':
-    'Create an image message from URLs',
+  'message/creating-messages/create-image-message-by-url': 'Create an image message from URLs',
   'message/creating-messages/create-sound-message': 'Create an audio message',
   'message/creating-messages/create-sound-message-by-file':
     'Create an audio message from a local path',
-  'message/creating-messages/create-sound-message-by-url':
-    'Create an audio message from a URL',
+  'message/creating-messages/create-sound-message-by-url': 'Create an audio message from a URL',
   'message/creating-messages/create-video-message': 'Create a video message',
   'message/creating-messages/create-video-message-by-file':
     'Create a video message from local paths',
-  'message/creating-messages/create-video-message-by-url':
-    'Create a video message from URLs',
+  'message/creating-messages/create-video-message-by-url': 'Create a video message from URLs',
   'message/creating-messages/create-file-message': 'Create a file message',
   'message/creating-messages/create-file-message-by-file':
     'Create a file message from a local path',
-  'message/creating-messages/create-file-message-by-url':
-    'Create a file message from a URL',
+  'message/creating-messages/create-file-message-by-url': 'Create a file message from a URL',
   'message/creating-messages/create-advanced-text-message': 'Create a rich-text message',
   'message/creating-messages/create-advanced-quote-message': 'Create a rich-text reply',
   'message/composing-messages/get-typing-status': 'Retrieve typing status',
@@ -63,9 +59,31 @@ const uniappRouteTitles = {
   'file-uploads/cancel-upload': 'Cancel a file upload',
 };
 
+const harmonyRouteTitles = {
+  'getting-started/get-sdk-version': 'Get the SDK version',
+  'app-integration/report-app-background-status': 'Report the app background status',
+  'app-integration/report-network-changes': 'Report network changes',
+  'app-integration/set-app-badge': 'Set the app badge count',
+  'user/friends/get-friend-count': 'Get the friend count',
+  'conversation/retrieving-conversations/get-active-conversation-count':
+    'Get the active conversation count',
+  'conversation/managing-conversations/set-conversation-unread-count':
+    'Set the local conversation unread count',
+  'group/retrieving-groups/get-joined-group-count': 'Get the joined group count',
+  'group/data-synchronization/check-group-data-sync': 'Check group data synchronization',
+  'group/data-synchronization/check-group-member-data-sync':
+    'Check group member data synchronization',
+  'message/creating-messages/create-advanced-text-message': 'Create a rich-text message',
+  'message/creating-messages/create-advanced-quote-message': 'Create a rich-text reply',
+  'message/translating-messages/translate-text': 'Translate text',
+  'message/translating-messages/translate-message': 'Translate a message',
+  'file-uploads/cancel-upload': 'Cancel a file upload',
+};
+
 function getPlatformExtensionTitle(platformId, suffix) {
   if (platformId === 'android') return androidRouteTitles[suffix];
   if (platformId === 'uniapp') return uniappRouteTitles[suffix];
+  if (platformId === 'harmony') return harmonyRouteTitles[suffix];
   return undefined;
 }
 
@@ -97,8 +115,7 @@ const conversationGroupTitles = {
       'Conversation group overview',
     'conversation/managing-conversation-groups/create-conversation-group':
       'createConversationGroup',
-    'conversation/managing-conversation-groups/get-conversation-groups':
-      'getConversationGroups',
+    'conversation/managing-conversation-groups/get-conversation-groups': 'getConversationGroups',
     'conversation/managing-conversation-groups/get-conversation-group-info-with-conversations':
       'getConversationGroupInfoWithConversations',
     'conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id':
@@ -151,14 +168,14 @@ export function isGeneratedClientSdkSkeleton(source) {
   }
 
   const platformMatch = source.match(
-    /context:\s*['"]chat\/sdk\/(android|ios|flutter|uniapp)['"]/,
+    /context:\s*['"]chat\/sdk\/(android|ios|flutter|uniapp|harmony)['"]/,
   );
   if (!/status:\s*['"]draft['"]/.test(source) || !platformMatch) {
     return false;
   }
 
   if (
-    /The English version of this OpenIM (?:Android|iOS|Flutter|uni-app \/ uni-app x) SDK guide is deferred/.test(
+    /The English version of this OpenIM (?:Android|iOS|Flutter|HarmonyOS|uni-app \/ uni-app x) SDK guide is deferred/.test(
       source,
     )
   ) {
@@ -197,10 +214,11 @@ export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) 
 export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
   const platform = getClientSdkPlatform(platformId);
   const current = routes.filter((route) => route.contextKey === platform.contextKey);
-  if (current.length === 0)
-    throw new Error(`[${platformId}] cannot locate the existing route range`);
-  const baseNavOrder = Math.min(...current.map((route) => route.navOrder));
   const otherRoutes = routes.filter((route) => route.contextKey !== platform.contextKey);
+  const baseNavOrder =
+    current.length > 0
+      ? Math.min(...current.map((route) => route.navOrder))
+      : Math.max(...otherRoutes.map((route) => route.navOrder)) + 1;
   const baseId = Math.max(...otherRoutes.map((route) => route.id)) + 1;
   const baseSourceIndex = Math.max(...otherRoutes.map((route) => route.sourceIndex)) + 1;
   const platformName = getPlatformDisplayName(platformId);
@@ -243,7 +261,10 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
       navOrder: baseNavOrder + index,
     };
   });
-  const firstIndex = routes.findIndex((route) => route.contextKey === platform.contextKey);
+  const currentIndex = routes.findIndex((route) => route.contextKey === platform.contextKey);
+  const wasmIndex = routes.findIndex((route) => route.contextKey === 'chat/sdk/wasm');
+  const firstIndex =
+    currentIndex >= 0 ? currentIndex : wasmIndex >= 0 ? wasmIndex : otherRoutes.length;
   const withoutPlatform = otherRoutes;
   withoutPlatform.splice(firstIndex, 0, ...nativeRoutes);
   return withoutPlatform;
@@ -330,6 +351,7 @@ function getPlatformDisplayName(platformId) {
   if (platformId === 'ios') return 'iOS';
   if (platformId === 'android') return 'Android';
   if (platformId === 'uniapp') return 'uni-app / uni-app x';
+  if (platformId === 'harmony') return 'HarmonyOS';
   return 'Flutter';
 }
 

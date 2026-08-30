@@ -71,6 +71,32 @@ for (const platformId of clientSdkStructurePlatformIds) {
 }
 
 const routeMap = new Map(routes.map((route) => [route.path, route]));
+for (const platformId of clientSdkStructurePlatformIds) {
+  if (sidebarDecisions.get(platformId).mode === 'skip') continue;
+  const platform = getClientSdkPlatform(platformId);
+  if (navigation.contexts.some((context) => context.key === platform.contextKey)) continue;
+
+  const overviewPath = `${platform.routePrefix}/overview`;
+  const overview = routeMap.get(overviewPath);
+  if (!overview)
+    throw new Error(`Cannot create missing ${platformId} context without ${overviewPath}`);
+  const context = {
+    key: platform.contextKey,
+    title: overview.contextTitle,
+    rootPath: platform.routePrefix,
+    overviewPath,
+    product: 'sdk',
+    version: overview.version ?? 'v4',
+    platform: platform.id,
+    nodes: [],
+  };
+  const wasmIndex = navigation.contexts.findIndex((item) => item.key === 'chat/sdk/wasm');
+  const insertIndex =
+    platformId === 'harmony' && wasmIndex >= 0 ? wasmIndex : navigation.contexts.length;
+  navigation.contexts.splice(insertIndex, 0, context);
+  changed += 1;
+}
+
 for (const context of navigation.contexts) {
   const platform = clientSdkStructurePlatformIds
     .map((platformId) => getClientSdkPlatform(platformId))
@@ -103,7 +129,9 @@ for (const platformId of clientSdkStructurePlatformIds) {
           ? 'Android'
           : platformId === 'uniapp'
             ? 'uni-app / uni-app x'
-            : 'Flutter';
+            : platformId === 'harmony'
+              ? 'HarmonyOS'
+              : 'Flutter';
     console.log(
       `Skipped ${platformName} client SDK sidebar sync: native route tree has not migrated to all ${pageCount} reviewed paths.`,
     );

@@ -1,0 +1,93 @@
+---
+title: '工程与设备接入'
+description: '在 HarmonyOS 工程中安装 HAR、声明权限并初始化 OpenIMClientSDK。'
+sourcePath: '/sdk/harmony/getting-started/environment-specific-implementation'
+---
+
+HarmonyOS SDK 使用一个 HAR 支持手机、平板和 2in1。开始前先完成[开始之前](/sdk/harmony/getting-started/before-you-start)中的服务、凭据和开发环境准备。
+
+## 安装 HAR
+
+把发行包复制到应用模块，例如 `libs/imsdk.har`，然后在该模块的 `oh-package.json5` 中声明依赖：
+
+```json5
+{
+  dependencies: {
+    '@openimsdk/imsdk': 'file:./libs/imsdk.har',
+  },
+}
+```
+
+在 `src/main/module.json5` 中声明网络权限：
+
+```json5
+{
+  module: {
+    requestPermissions: [{ name: 'ohos.permission.INTERNET' }],
+  },
+}
+```
+
+修改 HAR 或权限后重新同步 OHPM 依赖并完整构建应用，不要依赖旧的增量构建产物。
+
+## 初始化 SDK
+
+```ts
+import sdk, {
+  AppFramework,
+  HttpClientMode,
+  InitSDKReq,
+  LogLevel,
+  Platform,
+} from '@openimsdk/imsdk';
+
+const request: InitSDKReq = {
+  config: {
+    apiAddr: 'https://api.example.com',
+    wsAddr: 'wss://ws.example.com',
+    dataDir: `${filesDir}/openim/data`,
+    dbPath: `${filesDir}/openim/data`,
+    logFilePath: `${filesDir}/openim/logs`,
+    appFramework: AppFramework.Native,
+    platform: Platform.HarmonyOS,
+    logLevel: LogLevel.LevelWarn,
+    isLogStandardOutput: false,
+    StopGoroutineOnBackground: true,
+    LogRemainCount: 3,
+    diagnoseHashSalt: 'your-app-specific-diagnose-salt',
+    httpClientMode: HttpClientMode.ConnFirst,
+  },
+};
+
+await sdk.initSDK(request);
+```
+
+### 参数说明
+
+| 参数                        | 是否必填 | 说明                                                                          |
+| --------------------------- | -------- | ----------------------------------------------------------------------------- |
+| `apiAddr`                   | 是       | OpenIMServer API 地址。                                                       |
+| `wsAddr`                    | 是       | OpenIMServer WebSocket 地址。                                                 |
+| `dataDir`、`dbPath`         | 是       | 应用私有的稳定可写目录；同一进程内的窗口应保持一致。                          |
+| `logFilePath`               | 否       | 日志目录。生产环境仍应限制日志级别和保留数量。                                |
+| `appFramework`              | 否       | 原生 ArkTS 应用使用 `AppFramework.Native`。                                   |
+| `platform`                  | 否       | HarmonyOS 使用 `Platform.HarmonyOS`。                                         |
+| `logLevel`                  | 否       | SDK 日志级别。生产环境通常使用 `LevelWarn` 或 `LevelError`。                  |
+| `isLogStandardOutput`       | 是       | 是否把 Core 日志输出到系统日志。                                              |
+| `StopGoroutineOnBackground` | 是       | 手机和平板通常设为 `true`；持续运行的 2in1 进程可按生命周期策略设为 `false`。 |
+| `LogRemainCount`            | 是       | 本地日志文件保留数量。                                                        |
+| `diagnoseHashSalt`          | 是       | 应用级稳定的非密钥盐值，用于诊断信息脱敏；不要使用 Token。                    |
+| `httpClientMode`            | 是       | HTTP 连接策略，通常使用 `HttpClientMode.ConnFirst`。                          |
+
+Promise 成功只表示 SDK 初始化完成，不表示用户已经登录或数据同步完成。初始化后应先注册事件，再调用 `login()`。
+
+## 销毁 SDK
+
+只有进程确定不再使用 SDK，并且所有并发调用、宿主监听器和用户会话都已结束时，才调用 `unInitSDK()`：
+
+```ts
+await sdk.logout();
+await sdk.unInitSDK();
+```
+
+页面卸载、路由切换或单个 2in1 窗口关闭不应触发全局销毁。重新初始化前必须等待上一次销毁完成。

@@ -1,0 +1,35 @@
+---
+title: '撤回消息'
+description: '撤回已发送消息，并同步撤回状态。'
+sourcePath: '/sdk/harmony/message/managing-messages/revoke-a-message'
+---
+
+需要让会话成员看到撤回状态时使用该操作，不要用本地删除或批量删除替代。
+
+```ts
+import sdk, {
+  EventOnNewRecvMessageRevokedData,
+  OpenIMSDKEvent,
+  RevokeMessageReq,
+} from '@openimsdk/imsdk';
+
+const request: RevokeMessageReq = {
+  conversationID: conversationID,
+  clientMsgID: message.clientMsgID,
+};
+await sdk.revokeMessage(request);
+
+const handleMessageRevoked = (data: EventOnNewRecvMessageRevokedData): void => {
+  markMessageRevoked(data.revoked.clientMsgID, data.revoked);
+};
+const unsubscribeMessageRevoked = sdk.on(
+  OpenIMSDKEvent.EventOnNewRecvMessageRevoked,
+  handleMessageRevoked,
+);
+
+export function removeMessageRevokedListener(): void {
+  unsubscribeMessageRevoked();
+}
+```
+
+允许撤回的操作者、时间窗口和消息类型由 OpenIMServer 校验。Promise 成功不表示所有客户端已经更新；事件到达后按 `clientMsgID` 把原气泡改为撤回提示，不要直接从列表删除。退出账号或销毁消息状态层时移除监听。

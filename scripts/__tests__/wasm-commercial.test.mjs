@@ -7,6 +7,7 @@ const androidAudit = JSON.parse(readFileSync('data/structure/android-content-aud
 const flutterAudit = JSON.parse(readFileSync('data/structure/flutter-content-audit.json', 'utf8'));
 const iosAudit = JSON.parse(readFileSync('data/structure/ios-content-audit.json', 'utf8'));
 const uniappAudit = JSON.parse(readFileSync('data/structure/uniapp-content-audit.json', 'utf8'));
+const harmonyAudit = JSON.parse(readFileSync('data/structure/harmony-content-audit.json', 'utf8'));
 
 const commercialMethods = [
   'speechToTextCapabilities',
@@ -114,6 +115,11 @@ const platformSymbolAliases = {
   uniapp: {
     getSpeechToTextCapabilities: 'speechToTextCapabilities',
   },
+  harmony: {
+    getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
+    getSpeechToTextCapabilities: 'speechToTextCapabilities',
+    EventOnMessageDeleted: 'OnMsgDeleted',
+  },
 };
 
 const partialCommercialConceptSources = {
@@ -136,6 +142,11 @@ const partialCommercialConceptSources = {
     '/sdk/android/calling/managing-calls/start-single-call',
     '/sdk/android/calling/managing-calls/handle-call-events',
     '/sdk/android/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/harmony/calling/overview-calling': [
+    '/sdk/harmony/calling/managing-calls/start-single-call',
+    '/sdk/harmony/calling/managing-calls/handle-call-events',
+    '/sdk/harmony/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
 
@@ -166,6 +177,15 @@ const fullCommercialConceptPages = new Set([
   '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
   '/sdk/uniapp/message/composing-messages/save-local-transcript',
   '/sdk/uniapp/user/profile/set-friend-add-permission',
+  '/sdk/harmony/conversation/managing-conversations/set-private-chat',
+  '/sdk/harmony/conversation/managing-conversations/set-burn-duration',
+  '/sdk/harmony/conversation/managing-conversations/set-message-destruct',
+  '/sdk/harmony/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/harmony/conversation/managing-conversations/mark-conversation',
+  '/sdk/harmony/message/composing-messages/save-local-transcript',
+  '/sdk/harmony/message/translating-messages/translate-text',
+  '/sdk/harmony/message/translating-messages/translate-message',
+  '/sdk/harmony/user/profile/set-friend-add-permission',
 ]);
 
 function applyCommercialConceptOverride(pagePath, info) {
@@ -206,6 +226,9 @@ function normalizePlatformSymbol(platform, symbol, type) {
   const alias = platformSymbolAliases[platform][selectorBase];
   if (alias) return alias;
   if (type === 'event' && selectorBase.startsWith('on')) return `On${selectorBase.slice(2)}`;
+  if (type === 'event' && selectorBase.startsWith('EventOn')) {
+    return selectorBase.slice('Event'.length);
+  }
   return selectorBase;
 }
 
@@ -225,7 +248,7 @@ function getPageCommercialInfo(pagePath) {
     };
   }
 
-  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp|harmony)(\/.*)$/);
   if (!match) return { kind: 'none', methods: [], openSourceMethods: [], events: [] };
 
   const platform = match[1];
@@ -241,7 +264,9 @@ function getPageCommercialInfo(pagePath) {
         ? flutterAudit
         : platform === 'ios'
           ? iosAudit
-          : uniappAudit;
+          : platform === 'uniapp'
+            ? uniappAudit
+            : harmonyAudit;
   const page = audit.pages.find(
     (entry) => entry.currentPath === pagePath && entry.disposition !== 'omit',
   );
@@ -314,6 +339,16 @@ test('marks only the commercial bypass field on group-wide mute', () => {
     /`muteBypassUserIDs` <span className="enterprise-field-badge">商业版<\/span>/,
   );
   assert.equal(getPageCommercialInfo('/sdk/wasm/group/change-group-mute').kind, 'none');
+
+  const harmonyContent = readFileSync(
+    'content/zh/docs/chat/sdk/harmony/group/change-group-mute.mdx',
+    'utf8',
+  );
+  assert.match(
+    harmonyContent,
+    /`muteBypassUserIDs` <span className="enterprise-field-badge">商业版<\/span>/,
+  );
+  assert.equal(getPageCommercialInfo('/sdk/harmony/group/change-group-mute').kind, 'none');
 });
 
 test('marks enterprise-only fields in shared WASM return models', () => {
@@ -469,6 +504,23 @@ test('applies the WASM commercial presentation to verified native capabilities',
   );
   assert.equal(flutterTranscription.kind, 'full');
   assert.ok(flutterTranscription.methods.includes('speechToText'));
+
+  const harmonyGroupLookup = getPageCommercialInfo(
+    '/sdk/harmony/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id',
+  );
+  assert.equal(harmonyGroupLookup.kind, 'full');
+  assert.deepEqual(harmonyGroupLookup.methods, ['getConversationGroupByConversationID']);
+
+  const harmonyTranscription = getPageCommercialInfo(
+    '/sdk/harmony/message/composing-messages/transcribe-audio',
+  );
+  assert.equal(harmonyTranscription.kind, 'full');
+  assert.deepEqual(harmonyTranscription.methods, ['speechToText']);
+
+  const harmonyTranslation = getPageCommercialInfo(
+    '/sdk/harmony/message/translating-messages/translate-message',
+  );
+  assert.equal(harmonyTranslation.kind, 'full');
 });
 
 test('marks calling overviews as mixed while preserving verified platform symbols', () => {
@@ -493,6 +545,11 @@ test('marks calling overviews as mixed while preserving verified platform symbol
   assert.equal(androidOverview.kind, 'partial');
   assert.ok(androidOverview.methods.includes('signalingInvite'));
   assert.ok(androidOverview.methods.includes('getSignalingInvitationInfoStartApp'));
+
+  const harmonyOverview = getPageCommercialInfo('/sdk/harmony/calling/overview-calling');
+  assert.equal(harmonyOverview.kind, 'partial');
+  assert.ok(harmonyOverview.methods.includes('signalingInvite'));
+  assert.ok(harmonyOverview.events.includes('EventOnReceiveNewInvitation'));
 });
 
 test('does not infer commercial presentation for absent or open-source native capabilities', () => {

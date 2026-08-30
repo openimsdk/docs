@@ -1,0 +1,38 @@
+---
+title: '消息概览'
+description: '了解消息的创建、发送、接收、查询和状态同步边界。'
+sourcePath: '/sdk/harmony/message/overview-message'
+---
+
+HarmonyOS SDK 使用 `IMMessage` 表示一条消息。发送分为两个阶段：先根据内容创建待发送对象，再将该对象发送给单聊用户或群组。创建方法不会发送消息；发送方法的 Promise 成功也不等于其他客户端已经收到消息。
+
+消息列表使用 `conversationID` 与 `clientMsgID` 定位消息。`conversationID` 来自当前会话、查询条件或事件上下文；`clientMsgID` 是消息在客户端侧去重和合并状态的稳定标识。
+
+## 消息处理流程
+
+| 阶段 | 主要操作                     | 说明                                                         |
+| ---- | ---------------------------- | ------------------------------------------------------------ |
+| 创建 | `create*Message()`           | 返回 `IMMessage`，只在本地创建对象。                         |
+| 发送 | `sendMessage()`              | 单聊填写 `recvID`，群聊填写 `groupID`。                      |
+| 接收 | 新消息事件                   | 按 `conversationID:clientMsgID` 合并，重复事件不插入第二条。 |
+| 查询 | 历史、搜索或按 ID 定位       | 返回调用时可读取的数据，不触发新消息事件。                   |
+| 更新 | 删除、撤回、修改、置顶或已读 | 分别处理 Promise、相关事件和必要的重新查询。                 |
+
+本地图片、音频、视频和文件消息在发送时由 SDK 上传；已由业务上传的资源可以使用 URL 型创建接口。两类消息最后都交给 `sendMessage()`。
+
+## 常用字段
+
+| 字段                            | 说明                             |
+| ------------------------------- | -------------------------------- |
+| `clientMsgID`、`serverMsgID`    | 客户端与服务端消息 ID。          |
+| `sessionType`                   | 单聊或群聊等会话类型。           |
+| `sendID`、`recvID`、`groupID`   | 发送者和聊天目标。               |
+| `contentType`                   | 决定应读取哪个内容字段。         |
+| `createTime`、`sendTime`、`seq` | 创建时间、发送时间和服务端序号。 |
+| `status`、`isRead`              | 发送状态和已读状态。             |
+| `ex`                            | 随消息同步的扩展字符串。         |
+| `localEx`                       | 只保存在当前设备的扩展字符串。   |
+
+正文位于与 `contentType` 对应的字段中，例如 `textElem`、`pictureElem`、`soundElem`、`videoElem`、`fileElem`、`atTextElem`、`quoteElem`、`mergeElem` 或 `customElem`。不要根据展示文本、数组位置或分页长度判断消息身份。
+
+创建对象和纯查询不会触发共享消息事件。会改变状态的操作必须区分 Promise 成功、事件到达和重新查询校准三个阶段。

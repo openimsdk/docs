@@ -1,0 +1,27 @@
+---
+title: '获取用户资料'
+description: '按 userID 批量查询应用用户的账号级公开资料。'
+sourcePath: '/sdk/harmony/user/profile/get-users-info'
+---
+
+`getUsersInfo()` 适合加载陌生人资料卡、好友候选人或消息发送者的公开资料。按昵称、手机号、组织或邮箱搜索用户应由可信业务后端完成，再把候选 `userID` 交给 SDK 查询。
+
+```ts
+import sdk, { GetUsersInfoReq, GetUsersInfoResp } from '@openimsdk/imsdk';
+
+const request: GetUsersInfoReq = {
+  userIDs: ['user_a', 'user_b'],
+};
+const response: GetUsersInfoResp = await sdk.getUsersInfo(request);
+
+for (let index = 0; index < response.users.length; index += 1) {
+  const user = response.users[index];
+  usersByID.set(user.userID, user);
+}
+```
+
+调用前应去除空值和重复 ID，并控制单次查询数量。返回数组不保证与输入顺序一一对应，应按实际 `userID` 建立映射。
+
+`IMUser` 的主要字段包括 `userID`、`nickname`、`faceURL`、`ex`、`createTime`、`globalRecvMsgOpt`、`attached` 和 `addFriendPermission`。展示其他用户资料时，不应暴露其账号级接收策略或把公开昵称覆盖好友备注、群内昵称和会话标题。
+
+该查询不会触发当前用户资料事件；需要刷新时重新调用。

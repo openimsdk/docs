@@ -50,9 +50,20 @@ const clientSdkPlatforms = {
     sdkSourceKey: 'uniappSdk',
     sdkTag: '0.2.3',
     sdkCommit: 'sha256:8de6339b8c5c8f02a031892589de8e519de03240a34c22cb3548b501212308c3',
-    previousSdkCommits: [
-      'sha256:c4390e829a89ee2d3a5b781228102983d25e04dadfab3f7164a80a68fe01a90c',
-    ],
+    previousSdkCommits: ['sha256:c4390e829a89ee2d3a5b781228102983d25e04dadfab3f7164a80a68fe01a90c'],
+  },
+  harmony: {
+    id: 'harmony',
+    contextKey: 'chat/sdk/harmony',
+    routePrefix: '/sdk/harmony',
+    manualRoot: 'content/zh/docs/chat/sdk/harmony',
+    auditPath: 'data/structure/harmony-content-audit.json',
+    labelsPath: 'data/structure/harmony-navigation-labels.json',
+    sidebarPath: 'data/structure/harmony-sidebar.json',
+    localizedOutputPath: 'src/generated/harmony-sdk-zh-content.json',
+    sdkSourceKey: 'harmonySdk',
+    sdkTag: '1.0.2',
+    sdkCommit: '77bd15d59c9f91118ba24cbb51f2fd72195ff465',
   },
   wasm: {
     id: 'wasm',
@@ -66,9 +77,9 @@ const clientSdkPlatforms = {
   },
 };
 
-// Locale publication remains explicit. UniApp participates in structure and
-// content validation, but is not added to publication gating until its audit
-// states are promoted for release.
+// Locale publication remains explicit. UniApp and HarmonyOS participate in
+// structure and content validation, but are not added to publication gating
+// until their English audits are promoted for release.
 export const clientSdkPlatformIds = Object.freeze(['android', 'ios', 'flutter', 'wasm']);
 export const clientSdkStructurePlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));
 

@@ -1,0 +1,37 @@
+---
+title: '批量删除消息'
+description: '批量删除同一会话中的消息，并可同步到当前账号的其他客户端。'
+sourcePath: '/sdk/harmony/message/managing-messages/delete-saved-messages'
+---
+
+批量删除属于商业版能力。同一批客户端消息 ID 必须属于同一会话。
+
+```ts
+import sdk, {
+  DeleteMessagesReq,
+  EventOnMessageDeletedData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: DeleteMessagesReq = {
+  conversationID: conversationID,
+  clientMsgIDs: selectedMessageIDs,
+  IsSync: true,
+};
+await sdk.deleteMessages(request);
+
+const handleMessageDeleted = (data: EventOnMessageDeletedData): void => {
+  const targetConversationID = resolveMessageConversationID(data.message);
+  removeMessage(targetConversationID, data.message.clientMsgID);
+};
+const unsubscribeMessageDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnMessageDeleted,
+  handleMessageDeleted,
+);
+
+export function removeMessageDeletedListener(): void {
+  unsubscribeMessageDeleted();
+}
+```
+
+`IsSync` 字段首字母为大写。传 `true` 请求把删除动作同步到当前账号的其他客户端；它不会删除其他会话成员持有的消息副本，也不会生成撤回提示。Promise 成功、删除事件到达和历史重新查询是不同阶段。退出账号或销毁状态层时移除监听。

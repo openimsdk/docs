@@ -1,0 +1,80 @@
+---
+title: '接收消息'
+description: '监听普通、离线和仅在线消息，并合并到对应会话。'
+sourcePath: '/sdk/harmony/message/receiving-messages/receive-messages'
+---
+
+消息事件提供新到达的增量；首次进入会话、翻页或重连后刷新时仍需主动加载历史。两条路径可能包含同一消息，应先确定目标会话，再按 `clientMsgID` 去重。
+
+```ts
+import sdk, {
+  EventOnRecvNewMessageData,
+  EventOnRecvOfflineNewMessageData,
+  EventOnRecvOnlineOnlyMessageData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleNewMessage = (data: EventOnRecvNewMessageData): void => {
+  routeAndMergeMessage(data.message);
+};
+const handleOfflineMessage = (data: EventOnRecvOfflineNewMessageData): void => {
+  routeAndMergeMessage(data.message);
+};
+const handleOnlineOnlyMessage = (data: EventOnRecvOnlineOnlyMessageData): void => {
+  showTransientMessage(data.message);
+};
+
+const unsubscribeNewMessage = sdk.on(OpenIMSDKEvent.EventOnRecvNewMessage, handleNewMessage);
+const unsubscribeOfflineMessage = sdk.on(
+  OpenIMSDKEvent.EventOnRecvOfflineNewMessage,
+  handleOfflineMessage,
+);
+const unsubscribeOnlineOnlyMessage = sdk.on(
+  OpenIMSDKEvent.EventOnRecvOnlineOnlyMessage,
+  handleOnlineOnlyMessage,
+);
+
+export function removeMessageListeners(): void {
+  unsubscribeNewMessage();
+  unsubscribeOfflineMessage();
+  unsubscribeOnlineOnlyMessage();
+}
+```
+
+单聊根据 `sessionType`、`sendID` 和 `recvID` 确定对方，群聊使用 `groupID`。仅在线消息不会进入本地历史，不要用它承载必须回放的业务数据。
+
+SDK 还公开批量事件 `EventOnRecvNewMessages` 和 `EventOnRecvOfflineNewMessages`，其载荷为 `messages: IMMessage[]`，是否合并投递取决于底层批处理。应用应选择单条或批量入口建立一套去重流程，避免同时注册后把同一消息插入两次。
+
+如果应用选择批量入口，用下面的监听代替上面两个单条历史消息监听；仅在线消息仍保留原来的独立监听。
+
+```ts
+import sdk, {
+  EventOnRecvNewMessagesData,
+  EventOnRecvOfflineNewMessagesData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleNewMessages = (data: EventOnRecvNewMessagesData): void => {
+  for (let index = 0; index < data.messages.length; index += 1) {
+    routeAndMergeMessage(data.messages[index]);
+  }
+};
+const handleOfflineMessages = (data: EventOnRecvOfflineNewMessagesData): void => {
+  for (let index = 0; index < data.messages.length; index += 1) {
+    routeAndMergeMessage(data.messages[index]);
+  }
+};
+
+const unsubscribeNewMessages = sdk.on(OpenIMSDKEvent.EventOnRecvNewMessages, handleNewMessages);
+const unsubscribeOfflineMessages = sdk.on(
+  OpenIMSDKEvent.EventOnRecvOfflineNewMessages,
+  handleOfflineMessages,
+);
+
+export function removeBatchMessageListeners(): void {
+  unsubscribeNewMessages();
+  unsubscribeOfflineMessages();
+}
+```
+
+监听通常放在登录态的全局消息状态层，不应每次进入聊天页重复注册。退出账号或销毁状态层时移除监听。

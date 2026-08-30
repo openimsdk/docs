@@ -1,0 +1,47 @@
+---
+title: '获取会话列表'
+description: '分页获取当前用户的会话列表，并同步后续会话变化。'
+sourcePath: '/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+使用分页接口建立当前账号的会话列表，不使用一次性完整列表接口。
+
+```ts
+import sdk, {
+  EventOnConversationChangedData,
+  EventOnNewConversationData,
+  GetConversationListSplitReq,
+  GetConversationListSplitResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetConversationListSplitReq = {
+  pagination: {
+    pageNumber: 1,
+    showNumber: 50,
+  },
+};
+const response: GetConversationListSplitResp = await sdk.getConversationListSplit(request);
+mergeConversations(response.conversationList);
+
+const handleNewConversation = (data: EventOnNewConversationData): void => {
+  mergeConversations(data.conversationList);
+};
+const handleConversationChanged = (data: EventOnConversationChangedData): void => {
+  mergeConversations(data.conversationList);
+};
+const unsubscribeNew = sdk.on(OpenIMSDKEvent.EventOnNewConversation, handleNewConversation);
+const unsubscribeChanged = sdk.on(
+  OpenIMSDKEvent.EventOnConversationChanged,
+  handleConversationChanged,
+);
+
+export function removeConversationListListeners(): void {
+  unsubscribeNew();
+  unsubscribeChanged();
+}
+```
+
+每次按 `conversationID` 去重。本页返回的 `IMConversation` 包含 `conversationType`、`userID`、`groupID`、`showName`、`faceURL`、`latestMsg`、`unreadCount`、`recvMsgOpt`、`groupAtType`、草稿、置顶、标记、备注、阅后即焚和服务端消息删除策略等字段。
+
+退出账号或销毁会话状态层时调用两个取消订阅函数。事件到达并不代表当前分页已经完整；重连同步完成后可从第一页重新校准。

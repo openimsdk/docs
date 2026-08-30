@@ -2,6 +2,7 @@ import flutterAudit from '@/data/structure/flutter-content-audit.json';
 import iosAudit from '@/data/structure/ios-content-audit.json';
 import androidAudit from '@/data/structure/android-content-audit.json';
 import uniappAudit from '@/data/structure/uniapp-content-audit.json';
+import harmonyAudit from '@/data/structure/harmony-content-audit.json';
 import ownership from '@/data/structure/wasm-api-ownership.json';
 
 type OwnershipEntry = {
@@ -11,7 +12,7 @@ type OwnershipEntry = {
   commercial?: boolean;
 };
 
-type NativePlatform = 'android' | 'flutter' | 'ios' | 'uniapp';
+type NativePlatform = 'android' | 'flutter' | 'ios' | 'uniapp' | 'harmony';
 
 type ClientSdkAuditPage = {
   currentPath: string;
@@ -42,6 +43,7 @@ const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
   flutter: flutterAudit.pages as ClientSdkAuditPage[],
   ios: iosAudit.pages as ClientSdkAuditPage[],
   uniapp: uniappAudit.pages as ClientSdkAuditPage[],
+  harmony: harmonyAudit.pages as ClientSdkAuditPage[],
 };
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
@@ -77,6 +79,11 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
   uniapp: {
     getSpeechToTextCapabilities: 'speechToTextCapabilities',
   },
+  harmony: {
+    getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
+    getSpeechToTextCapabilities: 'speechToTextCapabilities',
+    EventOnMessageDeleted: 'OnMsgDeleted',
+  },
 };
 
 const partialCommercialConceptSources: Record<string, string[]> = {
@@ -99,6 +106,11 @@ const partialCommercialConceptSources: Record<string, string[]> = {
     '/sdk/android/calling/managing-calls/start-single-call',
     '/sdk/android/calling/managing-calls/handle-call-events',
     '/sdk/android/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/harmony/calling/overview-calling': [
+    '/sdk/harmony/calling/managing-calls/start-single-call',
+    '/sdk/harmony/calling/managing-calls/handle-call-events',
+    '/sdk/harmony/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
 
@@ -132,6 +144,15 @@ const fullCommercialConceptPages = new Set([
   '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
   '/sdk/uniapp/message/composing-messages/save-local-transcript',
   '/sdk/uniapp/user/profile/set-friend-add-permission',
+  '/sdk/harmony/conversation/managing-conversations/set-private-chat',
+  '/sdk/harmony/conversation/managing-conversations/set-burn-duration',
+  '/sdk/harmony/conversation/managing-conversations/set-message-destruct',
+  '/sdk/harmony/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/harmony/conversation/managing-conversations/mark-conversation',
+  '/sdk/harmony/message/composing-messages/save-local-transcript',
+  '/sdk/harmony/message/translating-messages/translate-text',
+  '/sdk/harmony/message/translating-messages/translate-message',
+  '/sdk/harmony/user/profile/set-friend-add-permission',
 ]);
 
 function applyCommercialConceptOverride(
@@ -178,7 +199,7 @@ function parseClientSdkPath(
   | { platform: 'wasm'; wasmPath: string }
   | { platform: NativePlatform; wasmPath: string }
   | undefined {
-  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp|harmony)(\/.*)$/);
   if (!match) return undefined;
 
   const platform = match[1] as 'wasm' | NativePlatform;
@@ -198,6 +219,9 @@ function normalizePlatformSymbol(
   if (alias) return alias;
   if (type === 'event' && selectorBase.startsWith('on')) {
     return `On${selectorBase.slice(2)}`;
+  }
+  if (type === 'event' && selectorBase.startsWith('EventOn')) {
+    return selectorBase.slice('Event'.length);
   }
   return selectorBase;
 }

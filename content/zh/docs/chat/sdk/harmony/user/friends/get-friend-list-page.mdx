@@ -1,0 +1,52 @@
+---
+title: '分页获取好友列表'
+description: '分页查询当前用户的好友关系资料。'
+sourcePath: '/sdk/harmony/user/friends/get-friend-list-page'
+---
+
+首次加载从 `pageNumber: 1` 开始。好友增删后重置分页，避免旧页与新状态重复。
+
+```ts
+import sdk, {
+  EventOnFriendAddedData,
+  EventOnFriendDeletedData,
+  EventOnFriendInfoChangedData,
+  GetFriendsPageReq,
+  GetFriendsPageResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetFriendsPageReq = {
+  filterBlack: true,
+  pagination: {
+    pageNumber: 1,
+    showNumber: 50,
+  },
+};
+const response: GetFriendsPageResp = await sdk.getFriendsPage(request);
+replaceFriends(response.friends);
+
+const handleFriendAdded = (data: EventOnFriendAddedData): void => {
+  mergeFriend(data.friend);
+};
+const handleFriendChanged = (data: EventOnFriendInfoChangedData): void => {
+  mergeFriend(data.friend);
+};
+const handleFriendDeleted = (data: EventOnFriendDeletedData): void => {
+  removeFriend(data.friend.friendUserID);
+};
+
+const unsubscribeAdded = sdk.on(OpenIMSDKEvent.EventOnFriendAdded, handleFriendAdded);
+const unsubscribeChanged = sdk.on(OpenIMSDKEvent.EventOnFriendInfoChanged, handleFriendChanged);
+const unsubscribeDeleted = sdk.on(OpenIMSDKEvent.EventOnFriendDeleted, handleFriendDeleted);
+
+export function removeFriendListListeners(): void {
+  unsubscribeAdded();
+  unsubscribeChanged();
+  unsubscribeDeleted();
+}
+```
+
+`filterBlack` 为 `true` 时过滤当前黑名单中的用户。`IMFriend` 使用 `friendUserID` 标识好友，并包含 `nickname`、`faceURL`、`remark`、`isPinned`、`ex`、`ownerUserID` 和 `createTime` 等关系资料。
+
+退出账号或销毁联系人状态层时调用三个取消订阅函数。事件遗漏或分页边界变化时重新查询。

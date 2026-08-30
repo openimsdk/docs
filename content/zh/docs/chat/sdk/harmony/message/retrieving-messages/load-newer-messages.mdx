@@ -1,0 +1,30 @@
+---
+title: '反向加载历史消息'
+description: '从消息锚点向较新方向分页读取历史记录。'
+sourcePath: '/sdk/harmony/message/retrieving-messages/load-newer-messages'
+---
+
+从搜索结果或回复消息进入聊天页，需要补齐锚点之后的记录时，将 `isReverse` 设为 `true`。这不是实时接收接口。
+
+```ts
+import sdk, {
+  ErrorCode,
+  GetHistoryMessageListReq,
+  GetHistoryMessageListResp,
+  ViewType,
+} from '@openimsdk/imsdk';
+
+const request: GetHistoryMessageListReq = {
+  conversationID: conversationID,
+  startClientMsgID: anchorMessage.clientMsgID,
+  count: 30,
+  isReverse: true,
+  viewType: ViewType.ViewHistory,
+};
+const response: GetHistoryMessageListResp = await sdk.getHistoryMessageList(request);
+if (response.errCode === ErrorCode.NoError) {
+  appendMessages(response.messageList);
+}
+```
+
+锚点必须具有有效 `clientMsgID`。继续分页时更新锚点；`isEnd` 表示向较新方向是否到达当前历史边界。不要在同一个滚动边界交替使用两个方向，加入列表时按稳定 ID 去重。

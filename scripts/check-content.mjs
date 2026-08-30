@@ -6,9 +6,7 @@ import {
 } from './lib/chat-content-paths.mjs';
 import { validateSearchIndexPaths } from './lib/search-index-contract.mjs';
 import { clientSdkPlatformIds, getClientSdkPlatform } from './lib/client-sdk-platforms.mjs';
-import {
-  getClientSdkSidebarApplicationScope,
-} from './lib/client-sdk-sidebar.mjs';
+import { getClientSdkSidebarApplicationScope } from './lib/client-sdk-sidebar.mjs';
 
 const root = process.cwd();
 const routes = JSON.parse(await readFile(resolve(root, 'src/generated/routes.json'), 'utf8'));
@@ -37,6 +35,7 @@ const expectedSdkPlatforms = [
   'android',
   'flutter',
   'uniapp',
+  'harmony',
   'wasm',
   'electron',
   'miniprogram',
@@ -184,7 +183,13 @@ const platformApiEnglishOverviewHeadingExpectations = new Map([
   ],
   [
     '/platform-api/message/overview',
-    ['## Capability scope', '## Common APIs', '## Enums', '## Integration advice', '## Related pages'],
+    [
+      '## Capability scope',
+      '## Common APIs',
+      '## Enums',
+      '## Integration advice',
+      '## Related pages',
+    ],
   ],
   [
     '/platform-api/logs/overview',
@@ -227,10 +232,7 @@ const platformApiZhOverviewHeadingExpectations = new Map([
     '/platform-api/relation/overview',
     ['## 能力范围', '## 常用接口', '## 资源表示', '## 枚举', '## 接入建议', '## 相关页面'],
   ],
-  [
-    '/platform-api/auth/overview',
-    ['## 能力范围', '## 常用接口', '## 接入建议', '## 相关页面'],
-  ],
+  ['/platform-api/auth/overview', ['## 能力范围', '## 常用接口', '## 接入建议', '## 相关页面']],
   [
     '/platform-api/group/overview',
     ['## 能力范围', '## 常用接口', '## 资源表示', '## 枚举', '## 接入建议', '## 相关页面'],
@@ -243,21 +245,20 @@ const platformApiZhOverviewHeadingExpectations = new Map([
     '/platform-api/message/overview',
     ['## 能力范围', '## 常用接口', '## 枚举', '## 接入建议', '## 相关页面'],
   ],
-  [
-    '/platform-api/logs/overview',
-    ['## 能力范围', '## 常用接口', '## 接入建议', '## 相关页面'],
-  ],
-  [
-    '/platform-api/timer/overview',
-    ['## 能力范围', '## 资源结构', '## 枚举', '## 接入建议'],
-  ],
-  [
-    '/platform-api/meeting/overview',
-    ['## 能力范围', '## 资源结构', '## 枚举', '## 接入建议'],
-  ],
+  ['/platform-api/logs/overview', ['## 能力范围', '## 常用接口', '## 接入建议', '## 相关页面']],
+  ['/platform-api/timer/overview', ['## 能力范围', '## 资源结构', '## 枚举', '## 接入建议']],
+  ['/platform-api/meeting/overview', ['## 能力范围', '## 资源结构', '## 枚举', '## 接入建议']],
   [
     '/platform-api/webhooks/overview',
-    ['## 工作方式', '## 配置 Webhooks', '## 调用协议', '## 枚举', '## 回调能力', '## 接入建议', '## 相关页面'],
+    [
+      '## 工作方式',
+      '## 配置 Webhooks',
+      '## 调用协议',
+      '## 枚举',
+      '## 回调能力',
+      '## 接入建议',
+      '## 相关页面',
+    ],
   ],
   [
     '/platform-api/migration-to-openim',
@@ -483,9 +484,7 @@ for (const route of routes) {
         if (visibleBrandPattern.test(localizedMdx)) {
           errors.push(`${localizedFile}: visible Chinese page must not mention Sendbird`);
         }
-        const expectedZhOverviewHeadings = platformApiZhOverviewHeadingExpectations.get(
-          route.path,
-        );
+        const expectedZhOverviewHeadings = platformApiZhOverviewHeadingExpectations.get(route.path);
         if (expectedZhOverviewHeadings) {
           const actualHeadings = extractPlatformApiSecondLevelHeadings(localizedBody);
           if (actualHeadings.join('\n') !== expectedZhOverviewHeadings.join('\n')) {
@@ -501,9 +500,7 @@ for (const route of routes) {
         }
         for (const pattern of platformApiUncoveredPatterns) {
           if (pattern.test(localizedBody)) {
-            errors.push(
-              `${localizedFile}: contains uncovered capability wording (${pattern})`,
-            );
+            errors.push(`${localizedFile}: contains uncovered capability wording (${pattern})`);
           }
         }
         for (const pattern of platformApiZhLegacyPatterns) {
@@ -524,9 +521,7 @@ for (const route of routes) {
             !localizedBody.includes('## 请求参数') &&
             !localizedBody.includes('## 请求体')
           ) {
-            errors.push(
-              `${localizedFile}: missing Sendbird-style parameter/request-body section`,
-            );
+            errors.push(`${localizedFile}: missing Sendbird-style parameter/request-body section`);
           }
           for (const pattern of platformApiForbiddenApiHeadings) {
             if (pattern.test(localizedBody)) {
@@ -616,9 +611,7 @@ for (const route of routes) {
     warnings.push(`Route is not represented in sidebar navigation: ${route.path}`);
 }
 
-const platformContext = navigation.contexts.find(
-  (context) => context.key === 'chat/platform-api',
-);
+const platformContext = navigation.contexts.find((context) => context.key === 'chat/platform-api');
 if (platformContext) {
   for (const segment of collectFolderSegments(platformContext.nodes)) {
     if (!platformApiZh.navigationLabels[segment]) {

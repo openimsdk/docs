@@ -149,7 +149,9 @@ export function resolvePlatformRoutes({ platform, routesData, sidebar }) {
                     ? 'Android'
                     : platform.id === 'uniapp'
                       ? 'uni-app and uni-app x'
-                      : 'Flutter'
+                      : platform.id === 'harmony'
+                        ? 'HarmonyOS'
+                        : 'Flutter'
               }`
           : structuralRoute.title,
     };

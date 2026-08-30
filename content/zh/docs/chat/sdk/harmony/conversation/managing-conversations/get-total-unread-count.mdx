@@ -1,0 +1,32 @@
+---
+title: '获取消息总未读数'
+description: '查询并持续维护当前账号的会话消息总未读数。'
+sourcePath: '/sdk/harmony/conversation/managing-conversations/get-total-unread-count'
+---
+
+不要只对已加载分页求和，未加载会话也可能有未读消息。
+
+```ts
+import sdk, {
+  EventOnTotalUnreadMessageCountChangedData,
+  GetTotalUnreadMsgCountResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const response: GetTotalUnreadMsgCountResp = await sdk.getTotalUnreadMsgCount();
+updateApplicationBadge(response.totalUnreadCount);
+
+const handleUnreadChanged = (data: EventOnTotalUnreadMessageCountChangedData): void => {
+  updateApplicationBadge(data.totalUnreadCount);
+};
+const unsubscribeUnread = sdk.on(
+  OpenIMSDKEvent.EventOnTotalUnreadMessageCountChanged,
+  handleUnreadChanged,
+);
+
+export function removeTotalUnreadListener(): void {
+  unsubscribeUnread();
+}
+```
+
+重连同步完成或事件可能遗漏时重新查询。应用桌面角标还应按[设置应用角标数量](/sdk/harmony/app-integration/set-app-badge)同步。

@@ -1,0 +1,110 @@
+---
+title: '认证与管理登录会话'
+description: '登录当前用户、处理连接与 Token 事件、更新 Token 并退出账号。'
+sourcePath: '/sdk/harmony/getting-started/authenticate-and-manage-session'
+---
+
+SDK 初始化后，应在登录前注册连接和账号事件，再使用可信后端返回的 `userID` 与 Token 登录。`login()` Promise 成功、长连接建立和服务端数据同步完成是三个不同阶段。
+
+## 注册连接与账号事件
+
+```ts
+import sdk, {
+  EventOnConnectFailedData,
+  EventOnKickedOfflineData,
+  EventOnUserTokenInvalidData,
+  OpenIMSDKEmptyPayload,
+  OpenIMSDKEvent,
+  OpenIMSDKUnsubscribe,
+} from '@openimsdk/imsdk';
+
+const unsubscribes: OpenIMSDKUnsubscribe[] = [];
+
+const handleConnecting = (data: OpenIMSDKEmptyPayload): void => {
+  setConnectionState('connecting');
+};
+const handleConnected = (data: OpenIMSDKEmptyPayload): void => {
+  setConnectionState('connected');
+};
+const handleConnectFailed = (data: EventOnConnectFailedData): void => {
+  console.error(`OpenIM connection failed: ${data.errCode} ${data.errMsg}`);
+};
+const handleKickedOffline = (data: EventOnKickedOfflineData): void => {
+  clearCurrentSession();
+  showSignedInElsewhereDialog(data.reason);
+};
+const handleTokenExpired = (data: OpenIMSDKEmptyPayload): void => {
+  refreshOpenIMToken();
+};
+const handleTokenInvalid = (data: EventOnUserTokenInvalidData): void => {
+  clearCurrentSession();
+  showTokenInvalidMessage(data.errMsg);
+};
+
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnConnecting, handleConnecting));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnConnectSuccess, handleConnected));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnConnectFailed, handleConnectFailed));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnKickedOffline, handleKickedOffline));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnUserTokenExpired, handleTokenExpired));
+unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnUserTokenInvalid, handleTokenInvalid));
+```
+
+同一账号在当前版本中按多端互斥处理。收到 `EventOnKickedOffline` 后，不要自动抢回登录状态；应清理业务数据并等待用户主动确认。
+
+## 登录当前用户
+
+```ts
+import sdk, { LoginReq } from '@openimsdk/imsdk';
+
+const request: LoginReq = {
+  userID: currentUserID,
+  token: currentToken,
+};
+
+await sdk.login(request);
+```
+
+登录 Promise 成功后，继续等待 `EventOnConnectSuccess` 和[事件](/sdk/harmony/events/overview-events)页说明的 `EventOnSyncServerFinish`。只有两者均已到达，才开始读取会话、群组、关系链和历史消息。
+
+## 查询登录状态
+
+```ts
+import sdk, { GetLoginStatusResp, LoginStatus } from '@openimsdk/imsdk';
+
+const response: GetLoginStatusResp = await sdk.getLoginStatus();
+if (response.status === LoginStatus.Logged) {
+  restoreSignedInInterface();
+}
+```
+
+| 状态                     | 说明                                                     |
+| ------------------------ | -------------------------------------------------------- |
+| `LoginStatus.LoggedOut`  | 当前未登录。                                             |
+| `LoginStatus.Logging`    | 正在登录，不应再发起并行登录。                           |
+| `LoginStatus.Logged`     | 登录会话已建立；仍需结合连接和同步事件判断数据是否可用。 |
+| `LoginStatus.LoggingOut` | 正在退出。                                               |
+
+## 更新 Token
+
+```ts
+import sdk, { UpdateTokenReq } from '@openimsdk/imsdk';
+
+const request: UpdateTokenReq = {
+  token: await requestOpenIMTokenFromBackend(),
+};
+await sdk.updateToken(request);
+```
+
+更新成功表示 SDK 已接受新 Token。Token 已失效、账号被踢下线或会话无法恢复时，应重新进入明确的登录流程。
+
+## 退出并清理监听
+
+```ts
+await sdk.logout();
+
+for (let index = 0; index < unsubscribes.length; index += 1) {
+  unsubscribes[index]();
+}
+```
+
+退出成功后清理当前账号的业务状态。只有进程不再使用 SDK 时才继续调用 `unInitSDK()`；普通账号切换不需要销毁整个原生运行时。
