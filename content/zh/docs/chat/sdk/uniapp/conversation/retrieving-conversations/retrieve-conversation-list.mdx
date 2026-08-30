@@ -1,0 +1,96 @@
+---
+title: '获取会话列表'
+description: '分页获取当前用户的会话列表，并同步后续会话变化。'
+sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+会话列表属于当前登录用户。应使用 `getConversationListSplit()` 分页读取，避免一次加载完整列表。第一页从 `offset: 0` 开始，继续加载时按已请求的条目数增加偏移量。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
+| `count` | `number` | 是 | 本次读取的会话数量。 |
+
+```uts
+import { getConversationListSplit } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getConversationListSplit({
+  offset: 0,
+  count: 50,
+})
+const conversations = result?.conversations ?? []
+mergeConversations(conversations)
+```
+
+Promise 成功后返回 `OpenIMConversationListResult | null`，当前页会话位于 `conversations`。合并分页时应按 `conversationID` 去重；本次返回数量小于 `count` 时，可视为到达列表末尾。重新登录、用户主动刷新或需要确认完整列表时，应清空旧分页状态并从第一页重新读取。
+
+## 会话字段
+
+`OpenIMConversationItem` 同时包含聊天目标、列表展示和当前账号的会话设置：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `string` | 会话的稳定 ID，用于合并查询结果和事件。 |
+| `conversationType` | `OpenIMSessionType` | 会话类型，例如单聊或群聊。 |
+| `userID` | `string \| null` | 单聊对方的用户 ID；群聊中通常为空。 |
+| `groupID` | `string \| null` | 群聊对应的群组 ID；单聊中通常为空。 |
+| `showName` | `string` | 当前会话记录中的展示名称。 |
+| `faceURL` | `string` | 当前会话记录中的展示头像。 |
+| `latestMsg` | `string \| null` | 最后一条消息的序列化内容；为空表示没有可展示的末条消息。 |
+| `latestMsgSendTime` | `number` | 最后一条消息发送时间，Unix 毫秒时间戳。 |
+| `unreadCount` | `number` | 当前账号在该会话中的未读消息数。 |
+| `recvMsgOpt` | `number` | 该会话的消息接收方式。 |
+| `groupAtType` | `number` | 群聊中的 @ 提醒状态；单聊不使用。 |
+| `draftText` | `string` | 当前客户端保存的会话草稿。 |
+| `draftTextTime` | `number` | 草稿更新时间，Unix 毫秒时间戳。 |
+| `isPinned` | `boolean` | 会话是否置顶。 |
+| `isMarked` | `boolean \| null` | 当前用户是否标记了该会话。标记后的会话会进入内置“标记一组”。 |
+| `remark` | `string \| null` | 当前用户为该会话设置的备注；为空表示未设置备注。 |
+| `isPrivateChat` | `boolean` | 是否启用私聊阅后即焚。 |
+| `burnDuration` | `number` | 私聊阅后即焚时长，单位为秒。 |
+| `isMsgDestruct` | `boolean` | 是否启用定期删除服务端消息。 |
+| `msgDestructTime` | `number` | 服务端消息删除周期，单位为秒。 |
+| `isNotInGroup` | `boolean` | 当前账号是否已不在该群组中。 |
+| `updateUnreadCountTime` | `number` | 会话未读数最后更新时间，Unix 毫秒时间戳。 |
+| `minSeq` | `number` | 当前会话已同步消息的最小序列号。 |
+| `maxSeq` | `number` | 当前会话已同步消息的最大序列号。 |
+| `ex` | `string` | 会话扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+列表标题和头像可以使用 `showName` 与 `faceURL`。好友或群资料变化时，应通过对应资料事件或重新查询获取最新内容；不要根据展示名称生成会话 ID。
+
+## 同步会话变化
+
+本页负责 `onNewConversation()` 和 `onConversationChanged()` 的完整监听。两个处理器都收到 `OpenIMConversationListResult | null`，一次事件可能携带多条会话；应遍历 `conversations` 并按 `conversationID` 合并。
+
+```uts
+import {
+  OpenIMConversationListResult,
+  off,
+  onConversationChanged,
+  onNewConversation,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleConversationUpdates = (
+  result: OpenIMConversationListResult | null,
+) => {
+  if (result == null) return
+  mergeConversations(result.conversations)
+}
+
+const newConversationSubscription = onNewConversation(
+  handleConversationUpdates,
+)
+const conversationChangedSubscription = onConversationChanged(
+  handleConversationUpdates,
+)
+
+function removeConversationListListeners() {
+  off(newConversationSubscription)
+  off(conversationChangedSubscription)
+}
+```
+
+组件卸载、退出登录或切换账号时调用 `removeConversationListListeners()`。不要用已加入群组列表替代会话列表：用户可能已加入群组但尚未产生会话，也可能退出群组后仍保留历史会话记录。

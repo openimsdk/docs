@@ -1,0 +1,53 @@
+---
+title: '批量删除消息'
+description: '使用 UniApp SDK 批量删除同一会话中的消息。'
+sourcePath: '/sdk/uniapp/message/managing-messages/delete-saved-messages'
+---
+
+批量删除消息属于商业版能力。一次调用中的消息必须属于同一会话：
+
+```uts
+import { deleteMessages } from '@/uni_modules/unix-openim-sdk'
+
+await deleteMessages({
+  conversationID,
+  clientMsgIDs: selectedMessageIDs,
+  IsSync: true,
+})
+```
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 要删除消息所属的会话 ID。 |
+| `clientMsgIDs` | `string[]` | 是 | 要删除的客户端消息 ID；同一批 ID 必须属于该会话。 |
+| `IsSync` | `boolean` | 是 | 是否将删除动作同步到当前账号的其他客户端。字段首字母为大写。 |
+
+`IsSync: false` 删除当前设备及当前账号服务端记录；传 `true` 时还请求将删除动作同步到当前账号的其他客户端。它不会删除其他会话成员持有的消息副本，也不会生成撤回提示。
+
+Promise 成功表示删除请求已经完成；开启同步时，也不表示其他客户端已经收到事件或刷新界面。
+
+## 接收同步删除
+
+`onMsgDeleted()` 的完整监听集中在本页。事件直接返回被删除的 `OpenIMMessageItem | null`。先确定消息所属会话，再按 `conversationID:clientMsgID` 移除；重复事件不应再次改变列表。
+
+```uts
+import {
+  off,
+  onMsgDeleted,
+  OpenIMMessageItem,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleMessageDeleted = (message: OpenIMMessageItem | null) => {
+  if (message == null || message.clientMsgID == null) return
+
+  const messageConversationID = resolveMessageConversationID(message)
+  removeMessage(messageConversationID, message.clientMsgID)
+}
+
+const messageDeletedSubscription = onMsgDeleted(handleMessageDeleted)
+
+// 页面卸载或账号切换时：
+off(messageDeletedSubscription)
+```
+
+需要确认最终列表时，重新查询该会话的历史消息并以最新结果为准。

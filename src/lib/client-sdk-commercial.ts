@@ -1,6 +1,7 @@
 import flutterAudit from '@/data/structure/flutter-content-audit.json';
 import iosAudit from '@/data/structure/ios-content-audit.json';
 import androidAudit from '@/data/structure/android-content-audit.json';
+import uniappAudit from '@/data/structure/uniapp-content-audit.json';
 import ownership from '@/data/structure/wasm-api-ownership.json';
 
 type OwnershipEntry = {
@@ -10,7 +11,7 @@ type OwnershipEntry = {
   commercial?: boolean;
 };
 
-type NativePlatform = 'android' | 'flutter' | 'ios';
+type NativePlatform = 'android' | 'flutter' | 'ios' | 'uniapp';
 
 type ClientSdkAuditPage = {
   currentPath: string;
@@ -40,6 +41,7 @@ const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
   android: androidAudit.pages as ClientSdkAuditPage[],
   flutter: flutterAudit.pages as ClientSdkAuditPage[],
   ios: iosAudit.pages as ClientSdkAuditPage[],
+  uniapp: uniappAudit.pages as ClientSdkAuditPage[],
 };
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
@@ -71,6 +73,9 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
     Open_im_sdkSpeechToTextCapabilities: 'speechToTextCapabilities',
     Open_im_sdkUpdateConversationGroup: 'updateConversationGroup',
     setConversationPinnedMsgWithConversationID: 'setConversationPinnedMsg',
+  },
+  uniapp: {
+    getSpeechToTextCapabilities: 'speechToTextCapabilities',
   },
 };
 
@@ -120,6 +125,13 @@ const fullCommercialConceptPages = new Set([
   '/sdk/android/conversation/managing-conversations/set-burn-duration',
   '/sdk/android/conversation/managing-conversations/set-message-destruct',
   '/sdk/android/user/user-profile/set-friend-add-permission',
+  '/sdk/uniapp/conversation/managing-conversations/set-private-chat',
+  '/sdk/uniapp/conversation/managing-conversations/set-burn-duration',
+  '/sdk/uniapp/conversation/managing-conversations/set-message-destruct',
+  '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
+  '/sdk/uniapp/message/composing-messages/save-local-transcript',
+  '/sdk/uniapp/user/profile/set-friend-add-permission',
 ]);
 
 function applyCommercialConceptOverride(
@@ -166,7 +178,7 @@ function parseClientSdkPath(
   | { platform: 'wasm'; wasmPath: string }
   | { platform: NativePlatform; wasmPath: string }
   | undefined {
-  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp)(\/.*)$/);
   if (!match) return undefined;
 
   const platform = match[1] as 'wasm' | NativePlatform;

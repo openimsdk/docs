@@ -1,0 +1,23 @@
+---
+title: '定期删除服务端消息'
+description: '启用、关闭并配置指定会话的服务端消息定期删除策略。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversations/set-message-destruct'
+---
+
+定期删除服务端消息属于商业版能力，由 `isMsgDestruct` 和 `msgDestructTime` 共同控制：前者设置开关，后者设置删除周期。两个字段属于同一项操作，可以在一次调用中提交。
+
+```uts
+import { setConversation } from '@/uni_modules/unix-openim-sdk'
+
+await setConversation({
+  conversationID,
+  isMsgDestruct: true,
+  msgDestructTime: 3600,
+})
+```
+
+`msgDestructTime` 的单位为秒。关闭时传入 `isMsgDestruct: false`；是否同时保留之前设置的周期由产品交互决定。该能力只控制服务端消息的定期删除，不是阅后即焚；阅后即焚使用 `isPrivateChat` 和 `burnDuration`。
+
+达到删除周期后，策略只清理服务端保存的消息，不会主动删除当前设备或其他客户端已经同步到本地的消息。客户端卸载重装、清除本地数据或切换到尚未同步过这些消息的新设备后，已被服务端清理的消息无法再次拉取。
+
+Promise 成功只表示设置请求已经完成，不表示会话变化事件已经到达。收到 `onConversationChanged()` 后，按 `conversationID` 更新对应会话的 `isMsgDestruct` 和 `msgDestructTime`；需要校准状态时重新查询会话。完整监听见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。

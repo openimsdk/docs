@@ -142,7 +142,15 @@ export function resolvePlatformRoutes({ platform, routesData, sidebar }) {
         suffix === 'overview'
           ? platform.id === 'wasm'
             ? structuralRoute.title
-            : `OpenIM SDK for ${platform.id === 'ios' ? 'iOS' : platform.id === 'android' ? 'Android' : 'Flutter'}`
+            : `OpenIM SDK for ${
+                platform.id === 'ios'
+                  ? 'iOS'
+                  : platform.id === 'android'
+                    ? 'Android'
+                    : platform.id === 'uniapp'
+                      ? 'uni-app and uni-app x'
+                      : 'Flutter'
+              }`
           : structuralRoute.title,
     };
   });

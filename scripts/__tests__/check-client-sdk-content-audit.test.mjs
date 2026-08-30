@@ -155,6 +155,31 @@ test('rejects conversationID on the Flutter Message model', () => {
   assert.ok(errors.some((error) => error.includes('does not expose conversationID')));
 });
 
+test('rejects TypeScript-only syntax in UniApp SDK examples', () => {
+  const platform = getClientSdkPlatform('uniapp');
+  const path = '/sdk/uniapp/message/managing-messages/modify-a-message';
+  const page = auditPage(path, platform.sdkCommit);
+  page.openimSources = [platform.sdkCommit];
+  const errors = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit: {
+      schemaVersion: 1,
+      sources: { uniappSdk: { tag: platform.sdkTag, commit: platform.sdkCommit } },
+      pages: [page],
+    },
+    manualPages: new Map([
+      [
+        path,
+        '```ts\nimport { type OpenIMMessageItem } from "sdk"\nconst next = { ...message }\n```',
+      ],
+    ]),
+  });
+
+  assert.ok(errors.some((error) => error.includes('requires a UTS example')));
+  assert.ok(errors.some((error) => error.includes('must use UTS code fences')));
+});
+
 function auditPage(path, commit) {
   return {
     currentPath: path,

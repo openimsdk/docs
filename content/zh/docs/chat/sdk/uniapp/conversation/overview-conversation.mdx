@@ -1,0 +1,46 @@
+---
+title: '会话概览'
+description: '了解会话记录、聊天目标、会话 ID 和列表同步之间的关系。'
+sourcePath: '/sdk/uniapp/conversation/overview-conversation'
+---
+
+在 OpenIMSDK 中，会话是当前登录用户围绕一次单聊或群聊维护的客户端聊天状态。每条 `OpenIMConversationItem` 保存未读数、最后一条消息、置顶、草稿、消息接收选项和消息存储策略等信息。
+
+会话记录与聊天目标使用不同标识：`conversationID` 定位当前账号的一条会话状态；单聊目标使用对方 `userID`，群聊目标使用 `groupID`。群聊页面通常同时需要 `groupID` 访问群资料和成员能力，并使用 `conversationID` 处理会话设置、未读数和消息历史。
+
+## 会话标识
+
+按聊天目标查询会话或生成会话 ID 时，单聊把对方用户 ID 作为 `sourceID`，类型使用 `OpenIMSessionTypeSingle`；群聊把群组 ID 作为 `sourceID`，类型使用 `OpenIMSessionTypeWriteGroup`。不要在应用层自行拼接会话 ID。
+
+| 标识 | 用途 |
+| --- | --- |
+| `conversationID` | 当前账号的会话记录 ID，用于会话设置、消息历史和未读状态。 |
+| `userID` | 单聊对方的用户 ID。 |
+| `groupID` | 群聊对应的群组 ID，也是群组 API 的目标标识。 |
+| `sourceID` | 按类型查询时传入的聊天目标 ID：单聊为 `userID`，群聊为 `groupID`。 |
+
+## 会话数据的职责
+
+`OpenIMConversationItem` 的字段可以按职责理解：
+
+| 职责 | 相关字段 | 说明 |
+| --- | --- | --- |
+| 标识与类型 | `conversationID`、`conversationType`、`userID`、`groupID` | 定位会话并对应真实聊天目标。 |
+| 列表展示 | `showName`、`faceURL`、`latestMsg`、`latestMsgSendTime` | 渲染会话名称、头像和最后一条消息。 |
+| 未读与提醒 | `unreadCount`、`groupAtType`、`recvMsgOpt` | 展示未读数、群聊 @ 状态和消息接收方式。 |
+| 本地整理 | `isPinned`、`isMarked`、`remark`、`draftText`、`draftTextTime` | 维护当前账号的置顶、标记、备注和草稿状态。 |
+| 消息策略 | `isPrivateChat`、`burnDuration`、`isMsgDestruct`、`msgDestructTime` | 描述阅后即焚和定期删除服务端消息等设置。 |
+| 同步范围 | `minSeq`、`maxSeq`、`updateUnreadCountTime` | 记录本地会话消息与未读状态的同步位置。 |
+| 业务扩展 | `ex`、`attachedInfo` | 保存业务扩展和 SDK 附加信息。 |
+
+## 查询与同步
+
+- 从用户资料或群资料进入聊天页时，使用[查询指定会话](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target)。
+- 只需要稳定标识时，使用[获取会话 ID](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id)。
+- 已经持有一组会话 ID 时，使用[按 ID 批量获取会话](/sdk/uniapp/conversation/retrieving-conversations/get-conversations-by-id)。
+- 构建会话列表时，使用[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)，并在同一页监听新增和变化事件。
+- 筛选本地已有会话时，使用[搜索会话](/sdk/uniapp/conversation/retrieving-conversations/search-conversations)。
+- 整理会话列表时，可分别[置顶会话](/sdk/uniapp/conversation/managing-conversations/pin-conversation)、[标记会话](/sdk/uniapp/conversation/managing-conversations/mark-conversation)或[设置会话备注](/sdk/uniapp/conversation/managing-conversations/set-conversation-remark)。
+- 需要配置服务端消息保留周期时，使用[定期删除服务端消息](/sdk/uniapp/conversation/managing-conversations/set-message-destruct)。
+
+查询用于取得调用时的数据，事件用于提供后续变化。一次修改请求成功、相关事件到达和重新查询得到最新结果是三个不同阶段；页面应使用 `conversationID` 合并状态，并在事件可能遗漏时重新查询最新会话数据。

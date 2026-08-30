@@ -1,0 +1,53 @@
+---
+title: '创建 @ 消息'
+description: '创建一条用于群聊的 @ 文本消息。'
+sourcePath: '/sdk/uniapp/message/creating-messages/create-text-at-message'
+---
+
+`createTextAtMessage()` 创建群聊 @ 消息。正文中的展示文本和 `atUserIDList` 应保持一致；应用应使用稳定用户 ID 识别被提及成员。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `text` | `string` | 是 | 消息正文。 |
+| `atUserIDList` | `string[]` | 是 | 被提及的用户 ID 或 SDK 返回的全体成员标记。 |
+| `atUsersInfo` | `OpenIMAtUsersInfoItem[]` | 否 | 用户 ID 与群内展示名。 |
+| `quoteMessage` | `OpenIMMessageItem` | 否 | 同时回复的原消息。 |
+
+```uts
+import { createTextAtMessage } from '@/uni_modules/unix-openim-sdk'
+
+const message = await createTextAtMessage({
+  text: '@Alex 请确认',
+  atUserIDList: ['user_a'],
+  atUsersInfo: [{
+    atUserID: 'user_a',
+    groupNickname: 'Alex',
+  }],
+})
+if (message == null) return
+```
+
+创建结果只用于群聊发送。该操作本身不会改变会话中的 @ 提醒状态，也不会触发新消息事件。
+
+## 提及全体成员
+
+不要在业务代码中写死全体成员标记。先调用 `getAtAllTag()` 读取当前 SDK 约定，再将 `tag` 同时放入正文和用户列表：
+
+```uts
+import {
+  createTextAtMessage,
+  getAtAllTag,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await getAtAllTag()
+if (result == null || result.tag.length == 0) return
+
+const message = await createTextAtMessage({
+  text: result.tag + ' 请查看群公告',
+  atUserIDList: [result.tag],
+})
+```
+
+`getAtAllTag()` 只读取标记，不创建或发送消息。将非空消息交给[发送消息](/sdk/uniapp/message/sending-messages/send-message)，并且只填写目标群组 ID。

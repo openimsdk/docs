@@ -1,0 +1,43 @@
+---
+title: '创建群组'
+description: '创建群组并配置初始管理员和普通成员。'
+sourcePath: '/sdk/uniapp/group/create-group'
+---
+
+`createGroup()` 接收初始群资料、普通成员列表和可选管理员列表。当前 UTS 合同不支持通过创建参数另行指定群主；创建完成后，应以返回结果中的 `ownerUserID` 为准。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `OpenIMCreateGroupInfo` | 是 | 初始群资料。 |
+| `groupInfo.groupName` | `string` | 是 | 群名称。 |
+| `groupInfo.groupType` | `2` | 是 | 当前插件创建常规工作群时固定传 `2`。 |
+| `groupInfo.notification` | `string` | 否 | 初始群公告。 |
+| `groupInfo.introduction` | `string` | 否 | 初始群简介。 |
+| `groupInfo.faceURL` | `string` | 否 | 群头像地址。 |
+| `groupInfo.ex` | `string` | 否 | 群组扩展字符串。 |
+| `memberUserIDs` | `string[]` | 是 | 初始普通成员用户 ID。 |
+| `adminUserIDs` | `string[]` | 否 | 初始管理员用户 ID。 |
+
+普通成员和管理员列表应先去重，并检查两组列表不存在交集。是否允许显式包含当前登录用户以服务端校验结果为准；当前合同不能另行指定群主。
+
+```uts
+import { createGroup } from '@/uni_modules/unix-openim-sdk'
+
+const group = await createGroup({
+  groupInfo: {
+    groupName: '项目讨论组',
+    groupType: 2,
+    faceURL: 'https://example.com/group.png',
+  },
+  memberUserIDs: ['user-003', 'user-004'],
+  adminUserIDs: ['user-002'],
+})
+
+if (group != null) {
+  openGroupPage(group.groupID)
+}
+```
+
+Promise 成功后返回 `OpenIMGroupItem | null`。非空结果可以立即用于群资料页；收到 `onJoinedGroupAdded()` 后，再按 `groupID` 合并已加入群组列表。完整监听见[群组概览](/sdk/uniapp/group/overview-group)。

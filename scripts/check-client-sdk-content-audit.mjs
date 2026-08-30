@@ -68,7 +68,15 @@ export function validateClientSdkAudit({
     }
 
     if (page.locales?.zh?.reviewStatus !== 'structure-only') {
-      if (!(page.openimSources ?? []).some((source) => source.includes(platform.sdkCommit))) {
+      const acceptedSdkCommits = [
+        platform.sdkCommit,
+        ...(platform.previousSdkCommits ?? []),
+      ];
+      if (
+        !(page.openimSources ?? []).some((source) =>
+          acceptedSdkCommits.some((commit) => source.includes(commit)),
+        )
+      ) {
         errors.push(`${path}: reviewed page requires the pinned SDK commit as evidence`);
       }
     }
@@ -173,6 +181,20 @@ function validateManualPage({ platform, page, path, source, errors }) {
     if ((page.sdkMethods?.length ?? 0) > 0 && !source.includes('```java')) {
       errors.push(`${path}: method page requires a Java example`);
     }
+  } else if (platform.id === 'uniapp') {
+    const utsExamples = extractUtsCodeBlocks(source).join('\n');
+    if ((page.sdkMethods?.length ?? 0) > 0 && !source.includes('```uts')) {
+      errors.push(`${path}: method page requires a UTS example`);
+    }
+    if (/```(?:ts|typescript|js|javascript)\n/.test(source)) {
+      errors.push(`${path}: UniApp SDK examples must use UTS code fences`);
+    }
+    if (/\btype\s+OpenIM[A-Za-z0-9_]*/.test(utsExamples)) {
+      errors.push(`${path}: UTS imports must not use TypeScript type modifiers`);
+    }
+    if (/\.\.\.[A-Za-z_][A-Za-z0-9_.]*/.test(utsExamples)) {
+      errors.push(`${path}: UTS examples must not use object spread syntax`);
+    }
   }
 }
 
@@ -194,9 +216,13 @@ function extractDartCodeBlocks(source) {
   return [...source.matchAll(/```dart\n([\s\S]*?)\n```/g)].map((match) => match[1]);
 }
 
+function extractUtsCodeBlocks(source) {
+  return [...source.matchAll(/```uts\n([\s\S]*?)\n```/g)].map((match) => match[1]);
+}
+
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter'];
+  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'uniapp'];
   let failed = false;
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);

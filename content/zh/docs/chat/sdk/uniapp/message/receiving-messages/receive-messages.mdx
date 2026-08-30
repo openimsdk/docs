@@ -1,0 +1,61 @@
+---
+title: '接收消息'
+description: '监听普通、离线和仅在线消息，并合并到对应会话。'
+sourcePath: '/sdk/uniapp/message/receiving-messages/receive-messages'
+---
+
+消息事件负责提供新到达的消息；首次进入会话、向上翻页或重连后刷新列表时，仍需主动[加载历史消息](/sdk/uniapp/message/retrieving-messages/load-older-messages)。两条路径可能包含同一条消息，应先确定目标会话，再按 `clientMsgID` 去重。
+
+`OpenIMMessageItem` 不包含 `conversationID`。单聊消息根据 `sessionType`、`sendID` 和 `recvID` 确定对方，群聊消息使用 `groupID`；应用可以据此计算会话 ID，或调用会话查询 API 取得对应会话。不要用展示名称或列表位置识别消息。
+
+## 监听新消息
+
+`onRecvNewMessages()` 和 `onRecvOfflineNewMessages()` 的回调参数是 `OpenIMMessageListResult | null`，消息数组位于 `messages`。`onRecvOnlineOnlyMessage()` 每次返回单条 `OpenIMMessageItem | null`。
+
+```uts
+import {
+  OpenIMMessageItem,
+  OpenIMMessageListResult,
+  off,
+  onRecvNewMessages,
+  onRecvOfflineNewMessages,
+  onRecvOnlineOnlyMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleNewMessages = (result: OpenIMMessageListResult | null) => {
+  if (result == null) return
+  mergeMessagesByClientMsgID(result.messages)
+}
+
+const handleOfflineMessages = (result: OpenIMMessageListResult | null) => {
+  if (result == null) return
+  mergeMessagesByClientMsgID(result.messages)
+}
+
+const handleOnlineOnlyMessage = (message: OpenIMMessageItem | null) => {
+  if (message == null) return
+  showTransientMessage(message)
+}
+
+const newMessagesSubscription = onRecvNewMessages(handleNewMessages)
+const offlineMessagesSubscription = onRecvOfflineNewMessages(handleOfflineMessages)
+const onlineOnlySubscription = onRecvOnlineOnlyMessage(handleOnlineOnlyMessage)
+
+function removeMessageListeners() {
+  off(newMessagesSubscription)
+  off(offlineMessagesSubscription)
+  off(onlineOnlySubscription)
+}
+```
+
+应用通过 `setAppBackgroundStatus(true)` 告知 SDK 进入后台后，后台期间同步到的消息通常由离线消息事件提供；回到前台时应恢复为 `false`。前后台状态的调用位置见[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。
+
+仅在线消息由发送方设置 `isOnlineOnly: true`。它不会进入 SDK 本地历史消息，适合正在输入提示等临时状态；不要把必须回放的业务数据只通过该事件传递。
+
+## 合并消息状态
+
+事件可能包含当前没有打开的会话。先把消息路由到正确会话，再使用“目标会话 + `clientMsgID`”替换或插入消息。普通消息事件、离线消息事件和历史查询都必须使用同一去重规则；重复到达不应产生第二个气泡。
+
+撤回、删除和修改消息由各自的状态事件处理，本页不重复注册。事件到达不代表某次历史查询已经完成，历史查询成功也不代表后续不会再收到增量消息。
+
+组件卸载、退出登录或切换账号前调用 `removeMessageListeners()`。如果消息监听放在全局状态层，不要在每次进入聊天页时重复注册。

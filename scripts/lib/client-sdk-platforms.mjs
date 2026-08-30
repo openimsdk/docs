@@ -38,6 +38,22 @@ const clientSdkPlatforms = {
     sdkTag: '3.8.3+hotfix.12',
     sdkCommit: '95889be7a26dce6fe896ef22096c9036cc25fc9b',
   },
+  uniapp: {
+    id: 'uniapp',
+    contextKey: 'chat/sdk/uniapp',
+    routePrefix: '/sdk/uniapp',
+    manualRoot: 'content/zh/docs/chat/sdk/uniapp',
+    auditPath: 'data/structure/uniapp-content-audit.json',
+    labelsPath: 'data/structure/uniapp-navigation-labels.json',
+    sidebarPath: 'data/structure/uniapp-sidebar.json',
+    localizedOutputPath: 'src/generated/uniapp-sdk-zh-content.json',
+    sdkSourceKey: 'uniappSdk',
+    sdkTag: '0.2.3',
+    sdkCommit: 'sha256:8de6339b8c5c8f02a031892589de8e519de03240a34c22cb3548b501212308c3',
+    previousSdkCommits: [
+      'sha256:c4390e829a89ee2d3a5b781228102983d25e04dadfab3f7164a80a68fe01a90c',
+    ],
+  },
   wasm: {
     id: 'wasm',
     contextKey: 'chat/sdk/wasm',
@@ -50,7 +66,11 @@ const clientSdkPlatforms = {
   },
 };
 
-export const clientSdkPlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));
+// Locale publication remains explicit. UniApp participates in structure and
+// content validation, but is not added to publication gating until its audit
+// states are promoted for release.
+export const clientSdkPlatformIds = Object.freeze(['android', 'ios', 'flutter', 'wasm']);
+export const clientSdkStructurePlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));
 
 export function getClientSdkPlatform(id) {
   const platform = clientSdkPlatforms[id];

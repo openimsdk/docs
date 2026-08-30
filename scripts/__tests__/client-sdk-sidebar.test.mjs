@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { clientSdkPlatformIds, getClientSdkPlatform } from '../lib/client-sdk-platforms.mjs';
+import {
+  clientSdkPlatformIds,
+  clientSdkStructurePlatformIds,
+  getClientSdkPlatform,
+} from '../lib/client-sdk-platforms.mjs';
 import {
   buildClientSdkSidebar,
   decideClientSdkSidebarApplication,
@@ -13,6 +17,13 @@ const wasmSidebar = readJson('data/structure/wasm-sidebar.json');
 
 test('registers the supported client SDK platforms and their structure paths', () => {
   assert.deepEqual(clientSdkPlatformIds, ['android', 'ios', 'flutter', 'wasm']);
+  assert.deepEqual(clientSdkStructurePlatformIds, [
+    'android',
+    'ios',
+    'flutter',
+    'uniapp',
+    'wasm',
+  ]);
   assert.deepEqual(getClientSdkPlatform('android'), {
     id: 'android',
     contextKey: 'chat/sdk/android',
@@ -40,6 +51,7 @@ test('registers the supported client SDK platforms and their structure paths', (
     sdkCommit: '17fb969fd3a360f00fe65f476435b81857e274f8',
   });
   assert.equal(getClientSdkPlatform('flutter').contextKey, 'chat/sdk/flutter');
+  assert.equal(getClientSdkPlatform('uniapp').contextKey, 'chat/sdk/uniapp');
   assert.equal(getClientSdkPlatform('wasm').contextKey, 'chat/sdk/wasm');
   assert.throws(() => getClientSdkPlatform('unknown'), /Unknown client SDK platform: unknown/);
 });
@@ -66,7 +78,7 @@ test('native sidebars keep unique platform routes and may extend the WASM struct
 test('keeps relationships beside users and account settings beside user profiles', () => {
   const navigation = readJson('src/generated/navigation.json');
 
-  for (const platform of ['wasm', 'ios', 'flutter', 'android']) {
+  for (const platform of ['wasm', 'ios', 'flutter', 'android', 'uniapp']) {
     const sidebar = readJson(`data/structure/${platform}-sidebar.json`);
     const user = sidebar.nodes.find((node) => node.id === 'user');
     const relationships = sidebar.nodes.find((node) => node.id === 'relationships');
@@ -77,17 +89,17 @@ test('keeps relationships beside users and account settings beside user profiles
     const profile = user.children.find((node) => node.id === 'user/user-profile');
     const onlineStatus = user.children.find((node) => node.id === 'user/online-status');
     const globalReceptionPath =
-      platform === 'wasm'
-        ? '/sdk/wasm/user/profile/set-global-message-reception'
+      platform === 'wasm' || platform === 'uniapp'
+        ? `/sdk/${platform}/user/profile/set-global-message-reception`
         : platform === 'android'
           ? '/sdk/android/user/user-profile/set-global-message-reception'
           : `/sdk/${platform}/user/retrieving-and-updating-user-information/set-global-message-reception`;
     const onlineStatusPaths =
-      platform === 'wasm'
+      platform === 'wasm' || platform === 'uniapp'
         ? [
-            '/sdk/wasm/user/online-status/subscribe-users-status',
-            '/sdk/wasm/user/online-status/get-subscribe-users-status',
-            '/sdk/wasm/user/online-status/unsubscribe-users-status',
+            `/sdk/${platform}/user/online-status/subscribe-users-status`,
+            `/sdk/${platform}/user/online-status/get-subscribe-users-status`,
+            `/sdk/${platform}/user/online-status/unsubscribe-users-status`,
           ]
         : platform === 'android'
           ? [

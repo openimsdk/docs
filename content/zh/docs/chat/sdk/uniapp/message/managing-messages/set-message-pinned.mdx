@@ -1,0 +1,48 @@
+---
+title: '置顶或取消置顶消息'
+description: '使用 UniApp SDK 置顶或取消置顶一条会话消息。'
+sourcePath: '/sdk/uniapp/message/managing-messages/set-message-pinned'
+---
+
+消息置顶属于商业版能力。传 `pinned: true` 置顶，传 `false` 取消置顶：
+
+```uts
+import { setConversationPinnedMsg } from '@/uni_modules/unix-openim-sdk'
+
+const clientMsgID = message.clientMsgID
+if (clientMsgID == null) return
+
+await setConversationPinnedMsg({
+  conversationID,
+  clientMsgID,
+  pinned: true,
+})
+```
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 消息所属的会话 ID。 |
+| `clientMsgID` | `string` | 是 | 要置顶或取消置顶的客户端消息 ID。 |
+| `pinned` | `boolean` | 是 | `true` 表示置顶，`false` 表示取消置顶。 |
+
+权限、可置顶的消息类型和数量限制由 OpenIMServer 校验。Promise 成功表示置顶请求已经完成，不表示变更事件已经到达。
+
+## 接收置顶列表变化
+
+`onChangedPinnedMsg()` 的载荷在当前 UTS 合同中公开为 `string`，没有声明字符串内部结构。收到事件后重新查询受关注会话的置顶消息，不要直接套用其他 SDK 的 `conversationID`、`msgs` 等对象字段。
+
+```uts
+import { off, onChangedPinnedMsg } from '@/uni_modules/unix-openim-sdk'
+
+const handlePinnedMessagesChanged = (_payload: string) => {
+  reloadPinnedMessagesForCurrentConversation()
+}
+
+const pinnedMessagesSubscription =
+  onChangedPinnedMsg(handlePinnedMessagesChanged)
+
+// 页面卸载或账号切换时：
+off(pinnedMessagesSubscription)
+```
+
+重新查询方式见[查询会话置顶消息](/sdk/uniapp/message/managing-messages/get-pinned-messages)。

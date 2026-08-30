@@ -1,29 +1,58 @@
 ---
-title: 'OpenIM uni-app SDK 概览'
-description: 'OpenIM uni-app SDK 入口，用于 App、H5 和支持的小程序目标。'
+title: 'OpenIM uni-app / uni-app x SDK 概览'
+description: '在 uni-app 和 uni-app x 的 Android、iOS 与 HarmonyOS App 中接入 OpenIMClientSDK。'
 sourcePath: '/sdk/uniapp/overview'
 ---
 
-## 概览
+OpenIM uni-app / uni-app x SDK 以 UTS 原生插件形式提供，可在传统 uni-app（Vue 2 / Vue 3）和 uni-app x 工程中调用 OpenIMClientSDK。SDK 为 Android、iOS 和 HarmonyOS App 提供用户、关系链、会话、群组、消息、音视频通话信令、实时事件与本地数据能力。
 
-当你希望在一个 uni-app 工程中覆盖 App、H5 以及支持的小程序目标时，可以从 uni-app SDK 开始。接入时应保持认证、用户身份、消息创建、会话状态和事件处理模型与其他 OpenIMClientSDK 一致。
+## 适用场景
 
-## 适用范围
+当项目使用 HBuilderX 开发原生 App，并希望在 uni-app 与 uni-app x 中复用同一套 OpenIM 业务模型时，可以使用本 SDK。插件直接集成各平台的 OpenIM 原生 SDK，适合需要本地会话、消息历史、离线同步和完整客户端能力的应用。
 
-- App 和 H5 构建应使用与你部署的 OpenIMServer 版本匹配的 SDK 包和运行时适配方式。
-- 小程序目标需要额外确认本地存储、网络请求、文件上传和 WebSocket 行为。
-- token 必须由可信后端签发，不应在客户端包内生成或写死用户 token。
+本 SDK 当前不支持 Web 与小程序。Web 应使用 [JavaScript SDK WASM](/sdk/wasm/overview)，小程序和不依赖本地消息存储的轻量 Web 场景应使用[小程序 SDK](/sdk/miniprogram/overview)。
 
-## 核心接入路径
+## 支持范围
 
-1. 安装与你的 OpenIMServer 版本匹配的 SDK 包。
-2. 使用 `apiAddr`、`wsAddr`、当前 `userID` 和后端签发的 token 初始化客户端。
-3. 在调用 `login()` 前注册连接事件和消息事件。
-4. 发送第一条文本消息，并在另一个已登录客户端确认收到消息。
-5. 再补充文件消息、推送通知和后台生命周期等平台差异处理。
+| 工程与平台 | 支持情况 | 最低系统版本 |
+| --- | --- | --- |
+| uni-app App Android（Vue 2 / Vue 3） | 支持 | Android 5.0 / API 21 |
+| uni-app App iOS（Vue 2 / Vue 3） | 支持 | iOS 14 |
+| uni-app App HarmonyOS（Vue 2 / Vue 3） | 商业版支持 | HarmonyOS API 24 |
+| uni-app x App Android | 支持 | Android 5.0 / API 21 |
+| uni-app x App iOS | 支持 | iOS 14 |
+| uni-app x App HarmonyOS | 商业版支持 | HarmonyOS API 24 |
+| Web / 小程序 | 不支持 | — |
 
-## 相关 SDK
+HarmonyOS 支持范围和商业版能力以实际取得的 SDK 发行包及商业协议为准。业务使用相册、相机、麦克风或文件功能时，还需要由宿主 App 按实际功能声明并申请系统权限。
 
-- [WASM SDK](/sdk/wasm/overview)：查看浏览器和 WebAssembly 方向的核心 API 示例。
-- [Flutter SDK](/sdk/flutter/overview)：适合用 Flutter 覆盖移动端和桌面端。
-- [React Native SDK](/sdk/react-native/overview)：适合 React Native 应用。
+## 接入方式
+
+SDK 以 `uni_modules/unix-openim-sdk` 插件目录交付。将完整插件放入工程后，从插件根路径导入 API：
+
+```uts
+import {
+  initSDK,
+  login,
+  createTextMessage,
+  sendMessage,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+原生依赖不会包含在 HBuilderX 标准基座中。调试 SDK 初始化、登录、消息收发和事件回调前，需要制作包含本插件的自定义基座，或安装正式构建的应用包。
+
+## API 使用模型
+
+- API 以 Promise 返回业务结果；失败时抛出包含 `errCode` 和 `errMsg` 的错误。
+- `onXxx` 事件注册方法返回 `OpenIMSDKEventSubscription`，销毁页面、退出账号或重建 SDK 作用域时使用 `off(subscription)` 精确取消。
+- 查询 API 用于取得当前数据，事件用于提供后续变化。Promise 成功、事件到达和重新查询最新数据是不同阶段。
+- 文件和媒体 API 可以使用 App 可读的 POSIX 绝对路径，或基于 `uni.env.USER_DATA_PATH` 生成的 `unifile://` 路径。
+
+## 开始接入
+
+1. 阅读[开始之前](/sdk/uniapp/getting-started/before-you-start)，准备 OpenIMServer、用户登录信息、插件和原生构建环境。
+2. 按[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)安装插件并完成三端初始化配置。
+3. 按[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)注册连接事件、初始化 SDK 并登录当前用户。
+4. 按[发送第一条消息](/sdk/uniapp/getting-started/send-first-message)验证单聊或群聊消息的收发流程。
+
+后续 API 文档沿用 WASM SDK 的用户、关系链、会话、群组、消息、文件上传、音视频通话与事件领域划分，但每个页面均以 uni-app / uni-app x 插件公开的 UTS 类型和方法为准。

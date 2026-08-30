@@ -1,0 +1,29 @@
+---
+title: '发送已上传的媒体消息'
+description: '发送已经包含远端资源 URL 的图片、音频、视频或文件消息。'
+sourcePath: '/sdk/uniapp/message/sending-messages/send-message-not-oss'
+---
+
+`sendMessageNotOss()` 适用于媒体资源已经通过业务上传服务取得 URL 的消息，可避免再次进入 SDK 内置上传流程。文本消息和仍只包含本地路径的媒体消息应使用普通的 `sendMessage()`。
+
+参数与 `sendMessage()` 相同：单聊填写 `recvID`，群聊填写 `groupID`，并传入由 URL 型创建 API 返回的非空消息对象。
+
+```uts
+import { sendMessageNotOss } from '@/uni_modules/unix-openim-sdk'
+
+const sentMessage = await sendMessageNotOss({
+  message: urlMessage,
+  recvID: receiverUserID,
+  groupID: '',
+  offlinePushInfo: null,
+  isOnlineOnly: false,
+})
+
+if (sentMessage.clientMsgID != null) {
+  replacePendingMessage(sentMessage.clientMsgID, sentMessage)
+}
+```
+
+资源 URL、类型、大小、尺寸和时长必须来自实际上传结果。该方法不会上传资源，也不适用于只有本地文件路径的消息。
+
+Promise 成功后返回发送结果中的 `OpenIMMessageItem`。使用 `clientMsgID` 更新待发送项；其他客户端接收消息和后续历史查询仍是独立阶段，不能由本次 Promise 成功直接推断。

@@ -1,0 +1,50 @@
+---
+title: '撤回消息'
+description: '使用 UniApp SDK 撤回已发送消息，并同步撤回状态。'
+sourcePath: '/sdk/uniapp/message/managing-messages/revoke-a-message'
+---
+
+需要让会话成员看到“消息已撤回”时使用 `revokeMessage()`，不要用本地删除或批量删除替代。
+
+```uts
+import { revokeMessage } from '@/uni_modules/unix-openim-sdk'
+
+const clientMsgID = message.clientMsgID
+if (clientMsgID == null) return
+
+await revokeMessage({
+  conversationID,
+  clientMsgID,
+})
+```
+
+`conversationID` 是消息所属会话 ID，`clientMsgID` 是要撤回消息的客户端消息 ID。允许撤回的操作者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留撤回展示。
+
+Promise 成功表示撤回请求已经完成，不表示所有客户端的界面已经更新。当前 UTS 方法返回确认字符串，不返回可直接替换的消息对象；当前端可先按原 `clientMsgID` 标记撤回，再通过后续查询确认最新消息状态。
+
+## 接收撤回状态
+
+完整撤回事件监听集中在本页。事件直接返回 `OpenIMMessageRevokedItem | null`，应按 `clientMsgID` 更新原消息气泡，不要把消息直接从列表删除。
+
+```uts
+import {
+  off,
+  onNewRecvMessageRevoked,
+  OpenIMMessageRevokedItem,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleMessageRevoked = (
+  revoked: OpenIMMessageRevokedItem | null,
+) => {
+  if (revoked == null) return
+  markMessageRevoked(revoked.clientMsgID, revoked)
+}
+
+const revokedSubscription =
+  onNewRecvMessageRevoked(handleMessageRevoked)
+
+// 页面卸载或账号切换时：
+off(revokedSubscription)
+```
+
+事件还提供撤回者、撤回时间和角色等信息，可用于生成适当的系统提示。重新登录或连接恢复后，先加载当前消息记录，再处理后续撤回事件。

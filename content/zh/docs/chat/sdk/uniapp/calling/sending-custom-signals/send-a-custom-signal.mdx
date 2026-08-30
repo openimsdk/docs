@@ -1,0 +1,59 @@
+---
+title: '发送自定义信令'
+description: '在指定通话房间内发送轻量级业务协商数据。'
+sourcePath: '/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal'
+---
+
+`signalingSendCustomSignaling()` 用于向指定通话房间发送轻量业务数据，例如举手、布局切换提示或产品自定义状态。它不是聊天消息接口，也不能替代媒体引擎的数据通道。
+
+```uts
+import {
+  signalingSendCustomSignaling,
+} from '@/uni_modules/unix-openim-sdk'
+
+const signal = {
+  version: 1,
+  eventID: createBusinessEventID(),
+  type: 'hand-raised',
+  userID: currentUserID,
+  sentAt: Date.now(),
+}
+
+await signalingSendCustomSignaling({
+  roomID,
+  customInfo: JSON.stringify(signal),
+})
+```
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `roomID` | `string` | 是 | 当前通话房间 ID。 |
+| `customInfo` | `string` | 是 | 业务自定义字符串；传 JSON 时应包含协议版本和唯一事件 ID。 |
+
+Promise 成功表示 OpenIMServer 已接受发送请求，不表示其他参与者已经处理。自定义信令应保持精简，不要放入大文件、聊天记录、长期状态或敏感凭据。
+
+## 接收自定义信令
+
+当前 UTS 契约中，`onReceiveCustomSignal()` 的载荷类型是 `string`，没有声明外层字段。业务应把解析集中在自己的协议适配层，验证 JSON、版本、事件 ID 和房间上下文后再更新界面。
+
+```uts
+import {
+  off,
+  onReceiveCustomSignal,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleCustomSignal = (payload: string) => {
+  const signal = parseAndValidateCallSignal(payload)
+  if (signal == null) return
+  if (hasAppliedSignal(signal.eventID)) return
+  applyCallSignal(signal)
+}
+
+const customSignalSubscription =
+  onReceiveCustomSignal(handleCustomSignal)
+
+// 离开通话功能或账号切换时：
+off(customSignalSubscription)
+```
+
+如果当前原生交付版本的事件字符串还包含 SDK 外层结构，应由适配层先取出 `customInfo`，不要在页面组件中散落不同平台的解析逻辑。自定义信令不能授予主持人、付费或隐私权限；需要权威判断的状态应由可信后端保存。

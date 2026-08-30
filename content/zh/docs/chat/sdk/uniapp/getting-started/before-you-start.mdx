@@ -1,0 +1,68 @@
+---
+title: '开始之前'
+description: '准备 OpenIMServer、用户登录信息、UTS 插件和原生 App 构建环境。'
+sourcePath: '/sdk/uniapp/getting-started/before-you-start'
+---
+
+在 uni-app 或 uni-app x 应用中接入 OpenIMClientSDK 前，需要先准备可访问的 OpenIMServer、可信的用户认证流程、完整的 UTS 插件，以及能够编译原生依赖的 App 构建环境。这些条件同时适用于[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)和[发送第一条消息](/sdk/uniapp/getting-started/send-first-message)。
+
+## 准备 OpenIMServer
+
+如果还没有可用的 OpenIMServer，先按 [Docker 部署指南](/docs/guides/quick-deployment/docker)完成部署，并确认 Android、iOS 或 HarmonyOS 设备可以访问以下地址：
+
+| 字段 | 说明 |
+| --- | --- |
+| `apiAddr` | OpenIMServer 的 HTTP API 地址，用于登录、同步和资源请求。生产环境应使用 HTTPS。 |
+| `wsAddr` | OpenIMServer 的 WebSocket 地址，用于建立长连接和接收实时事件。生产环境应使用 WSS。 |
+
+不要只在开发电脑或服务器本机验证地址。还应从真机或模拟器检查 DNS、TLS 证书、防火墙、反向代理、WebSocket 升级和消息媒体资源域名是否可访问。
+
+## 准备用户和 Token
+
+`userID` 标识 OpenIMSDK 用户，Token 用于认证该用户。创建或绑定用户、签发 Token 和校验业务权限都应由可信后端完成，App 不能保存管理员 Token、secret 或其他服务端凭据。
+
+后端接入 OpenIMServer REST API 前，可阅读[准备使用 Platform API](/platform-api/prepare-to-use-api)和[签发会话 Token](/platform-api/user/managing-session-tokens/issue-a-session-token)。如果产品已有账号体系，业务后端应在验证当前业务账号后，返回与该账号对应的 `userID`、Token、`apiAddr` 和 `wsAddr`。
+
+`userID` 必须与 Token 对应。客户端不能接受任意用户 ID 后自行签发或拼装 Token，也不能把 Token 写入源码、插件配置或日志。
+
+## 准备插件和 HBuilderX
+
+接入前确认以下条件：
+
+- 已取得与你的授权范围和目标平台匹配的 `unix-openim-sdk` 发行包。
+- 使用发行说明指定的 HBuilderX 与 uni-app / uni-app x 兼容版本；当前基线为 HBuilderX `5.23.2026080313-alpha` 或更高兼容版本、uni-app / uni-app x `5.23` 系列。
+- 将发行包中的 `uni_modules/unix-openim-sdk` 完整放入项目的 `uni_modules/`，不要只复制 `utssdk` 子目录。
+- 不要同时安装其他版本的 `unix-openim-sdk`，也不要额外加入 OpenIM Android AAR、iOS XCFramework、CocoaPods Core 或 HarmonyOS HAR，以免重复链接或混用不匹配的原生制品。
+
+插件必须从根路径导入：
+
+```uts
+import { initSDK, login } from '@/uni_modules/unix-openim-sdk'
+```
+
+不要从 `utssdk/app-android`、`utssdk/app-ios` 或 `utssdk/app-harmony` 等插件内部路径直接导入实现文件。
+
+## 准备原生运行环境
+
+HBuilderX 标准基座不包含本插件声明的 OpenIM 原生依赖，不能用于验证 SDK 初始化、登录、消息收发或事件回调。开发阶段应制作包含本插件的自定义基座；发布前还应使用正式构建的安装包完成真机验证。
+
+当前 SDK 面向原生 App：
+
+- Android 最低支持 Android 5.0 / API 21。
+- iOS 最低支持 iOS 14。
+- HarmonyOS 最低支持 API 24，且需要取得对应商业版发行包。
+- Web 和小程序不在本 SDK 的支持范围内。
+
+业务使用相册、相机、麦克风、文件选择或系统通知时，由宿主 App 按实际功能声明并申请权限。SDK 本身不会为了尚未使用的业务功能主动申请这些权限。
+
+## 发布前检查
+
+- 自定义基座或正式安装包已包含目标平台的 OpenIM 原生依赖。
+- 真机可以访问 `apiAddr`、`wsAddr` 和消息媒体资源域名。
+- 业务后端能为当前登录账号返回匹配的 `userID` 与 Token。
+- 应用已规划前后台切换、网络恢复、Token 失效、多端登录和账号切换流程。
+- SDK 数据使用 App 沙盒内的可写目录；没有把临时目录、共享目录或前端虚拟路径直接作为 Core 数据目录。
+
+## 继续接入
+
+准备完成后，按[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)安装并初始化插件，再完成[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)。确认连接可用后，按照[发送第一条消息](/sdk/uniapp/getting-started/send-first-message)验证消息收发流程。

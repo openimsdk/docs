@@ -1,0 +1,80 @@
+---
+title: '日志与诊断'
+description: '配置 UniApp SDK 日志级别，并在用户授权后上传原生诊断日志。'
+sourcePath: '/sdk/uniapp/logger'
+---
+
+UniApp SDK 的日志用于定位原生 App 中的初始化、连接和业务 API 问题。开发环境可以输出较详细的日志；生产环境应降低日志级别，并避免记录 Token、消息正文、文件地址和其他敏感信息。
+
+## 配置日志级别
+
+日志设置属于 `initSDK()` 的初始化参数：
+
+```uts
+import {
+  OpenIMLogLevelDebug,
+  initSDK,
+} from '@/uni_modules/unix-openim-sdk'
+
+await initSDK({
+  platformID: currentOpenIMPlatform,
+  apiAddr,
+  wsAddr,
+  dataDir: '',
+  logFilePath: '',
+  logLevel: OpenIMLogLevelDebug,
+  isLogStandardOutput: true,
+  systemType: 'your-app',
+})
+```
+
+| 常量 | 数值 | 建议用途 |
+| --- | --- | --- |
+| `OpenIMLogLevelPanic` | `0` | 仅保留最高严重级别。 |
+| `OpenIMLogLevelFatal` | `1` | 致命错误。 |
+| `OpenIMLogLevelError` | `2` | 生产环境错误诊断。 |
+| `OpenIMLogLevelWarn` | `3` | 生产环境默认可考虑的警告级别。 |
+| `OpenIMLogLevelInfo` | `4` | 联调信息。 |
+| `OpenIMLogLevelDebug` | `5` | 开发调试。 |
+| `OpenIMLogLevelVerbose` | `6` | 临时深度诊断，避免长期在生产环境开启。 |
+
+`isLogStandardOutput` 控制是否把 SDK 日志输出到标准输出；`logFilePath` 用于指定原生日志目录。路径需要是 App 可写目录，不要使用代码包的只读路径。完整初始化字段见[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)。
+
+## 上传诊断日志
+
+`uploadLogs()` 把原生 SDK 已写入本地文件的日志提交到当前部署配置的日志收集服务。只在用户主动提交诊断信息、问题排查或运维明确要求时调用。
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `line` | `number` | 是 | 本次上传读取的日志行数，按当前部署约定设置。 |
+| `ex` | `string` | 是 | 附加诊断说明；只写可公开的业务标记，不要写 Token 或消息正文。 |
+
+```uts
+import {
+  OpenIMUploadLogsProgressEvent,
+  off,
+  onUploadLogsProgress,
+  uploadLogs,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleLogUploadProgress = (
+  event: OpenIMUploadLogsProgressEvent | null,
+) => {
+  if (event == null) return
+  setDiagnosticUploadProgress(event.progress)
+}
+
+const logUploadSubscription =
+  onUploadLogsProgress(handleLogUploadProgress)
+
+await uploadLogs({
+  line: 2000,
+  ex: 'user-approved-diagnostic-session',
+})
+
+off(logUploadSubscription)
+```
+
+Promise 成功返回字符串，表示本次日志上传调用已完成。该方法不会修改用户、会话或消息，也不会触发业务领域事件。上传失败时可以记录 `errCode`、`errMsg` 和当前用户 ID，但不要再次输出完整日志正文。
+
+除本页外，其他 API 页面不要求业务显式生成或传递 `operationID`；需要与 OpenIMServer 日志精确关联时，再由诊断工具按当前 SDK 约定处理。

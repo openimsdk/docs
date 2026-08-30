@@ -59,6 +59,16 @@ const androidRouteTitles = {
   'message/composing-messages/get-typing-status': 'Retrieve typing status',
 };
 
+const uniappRouteTitles = {
+  'file-uploads/cancel-upload': 'Cancel a file upload',
+};
+
+function getPlatformExtensionTitle(platformId, suffix) {
+  if (platformId === 'android') return androidRouteTitles[suffix];
+  if (platformId === 'uniapp') return uniappRouteTitles[suffix];
+  return undefined;
+}
+
 const conversationGroupTitles = {
   ios: {
     'conversation/managing-conversation-groups/overview-conversation-groups':
@@ -136,14 +146,27 @@ The English version of this OpenIM ${platformName} SDK guide is deferred until t
 }
 
 export function isGeneratedClientSdkSkeleton(source) {
-  return (
-    /generatedBy:\s*['"]sync-client-sdk-route-skeletons['"]/.test(source) ||
-    (/status:\s*['"]draft['"]/.test(source) &&
-      /context:\s*['"]chat\/sdk\/(?:android|ios|flutter)['"]/.test(source) &&
-      /The English version of this OpenIM (?:Android|iOS|Flutter) SDK guide is deferred/.test(
-        source,
-      ))
+  if (/generatedBy:\s*['"]sync-client-sdk-route-skeletons['"]/.test(source)) {
+    return true;
+  }
+
+  const platformMatch = source.match(
+    /context:\s*['"]chat\/sdk\/(android|ios|flutter|uniapp)['"]/,
   );
+  if (!/status:\s*['"]draft['"]/.test(source) || !platformMatch) {
+    return false;
+  }
+
+  if (
+    /The English version of this OpenIM (?:Android|iOS|Flutter|uni-app \/ uni-app x) SDK guide is deferred/.test(
+      source,
+    )
+  ) {
+    return true;
+  }
+
+  const body = source.replace(/^---\n[\s\S]*?\n---\n?/, '').trim();
+  return platformMatch[1] === 'uniapp' && body.length === 0;
 }
 
 export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) {
@@ -157,7 +180,7 @@ export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) 
     const suffix = path.replace(`/sdk/${platformId}/`, '');
     const baseline = wasmBySuffix.get(suffix);
     const existing = routeByPath.get(path);
-    const extensionTitle = platformId === 'android' ? androidRouteTitles[suffix] : undefined;
+    const extensionTitle = getPlatformExtensionTitle(platformId, suffix);
     if (!baseline && !existing && !extensionTitle)
       throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     return {
@@ -165,7 +188,7 @@ export function resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes }) 
       title: resolveClientSdkRouteTitle({
         platformId,
         suffix,
-        baselineTitle: existing?.title ?? baseline?.title ?? extensionTitle,
+        baselineTitle: baseline?.title ?? existing?.title ?? extensionTitle,
       }),
     };
   });
@@ -192,7 +215,7 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
     const suffix = path.replace(`${platform.routePrefix}/`, '');
     const baseline = wasmBySuffix.get(suffix);
     const template = baseline ?? existingByPath.get(path);
-    const extensionTitle = platformId === 'android' ? androidRouteTitles[suffix] : undefined;
+    const extensionTitle = getPlatformExtensionTitle(platformId, suffix);
     if (!template && !extensionTitle)
       throw new Error(`[${platformId}] missing WASM baseline or platform extension: ${suffix}`);
     const title = resolveClientSdkRouteTitle({
@@ -306,6 +329,7 @@ async function readJson(relativePath) {
 function getPlatformDisplayName(platformId) {
   if (platformId === 'ios') return 'iOS';
   if (platformId === 'android') return 'Android';
+  if (platformId === 'uniapp') return 'uni-app / uni-app x';
   return 'Flutter';
 }
 

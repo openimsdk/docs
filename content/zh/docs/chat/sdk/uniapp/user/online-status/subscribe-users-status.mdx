@@ -1,0 +1,79 @@
+---
+title: '订阅用户在线状态'
+description: '订阅指定用户的在线状态，并处理后续状态变化。'
+sourcePath: '/sdk/uniapp/user/online-status/subscribe-users-status'
+---
+
+在线状态表示用户是否连接 OpenIMServer，不表示用户正在查看应用、某个会话或某条消息。建议只订阅当前界面或业务确实需要展示的用户，每个账号最多订阅 3000 个用户。
+
+## 建立状态订阅
+
+`subscribeUsersStatus()` 接收用户 ID 数组。调用前应去除空值和重复 ID；不要一次订阅整个用户目录。
+
+```uts
+import {
+  getSubscribeUsersStatus,
+  subscribeUsersStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+const visibleUserIDs = ['user_a', 'user_b']
+
+await subscribeUsersStatus(visibleUserIDs)
+
+const current = await getSubscribeUsersStatus()
+const states = current?.statuses ?? []
+states.forEach((state) => {
+  presenceByUserID.set(state.userID, state)
+})
+```
+
+与 WASM SDK 不同，UTS 插件中 `subscribeUsersStatus()` 的 Promise 返回字符串调用结果，不直接返回当前状态列表。订阅成功后，应调用 `getSubscribeUsersStatus()` 建立当前状态数据，再通过事件合并后续变化。
+
+## 在线状态字段
+
+`OpenIMUserStatusItem` 包含以下字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 状态所属的用户 ID，用于更新对应缓存记录。 |
+| `status` | `number` | 汇总在线状态；`1` 表示在线，`0` 表示离线。 |
+| `platformIDs` | `number[]` | 用户当前在线的平台 ID 列表；为空时不要推断具体设备。 |
+
+`status` 是所有平台的汇总结果。需要展示具体在线端时再读取 `platformIDs`，并使用 SDK 导出的 `OpenIMPlatformAndroid`、`OpenIMPlatformIOS`、`OpenIMPlatformHarmony` 等平台常量进行比较，不要在界面代码中散落平台数字。
+
+## 监听在线状态变化
+
+本页负责 `onUserStatusChanged()` 的完整监听。事件处理器收到 `OpenIMUserStatusListResult | null`，一次事件可能包含多个用户状态；应遍历 `statuses`，按 `userID` 分别更新。
+
+```uts
+import {
+  OpenIMUserStatusListResult,
+  off,
+  onUserStatusChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleUserStatusChanged = (
+  result: OpenIMUserStatusListResult | null,
+) => {
+  if (result == null) return
+
+  result.statuses.forEach((state) => {
+    presenceByUserID.set(state.userID, state)
+  })
+}
+
+const userStatusSubscription = onUserStatusChanged(
+  handleUserStatusChanged,
+)
+
+function removeUserStatusListener() {
+  off(userStatusSubscription)
+}
+```
+
+退出登录、切换账号或销毁在线状态层时调用 `removeUserStatusListener()`。页面翻页或搜索结果变化时，还应取消不再需要的用户订阅，避免订阅集合持续增长。
+
+## 下一步
+
+- [查询已订阅用户状态](/sdk/uniapp/user/online-status/get-subscribe-users-status)
+- [取消订阅用户状态](/sdk/uniapp/user/online-status/unsubscribe-users-status)

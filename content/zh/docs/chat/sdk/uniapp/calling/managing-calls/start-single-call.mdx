@@ -1,0 +1,57 @@
+---
+title: '发起单聊通话'
+description: '向一个用户发起音频或视频通话邀请。'
+sourcePath: '/sdk/uniapp/calling/managing-calls/start-single-call'
+---
+
+`signalingInvite()` 向一个用户发起通话邀请。应用应为每次通话生成新的 `roomID`，并保留本次完整邀请，供取消、挂断等后续操作复用。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `invitation` | `OpenIMSignalingInvitationInfo` | 是 | 本次通话邀请。 |
+| `invitation.inviterUserID` | `string` | 建议填写 | 当前登录用户 ID。 |
+| `invitation.inviteeUserIDList` | `string[]` | 是 | 单聊只填写对方一个用户 ID。 |
+| `invitation.groupID` | `string` | 建议填写 | 单聊传空字符串。 |
+| `invitation.roomID` | `string` | 是 | 本次通话的唯一房间 ID。 |
+| `invitation.timeout` | `number` | 是 | 等待接听时长，单位为秒。 |
+| `invitation.mediaType` | `string` | 是 | 业务约定的媒体类型，例如 `audio` 或 `video`。 |
+| `invitation.sessionType` | `OpenIMSessionType` | 是 | 单聊使用 `OpenIMSessionTypeSingle`。 |
+| `invitation.platformID` | `OpenIMPlatform` | 建议填写 | 当前 App 平台，应与初始化 SDK 时的平台一致。 |
+| `invitation.customData` | `string` | 否 | 随邀请发送的业务扩展字符串。 |
+| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | 否 | 被邀请人离线时使用的推送内容。 |
+
+```uts
+import {
+  OpenIMSessionTypeSingle,
+  signalingInvite,
+} from '@/uni_modules/unix-openim-sdk'
+
+const invitation = {
+  inviterUserID: currentUserID,
+  inviteeUserIDList: [peerUserID],
+  customData: JSON.stringify({ source: 'contact-card' }),
+  groupID: '',
+  roomID: createCallRoomID(),
+  timeout: 30,
+  mediaType: 'video',
+  sessionType: OpenIMSessionTypeSingle,
+  platformID: currentOpenIMPlatform,
+}
+
+const result = await signalingInvite({
+  invitation,
+  offlinePushInfo: {
+    title: '视频通话',
+    desc: '你收到一个视频通话邀请',
+    ex: '',
+    iOSPushSound: 'default',
+    iOSBadgeCount: true,
+  },
+})
+```
+
+Promise 成功后返回 `OpenIMSignalingInviteResult | null`。非空结果可能包含 `invitation`、`roomID`、`token`、`liveURL` 和 `busyLineUserIDList`；取得有效 `roomID` 与 `token` 后再连接媒体房间。
+
+成功只表示邀请请求完成并可能取得房间凭据，不表示对方已经接听。后续状态见[处理通话事件](/sdk/uniapp/calling/managing-calls/handle-call-events)。

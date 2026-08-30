@@ -1,0 +1,38 @@
+---
+title: '按 ID 查找消息'
+description: '按会话 ID 和客户端消息 ID 查找本地已同步消息。'
+sourcePath: '/sdk/uniapp/message/retrieving-messages/find-messages-by-id'
+---
+
+搜索结果、回复引用或通知跳转应同时保存 `conversationID` 和 `clientMsgID`。需要重新取得这些消息时，将查询条件数组传给 `findMessageList()`。
+
+## 参数说明
+
+数组中的每一项对应一个会话：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 目标消息所属会话 ID。 |
+| `clientMsgIDList` | `string[]` | 是 | 要在该会话中查找的客户端消息 ID。 |
+
+```uts
+import { findMessageList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await findMessageList([{
+  conversationID: conversationID,
+  clientMsgIDList: [clientMsgID],
+}])
+
+if (
+  result != null &&
+  result.findResultItems.length > 0 &&
+  result.findResultItems[0].messageList.length > 0
+) {
+  const targetMessage = result.findResultItems[0].messageList[0]
+  showMessage(targetMessage)
+}
+```
+
+Promise 成功后返回 `OpenIMFindMessageResult | null`。`totalCount` 是找到的消息数量，`findResultItems` 按会话组织结果；每项包含 `conversationID`、会话展示信息、`messageCount` 和 `messageList`。
+
+一次调用可以查询多个会话。不要假设结果项与输入数组的位置一致，应按结果项的 `conversationID` 和消息的 `clientMsgID` 对应。消息尚未同步、已经删除或 ID 不存在时，可能返回空结果；查询不会触发消息事件。

@@ -1,0 +1,94 @@
+---
+title: '分页查询群成员'
+description: '按角色和偏移量分页查询指定群组的成员。'
+sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
+---
+
+`getGroupMemberList()` 用于构建群成员列表，也可以通过 `filter` 只查询指定角色。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string` | 是 | 目标群组 ID。 |
+| `filter` | `number` | 是 | 成员角色筛选，取值见下表。 |
+| `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
+| `count` | `number` | 是 | 本次读取数量。 |
+
+| `filter` | 含义 |
+| --- | --- |
+| `0` | 全部成员。 |
+| `1` | 仅群主。 |
+| `2` | 仅管理员。 |
+| `3` | 仅普通成员。 |
+| `4` | 管理员和普通成员。 |
+| `5` | 群主和管理员。 |
+
+```uts
+import { getGroupMemberList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getGroupMemberList({
+  groupID: groupID,
+  filter: 0,
+  offset: 0,
+  count: 50,
+})
+const members = result != null ? result.members : []
+```
+
+Promise 成功后返回 `OpenIMGroupMemberListResult | null`；非空结果的 `members` 是当前页 `OpenIMGroupMemberItem[]`。继续加载时，应按已经请求的条目数增加 `offset`，不要使用收到成员事件后可能已经变化的界面列表长度。
+
+### 群成员字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 成员所属的群组 ID。 |
+| `userID` | `string` | 成员用户 ID；与 `groupID` 共同识别一条成员记录。 |
+| `nickname` | `string` | 用户在当前群内的昵称。 |
+| `faceURL` | `string` | 当前群成员资料中的头像地址。 |
+| `roleLevel` | `number` | 角色等级：`20` 普通成员、`60` 管理员、`100` 群主。 |
+| `muteEndTime` | `number` | 禁言结束时间，Unix 毫秒时间戳；与当前时间比较后判断是否仍在禁言。 |
+| `joinTime` | `number` | 加入群组的时间，Unix 毫秒时间戳。 |
+| `joinSource` | `number` | 入群途径，例如邀请、搜索或二维码。 |
+| `inviterUserID` | `string` | 邀请人用户 ID；无邀请人时可能为空字符串。 |
+| `operatorUserID` | `string` | 建立或最近更新成员记录的操作用户 ID。 |
+| `ex` | `string` | 群成员扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+群内昵称、群内头像、角色和禁言状态属于指定群组，不要用它们覆盖账号级用户资料。SDK 没有独立的禁言成员列表方法，需要时分页读取成员后根据 `muteEndTime` 过滤。
+
+## 监听成员变化
+
+本页集中说明并监听群成员事件。事件直接返回 `OpenIMGroupMemberItem | null`，使用 `groupID:userID` 合并或移除记录。
+
+```uts
+import {
+  OpenIMGroupMemberItem,
+  off,
+  onGroupMemberAdded,
+  onGroupMemberDeleted,
+  onGroupMemberInfoChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const upsertMember = (member: OpenIMGroupMemberItem | null) => {
+  if (member == null) return
+  upsertGroupMember(member)
+}
+
+const deleteMember = (member: OpenIMGroupMemberItem | null) => {
+  if (member == null) return
+  removeGroupMember(member.groupID, member.userID)
+}
+
+const addedSubscription = onGroupMemberAdded(upsertMember)
+const deletedSubscription = onGroupMemberDeleted(deleteMember)
+const changedSubscription = onGroupMemberInfoChanged(upsertMember)
+
+function removeGroupMemberListeners() {
+  off(addedSubscription)
+  off(deletedSubscription)
+  off(changedSubscription)
+}
+```
+
+分页期间发生成员新增或删除时，应重置分页并从第一页重新加载。组件卸载、退出登录或切换账号时调用 `removeGroupMemberListeners()`。

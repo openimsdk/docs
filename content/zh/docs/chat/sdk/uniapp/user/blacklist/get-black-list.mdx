@@ -1,0 +1,70 @@
+---
+title: '获取黑名单'
+description: '查询当前用户主动加入黑名单的用户。'
+sourcePath: '/sdk/uniapp/user/blacklist/get-black-list'
+---
+
+黑名单记录当前用户主动限制的用户，可用于黑名单设置页、资料卡关系状态和聊天入口控制。它与好友关系、群成员管理和平台封禁相互独立。
+
+`getBlackList()` 不接收业务参数。返回空数组表示当前黑名单中没有用户。
+
+```uts
+import { getBlackList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getBlackList()
+const blockedUsers = result?.blackUsers ?? []
+replaceBlockedUsers(blockedUsers)
+```
+
+资料卡、会话操作菜单和联系人列表通常只需判断 `userID` 是否在黑名单中。建议以 `userID` 建立集合，昵称和头像只用于展示。
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMBlackListResult | null`，黑名单数组位于 `blackUsers`。`OpenIMBlackUserItem` 包含以下字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 被当前用户加入黑名单的目标用户 ID，也是合并事件的稳定标识。 |
+| `nickname` | `string` | 目标用户昵称。 |
+| `faceURL` | `string` | 目标用户头像地址。 |
+| `ownerUserID` | `string` | 这条黑名单关系的所有者，即当前用户 ID。 |
+| `operatorUserID` | `string` | 执行黑名单操作的用户 ID。 |
+| `createTime` | `number` | 黑名单关系创建时间，Unix 毫秒时间戳。 |
+| `addSource` | `number` | 黑名单关系的添加来源值。 |
+| `ex` | `string` | 黑名单关系扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+如果页面还要展示公开资料或好友备注，应按 `userID` 对应不同来源的数据，并明确区分 `OpenIMBlackUserItem`、`OpenIMFriendUserItem` 和 `OpenIMPublicUserItem`。
+
+## 同步黑名单变化
+
+本页负责 `onBlackAdded()` 和 `onBlackDeleted()` 的完整监听。查询用于建立黑名单，事件用于合并后续增量。
+
+```uts
+import {
+  OpenIMBlackUserItem,
+  off,
+  onBlackAdded,
+  onBlackDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleBlackAdded = (user: OpenIMBlackUserItem | null) => {
+  if (user == null) return
+  mergeBlockedUser(user)
+}
+
+const handleBlackDeleted = (user: OpenIMBlackUserItem | null) => {
+  if (user == null) return
+  removeBlockedUser(user.userID)
+}
+
+const blackAddedSubscription = onBlackAdded(handleBlackAdded)
+const blackDeletedSubscription = onBlackDeleted(handleBlackDeleted)
+
+function removeBlacklistListeners() {
+  off(blackAddedSubscription)
+  off(blackDeletedSubscription)
+}
+```
+
+加入黑名单后，对方不能向当前用户发送消息，但当前用户仍可向对方发送；如需双向限制，应由业务层另外控制。退出登录、切换账号或销毁黑名单状态层时调用 `removeBlacklistListeners()`。事件可能遗漏时，应重新查询，并用最新结果更新本地状态。

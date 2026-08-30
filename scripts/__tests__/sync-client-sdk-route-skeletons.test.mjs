@@ -36,6 +36,18 @@ test('recognizes only generator-owned deferred English skeletons', () => {
     ),
     false,
   );
+  assert.equal(
+    isGeneratedClientSdkSkeleton(
+      "---\nstatus: 'draft'\ncontext: 'chat/sdk/uniapp'\n---\n",
+    ),
+    true,
+  );
+  assert.equal(
+    isGeneratedClientSdkSkeleton(
+      "---\nstatus: 'draft'\ncontext: 'chat/sdk/uniapp'\n---\n\n## Overview\n\nReviewed English content.\n",
+    ),
+    false,
+  );
 });
 
 test('replaces legacy platform route records with the reviewed active tree', () => {
@@ -59,6 +71,23 @@ test('replaces legacy platform route records with the reviewed active tree', () 
   const nonIosSourceIndexes = new Set(nonIos.map((route) => route.sourceIndex));
   assert.ok(ios.every((route) => !nonIosIds.has(route.id)));
   assert.ok(ios.every((route) => !nonIosSourceIndexes.has(route.sourceIndex)));
+});
+
+test('uses the same title baseline for skeletons and replacement route records', () => {
+  const routes = readJson('src/generated/routes.json');
+  const sidebar = readJson('data/structure/uniapp-sidebar.json');
+  const skeletonTitles = new Map(
+    resolveClientSdkSkeletonRoutes({ platformId: 'uniapp', sidebar, routes }).map((route) => [
+      route.path,
+      route.title,
+    ]),
+  );
+  const replaced = replaceClientSdkRouteRecords({ platformId: 'uniapp', sidebar, routes });
+  const uniappRoutes = replaced.filter((route) => route.contextKey === 'chat/sdk/uniapp');
+
+  for (const route of uniappRoutes) {
+    assert.equal(skeletonTitles.get(route.path), route.title, route.path);
+  }
 });
 
 test('resolves every active native suffix against the current WASM routes', () => {

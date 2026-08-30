@@ -1,0 +1,36 @@
+---
+title: '更新本地消息内容'
+description: '使用 UniApp SDK 替换当前设备数据库中的消息内容。'
+sourcePath: '/sdk/uniapp/message/composing-messages/save-local-transcript'
+---
+
+`setMessageLocalContent()` 属于商业版能力，用于替换当前设备本地数据库中的消息内容。它接收完整的 `OpenIMMessageItem`，不是只更新某一个内容字段。
+
+下面以修改本地文本消息的展示内容为例。先保留原消息全部字段，再替换与 `contentType` 对应的内容元素：
+
+```uts
+import {
+  OpenIMMessageItem,
+  setMessageLocalContent,
+} from '@/uni_modules/unix-openim-sdk'
+
+const updatedMessage = JSON.parse<OpenIMMessageItem>(
+  JSON.stringify(message),
+)
+const textElem = updatedMessage.textElem
+if (textElem == null) return
+
+textElem.content = '仅在当前设备显示的文本'
+updatedMessage.textElem = textElem
+
+await setMessageLocalContent({
+  conversationID,
+  message: updatedMessage,
+})
+```
+
+`conversationID` 必须是该消息所属的会话 ID，`message` 必须保留用于定位消息的原始标识和其他必要字段。示例通过序列化后按声明类型解析得到独立对象，避免直接修改列表中的原消息；不要用只包含 `clientMsgID` 与新内容的精简对象替代完整消息。
+
+Promise 成功表示当前设备的本地消息内容已经保存；该修改不会上传到 OpenIMServer、不会同步给其他用户或设备，也不会触发共享消息事件。需要立即刷新界面时，更新当前列表中的同一条消息；需要确认持久化结果时，再按 ID 查询本地消息。
+
+当前 UniApp SDK 的 `OpenIMSoundElem` 没有公开语音转写文本字段，因此不能照搬其他客户端 SDK 将转写结果写入 `soundElem.text` 的做法。若只需保存语音转写等应用自定义数据，请将其与消息已有数据合并后写入 `localEx`，并为业务 JSON 设计稳定的字段命名。

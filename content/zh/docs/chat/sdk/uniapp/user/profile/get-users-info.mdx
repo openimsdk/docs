@@ -1,0 +1,68 @@
+---
+title: '获取用户资料'
+description: '按 userID 批量查询应用用户的账号级公开资料。'
+sourcePath: '/sdk/uniapp/user/profile/get-users-info'
+---
+
+`getUsersInfo()` 按 `userID` 批量查询应用用户的公开资料，适合展示陌生人资料卡、好友候选人或消息发送者的账号级资料。
+
+如果产品需要按昵称、手机号、组织、邮箱或其他业务字段搜索用户，应先由业务后端完成搜索、鉴权和脱敏，再把候选 `userID` 传给 SDK。客户端不能使用管理员 Token 查询或管理用户目录。
+
+## 查询公开资料
+
+```uts
+import { getUsersInfo } from '@/uni_modules/unix-openim-sdk'
+
+const userIDs = ['user_a', 'user_b']
+const result = await getUsersInfo(userIDs)
+const users = result?.users ?? []
+
+users.forEach((user) => {
+  usersByID.set(user.userID, user)
+})
+```
+
+传入值是 OpenIMSDK 用户 ID 数组。调用前应去除空值和重复 ID，并按业务页面控制单次查询数量。
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMUserListResult | null`。非空结果的 `users` 是 `OpenIMUserInfo[]`；`OpenIMPublicUserItem` 是该用户结构的类型别名。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | OpenIMSDK 用户 ID。 |
+| `nickname` | `string` | 账号级公开昵称。 |
+| `faceURL` | `string` | 账号级公开头像地址。 |
+| `ex` | `string` | 账号级扩展字段，格式由业务约定。 |
+| `createTime` | `number \| null` | 用户记录创建时间；存在值时为 Unix 毫秒时间戳。 |
+| `attachedInfo` | `string \| null` | SDK 附加信息，只按已确认的业务约定解析。 |
+| `globalRecvMsgOpt` | `number \| null` | 账号级消息接收方式。该字段属于用户自身设置，不应作为其他用户资料卡的展示信息。 |
+
+查询结果可能为 `null`，也可能不包含请求列表中的所有用户。业务代码应以实际返回的 `userID` 建立映射，不能按请求数组下标对应结果。
+
+## 刷新用户资料
+
+打开资料卡、手动刷新、断线重连，或业务后端通知某个用户资料发生变化时，重新调用 `getUsersInfo()` 获取最新公开资料。UTS 插件没有面向所有公开用户的通用资料变化事件；`onSelfInfoUpdated()` 只用于当前登录用户。
+
+如果当前场景是好友列表，应优先使用好友 API 返回的 `OpenIMFriendUserItem`，其中包含好友备注和关系字段。群成员列表则使用 `OpenIMGroupMemberItem`，其中包含群内昵称和角色。不要用这里返回的公开昵称覆盖好友备注或群内昵称。
+
+## 搜索并添加好友
+
+典型流程是先由业务后端返回候选用户 ID，再通过 SDK 获取公开资料：
+
+```uts
+async function loadFriendCandidates(keyword: string) {
+  const userIDs = await searchUserIDsFromBackend(keyword)
+  if (userIDs.length == 0) return []
+
+  const result = await getUsersInfo(userIDs)
+  return result?.users ?? []
+}
+```
+
+只支持按用户 ID 精确查找时，可以直接把用户输入作为 `userID` 查询。模糊搜索和敏感字段搜索应由后端负责限流、权限与审计。
+
+## 下一步
+
+- [获取当前用户资料](/sdk/uniapp/user/profile/get-self-user-info)
+- [更新当前用户资料](/sdk/uniapp/user/profile/set-self-info)

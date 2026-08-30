@@ -1,0 +1,27 @@
+---
+title: '恢复待处理的通话邀请'
+description: '查询应用启动或回到前台时仍然有效的待处理邀请。'
+sourcePath: '/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation'
+---
+
+`signalingGetInvitationInfoStartApp()` 用于查询当前是否仍有需要处理的通话邀请。应用启动、登录恢复或收到来电字符串事件后，可以用它取得类型明确的完整邀请。
+
+```uts
+import {
+  signalingGetInvitationInfoStartApp,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await signalingGetInvitationInfoStartApp({
+  userID: currentUserID,
+})
+
+if (result?.invitation?.roomID != null) {
+  restoreIncomingCall(result.invitation!)
+}
+```
+
+参数对象可以省略；提供 `userID` 时应填写当前登录用户 ID，不要查询其他用户的邀请。
+
+Promise 成功后返回 `OpenIMSignalingGetInvitationInfoStartAppResult | null`。非空结果中的 `invitation` 是 `OpenIMSignalingInvitationInfo | null`；没有仍然有效的邀请时不要继续展示旧的来电界面，也不要复用之前保存的房间凭据。
+
+该查询只读取当前状态，不会主动接受或拒绝邀请，也不会补发通话事件。恢复界面后仍需监听取消、超时、其他设备接听和挂断，见[处理通话事件](/sdk/uniapp/calling/managing-calls/handle-call-events)。

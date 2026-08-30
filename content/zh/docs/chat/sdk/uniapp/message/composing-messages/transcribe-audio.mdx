@@ -1,0 +1,25 @@
+---
+title: '识别音频文字'
+description: '使用 UniApp SDK 将音频内容识别为文字。'
+sourcePath: '/sdk/uniapp/message/composing-messages/transcribe-audio'
+---
+
+语音识别属于商业版能力。`speechToText()` 接收音频文件名和音频数据的 Base64 字符串；不能直接传入录音临时路径、`ArrayBuffer` 或带有 `data:*;base64,` 前缀的数据 URL。
+
+```uts
+import { speechToText } from '@/uni_modules/unix-openim-sdk'
+
+const result = await speechToText({
+  filename: 'voice.m4a',
+  data: audioBase64,
+})
+
+const transcript = result?.text ?? ''
+showTranscript(transcript)
+```
+
+`filename` 应包含能够反映真实音频格式的扩展名，`data` 是只包含 Base64 内容的字符串。录音 API 返回的 `tempFilePath` 只是临时文件地址；应在临时文件被系统清理前读取内容，需要跨页面或稍后识别时，先将文件保存到应用可持久使用的目录。
+
+调用前先[查询语音识别能力](/sdk/uniapp/message/composing-messages/check-speech-to-text)，并按服务返回的格式、采样率、时长和字节数限制校验音频。Promise 成功后返回 `OpenIMSpeechToTextResult | null`；非空结果的 `text` 仍可能为空。
+
+识别结果只作为本次调用结果返回，不会修改原语音消息，也不会触发消息事件。需要只在当前设备保留业务展示数据时，优先合并到消息已有的 `localEx`；不要覆盖其他功能已经写入的本地扩展内容。

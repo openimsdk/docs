@@ -6,6 +6,7 @@ const ownership = JSON.parse(readFileSync('data/structure/wasm-api-ownership.jso
 const androidAudit = JSON.parse(readFileSync('data/structure/android-content-audit.json', 'utf8'));
 const flutterAudit = JSON.parse(readFileSync('data/structure/flutter-content-audit.json', 'utf8'));
 const iosAudit = JSON.parse(readFileSync('data/structure/ios-content-audit.json', 'utf8'));
+const uniappAudit = JSON.parse(readFileSync('data/structure/uniapp-content-audit.json', 'utf8'));
 
 const commercialMethods = [
   'speechToTextCapabilities',
@@ -110,6 +111,9 @@ const platformSymbolAliases = {
     Open_im_sdkUpdateConversationGroup: 'updateConversationGroup',
     setConversationPinnedMsgWithConversationID: 'setConversationPinnedMsg',
   },
+  uniapp: {
+    getSpeechToTextCapabilities: 'speechToTextCapabilities',
+  },
 };
 
 const partialCommercialConceptSources = {
@@ -155,6 +159,13 @@ const fullCommercialConceptPages = new Set([
   '/sdk/android/conversation/managing-conversations/set-private-chat',
   '/sdk/android/conversation/managing-conversations/set-burn-duration',
   '/sdk/android/conversation/managing-conversations/set-message-destruct',
+  '/sdk/uniapp/conversation/managing-conversations/set-private-chat',
+  '/sdk/uniapp/conversation/managing-conversations/set-burn-duration',
+  '/sdk/uniapp/conversation/managing-conversations/set-message-destruct',
+  '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
+  '/sdk/uniapp/message/composing-messages/save-local-transcript',
+  '/sdk/uniapp/user/profile/set-friend-add-permission',
 ]);
 
 function applyCommercialConceptOverride(pagePath, info) {
@@ -214,7 +225,7 @@ function getPageCommercialInfo(pagePath) {
     };
   }
 
-  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios)(\/.*)$/);
+  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp)(\/.*)$/);
   if (!match) return { kind: 'none', methods: [], openSourceMethods: [], events: [] };
 
   const platform = match[1];
@@ -224,7 +235,13 @@ function getPageCommercialInfo(pagePath) {
   }
 
   const audit =
-    platform === 'android' ? androidAudit : platform === 'flutter' ? flutterAudit : iosAudit;
+    platform === 'android'
+      ? androidAudit
+      : platform === 'flutter'
+        ? flutterAudit
+        : platform === 'ios'
+          ? iosAudit
+          : uniappAudit;
   const page = audit.pages.find(
     (entry) => entry.currentPath === pagePath && entry.disposition !== 'omit',
   );
@@ -349,7 +366,7 @@ test('classifies full commercial pages', () => {
   }
 });
 
-test('applies the WASM commercial presentation to verified Flutter and iOS capabilities', () => {
+test('applies the WASM commercial presentation to verified native capabilities', () => {
   const flutterGroupCreate = getPageCommercialInfo(
     '/sdk/flutter/conversation/managing-conversation-groups/create-conversation-group',
   );
@@ -428,6 +445,18 @@ test('applies the WASM commercial presentation to verified Flutter and iOS capab
   assert.equal(flutterPinned.kind, 'full');
   assert.ok(flutterPinned.methods.includes('setConversationPinnedMsg'));
   assert.ok(flutterPinned.events.includes('onChangedPinnedMsg'));
+
+  const uniappCapabilities = getPageCommercialInfo(
+    '/sdk/uniapp/message/composing-messages/check-speech-to-text',
+  );
+  assert.equal(uniappCapabilities.kind, 'full');
+  assert.deepEqual(uniappCapabilities.methods, ['getSpeechToTextCapabilities']);
+
+  const uniappTranscription = getPageCommercialInfo(
+    '/sdk/uniapp/message/composing-messages/transcribe-audio',
+  );
+  assert.equal(uniappTranscription.kind, 'full');
+  assert.deepEqual(uniappTranscription.methods, ['speechToText']);
 
   const androidPinned = getPageCommercialInfo(
     '/sdk/android/message/managing-messages/get-pinned-messages',

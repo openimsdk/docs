@@ -1,0 +1,46 @@
+---
+title: '加载历史消息'
+description: '分页读取会话中更早的历史消息。'
+sourcePath: '/sdk/uniapp/message/retrieving-messages/load-older-messages'
+---
+
+进入聊天页或继续向上翻页时，使用 `getAdvancedHistoryMessageList()` 从当前会话读取历史消息。第一页的 `startClientMsgID` 传空字符串；继续分页时传当前最早消息的 `clientMsgID`。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 要读取历史消息的会话 ID。 |
+| `startClientMsgID` | `string` | 是 | 分页锚点；第一页传空字符串。 |
+| `count` | `number` | 是 | 本次最多读取的消息数量。 |
+
+```uts
+import {
+  getAdvancedHistoryMessageList,
+} from '@/uni_modules/unix-openim-sdk'
+
+const page = await getAdvancedHistoryMessageList({
+  conversationID: conversationID,
+  startClientMsgID: oldestClientMsgID,
+  count: 30,
+})
+
+if (page != null && page.errCode == 0) {
+  prependMessages(page.messageList)
+}
+```
+
+首次查询时 `oldestClientMsgID` 使用空字符串。继续分页时，将当前列表中最早一条消息的 `clientMsgID` 作为新的 `startClientMsgID`；`isEnd` 为 `true` 时停止向更早方向请求。
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMAdvancedHistoryMessageListResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `messageList` | `OpenIMMessageItem[]` | 本页读取到的消息。 |
+| `isEnd` | `boolean` | 是否已经到达当前方向的历史边界。 |
+| `errCode` | `number` | 结果对象携带的状态码，`0` 表示本次读取成功。 |
+| `errMsg` | `string` | 与 `errCode` 对应的状态说明。 |
+
+Promise 被拒绝和返回对象中的非零 `errCode` 都应作为加载失败处理。查询不会触发新消息事件；合并结果时限定当前 `conversationID`，并按 `clientMsgID` 去重。

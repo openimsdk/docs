@@ -1,0 +1,63 @@
+---
+title: '搜索消息'
+description: '在当前设备已同步的本地消息中按关键词和条件搜索。'
+sourcePath: '/sdk/uniapp/message/searching-messages/search-messages'
+---
+
+`searchLocalMessages()` 搜索当前账号已经同步到本设备的消息，不会请求业务后端的全量索引。群聊搜索使用对应的 `conversationID`，不是发送消息时使用的 `groupID`；`conversationID` 为空时可搜索全部本地会话。
+
+跨用户审计、服务端全量检索、复杂权限过滤或全局排序应由后端搜索服务处理，再把命中的会话 ID 和消息 ID 返回客户端定位。
+
+## 参数说明
+
+UTS 接口要求传入完整搜索对象。没有启用的数组筛选传空数组，没有启用的时间筛选传 `0`。
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 否 | 限定目标会话；省略或传 `null` 时搜索本地全部会话。 |
+| `keywordList` | `string[]` | 是 | 非空关键词列表。 |
+| `keywordListMatchType` | `number` | 是 | `0` 表示命中任一关键词，`1` 表示同时命中全部关键词。 |
+| `senderUserIDList` | `string[]` | 是 | 发送者筛选；不限制时传空数组。 |
+| `messageTypeList` | `OpenIMMessageType[]` | 是 | 消息类型筛选；不限制时传空数组。 |
+| `searchTimePosition` | `number` | 是 | UTC 秒级搜索起点；`0` 表示从当前时间开始。 |
+| `searchTimePeriod` | `number` | 是 | 从起点向过去搜索的秒数；`0` 表示不限制时间范围。 |
+| `pageIndex` | `number` | 是 | 页码，第一页传 `1`。 |
+| `count` | `number` | 是 | 每页最多返回的结果数量。 |
+
+```uts
+import {
+  OpenIMMessageTypeAtText,
+  OpenIMMessageTypeText,
+  searchLocalMessages,
+} from '@/uni_modules/unix-openim-sdk'
+
+const keyword = searchText.trim()
+if (keyword.length == 0) return
+
+const result = await searchLocalMessages({
+  conversationID: conversationID,
+  keywordList: [keyword],
+  keywordListMatchType: 0,
+  senderUserIDList: [],
+  messageTypeList: [OpenIMMessageTypeText, OpenIMMessageTypeAtText],
+  searchTimePosition: 0,
+  searchTimePeriod: 0,
+  pageIndex: 1,
+  count: 20,
+})
+```
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMSearchMessageResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `totalCount` | `number` | 当前条件下匹配的消息总数。 |
+| `searchResultItems` | `OpenIMSearchMessageResultItem[]` | 按会话组织的搜索结果。 |
+
+每个结果项包含 `conversationID`、`conversationType`、`showName`、`faceURL`、`messageCount` 和 `messageList`；`latestMsgSendTime` 可能为空。跳转到结果时应使用结果项的 `conversationID` 与消息的 `clientMsgID`，不要按数组位置保存选中项。
+
+继续分页时保持关键词、发送者、类型和时间条件不变，只递增 `pageIndex`。修改任一条件时，重置为第 1 页并清空旧结果。
+
+搜索只建立调用时的本地结果，不触发消息事件。搜索结果可能因新消息、撤回或删除发生变化；页面可复用这些事件的所属页面更新增量，或使用相同条件重新搜索。需要展示命中消息前后记录时，使用[读取消息上下文](/sdk/uniapp/message/retrieving-messages/load-message-context)。

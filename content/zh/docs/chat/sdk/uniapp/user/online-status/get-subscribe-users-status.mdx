@@ -1,0 +1,26 @@
+---
+title: '查询已订阅用户状态'
+description: '获取当前账号已订阅用户的在线状态。'
+sourcePath: '/sdk/uniapp/user/online-status/get-subscribe-users-status'
+---
+
+`getSubscribeUsersStatus()` 查询当前账号已经订阅的用户状态，不接收业务参数。
+
+```uts
+import { getSubscribeUsersStatus } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getSubscribeUsersStatus()
+const states = result?.statuses ?? []
+
+states.forEach((state) => {
+  presenceByUserID.set(state.userID, state)
+})
+```
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMUserStatusListResult | null`。非空结果的 `statuses` 是 `OpenIMUserStatusItem[]`，每项包含 `userID`、汇总 `status` 和当前在线的 `platformIDs`；字段含义见[订阅用户在线状态](/sdk/uniapp/user/online-status/subscribe-users-status)。
+
+该查询返回调用时的状态，不会触发在线状态事件。目标用户尚未订阅时，应先调用 `subscribeUsersStatus()`；查询结果为空时，不要自行把未返回用户判定为离线，应先确认订阅是否建立成功。
+
+首次进入页面、网络恢复或需要确认当前状态时可以重新查询。后续变化由订阅页面统一注册的 `onUserStatusChanged()` 处理，本页不重复注册该事件。

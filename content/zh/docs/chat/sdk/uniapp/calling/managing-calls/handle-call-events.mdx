@@ -1,0 +1,84 @@
+---
+title: '处理通话事件'
+description: '集中监听邀请、接听、参与者和挂断等通话状态变化。'
+sourcePath: '/sdk/uniapp/calling/managing-calls/handle-call-events'
+---
+
+通话状态层应集中注册邀请生命周期和参与者事件。当前 UTS 契约将这些事件的回调参数统一声明为 `string`，没有公开字符串内部字段，因此不要把 WASM SDK 的 `data.invitation.roomID` 等结构直接用于 UniApp 代码。
+
+| 事件 | 建议处理 |
+| --- | --- |
+| `onReceiveNewInvitation` | 查询并恢复当前待处理邀请，显示来电界面。 |
+| `onInviteeAccepted` | 刷新当前通话状态，继续媒体连接流程。 |
+| `onInviteeAcceptedByOtherDevice` | 当前设备结束来电等待，避免重复接听。 |
+| `onInviteeRejected` | 刷新被邀请人的状态；无人可接听时结束邀请。 |
+| `onInviteeRejectedByOtherDevice` | 当前设备关闭来电界面。 |
+| `onInvitationCancelled`、`onInvitationTimeout` | 结束等待状态并释放预创建资源。 |
+| `onHangUp` | 离开媒体房间并结束通话。 |
+| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 重新获取当前房间或由媒体引擎刷新参与者列表。 |
+| `onStreamChange` | Android、iOS 可作为媒体状态变化提示；HarmonyOS 当前交付物不支持此事件。 |
+
+下面把事件当作刷新信号，不假设载荷结构。来电事件通过 `signalingGetInvitationInfoStartApp()` 取得类型明确的邀请；群通话可以通过 `signalingGetRoomByGroupID()` 重新查询当前房间。
+
+```uts
+import {
+  off,
+  onHangUp,
+  onInvitationCancelled,
+  onInvitationTimeout,
+  onInviteeAccepted,
+  onInviteeAcceptedByOtherDevice,
+  onInviteeRejected,
+  onInviteeRejectedByOtherDevice,
+  onReceiveNewInvitation,
+  onRoomParticipantConnected,
+  onRoomParticipantDisconnected,
+  onStreamChange,
+  signalingGetInvitationInfoStartApp,
+} from '@/uni_modules/unix-openim-sdk'
+
+const restoreIncomingInvitation = async () => {
+  const result = await signalingGetInvitationInfoStartApp({
+    userID: currentUserID,
+  })
+  if (result?.invitation?.roomID != null) {
+    showIncomingCall(result.invitation!)
+  }
+}
+
+const handleIncomingInvitation = (_payload: string) => {
+  void restoreIncomingInvitation()
+}
+
+const refreshCall = (_payload: string) => {
+  void refreshCurrentCall()
+}
+
+const finishCurrentCall = (_payload: string) => {
+  closeCallAndReleaseMedia()
+}
+
+const callSubscriptions = [
+  onReceiveNewInvitation(handleIncomingInvitation),
+  onInviteeAccepted(refreshCall),
+  onInviteeAcceptedByOtherDevice(finishCurrentCall),
+  onInviteeRejected(refreshCall),
+  onInviteeRejectedByOtherDevice(finishCurrentCall),
+  onInvitationCancelled(finishCurrentCall),
+  onInvitationTimeout(finishCurrentCall),
+  onHangUp(finishCurrentCall),
+  onRoomParticipantConnected(refreshCall),
+  onRoomParticipantDisconnected(refreshCall),
+  onStreamChange(refreshCall),
+]
+
+function removeCallListeners() {
+  callSubscriptions.forEach((subscription) => {
+    off(subscription)
+  })
+}
+```
+
+如果应用已与原生交付方约定并验证了事件字符串协议，可以在单独的适配层解析；在公共文档和业务状态层中仍应校验字段、协议版本和 `roomID`，解析失败时回退到查询。不要把未经声明的字符串强制断言成其他 SDK 的事件类型。
+
+退出登录、切换账号或销毁全局通话状态层时调用 `removeCallListeners()`。自定义信令事件单独归属[发送自定义信令](/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal)。
