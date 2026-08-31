@@ -1,0 +1,100 @@
+---
+title: 'Events overview'
+description: 'Understand the OpenIM React Native SDK event model, event categories, and listener lifecycle.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'published'
+lastUpdated: '2026-08-28'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/events/overview-events'
+---
+
+## Event model
+
+The OpenIM React Native SDK uses `OpenIMEvent` to define event names and a shared listener interface to report connection state, data changes, and business signaling.
+
+Call `OpenIMSDK.on()` to register a listener and `OpenIMSDK.off()` to remove it. Event names can use enum values from `OpenIMEvent` or the corresponding event strings. When using a string, it must exactly match the event name defined by the SDK.
+
+```ts
+function handleEvent(payload: unknown) {
+  // Update application state from the event payload.
+}
+
+// Set listener
+OpenIMSDK.on(OpenIMEvent.OnConversationChanged, handleEvent);
+// Or use the event string
+OpenIMSDK.on("onConversationChanged", handleEvent);
+
+// Remove listener
+OpenIMSDK.off(OpenIMEvent.OnConversationChanged, handleEvent);
+// Or use the event string
+OpenIMSDK.off("onConversationChanged", handleEvent);
+```
+
+The callback parameter for each event is defined by the SDK declaration. It can be an entity, an array, a progress value, or error information. See the corresponding feature page for the exact parameter format and handling example.
+
+## Event categories
+
+React Native SDK events are grouped by business domain:
+
+| Event category | Typical events | Description |
+| --- | --- | --- |
+| Connection and sign-in state | `OnConnecting`, `OnConnectSuccess`, `OnConnectFailed`, `OnKickedOffline`, `OnUserTokenExpired`, `OnUserTokenInvalid` | Connection, connection failure, forced sign-out, and token state changes. |
+| Initial synchronization | `OnSyncServerStart`, `OnSyncServerProgress`, `OnSyncServerFinish`, `OnSyncServerFailed` | The lifecycle of server data synchronization after sign-in. |
+| Users and online status | `OnSelfInfoUpdated`, `OnUserStatusChanged` | Changes to the current user's profile and user online status. |
+| Friends and blacklist | `OnFriendAdded`, `OnFriendDeleted`, `OnFriendInfoChanged`, `OnFriendApplicationAdded`, `OnBlackAdded` | Changes to friend relationships, friend applications, and the blacklist. |
+| Conversations and unread state | `OnNewConversation`, `OnConversationChanged`, `OnTotalUnreadMessageCountChanged`, `OnInputStatusChanged` | Conversation list, unread count, and typing state changes. |
+| Conversation groups | `OnConversationGroupAdded`, `OnConversationGroupChanged`, `OnConversationGroupDeleted` | Conversation groups and their membership changes. |
+| Groups and members | `OnGroupInfoChanged`, `OnGroupMemberAdded`, `OnGroupMemberDeleted`, `OnGroupApplicationAdded`, `OnJoinedGroupAdded` | Group profile, member, application, and joined-group changes. |
+| Messages | `OnRecvNewMessage`, `OnMsgDeleted`, `OnNewRecvMessageRevoked`, `OnMessageModified`, `OnRecvC2CReadReceipt` | New messages, deletions, revocations, modifications, and one-to-one read receipts. |
+| File uploads | `UploadOnProgress`, `UploadComplete` | File upload progress and completion. |
+| Audio and video calls | `OnReceiveNewInvitation`, `OnInviteeAccepted`, `OnInvitationCancelled`, `OnHangUp`, `OnReceiveCustomSignal` | Call invitations, participant state, and call signaling changes. |
+| Custom business messages | `OnRecvCustomBusinessMessage` | Custom business messages. |
+
+## Registration timing and lifecycle
+
+The React Native SDK allows global listeners to be registered at any time. It starts delivering connection, synchronization, and business data events after `initSDK()` and sign-in; register listeners before the operation whose events you need to receive.
+
+The React Native SDK supports multiple listeners for the same event. Every registered listener receives the event, unlike the single-listener mechanism in the Flutter and Android SDKs, where a later listener replaces the earlier one. Even though multiple listeners are supported, register and manage callbacks centrally in the application so that rendering or re-entering a component does not register the same business handler repeatedly.
+
+Keep listener functions in stable references. When logging out, switching accounts, or destroying related state, call `off()` with the same event name and function reference used for registration.
+
+## Connection and initial synchronization events
+
+Connection events report the SDK connection state:
+
+| Event | Description |
+| --- | --- |
+| `OnConnecting` | The SDK starts connecting to the server. |
+| `OnConnectSuccess` | The SDK connects successfully. |
+| `OnConnectFailed` | The connection fails and error information is provided. |
+| `OnKickedOffline` | The current account signs in on another client or is forced offline by the server. |
+| `OnUserTokenExpired` | The current login token has expired. |
+| `OnUserTokenInvalid` | The current login token is invalid. |
+
+After sign-in, the SDK reports initial synchronization through these events:
+
+| Event | Description |
+| --- | --- |
+| `OnSyncServerStart` | Synchronization starts. |
+| `OnSyncServerProgress` | The current synchronization progress. |
+| `OnSyncServerFinish` | The current synchronization completes. |
+| `OnSyncServerFailed` | The current synchronization fails. |
+
+After synchronization completes, query the data needed by the current interface again. Later user, friend, conversation, group, message, and call changes are reported by the corresponding business events.
+
+## Handle events by domain
+
+The feature pages below provide complete parameter descriptions and listener examples:
+
+| Event scope | Reference pages |
+| --- | --- |
+| User profile and online status | [Update the current user profile](/sdk/react-native/user/profile/set-self-info), [Subscribe to user online status](/sdk/react-native/user/online-status/subscribe-users-status) |
+| Friends, friend applications, and blacklist | [Get the friend list by page](/sdk/react-native/user/friends/get-friend-list-page), [Get received friend applications](/sdk/react-native/user/friend-applications/get-friend-application-list-as-recipient), [Get the blacklist](/sdk/react-native/user/blacklist/get-black-list) |
+| Conversations, unread counts, and conversation groups | [Retrieve the conversation list](/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list), [Get the total unread count](/sdk/react-native/conversation/managing-conversations/get-total-unread-count), [Conversation groups overview](/sdk/react-native/conversation/managing-conversation-groups/overview-conversation-groups) |
+| Groups, members, and applications | [Group overview](/sdk/react-native/group/overview-group), [Get received group applications](/sdk/react-native/group/group-applications/get-group-application-list-as-recipient), [Get the group member list by page](/sdk/react-native/group/retrieving-group-members/get-group-member-list) |
+| Messages and message status | [Receive messages](/sdk/react-native/message/receiving-messages/receive-messages), [Receive custom business messages](/sdk/react-native/message/receiving-messages/receive-custom-business-messages), [Delete saved messages in a batch](/sdk/react-native/message/managing-messages/delete-saved-messages), [Revoke a message](/sdk/react-native/message/managing-messages/revoke-a-message), [Modify a message](/sdk/react-native/message/managing-messages/modify-a-message), [Send group read receipts](/sdk/react-native/message/managing-read-status/send-group-read-receipts) |
+| File uploads | [Upload a file](/sdk/react-native/file-uploads/upload-file) |
+| Audio and video calls and custom signaling | [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal) |

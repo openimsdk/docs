@@ -196,7 +196,8 @@ function extractDartCodeBlocks(source) {
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter'];
+  const platformIds =
+    requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'react-native'];
   let failed = false;
   for (const platformId of platformIds) {
     const platform = getClientSdkPlatform(platformId);

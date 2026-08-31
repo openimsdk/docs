@@ -6,9 +6,11 @@ import iosAuditData from '../../data/structure/ios-content-audit.json' with { ty
 import iosSidebarData from '../../data/structure/ios-sidebar.json' with { type: 'json' };
 import wasmAuditData from '../../data/structure/wasm-content-audit.json' with { type: 'json' };
 import wasmSidebarData from '../../data/structure/wasm-sidebar.json' with { type: 'json' };
+import reactNativeAuditData from '../../data/structure/react-native-content-audit.json' with { type: 'json' };
+import reactNativeSidebarData from '../../data/structure/react-native-sidebar.json' with { type: 'json' };
 
 export type ReviewLocale = 'en' | 'zh';
-export type ClientSdkPlatform = 'android' | 'flutter' | 'ios' | 'wasm';
+export type ClientSdkPlatform = 'android' | 'flutter' | 'ios' | 'wasm' | 'react-native';
 
 type ReviewStatus =
   | 'deferred'
@@ -87,6 +89,10 @@ const publicationLookup = createClientSdkPublicationLookup({
     pages: wasmAuditData.pages as ClientSdkAuditPage[],
     activePaths: flattenSidebarPaths(wasmSidebarData.nodes),
   },
+  'react-native': {
+    pages: reactNativeAuditData.pages as ClientSdkAuditPage[],
+    activePaths: flattenSidebarPaths(reactNativeSidebarData.nodes),
+  },
 });
 
 const platformNames: Record<ClientSdkPlatform, string> = {
@@ -94,6 +100,7 @@ const platformNames: Record<ClientSdkPlatform, string> = {
   flutter: 'Flutter',
   ios: 'iOS',
   wasm: 'WASM',
+  'react-native': 'React Native',
 };
 
 export function getClientSdkPendingReviewBody(platform: ClientSdkPlatform): string {

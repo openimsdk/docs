@@ -3,11 +3,13 @@ import { resolve } from 'node:path';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Fragment, type ReactNode } from 'react';
+import { CodeBlock } from '@/src/components/docs/code-block';
 import { ArticleHeader } from '@/src/components/docs/article-header';
 import type { ContextOption } from '@/src/components/docs/context-picker';
 import { DocsShell } from '@/src/components/docs/docs-shell';
 import { ChevronRightIcon } from '@/src/components/ui/icons';
 import guidesContentData from '@/src/generated/guides-content.json';
+import { highlightCode } from '@/src/lib/code-highlighting';
 import { extractMarkdownHeadings } from '@/src/lib/heading-ids';
 import type { Locale } from '@/src/lib/i18n';
 import { toLocalizedPath } from '@/src/lib/i18n';
@@ -884,7 +886,7 @@ function GuidesBody({
   );
 }
 
-function GuideMarkdown({
+async function GuideMarkdown({
   body,
   locale,
   sourceMap,
@@ -897,16 +899,18 @@ function GuideMarkdown({
 }) {
   return (
     <div className="guide-markdown">
-      {parseGuideMarkdown(body).map((block, index) => (
-        <GuideMarkdownBlock
-          block={block}
-          index={index}
-          key={`${block.type}-${index}`}
-          locale={locale}
-          sourceMap={sourceMap}
-          sourcePath={sourcePath}
-        />
-      ))}
+      {await Promise.all(
+        parseGuideMarkdown(body).map((block, index) => (
+          <GuideMarkdownBlock
+            block={block}
+            index={index}
+            key={`${block.type}-${index}`}
+            locale={locale}
+            sourceMap={sourceMap}
+            sourcePath={sourcePath}
+          />
+        )),
+      )}
     </div>
   );
 }
@@ -920,7 +924,7 @@ type GuideMarkdownBlock =
   | { type: 'paragraph'; text: string }
   | { type: 'table'; rows: string[][] };
 
-function GuideMarkdownBlock({
+async function GuideMarkdownBlock({
   block,
   index,
   locale,
@@ -964,9 +968,12 @@ function GuideMarkdownBlock({
 
   if (block.type === 'code') {
     return (
-      <pre>
-        <code data-language={block.language}>{block.code}</code>
-      </pre>
+      <CodeBlock
+        code={block.code}
+        highlightedHtml={await highlightCode(block.code, block.language)}
+        language={block.language}
+        locale={locale}
+      />
     );
   }
 

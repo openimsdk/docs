@@ -1,0 +1,78 @@
+---
+title: '分页查询群成员'
+description: '分页查询指定群组的成员。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/group/retrieving-group-members/get-group-member-list'
+---
+
+调用 `getGroupMemberList()` 分页查询指定群组的成员，并按成员角色筛选。
+
+```ts
+const members = await OpenIMSDK.getGroupMemberList({
+  groupID: 'group-001',
+  filter: GroupMemberFilter.All,
+  offset: 0,
+  count: 50,
+});
+```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `string` | 是 | 目标群组 ID。 |
+| `filter` | `GroupMemberFilter` | 是 | 成员角色筛选条件。 |
+| `offset` | `number` | 是 | 分页偏移量，第一页传 `0`。 |
+| `count` | `number` | 是 | 本次读取的成员数量。 |
+
+`GroupMemberFilter` 的取值如下：
+
+| 枚举值 | 数值 | 说明 |
+| --- | --- | --- |
+| `GroupMemberFilter.All` | `0` | 全部成员。 |
+| `GroupMemberFilter.Owner` | `1` | 仅群主。 |
+| `GroupMemberFilter.Admin` | `2` | 仅管理员。 |
+| `GroupMemberFilter.Normal` | `3` | 仅普通成员。 |
+| `GroupMemberFilter.AdminAndNormal` | `4` | 管理员和普通成员。 |
+| `GroupMemberFilter.AdminAndOwner` | `5` | 管理员和群主。 |
+
+继续读取下一页时，将 `offset` 设置为已读取的成员数量。
+
+## 返回结果
+
+调用完成后返回当前页的 `GroupMemberItem[]`。字段说明见[群组概览](/sdk/react-native/group/overview-group)。
+
+## 监听群成员变化
+
+成员加入、退出或资料变化时，分别触发 `OnGroupMemberAdded`、`OnGroupMemberDeleted` 和 `OnGroupMemberInfoChanged`。事件回调直接接收 `GroupMemberItem`：
+
+```ts
+const handleMemberAdded = (member: GroupMemberItem) => {
+  // 将 member 添加到对应群组的成员列表
+};
+
+const handleMemberDeleted = (member: GroupMemberItem) => {
+  // 根据 member.groupID 和 member.userID 删除成员
+};
+
+const handleMemberChanged = (member: GroupMemberItem) => {
+  // 根据 member.groupID 和 member.userID 更新成员资料
+};
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.OnGroupMemberAdded, handleMemberAdded);
+OpenIMSDK.on(OpenIMEvent.OnGroupMemberDeleted, handleMemberDeleted);
+OpenIMSDK.on(OpenIMEvent.OnGroupMemberInfoChanged, handleMemberChanged);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.OnGroupMemberAdded, handleMemberAdded);
+OpenIMSDK.off(OpenIMEvent.OnGroupMemberDeleted, handleMemberDeleted);
+OpenIMSDK.off(OpenIMEvent.OnGroupMemberInfoChanged, handleMemberChanged);
+```
+
+退出登录、切换账号或销毁成员列表状态时，取消这些监听。

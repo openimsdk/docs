@@ -24,7 +24,7 @@ type ResourceLink = {
   title: string;
 };
 
-export type SdkOverviewPlatform = 'android' | 'flutter' | 'ios' | 'wasm';
+export type SdkOverviewPlatform = 'android' | 'flutter' | 'ios' | 'react-native' | 'wasm';
 
 type OverviewCopy = {
   eyebrow: string;
@@ -355,6 +355,54 @@ const mobileCopy = {
       },
     ],
   },
+  'react-native': {
+    eyebrow: 'Version 4',
+    intro:
+      'OpenIM React Native SDK 为 Android 和 iOS React Native 应用提供用户、会话、群组、消息、实时事件和本地存储能力。先完成 React Native 工程配置与登录，再通过 SDK API 和事件监听把业务数据接入应用状态。',
+    mostPopular: '热门主题',
+    recommended: '推荐功能',
+    resources: '资源',
+    popular: createMobilePopularCards('react-native'),
+    features: [
+      {
+        title: '用户认证',
+        description: '使用后端签发的 Token 登录，并处理连接、过期和被踢下线事件。',
+        href: '/sdk/react-native/getting-started/authenticate-and-manage-session',
+      },
+      {
+        title: '群组',
+        description: '管理群资料、群成员、入群申请、权限和群组事件。',
+        href: '/sdk/react-native/group/overview-group',
+      },
+      {
+        title: '事件',
+        description: '注册全局事件监听，并按稳定标识合并增量数据。',
+        href: '/sdk/react-native/events/overview-events',
+      },
+    ],
+    links: [
+      {
+        title: '发送第一条消息',
+        description: '完成接入、初始化、登录、选择目标并发送消息。',
+        href: '/sdk/react-native/getting-started/send-first-message',
+      },
+      {
+        title: 'React Native 环境接入',
+        description: '配置 React Native CLI 或 Expo 工程并接入 SDK 原生模块。',
+        href: '/sdk/react-native/getting-started/environment-specific-implementation',
+      },
+      {
+        title: '日志与诊断',
+        description: '配置 SDK 日志，并保留错误码和错误信息用于诊断。',
+        href: '/sdk/react-native/logger',
+      },
+      {
+        title: '客户端 SDK 错误码',
+        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        href: '/sdk/error-codes',
+      },
+    ],
+  },
 } satisfies Record<Exclude<SdkOverviewPlatform, 'wasm'>, OverviewCopy>;
 
 const androidEnglishCopy = {
@@ -453,6 +501,34 @@ const androidEnglishCopy = {
   ],
 } satisfies OverviewCopy;
 
+const reactNativeEnglishCopy = {
+  eyebrow: 'Version 4',
+  intro:
+    'OpenIM React Native SDK provides users, conversations, groups, messages, realtime events, and local storage for React Native applications on Android and iOS. Configure the React Native project and sign in first, then connect business data to application state through SDK APIs and event listeners.',
+  mostPopular: 'Most popular',
+  recommended: 'Recommended features',
+  resources: 'Resources',
+  popular: [
+    { title: 'Manage conversations', description: 'Configure conversation state, drafts, unread counts, hiding, and deletion.', href: '/sdk/react-native/conversation/overview-conversation', visual: 'migration' },
+    { title: 'Unread message count', description: 'Read conversation unread counts and keep chat lists, badges, and global state in sync.', href: '/sdk/react-native/conversation/managing-conversations/get-total-unread-count', visual: 'unread' },
+    { title: 'Conversation read status', description: 'Clear conversation unread counts and handle one-to-one message read receipts.', href: '/sdk/react-native/conversation/managing-conversations/mark-conversation-read', visual: 'receipt' },
+    { title: 'Send messages', description: 'Create text, file, or custom messages and send them to users or groups.', href: '/sdk/react-native/message/sending-messages/send-message', visual: 'message' },
+    { title: 'Receive messages', description: 'Subscribe to new-message events and merge incremental messages into application state.', href: '/sdk/react-native/message/receiving-messages/receive-messages', visual: 'events' },
+    { title: 'Message history', description: 'Retrieve local and synchronized message history with conversation identifiers and message cursors.', href: '/sdk/react-native/message/retrieving-messages/load-older-messages', visual: 'history' },
+  ],
+  features: [
+    { title: 'Authentication', description: 'Sign in with a backend-issued token and handle connection, expiration, and forced-logout events.', href: '/sdk/react-native/getting-started/authenticate-and-manage-session' },
+    { title: 'Groups', description: 'Manage group profiles, members, applications, permissions, and group events.', href: '/sdk/react-native/group/overview-group' },
+    { title: 'Events', description: 'Register global event listeners and merge incremental data by stable identifiers.', href: '/sdk/react-native/events/overview-events' },
+  ],
+  links: [
+    { title: 'Send your first message', description: 'Complete integration, initialization, sign-in, target selection, and sending.', href: '/sdk/react-native/getting-started/send-first-message' },
+    { title: 'React Native integration', description: 'Configure a React Native CLI or Expo project and link the SDK native module.', href: '/sdk/react-native/getting-started/environment-specific-implementation' },
+    { title: 'Logging and diagnostics', description: 'Configure SDK logging and retain error codes and messages for diagnosis.', href: '/sdk/react-native/logger' },
+    { title: 'Client SDK error codes', description: 'Look up common client errors and choose a handling path by error source.', href: '/sdk/error-codes' },
+  ],
+} satisfies OverviewCopy;
+
 function createMobilePopularCards(
   platform: Exclude<SdkOverviewPlatform, 'wasm'>,
 ): OverviewCard[] {
@@ -522,6 +598,8 @@ export function SdkOverviewPage({
       ? copy[locale]
       : platform === 'android' && locale === 'en'
         ? androidEnglishCopy
+        : platform === 'react-native' && locale === 'en'
+          ? reactNativeEnglishCopy
         : mobileCopy[platform];
 
   return (

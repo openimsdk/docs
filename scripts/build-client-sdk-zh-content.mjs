@@ -142,7 +142,7 @@ export function resolvePlatformRoutes({ platform, routesData, sidebar }) {
         suffix === 'overview'
           ? platform.id === 'wasm'
             ? structuralRoute.title
-            : `OpenIM SDK for ${platform.id === 'ios' ? 'iOS' : platform.id === 'android' ? 'Android' : 'Flutter'}`
+            : `OpenIM SDK for ${platform.id === 'ios' ? 'iOS' : platform.id === 'android' ? 'Android' : platform.id === 'flutter' ? 'Flutter' : platform.id === 'react-native' ? 'React Native' : platform.id}`
           : structuralRoute.title,
     };
   });
@@ -150,7 +150,7 @@ export function resolvePlatformRoutes({ platform, routesData, sidebar }) {
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'wasm'];
+  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'wasm', 'react-native'];
   for (const platformId of platformIds) {
     const output = await buildClientSdkLocalizedFile(platformId);
     console.log(

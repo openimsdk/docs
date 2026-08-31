@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Fragment, type ReactNode } from 'react';
 import { CodeBlock, CodeTabs, type CodeTab } from '@/src/components/docs/code-block';
 import { createHeadingIdGenerator } from '@/src/lib/heading-ids';
+import { highlightCode } from '@/src/lib/code-highlighting';
 import type { Locale } from '@/src/lib/i18n';
 import { t, toLocalizedPath } from '@/src/lib/i18n';
 import { matchCommercialSymbol } from '@/src/lib/client-sdk-commercial';
@@ -21,7 +22,7 @@ type InlineRenderOptions = {
   locale: Locale;
 };
 
-export function MarkdownContent({
+export async function MarkdownContent({
   body,
   locale,
   commercialNames,
@@ -34,19 +35,21 @@ export function MarkdownContent({
 
   return (
     <>
-      {parseMarkdown(body).map((block, index) => (
-        <MarkdownBlockView
-          block={block}
-          index={index}
-          inlineOptions={inlineOptions}
-          key={`${block.type}-${index}`}
-        />
-      ))}
+      {await Promise.all(
+        parseMarkdown(body).map((block, index) => (
+          <MarkdownBlockView
+            block={block}
+            index={index}
+            inlineOptions={inlineOptions}
+            key={`${block.type}-${index}`}
+          />
+        )),
+      )}
     </>
   );
 }
 
-function MarkdownBlockView({
+async function MarkdownBlockView({
   block,
   index,
   inlineOptions,
@@ -81,11 +84,24 @@ function MarkdownBlockView({
   }
 
   if (block.type === 'code') {
-    return <CodeBlock code={block.code} language={block.language} locale={inlineOptions.locale} />;
+    return (
+      <CodeBlock
+        code={block.code}
+        highlightedHtml={await highlightCode(block.code, block.language)}
+        language={block.language}
+        locale={inlineOptions.locale}
+      />
+    );
   }
 
   if (block.type === 'codeTabs') {
-    return <CodeTabs locale={inlineOptions.locale} tabs={block.tabs} />;
+    const tabs = await Promise.all(
+      block.tabs.map(async (tab) => ({
+        ...tab,
+        highlightedHtml: await highlightCode(tab.code, tab.language),
+      })),
+    );
+    return <CodeTabs locale={inlineOptions.locale} tabs={tabs} />;
   }
 
   if (block.type === 'list') {

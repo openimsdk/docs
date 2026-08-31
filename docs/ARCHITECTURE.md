@@ -81,7 +81,7 @@ Docker 与普通 Node.js 环境使用 Next.js `standalone` 输出，`scripts/pre
 
 `pnpm content:sync` 依次：
 
-1. 从已审核的中文 SDK MDX 构建 WASM、Android、iOS 和 Flutter 中文运行时数据。
+1. 从已审核的中文 SDK MDX 构建 WASM、Android、iOS、Flutter 和 React Native 中文运行时数据。
 2. 重建中英文搜索索引。
 
 该命令不会自动修改路由和导航。结构性调整必须显式维护 `routes.json`、`navigation.json` 和审核数据；需要刷新 frontmatter 元数据时，运行 `pnpm content:metadata` 并审查 diff。`pnpm structure:report` 会先执行该元数据同步，确保报告中的发布状态与正文一致。

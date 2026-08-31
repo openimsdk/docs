@@ -99,6 +99,20 @@ export function ChevronRightIcon(props: IconProps) {
   );
 }
 
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path
+        d="m14.5 7-5 5 5 5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </IconBase>
+  );
+}
+
 export function CopyIcon(props: IconProps) {
   return (
     <IconBase {...props}>

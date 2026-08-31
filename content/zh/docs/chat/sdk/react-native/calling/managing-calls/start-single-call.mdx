@@ -1,0 +1,64 @@
+---
+title: '发起单聊通话'
+description: '使用 OpenIM React Native SDK 发起单聊音视频通话。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/calling/managing-calls/start-single-call'
+---
+
+调用 `signalingInvite()` 发起单聊音视频通话。调用完成后返回房间凭据，应用可使用其中的 `roomID`、`token` 和 `liveURL` 接入实时音视频媒体引擎。
+
+```ts
+const roomCredentials = await OpenIMSDK.signalingInvite({
+  invitation: {
+    inviterUserID: currentUserID,
+    inviteeUserIDList: [peerUserID],
+    groupID: '',
+    roomID,
+    timeout: 30,
+    mediaType: 'video',
+    sessionType: SessionType.Single,
+    platformID: currentPlatform,
+  },
+});
+```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `invitation` | `RtcInvite` | 是 | 本次通话邀请。 |
+| `invitation.inviterUserID` | `string` | 是 | 发起通话的当前用户 ID。 |
+| `invitation.inviteeUserIDList` | `string[]` | 是 | 被邀请用户 ID 列表；单聊时传入对方用户 ID。 |
+| `invitation.groupID` | `string` | 是 | 单聊传空字符串。 |
+| `invitation.roomID` | `string` | 是 | 本次通话的房间 ID，后续通话操作和状态处理使用该值识别通话。 |
+| `invitation.timeout` | `number` | 是 | 邀请等待时长，单位为秒。 |
+| `invitation.mediaType` | `string` | 是 | 媒体类型，例如 `audio` 或 `video`。 |
+| `invitation.sessionType` | `SessionType` | 是 | 单聊传入 `SessionType.Single`。 |
+| `invitation.platformID` | `Platform` | 是 | 发起端平台；传入当前客户端对应的 `Platform` 枚举值。 |
+| `invitation.customData` | `string` | 否 | 随邀请传递的业务扩展字符串。 |
+| `invitation.initiateTime` | `number` | 否 | 邀请发起时间，Unix 毫秒时间戳。通常由通话流程维护，无需手动填写。 |
+| `invitation.busyLineUserIDList` | `string[]` | 否 | 忙线用户列表。发起新邀请时通常不填写。 |
+| `offlinePushInfo` | `OfflinePush` | 否 | 被邀请用户离线时使用的推送内容。 |
+| `offlinePushInfo.title` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写推送标题。 |
+| `offlinePushInfo.desc` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写推送正文。 |
+| `offlinePushInfo.ex` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写扩展字符串；没有内容时传空字符串。 |
+| `offlinePushInfo.iOSPushSound` | `string` | 条件必填 | 提供 `offlinePushInfo` 时填写 iOS 推送声音。 |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | 条件必填 | 提供 `offlinePushInfo` 时说明是否更新 iOS 角标。 |
+
+## 返回结果
+
+调用完成后返回 `RtcInviteResults`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `roomID` | `string` | 通话房间 ID。 |
+| `token` | `string` | 加入通话房间使用的凭据。 |
+| `liveURL` | `string` | 通话服务返回的房间地址。 |
+| `busyLineUserIDList` | `string[]` | 处于忙线状态的被邀请用户 ID 列表。 |
+
+被邀请用户会通过 `OnReceiveNewInvitation` 收到 `OnReceiveNewInvitationPayload`。接受、拒绝、取消和挂断等状态变化见[处理通话事件](/sdk/react-native/calling/managing-calls/handle-call-events)。

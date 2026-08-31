@@ -139,8 +139,8 @@ export function isGeneratedClientSdkSkeleton(source) {
   return (
     /generatedBy:\s*['"]sync-client-sdk-route-skeletons['"]/.test(source) ||
     (/status:\s*['"]draft['"]/.test(source) &&
-      /context:\s*['"]chat\/sdk\/(?:android|ios|flutter)['"]/.test(source) &&
-      /The English version of this OpenIM (?:Android|iOS|Flutter) SDK guide is deferred/.test(
+      /context:\s*['"]chat\/sdk\/(?:android|ios|flutter|react-native)['"]/.test(source) &&
+      /The English version of this OpenIM (?:Android|iOS|Flutter|React Native) SDK guide is deferred/.test(
         source,
       ))
   );
@@ -228,7 +228,8 @@ export function replaceClientSdkRouteRecords({ platformId, sidebar, routes }) {
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : ['android', 'ios', 'flutter'];
+  const platformIds =
+    requested.length > 0 ? requested : ['android', 'ios', 'flutter', 'react-native'];
   let routes = await readJson('src/generated/routes.json');
 
   for (const platformId of platformIds) {
@@ -306,6 +307,7 @@ async function readJson(relativePath) {
 function getPlatformDisplayName(platformId) {
   if (platformId === 'ios') return 'iOS';
   if (platformId === 'android') return 'Android';
+  if (platformId === 'react-native') return 'React Native';
   return 'Flutter';
 }
 

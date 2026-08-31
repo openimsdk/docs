@@ -12,7 +12,7 @@ import {
 const wasmSidebar = readJson('data/structure/wasm-sidebar.json');
 
 test('registers the supported client SDK platforms and their structure paths', () => {
-  assert.deepEqual(clientSdkPlatformIds, ['android', 'ios', 'flutter', 'wasm']);
+  assert.deepEqual(clientSdkPlatformIds, ['android', 'ios', 'flutter', 'wasm', 'react-native']);
   assert.deepEqual(getClientSdkPlatform('android'), {
     id: 'android',
     contextKey: 'chat/sdk/android',
@@ -42,6 +42,7 @@ test('registers the supported client SDK platforms and their structure paths', (
   assert.equal(getClientSdkPlatform('flutter').contextKey, 'chat/sdk/flutter');
   assert.equal(getClientSdkPlatform('wasm').contextKey, 'chat/sdk/wasm');
   assert.throws(() => getClientSdkPlatform('unknown'), /Unknown client SDK platform: unknown/);
+  assert.equal(getClientSdkPlatform('react-native').contextKey, 'chat/sdk/react-native');
 });
 
 test('native sidebars keep unique platform routes and may extend the WASM structure', () => {
