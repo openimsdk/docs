@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { CheckIcon, CopyIcon } from '@/src/components/ui/icons';
 import { writeClipboardText } from '@/src/lib/clipboard';
 import type { Locale } from '@/src/lib/i18n';
 
 export type CodeTab = {
   code: string;
+  highlightedHtml?: string;
   language: string;
   title: string;
 };
@@ -14,21 +15,28 @@ export type CodeTab = {
 export function CodeBlock({
   code,
   insideTabs = false,
+  highlightedHtml,
+  children,
   language,
   locale = 'en',
+  ...preProps
 }: {
-  code: string;
+  code?: string;
   insideTabs?: boolean;
-  language: string;
+  highlightedHtml?: string;
+  language?: string;
   locale?: Locale;
-}) {
+  children?: ReactNode;
+} & Omit<ComponentPropsWithoutRef<'pre'>, 'children'>) {
+  const codeBlockRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const copyLabel = locale === 'zh' ? '复制代码' : 'Copy code';
   const copiedLabel = locale === 'zh' ? '已复制' : 'Copied';
 
   async function copyCode() {
     try {
-      await writeClipboardText(code);
+      const renderedCode = codeBlockRef.current?.querySelector('pre')?.textContent;
+      await writeClipboardText(renderedCode ?? code ?? '');
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1400);
     } catch {
@@ -37,7 +45,7 @@ export function CodeBlock({
   }
 
   return (
-    <div className={`code-block-shell ${insideTabs ? 'is-inside-tabs' : ''}`}>
+    <div className={`code-block-shell ${insideTabs ? 'is-inside-tabs' : ''}`} ref={codeBlockRef}>
       <button
         aria-label={copied ? copiedLabel : copyLabel}
         className="code-copy-button"
@@ -46,11 +54,18 @@ export function CodeBlock({
         type="button"
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
-        <span>{copied ? copiedLabel : copyLabel}</span>
       </button>
-      <pre>
-        <code data-language={language}>{code}</code>
-      </pre>
+      {highlightedHtml ? (
+        <div className="code-highlight" dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
+      ) : children !== undefined ? (
+        <div className="code-highlight">
+          <pre {...preProps}>{children}</pre>
+        </div>
+      ) : (
+        <pre>
+          <code data-language={language}>{code ?? ''}</code>
+        </pre>
+      )}
     </div>
   );
 }
@@ -75,7 +90,13 @@ export function CodeTabs({ locale = 'en', tabs }: { locale?: Locale; tabs: CodeT
           </button>
         ))}
       </div>
-      <CodeBlock code={current.code} insideTabs language={current.language} locale={locale} />
+      <CodeBlock
+        code={current.code}
+        highlightedHtml={current.highlightedHtml}
+        insideTabs
+        language={current.language}
+        locale={locale}
+      />
     </div>
   );
 }
