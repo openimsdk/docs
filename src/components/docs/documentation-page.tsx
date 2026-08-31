@@ -214,7 +214,8 @@ export async function renderDocumentationPage(
   const sdkOverviewPlatform =
     locale === 'zh' ||
     candidateSdkOverviewPlatform === 'wasm' ||
-    candidateSdkOverviewPlatform === 'android'
+    candidateSdkOverviewPlatform === 'android' ||
+    candidateSdkOverviewPlatform === 'react-native'
       ? candidateSdkOverviewPlatform
       : undefined;
 
@@ -296,6 +297,7 @@ function getSdkOverviewPlatform(path: string): SdkOverviewPlatform | undefined {
     '/sdk/android/overview': 'android',
     '/sdk/flutter/overview': 'flutter',
     '/sdk/ios/overview': 'ios',
+    '/sdk/react-native/overview': 'react-native',
     '/sdk/wasm/overview': 'wasm',
   };
 

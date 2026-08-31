@@ -1,0 +1,98 @@
+---
+title: 'Get received group applications'
+description: 'OpenIM React Native SDK guide for get received group applications.'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/group/group-applications/get-group-application-list-as-recipient'
+---
+
+Group owners and administrators can call `getGroupApplicationListAsRecipient()` to retrieve received group applications.
+
+```ts
+const applications = await OpenIMSDK.getGroupApplicationListAsRecipient({
+  groupIDs: ['group-001'],
+  handleResults: [ApplicationHandleResult.Unprocessed],
+  offset: 0,
+  count: 20,
+});
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- |
+| `groupIDs` | `string[]` | Yes | Group IDs to retrieve applications for. Pass an empty array to skip filtering by group. |
+| `handleResults` | `number[]` | Yes | Application results to retrieve. Pass an empty array to skip filtering by result. |
+| `offset` | `number` | Yes | Pagination offset. Use `0` for the first page. |
+| `count` | `number` | Yes | Number of applications to retrieve. |
+
+Common `ApplicationHandleResult` values are:
+
+| Enum value | Value | Meaning |
+| --- | --- | --- |
+| `ApplicationHandleResult.Unprocessed` | `0` | Pending. |
+| `ApplicationHandleResult.Agree` | `1` | Accepted. |
+| `ApplicationHandleResult.Reject` | `-1` | Rejected. |
+
+## Return value
+
+When the call completes, it returns `GroupApplicationItem[]` that the current account can handle.
+
+### Group application fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | ID of the group that the user applied to join. |
+| `userID` | `string` | User ID of the applicant. |
+| `nickname` | `string` | Applicant nickname recorded in the application. |
+| `userFaceURL` | `string` | Applicant avatar URL recorded in the application. |
+| `reqMsg` | `string` | Application message. |
+| `reqTime` | `number` | Application time. |
+| `joinSource` | `GroupJoinSource` | Source of the group application. |
+| `handleResult` | `ApplicationHandleResult` | Current handling result. |
+| `handleUserID` | `string` | User ID of the person who handled the application. |
+| `handledMsg` | `string` | Message entered while handling the application. |
+| `handledTime` | `number` | Time when the application was handled. |
+| `groupName` | `string` | Group name recorded in the application. |
+| `groupFaceURL` | `string` | Group avatar URL recorded in the application. |
+| `groupType` | `GroupType` | Group type. |
+| `ownerUserID` | `string` | Group owner user ID. |
+| `creatorUserID` | `string` | Group creator user ID. |
+| `introduction` | `string` | Group description recorded in the application. |
+| `notification` | `string` | Group announcement recorded in the application. |
+| `memberCount` | `number` | Group member count recorded in the application. |
+| `status` | `GroupStatus` | Group status. |
+| `createTime` | `number` | Application record creation time as a Unix timestamp in milliseconds. |
+| `ex` | `string` | Application record extension string. |
+
+The nickname, avatar, and group information in an application record reflect the values when the record was created. Query the current user profile or group profile to show the latest information.
+
+## Listen for group application changes
+
+When a group application is added, handled, or deleted, `OnGroupApplicationAdded`, `OnGroupApplicationAccepted`, `OnGroupApplicationRejected`, or `OnGroupApplicationDeleted` is triggered respectively. Each callback receives a `GroupApplicationItem` directly:
+
+```ts
+const handleApplicationChanged = (application: GroupApplicationItem) => {
+  // Update the application record by groupID and userID
+};
+
+const handleApplicationDeleted = (application: GroupApplicationItem) => {
+  // Delete the application record by groupID and userID
+};
+
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationAdded, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationAccepted, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged);
+OpenIMSDK.on(OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted);
+
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationAdded, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationAccepted, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged);
+OpenIMSDK.off(OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted);
+```
+
+Remove these listeners when signing out, switching accounts, or discarding application-list state.

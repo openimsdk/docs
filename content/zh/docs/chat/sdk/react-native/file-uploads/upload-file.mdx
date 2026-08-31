@@ -1,0 +1,59 @@
+---
+title: '上传文件'
+description: '使用 OpenIM React Native SDK 独立上传文件并获取远端资源 URL。'
+product: 'sdk'
+context: 'chat/sdk/react-native'
+template: 'guide'
+status: 'draft'
+version: 'v4'
+platform: 'react-native'
+sourcePath: '/sdk/react-native/file-uploads/upload-file'
+---
+
+`uploadFile()` 用于独立上传本地文件，可用于头像、群头像、资料附件或其他业务文件。
+
+```ts
+const { url } = await OpenIMSDK.uploadFile({
+  name: 'avatar.png',
+  contentType: 'image/png',
+  uuid: 'avatar-upload-20260827',
+  cause: 'user-avatar',
+  filepath,
+});
+```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `name` | `string` | 是 | 上传使用的文件名。 |
+| `contentType` | `string` | 是 | 文件的 MIME 类型。 |
+| `uuid` | `string` | 是 | 本次上传的业务标识。 |
+| `cause` | `string` | 否 | 业务约定的上传原因。 |
+| `filepath` | `string` | 是 | 应用可读取的本地文件路径。 |
+
+调用完成后返回远端资源地址 `url`。可将该地址用于更新头像、保存业务附件，或创建 URL 类型的媒体消息后再发送。
+
+## 监听上传状态
+
+上传过程中触发 `UploadOnProgress` 事件，回调参数包含当前已上传量 `current` 和文件总量 `size`。上传完成时触发 `UploadComplete` 事件，回调参数的 `data` 包含 `fileSize`、`streamSize` 和 `storageSize`。
+
+```ts
+function handleUploadProgress({ current, size }) {
+  // ...
+}
+
+function handleUploadComplete({ data }) {
+  // ...
+}
+
+// 设置监听
+OpenIMSDK.on(OpenIMEvent.UploadOnProgress, handleUploadProgress);
+OpenIMSDK.on(OpenIMEvent.UploadComplete, handleUploadComplete);
+
+// 取消监听
+OpenIMSDK.off(OpenIMEvent.UploadOnProgress, handleUploadProgress);
+OpenIMSDK.off(OpenIMEvent.UploadComplete, handleUploadComplete);
+```
+
+组件销毁、退出登录或切换账号时，应取消监听。
