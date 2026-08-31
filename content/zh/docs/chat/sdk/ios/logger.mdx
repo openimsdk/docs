@@ -4,7 +4,7 @@ description: '配置 OpenIM iOS SDK 日志，写入应用诊断信息并上传�
 sourcePath: '/sdk/ios/logger'
 ---
 
-OpenIM iOS SDK 的日志用于定位初始化、连接和业务 API 调用问题。开发环境可以输出较详细的信息；生产环境应减少日志量，并避免记录 token、消息正文、文件 URL 和用户隐私字段。
+OpenIM iOS SDK 的日志用于定位初始化、连接和业务 API 调用问题。初始化配置可以控制日志级别、标准输出和日志目录。
 
 ## 初始化日志配置
 
@@ -26,12 +26,12 @@ config.systemType = @"ios";
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| `logLevel` | `NSInteger` | SDK 日志级别；默认值为 `6`，实际级别约定以当前 SDK 版本为准。 |
+| `logLevel` | `NSInteger` | SDK 日志级别，默认值为 `6`。 |
 | `isLogStandardOutput` | `BOOL` | 是否输出 SDK 标准日志。 |
 | `logFilePath` | `NSString *` | 可选的日志文件目录。 |
 | `systemType` | `NSString *` | 日志中的系统类型标识。 |
 
-生产环境不要长期启用最详细日志。日志目录应位于应用可写范围，并纳入容量、保留期和隐私策略。
+日志级别越详细，产生的日志内容越多。`logFilePath` 需要指向应用可写目录。
 
 ## 写入应用诊断日志
 
@@ -47,11 +47,11 @@ config.systemType = @"ios";
                   logLevel:2];
 ```
 
-`keyAndValues` 应只包含排查所需的非敏感标识。不要写入访问 token、完整消息内容或原始文件地址。
+`keyAndValues` 按“键、值”成对传入，可用于补充 `conversationID`、`clientMsgID` 等调用上下文。
 
 ## 上传日志
 
-用户明确同意提交诊断信息后，可以上传 SDK 日志：
+调用以下方法可以上传 SDK 日志：
 
 ```objc
 [[OIMManager manager] uploadLogsWithProgress:^(NSInteger saveBytes, NSInteger currentBytes, NSInteger totalBytes) {
@@ -67,4 +67,4 @@ config.systemType = @"ios";
 }];
 ```
 
-上传进度 callback 依次提供已保存、当前处理和总字节数。上传前应说明收集范围，并遵守产品的隐私、用户同意和资料保留规范。
+上传进度 callback 依次提供已保存、当前处理和总字节数。成功 callback 表示本次上传请求已完成。

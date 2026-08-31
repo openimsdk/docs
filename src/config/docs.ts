@@ -16,7 +16,7 @@ export const platformLabels: Record<string, string> = {
   ios: 'iOS',
   android: 'Android',
   flutter: 'Flutter',
-  uniapp: 'uni-app',
+  uniapp: 'uni-app / uni-app x',
   wasm: 'WASM',
   electron: 'Electron',
   miniprogram: 'Mini Program',
@@ -26,10 +26,14 @@ export const platformLabels: Record<string, string> = {
 export const webCompatibleSdkPlatforms = ['wasm', 'electron', 'miniprogram'] as const;
 
 /** Temporarily hidden from SDK nav, home cards, and platform switcher. Routes remain. */
-export const hiddenSdkPlatforms = ['uniapp', 'react-native'] as const;
+export const hiddenSdkPlatforms = ['react-native'] as const;
 
-export function isSdkPlatformVisible(platform?: string | null): boolean {
+export function isSdkPlatformVisible(
+  platform?: string | null,
+  locale?: Locale,
+): boolean {
   if (!platform) return true;
+  if (platform === 'uniapp' && locale === 'en') return false;
   return !(hiddenSdkPlatforms as readonly string[]).includes(platform);
 }
 
@@ -54,6 +58,11 @@ export const sdkPlatformSections: SdkPlatformSection[] = [
       { label: 'iOS', platform: 'ios', href: '/sdk/ios/overview' },
       { label: 'Android', platform: 'android', href: '/sdk/android/overview' },
       { label: 'Flutter', platform: 'flutter', href: '/sdk/flutter/overview' },
+      {
+        label: 'uni-app / uni-app x',
+        platform: 'uniapp',
+        href: '/sdk/uniapp/overview',
+      },
     ],
   },
   {
@@ -88,6 +97,15 @@ export const sdkPlatformSections: SdkPlatformSection[] = [
 ];
 
 export const sdkPlatformItems = sdkPlatformSections.flatMap((section) => section.items);
+
+export function getSdkPlatformSections(locale: Locale): SdkPlatformSection[] {
+  return sdkPlatformSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => isSdkPlatformVisible(item.platform, locale)),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 export function getProductLabel(product: string, locale: Locale = 'en'): string {
   if (locale === 'zh')

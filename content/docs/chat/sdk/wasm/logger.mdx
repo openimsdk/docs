@@ -11,7 +11,7 @@ platform: 'wasm'
 sourcePath: '/sdk/wasm/logger'
 ---
 
-WASM SDK logs are primarily used to diagnose browser login and business API calls. Development and staging environments can emit detailed SDK logs. Production should retain only necessary errors and tracing fields and must avoid logging tokens, message bodies, file URLs, or other sensitive data.
+WASM SDK logs help diagnose browser sign-in and business API calls. Use the log level and standard-output options to control the amount of SDK output.
 
 A logging flow generally combines the SDK login configuration, the `operationID` for one call, diagnostic fields in the SDK response, and your application's own structured logs.
 
@@ -21,16 +21,13 @@ Pass browser SDK logging options through `LoginParams` when calling `login()`. `
 
 The current browser SDK login wrapper writes the configuration using `params.logLevel || 5`. Because `LogLevel.Panic` has the numeric value `0`, it is treated as falsy and falls back to `Debug`. To reduce log output, use `LogLevel.Fatal` or `LogLevel.Error` instead of relying on `Panic`.
 
-Avoid leaving the most verbose logging enabled in production. Increase the level temporarily based on the environment, a staged feature flag, or an explicit user-initiated diagnostic flow.
-
 ### Recommended log levels
 
 | Scenario | Recommended configuration | Description |
 | --- | --- | --- |
 | Local development | `LogLevel.Debug`, `isLogStandardOutput: true` | Inspect SDK call details in the browser console. |
 | Integration or staging | Temporarily use a more detailed level when needed | Correlate user IDs, conversation IDs, error codes, and OpenIMServer logs. |
-| Production default | Use `Warn` or `Error` and disable unnecessary console output | Reduce noise and sensitive-data exposure while retaining structured application errors. |
-| User diagnostic mode | Temporarily enable more detailed logs and explain the collection scope | State which fields are collected and follow privacy and compliance requirements. |
+| Reduced output | Use `Warn` or `Error` and disable console output | Emit only SDK logs at the selected levels. |
 
 ## Configure the log level
 
@@ -60,7 +57,7 @@ await openimsdk.login({
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `logLevel` | `LogLevel` | No | Controls the verbosity of SDK runtime logs. |
-| `isLogStandardOutput` | `boolean` | No | Whether to write SDK logs to the browser console. Use it during development and temporary diagnostics. |
+| `isLogStandardOutput` | `boolean` | No | Whether to write SDK logs to the browser console. |
 
 `errCode` and `errMsg` are diagnostic fields in a response, not logging configuration parameters for `login()`.
 
@@ -94,10 +91,6 @@ try {
 For ordinary calls, omit `operationID` and let the SDK generate it. Generate and pass one explicitly only when the application needs to correlate a specific call precisely with OpenIMServer logs. Use a new value for every call; do not share one `operationID` across unrelated requests.
 
 `operationID` is not a user identity, permission credential, conversation ID, or application ID used to prevent duplicate processing. It cannot replace a token, `conversationID`, `clientMsgID`, or another business identifier. If a business flow contains multiple SDK calls, generate a separate `operationID` for each call and use an application trace ID to correlate the complete flow.
-
-## Record business context
-
-Include the current route, business action, `operationID`, `errCode`, `errMsg`, and necessary target identifiers in structured logs. Do not write tokens, complete message bodies, raw file URLs, or private user fields to frontend logs.
 
 ## Related pages
 

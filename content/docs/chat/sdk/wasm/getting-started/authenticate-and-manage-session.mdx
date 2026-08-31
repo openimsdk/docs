@@ -17,7 +17,7 @@ Follow this sequence for a complete sign-in flow:
 
 1. Publish the WASM assets and create an SDK instance with `getSDK()`.
 2. Register connection, token, and account sign-out events so that no state changes are missed during sign-in.
-3. Obtain the `userID`, token, `apiAddr`, and `wsAddr` described in “Before you start” from a trusted backend.
+3. Obtain the `userID`, token, `apiAddr`, and `wsAddr` described in “Before you start” from the application backend.
 4. Call `login()`, wait for its Promise to succeed, and then wait for `OnConnectSuccess` to confirm that the connection is ready.
 5. Query user, friend, conversation, group, and message data only after the connection succeeds.
 6. When the user signs out or switches accounts, call `logout()`, then clear application state and event listeners for the current account.
@@ -43,7 +43,7 @@ const openimsdk = getSDK({
 | --- | --- | --- | --- |
 | `coreWasmPath` | `string` | No | Browser-accessible URL for `openIM.wasm`. Defaults to `/openIM.wasm` when omitted. |
 | `sqlWasmPath` | `string` | No | Browser-accessible URL for `sql-wasm.wasm`. Set it explicitly when the project changes its static asset directory or uses a CDN. |
-| `debug` | `boolean` | No | Controls diagnostic output from the JavaScript wrapper and local database bridge. It is enabled by default and is normally disabled explicitly in production. |
+| `debug` | `boolean` | No | Controls diagnostic output from the JavaScript wrapper and local database bridge. It is enabled by default. |
 
 ### Understand the browser package
 
@@ -63,7 +63,7 @@ const { userID, token, apiAddr, wsAddr } = await loadOpenIMSDKSession();
 
 ## Register connection events before signing in
 
-Register connection events before calling `login()`. This lets the application capture errors caused by network access, service addresses, tokens, or server conditions during sign-in and surface them in the UI and logs.
+Register connection events before calling `login()`. This lets the application capture errors caused by network access, service addresses, tokens, or server conditions during sign-in and update its connection state.
 
 ```ts
 const handleConnecting = () => {
@@ -76,7 +76,7 @@ const handleConnectSuccess = () => {
 
 const handleConnectFailed = ({ errCode, errMsg }) => {
   setConnectionState('failed');
-  console.error('OpenIMClientSDK connection failed', { errCode, errMsg });
+  handleOpenIMError(errCode, errMsg);
 };
 
 openimsdk.on(SdkEvent.OnConnecting, handleConnecting);
@@ -102,7 +102,7 @@ try {
     isLogStandardOutput: false,
   });
 } catch ({ errCode, errMsg }) {
-  console.error('OpenIMClientSDK sign-in failed', { errCode, errMsg, userID });
+  handleOpenIMError(errCode, errMsg);
   throw new Error(`OpenIMClientSDK login failed: ${errCode} ${errMsg}`);
 }
 ```
@@ -112,11 +112,11 @@ try {
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `userID` | `string` | Yes | The current OpenIMSDK user ID, which must match the token. It is not a nickname, phone number, or temporary application session ID. |
-| `token` | `string` | Yes | The current user's OpenIMSDK token, obtained from a trusted backend. Do not use an administrator token or issue tokens in the frontend. |
+| `token` | `string` | Yes | The current user's OpenIMSDK token returned by the application backend. It must correspond to `userID`. |
 | `platformID` | `number` | Yes | The current client platform. Use `Platform.Web` in a browser. Desktop and mobile clients should select the appropriate enum according to their runtime and the server's multi-device sign-in policy. |
 | `apiAddr` | `string` | Yes | The OpenIMServer HTTP API address, which must be reachable from the current browser. Use an HTTPS address on an HTTPS page. |
 | `wsAddr` | `string` | Yes | The OpenIMServer WebSocket address, which must accept connections from the current browser. An HTTPS page normally uses WSS. |
-| `logLevel` | `LogLevel` | No | The SDK log level. Use `Debug` during development and normally `Warn` or `Error` in production. |
+| `logLevel` | `LogLevel` | No | The SDK log level. See [Logging](/sdk/wasm/logger) for enum values. |
 | `isLogStandardOutput` | `boolean` | No | Whether to send core SDK logs to the browser console. Disabling this option does not disable JavaScript wrapper logs controlled by `getSDK({ debug })`. |
 | `isExternalExtensions` | `boolean` | No | Whether to enable external message extensions. Set it to `true` only when the server and application implement the corresponding extension contract. |
 | `tryParse` | `boolean` | No | Whether the SDK should try to parse JSON response strings into objects. It defaults to `true`; when disabled, the application must parse response data itself. |
@@ -134,7 +134,7 @@ try {
   const { data } = await openimsdk.getSelfUserInfo();
   useCurrentUser(data);
 } catch ({ errCode, errMsg }) {
-  console.error('getSelfUserInfo failed', { errCode, errMsg });
+  handleOpenIMError(errCode, errMsg);
 }
 ```
 
@@ -195,24 +195,22 @@ These methods only report runtime changes. They do not establish a new user sess
 
 ### Use access tokens
 
-A trusted backend must issue the OpenIMSDK token and return it to the browser. The frontend only passes it to `login()` and restarts authentication when the token expires, becomes invalid, or the user deliberately switches accounts.
+The application backend issues the OpenIMSDK token and returns it to the browser. The frontend passes it to `login()` and restarts authentication when the token expires, becomes invalid, or the user switches accounts.
 
 ```ts
 const handleUserTokenExpired = async () => {
-  console.warn('OpenIMSDK token has expired');
   await refreshSessionAndRelogin();
 };
 
 const handleUserTokenInvalid = ({ data: reason }) => {
-  console.warn('OpenIMSDK token is invalid', { reason });
-  redirectToSignIn();
+  handleInvalidOpenIMToken(reason);
 };
 
 openimsdk.on(SdkEvent.OnUserTokenExpired, handleUserTokenExpired);
 openimsdk.on(SdkEvent.OnUserTokenInvalid, handleUserTokenInvalid);
 ```
 
-The `data` value of `OnUserTokenInvalid` is a reason string returned by the SDK. Use it only for diagnostics and user-facing guidance; never use it to bypass reauthentication. To refresh a token, request a new `userID`, token, and service addresses from the trusted backend, then call `login()` again or direct the user to sign in according to your product policy.
+The `data` value of `OnUserTokenInvalid` is a reason string returned by the SDK. To refresh a token, request a new `userID`, token, and service addresses from the application backend, then call `login()` again through the application's authentication flow.
 
 ### Access tokens and session tokens
 
@@ -227,13 +225,13 @@ In addition to connection and token events, handle forced sign-out. This event n
 ```ts
 const handleKickedOffline = () => {
   clearCurrentSession();
-  showSignedInElsewhereDialog();
+  handleForcedSignOut();
 };
 
 openimsdk.on(SdkEvent.OnKickedOffline, handleKickedOffline);
 ```
 
-When `OnKickedOffline` arrives, the WASM SDK has already signed out the current session automatically. Do not call `logout()` again. The event handler only needs to clear the application's current user, conversation list, message view, and page state, then prompt the user to sign in again or navigate to the sign-in page according to product policy.
+When `OnKickedOffline` arrives, the WASM SDK has already signed out the current session automatically. Do not call `logout()` again. Clear the current user, conversation list, message view, and page state maintained by the application, then enter its signed-out flow.
 
 ## Disconnect from OpenIMServer
 

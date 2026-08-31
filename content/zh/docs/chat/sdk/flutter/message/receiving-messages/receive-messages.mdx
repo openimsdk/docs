@@ -10,13 +10,13 @@ sourcePath: '/sdk/flutter/message/receiving-messages/receive-messages'
 
 ## 消息类型
 
-根据 `contentType` 或非空内容元素选择渲染器：`textElem`、`atTextElem`、`customElem` 分别处理文本、@ 和自定义内容；`pictureElem`、`soundElem`、`videoElem`、`fileElem` 读取消息中已有的 URL、大小、名称、时长或封面图，不需要在接收端重新上传。未知类型应显示安全的“不支持消息”占位，不能把任意自定义数据直接当 HTML 渲染。
+根据 `contentType` 或非空内容元素选择渲染器：`textElem`、`atTextElem`、`customElem` 分别处理文本、@ 和自定义内容；`pictureElem`、`soundElem`、`videoElem`、`fileElem` 读取消息中已有的 URL、大小、名称、时长或封面图，不需要在接收端重新上传。未知类型可以显示“不支持的消息”占位；自定义消息由应用按约定的数据格式解析和渲染。
 
 如果产品需要一次发送多个文件，常见实现是连续发送多条文件消息，或发送一条自定义消息承载文件组数据。无论界面如何组合展示，状态层仍应以每条 `Message.clientMsgID` 作为稳定标识。
 
 Flutter 的 `Message` 没有 `conversationID`。全局 listener 应先解析消息路由，再由 SDK 取得对应会话 ID：
 
-当前 SDK 中用于接收、路由与合并的常用字段如下，除 `exMap` 外都声明为 nullable，因此 listener 不能假设回调数据完整：
+用于接收、路由与合并的常用字段如下，除 `exMap` 外都声明为 nullable，因此 listener 需要处理字段为空的情况：
 
 | 字段          | 类型      | 说明                                                  |
 | ------------- | --------- | ----------------------------------------------------- |
@@ -84,7 +84,7 @@ Future<void> handleOnlineOnlyMessage(Message message) async {
 }
 ```
 
-这三个函数应纳入应用唯一的 `OnAdvancedMsgListener`，集中设置方式见[事件概览](/sdk/flutter/events/overview-events)。固定 SDK 没有 remove 或 unset API。
+这三个函数应纳入应用唯一的 `OnAdvancedMsgListener`，集中设置方式见[事件概览](/sdk/flutter/events/overview-events)。SDK 没有 remove 或 unset API。
 
 应用应在 SDK 初始化和登录生命周期内只设置一次 listener，并由稳定的应用级分发器把事件路由到各会话状态。不要在每次进入聊天页时重新设置 listener，否则后设置的实例会替换先前回调，页面销毁也无法用 unset API 单独移除。
 
@@ -107,7 +107,7 @@ Future 成功只表示已读请求完成，不代表会话列表事件已经到�
 - 用另一个已登录账号分别发送文本、媒体和自定义消息，确认路由到正确会话且每个 `clientMsgID` 只渲染一次。
 - 在重新登录后确认离线同步消息与历史查询结果不会重复。
 - 发送 `isOnlineOnly: true` 的消息，确认只走在线回调且历史查询不返回该消息。
-- 验证缺少必要路由字段或 `clientMsgID` 的异常消息被忽略并记录诊断，而不是造成崩溃。
+- 验证缺少必要路由字段或 `clientMsgID` 的异常消息被忽略，而不是造成崩溃。
 - 撤回一条消息，确认对应 `clientMsgID` 更新为撤回态，而不是额外插入一条消息。
 - 打开并实际阅读会话后标记已读，确认会话未读数和总未读角标通过会话事件更新。
 

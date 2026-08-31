@@ -4,15 +4,15 @@ description: '在 Flutter SDK 已同步的本地消息中按关键词与会话�
 sourcePath: '/sdk/flutter/message/searching-messages/search-messages'
 ---
 
-`searchLocalMessages()` 搜索当前用户本地已同步消息。群聊目标使用对应的 `conversationID`，不是发送时使用的 `groupID`。跨用户审计或服务端全量搜索应由后端服务提供。
+`searchLocalMessages()` 搜索当前用户本地已同步消息。群聊目标使用对应的 `conversationID`，不是发送时使用的 `groupID`。
 
 如果入口只有用户 ID 或群组 ID，先调用 `getConversationIDBySessionType(sourceID:, sessionType:)` 换取会话 ID；单聊使用 `ConversationType.single`，群聊按实际会话类型使用对应值。全局搜索则省略 `conversationID`。
 
-搜索范围来自 SDK 已同步到当前设备本地缓存的消息。需要跨用户审计、服务端全量检索、复杂权限过滤或全局排序时，应由后端搜索服务承担，再把命中的会话和消息标识返回客户端定位。
+搜索范围来自 SDK 已同步到当前设备本地缓存的消息。服务端全量检索或跨会话全局排序不属于本方法的能力范围；这类结果可以由后端搜索服务返回对应的会话和消息标识，再由客户端定位。
 
 ## 创建搜索查询
 
-`keywordList` 接收关键词列表，但固定 Flutter 实现当前只使用一个关键词。搜索框提交前应去掉首尾空格并过滤空值，避免把空关键词传给 SDK。
+`keywordList` 接收关键词列表，但当前只使用一个关键词。搜索框提交前应去掉首尾空格并过滤空值。
 
 ```dart
 final keyword = input.trim();
@@ -30,7 +30,7 @@ if (keyword.isNotEmpty) {
 
 ## 高级搜索
 
-`searchLocalMessages()` 还公开发送者、消息类型和时间窗口等筛选字段。固定 Flutter 实现目前未使用 `keywordListMatchType` 和 `senderUserIDList`，因此不能把它们描述为已经生效的过滤能力；需要可靠的发送者筛选时，应在当前 SDK 版本验证行为或由后端搜索服务处理。
+`searchLocalMessages()` 还提供消息类型和时间窗口等筛选字段。`keywordListMatchType` 和 `senderUserIDList` 当前不参与搜索；发送者筛选可以由其他业务搜索能力提供。
 
 ```dart
 final result = await OpenIM.iMManager.messageManager.searchLocalMessages(
@@ -44,16 +44,16 @@ final result = await OpenIM.iMManager.messageManager.searchLocalMessages(
 );
 ```
 
-如果搜索入口允许搜索图片、文件或自定义消息，把对应的 `MessageType` 数字常量加入 `messageTypeList`。不需要限制消息类型时，按固定 SDK 的默认行为构造参数，不要自行假设所有内容类型都会参与关键词匹配。
+如果搜索入口允许搜索图片、文件或自定义消息，把对应的 `MessageType` 数字常量加入 `messageTypeList`。不需要限制消息类型时，使用默认空列表；不同内容类型是否支持关键词匹配取决于其本地索引内容。
 
 ### 参数说明
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
 | `conversationID` | `String?` | 否 | 指定会话；为 `null` 时搜索本地全部会话。 |
-| `keywordList` | `List<String>` | 否 | 默认为空列表；执行关键词搜索时传一个清理后的非空关键词。固定实现当前只使用一个关键词。 |
+| `keywordList` | `List<String>` | 否 | 默认为空列表；执行关键词搜索时传一个清理后的非空关键词。当前只使用一个关键词。 |
 | `keywordListMatchType` | `int` | 否 | 默认 `0`；多关键词匹配字段当前实现未使用。 |
-| `senderUserIDList` | `List<String>` | 否 | 默认空列表；固定实现标注为当前未使用。 |
+| `senderUserIDList` | `List<String>` | 否 | 默认空列表；当前未使用。 |
 | `messageTypeList` | `List<int>` | 否 | 消息类型数字列表，例如 `MessageType.text`；默认空列表。 |
 | `searchTimePosition` | `int` | 否 | UTC 秒级时间起点，默认 `0`，表示从当前时间开始。 |
 | `searchTimePeriod` | `int` | 否 | 向过去搜索的秒数，默认 `0`，表示不限制。 |
@@ -62,7 +62,7 @@ final result = await OpenIM.iMManager.messageManager.searchLocalMessages(
 
 ## 处理分页结果
 
-返回 `SearchResult`，其字段在固定 SDK 中均为 nullable：
+返回 `SearchResult`，以下字段均为 nullable：
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ final result = await OpenIM.iMManager.messageManager.searchLocalMessages(
 
 搜索命中的消息可能在页面打开后被撤回、删除，或由新的同步数据补充。应使用[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)、[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)和[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)中的统一处理器更新结果；本页只负责搜索与分页，不重复设置消息 listener。
 
-跳转到命中消息时，使用结果项的 `conversationID` 和消息的 `clientMsgID` 定位。需要展示前后文时，按[按 ID 定位消息](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)分别读取较旧与较新的消息；固定 Flutter SDK 没有 WASM 的 `fetchSurroundingMessages()`，不能直接照搬该调用。
+跳转到命中消息时，使用结果项的 `conversationID` 和消息的 `clientMsgID` 定位。需要展示前后文时，按[按 ID 定位消息](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)分别读取较旧与较新的消息。
 
 需要显示当前时刻的搜索结果时，可以用相同条件重新执行查询。搜索 Future、后续消息事件和重新查询是三条独立路径。
 

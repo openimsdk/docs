@@ -4,7 +4,7 @@ description: '配置 Android SDK 日志、写入应用诊断信息并上传日�
 sourcePath: '/sdk/android/logger'
 ---
 
-OpenIM Android SDK 日志用于定位初始化、连接和业务 API 调用问题。开发和预发布环境可以输出较详细的信息；生产环境应减少日志量，并避免记录 Token、完整消息正文、原始文件 URL、通话房间凭据和用户隐私字段。
+OpenIM Android SDK 日志用于定位初始化、连接和业务 API 调用问题。可以通过初始化配置控制日志级别、标准输出和日志目录。
 
 ## 初始化日志配置
 
@@ -33,10 +33,10 @@ boolean initialized = OpenIMClient.getInstance().initSDK(
 | 字段 | 说明 |
 | --- | --- |
 | `logLevel` | 使用 `LogLevel` 常量控制详细程度。可选值包括 `DebugWithSQL`、`Debug`、`Info`、`Warn`、`Error`、`Panic` 和 `Fatal`。 |
-| `isLogStandardOutput` | 是否把 SDK 日志输出到 Android 标准日志；开发诊断时开启。 |
-| `logFilePath` | 可选日志目录，应位于应用可写范围并纳入容量与保留期管理。 |
+| `isLogStandardOutput` | 是否把 SDK 日志输出到 Android 标准日志。 |
+| `logFilePath` | 可选日志目录，需要位于应用可写范围。 |
 
-开发诊断可以使用 `Debug`；只有排查数据库问题时才临时启用 `DebugWithSQL`。生产环境通常使用 `Warn` 或 `Error`，并关闭不必要的标准输出。
+`DebugWithSQL` 会包含数据库调试信息，`Debug`、`Info`、`Warn` 和 `Error` 等级依次减少输出内容。应用可以根据排查范围选择日志级别。
 
 ## 写入应用日志
 
@@ -54,7 +54,7 @@ OpenIMClient.getInstance().logs(
 );
 ```
 
-`currentClassName` 和 `currentLineNum` 用于定位调用位置，`msgStr` 是简短动作描述，`errStr` 是错误信息。`Warn`、`Error`、`Panic` 和 `Fatal` 级别必须提供非空错误信息。末尾的 `extra` 按“键、值”成对传入；只记录排查所需的非敏感标识。
+`currentClassName` 和 `currentLineNum` 用于定位调用位置，`msgStr` 是简短动作描述，`errStr` 是错误信息。`Warn`、`Error`、`Panic` 和 `Fatal` 级别必须提供非空错误信息。末尾的 `extra` 按“键、值”成对传入。
 
 旧版带 `OnBase<String>`、`Map` 参数的 `logs()` 重载已经废弃，不应在新代码中使用。
 
@@ -95,12 +95,12 @@ OpenIMClient.getInstance().uploadLogs(
 | `params` | 历史遗留参数，当前 SDK 不使用；传入空列表，例如 `new ArrayList<>()`。 |
 | `line` | 本次上传读取的日志行数配置。 |
 | `cancelID` | 本次上传的稳定标识，可使用业务生成的 UUID。 |
-| `ex` | 附加到上传任务的诊断说明，例如工单 ID；不能包含凭据或隐私数据。 |
+| `ex` | 附加到上传任务的说明，例如工单 ID。 |
 | `UploadLogProgress` | 提供当前进度和总量，用于更新上传界面。 |
 
 成功 callback 表示本次日志上传请求完成。
 
-排查问题或向技术支持提供日志时，同时说明发生时间、用户 ID、操作名称，以及必要的 `conversationID`、`clientMsgID`、`groupID` 或 `roomID`。这些非敏感业务标识有助于定位对应记录，但不能替代完整日志。
+上传完成后，可以结合发生时间、操作名称和相关的 `conversationID`、`clientMsgID`、`groupID` 或 `roomID` 定位对应调用。
 
 ## 相关页面
 

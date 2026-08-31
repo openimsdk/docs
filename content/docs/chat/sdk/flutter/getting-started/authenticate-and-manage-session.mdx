@@ -16,16 +16,16 @@ Initialize the local OpenIM Flutter SDK with `initSDK()`, then establish the cur
 The complete flow is:
 
 1. Call `initSDK()` and provide an `OnConnectListener`.
-2. Obtain the `userID`, token, `apiAddr`, and `wsAddr` from a trusted backend.
+2. Obtain the `userID`, token, `apiAddr`, and `wsAddr` from the application backend.
 3. Call `login()`, wait for its `Future`, and then wait for `onConnectSuccess`.
 4. Once the connection is available, query user, friend, conversation, group, and message data.
 5. When signing out or switching accounts, call `logout()` and then clear application state for the current account.
 
 ## Obtain credentials for the current user
 
-Your app should obtain the current user's `userID` and token, together with the environment's `apiAddr` and `wsAddr`, from a trusted backend. See [Before you start](/sdk/flutter/getting-started/before-you-start) for the API responsibilities and security boundaries.
+Obtain the current user's `userID` and token, together with the environment's `apiAddr` and `wsAddr`, from the application backend. See [Before you start](/sdk/flutter/getting-started/before-you-start) for the required data.
 
-`userID` is an OpenIMSDK user identifier, not an authentication credential, and it must correspond to the token. The mobile client only consumes credentials returned by the backend; it must not create OpenIM users, issue tokens, or embed an administrator token in the app.
+`userID` is an OpenIMSDK user identifier and must correspond to the token. The mobile client consumes credentials returned by the backend; it does not create OpenIM users or issue tokens.
 
 ## Initialize and configure the connection lifecycle
 
@@ -78,7 +78,7 @@ if (initialized != true) {
 
 When the `initSDK()` `Future` succeeds and returns `true`, local SDK initialization is complete. This does not mean that a user is logged in or that the persistent connection is available. Initialize the SDK centrally once per application process; do not start separate initialization flows from multiple widgets.
 
-`OnConnectListener` is a Dart callback object, not the WASM `on()`/`off()` event model. The pinned version does not expose a method for removing the connection listener. Keep one listener in a central owner and avoid reinitializing the SDK during widget rebuilds.
+`initSDK()` retains the `OnConnectListener`, and the SDK does not expose a method for removing it. Keep one listener in a central owner and avoid reinitializing the SDK during widget rebuilds.
 
 ## Log in the current user
 
@@ -96,7 +96,7 @@ setCurrentUser(currentUser);
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `userID` | `String` | Yes | The current OpenIMSDK user ID. It must correspond to the token. |
-| `token` | `String` | Yes | The current user's token returned by a trusted backend. |
+| `token` | `String` | Yes | The current user's token returned by the application backend. |
 | `checkLoginStatus` | `bool` | No | Whether to check SDK login state first. The default is `true`. |
 | `defaultValue` | `Future<UserInfo> Function()?` | No | Fallback used when reading the logged-in user's profile fails. Usually leave this unset so the actual error remains visible. |
 
@@ -129,7 +129,7 @@ When switching accounts, do not overwrite the current login with new parameters.
 
 ## Handle token errors and forced sign-out
 
-When a token expires or becomes invalid, obtain new credentials from the trusted backend and either log in again or return to the sign-in page according to product policy. When `onKickedOffline` fires, clear user, list, and page state maintained by the app. Do not treat forced sign-out as if the user had deliberately selected Log out.
+When a token expires or becomes invalid, obtain new credentials from the application backend and log in again or enter the application's sign-in flow. `onKickedOffline` indicates that another device or the server forced the current account offline; it is distinct from an explicit user sign-out.
 
 The Flutter login flow passes one OpenIMSDK token to `login()`; it does not distinguish client-side “access tokens” from “session tokens.” Token issuance, expiration, refresh, and revocation are determined by the application backend and OpenIMServer configuration.
 
