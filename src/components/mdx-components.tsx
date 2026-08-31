@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ComponentPropsWithoutRef } from 'react';
 import type { MDXComponents } from 'mdx/types';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
+import { CodeBlock } from '@/src/components/docs/code-block';
 import {
   ChatHero,
   FeaturedSamplesSection,
@@ -29,6 +30,7 @@ function SmartLink({
 export function getMDXComponents(locale: Locale = 'en', components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
+    pre: (props) => <CodeBlock {...props} />,
     a: (props) => <SmartLink {...props} locale={locale} />,
     ChatHero: (props) => <ChatHero {...props} locale={locale} />,
     FeaturedSamplesSection: () => <FeaturedSamplesSection locale={locale} />,
