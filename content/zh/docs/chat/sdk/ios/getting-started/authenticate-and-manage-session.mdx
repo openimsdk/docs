@@ -9,16 +9,16 @@ OpenIM iOS SDK 使用 `login:token:onSuccess:onFailure:` 建立当前用户的�
 完整流程如下：
 
 1. 使用 `OIMInitConfig` 初始化 SDK，同时设置连接、Token 与强制下线 callback。
-2. 从可信后端取得当前用户的 `userID` 与 Token。
+2. 从业务后端取得当前用户的 `userID` 与 Token。
 3. 调用登录方法，等待成功 callback，并继续等待 `onConnectSuccess`。
 4. 连接可用后，再查询用户、好友、会话、群组与消息数据。
 5. 主动退出或切换账号时调用登出方法，再清理当前账号的应用状态。
 
 ## 获取当前用户的登录信息
 
-应用应从可信后端取得当前用户的 `userID` 与 OpenIMSDK Token。`userID` 只是 OpenIMSDK 用户标识，不是认证凭据，而且必须与 Token 对应。
+应用从业务后端取得当前用户的 `userID` 与 OpenIMSDK Token。`userID` 是 OpenIMSDK 用户标识，必须与 Token 对应。
 
-iOS 客户端只使用后端返回的登录信息，不负责建立 OpenIM 用户或签发 Token。不要把管理员 Token 打包进 App，也不要把完整 Token 写入普通日志。
+iOS 客户端使用后端返回的登录信息，不负责建立 OpenIM 用户或签发 Token。
 
 ## 初始化并处理连接生命周期
 
@@ -46,11 +46,11 @@ BOOL accepted = [[OIMManager manager]
 
 `initSDKWithConfig:...` 返回 `YES` 表示 SDK 接受初始化，不表示用户已登录，也不表示长连接已可用。同一个 App 进程应集中初始化一次，不要由多个页面各自建立初始化流程。
 
-这些 callback 没有业务实体合并标识，应按当前 SDK 实例与登录账号隔离状态。callback 由初始化流程持有，不是 WASM 的 `on()`／`off()` 模型；切换账号或重建 SDK 前，应先停止旧账号的异步任务，避免旧 callback 更新新账号页面。
+这些 callback 没有业务实体合并标识，应按当前 SDK 实例与登录账号隔离状态。callback 由初始化流程持有；切换账号或重建 SDK 前，先停止旧账号的异步任务，避免旧 callback 更新新账号页面。
 
 ## 登录当前用户
 
-从可信后端取得与当前业务账号对应的 `userID` 和 Token，再调用登录接口：
+从业务后端取得与当前业务账号对应的 `userID` 和 Token，再调用登录接口：
 
 ```objc
 [[OIMManager manager] login:userID
@@ -63,7 +63,7 @@ BOOL accepted = [[OIMManager manager]
                      }];
 ```
 
-`userID` 必须是当前 OpenIMSDK 用户 ID，`token` 必须是可信后端签发给同一用户的 Token。成功 callback 中的可空字符串不包含用户资料；登录后需要账号资料时，另行调用自身资料查询 API。
+`userID` 必须是当前 OpenIMSDK 用户 ID，`token` 必须属于同一用户。成功 callback 中的可空字符串不包含用户资料；登录后需要账号资料时，另行调用自身资料查询 API。
 
 登录成功 callback 表示登录调用已完成；初始化时的 `onConnectSuccess` 表示长连接已可供业务 API 使用。两者是不同阶段，不能只因登录 callback 成功就立即执行依赖连接的消息、会话、群组或用户操作。
 
@@ -93,9 +93,9 @@ if (status == OIMLoginStatusLogged) {
 
 ## 处理 Token 与强制下线
 
-收到 `onUserTokenExpired` 或 `onUserTokenInvalid` 后，重新向可信后端请求凭据，再按产品策略重新登录或返回登录页。iOS 登录流程只向登录方法传入 OpenIMSDK Token，不在客户端区分“访问 Token”和“会话 Token”；Token 的签发、有效期、更新与撤销策略由业务后端和 OpenIMServer 决定。
+收到 `onUserTokenExpired` 或 `onUserTokenInvalid` 后，可以向业务后端请求新凭据，再重新登录或进入应用的登录流程。iOS 登录流程只向登录方法传入 OpenIMSDK Token，不在客户端区分“访问 Token”和“会话 Token”；Token 的签发、有效期、更新与撤销由业务后端和 OpenIMServer 决定。
 
-收到 `onKickedOffline` 时，SDK 已结束当前登录会话。应用只需清理自己保存的用户、会话、消息、未读数与页面状态，不要再并行调用退出方法。可按产品策略提示账号已在其他设备登录，或跳转到登录页。
+收到 `onKickedOffline` 时，SDK 已结束当前登录会话。该状态与用户主动退出不同，应用可以据此结束当前账号的页面与异步任务，并进入登录流程。
 
 ## 主动退出
 

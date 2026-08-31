@@ -17,13 +17,13 @@ A message screen commonly handles an initial history snapshot, real-time message
 
 ## Message types
 
-Choose a renderer from `contentType` or the non-null content element. `textElem`, `atTextElem`, and `customElem` represent text, @ mentions, and custom content. `pictureElem`, `soundElem`, `videoElem`, and `fileElem` contain the existing URL, size, name, duration, or snapshot, so the receiver does not upload the resource again. For an unknown type, show a safe unsupported-message placeholder; never render arbitrary custom data as HTML.
+Choose a renderer from `contentType` or the non-null content element. `textElem`, `atTextElem`, and `customElem` represent text, @ mentions, and custom content. `pictureElem`, `soundElem`, `videoElem`, and `fileElem` contain the existing URL, size, name, duration, or snapshot, so the receiver does not upload the resource again. For an unknown type, show an unsupported-message placeholder. Parse and render custom messages according to the application's agreed data format.
 
 If your product needs to send several files at once, you can send several file messages in sequence or use one custom message to carry file-group data. Regardless of how the UI groups them, the state layer must continue to identify each `Message` by its stable `clientMsgID`.
 
 Flutter's `Message` model does not contain `conversationID`. A global listener must resolve the message route first and then ask the SDK to confirm the conversation ID.
 
-The pinned SDK declares these commonly used receive, routing, and merge fields as nullable, except for `exMap`. A listener must therefore tolerate incomplete payloads:
+These commonly used receive, routing, and merge fields are nullable except for `exMap`, so a listener needs to handle missing values:
 
 | Field          | Type      | Description                                                                 |
 | -------------- | --------- | --------------------------------------------------------------------------- |
@@ -91,7 +91,7 @@ Future<void> handleOnlineOnlyMessage(Message message) async {
 }
 ```
 
-Add these three functions to the application's single `OnAdvancedMsgListener`. See [Event overview](/sdk/flutter/events/overview-events) for centralized configuration. The pinned SDK does not expose a remove or unset API.
+Add these three functions to the application's single `OnAdvancedMsgListener`. See [Event overview](/sdk/flutter/events/overview-events) for centralized configuration. The SDK does not expose a remove or unset API.
 
 Configure the listener only once during the SDK initialization and login lifecycle, then use a stable application-level dispatcher to route events to each conversation store. Do not configure it every time a chat screen opens: a later instance replaces earlier callbacks, and the screen cannot remove its listener independently when disposed.
 
@@ -114,7 +114,7 @@ Event delivery does not mean the current history page has been queried again. Af
 - From another signed-in account, send text, media, and custom messages. Confirm that each message is routed to the correct conversation and each `clientMsgID` renders only once.
 - Sign in again and confirm that offline synchronization does not duplicate messages already present in the history snapshot.
 - Send an `isOnlineOnly: true` message and confirm that only the online callback receives it and history queries do not return it.
-- Confirm that malformed payloads missing required routing fields or `clientMsgID` are ignored and diagnosed instead of causing a crash.
+- Confirm that payloads missing required routing fields or `clientMsgID` are ignored instead of causing a crash.
 - Recall a message and confirm that the matching `clientMsgID` is updated to the recalled state rather than inserted as another message.
 - After actually opening and reading a conversation, mark it as read and confirm that conversation events update both its unread count and the total unread badge.
 

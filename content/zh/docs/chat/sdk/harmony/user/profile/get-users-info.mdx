@@ -4,7 +4,7 @@ description: '按 userID 批量查询应用用户的账号级公开资料。'
 sourcePath: '/sdk/harmony/user/profile/get-users-info'
 ---
 
-`getUsersInfo()` 适合加载陌生人资料卡、好友候选人或消息发送者的公开资料。按昵称、手机号、组织或邮箱搜索用户应由可信业务后端完成，再把候选 `userID` 交给 SDK 查询。
+`getUsersInfo()` 适合加载陌生人资料卡、好友候选人或消息发送者的公开资料。接口按 `userID` 精确查询；按昵称、手机号、组织或邮箱检索用户，需要先由业务系统取得候选用户 ID。
 
 ```ts
 import sdk, { GetUsersInfoReq, GetUsersInfoResp } from '@openimsdk/imsdk';
@@ -22,6 +22,21 @@ for (let index = 0; index < response.users.length; index += 1) {
 
 调用前应去除空值和重复 ID，并控制单次查询数量。返回数组不保证与输入顺序一一对应，应按实际 `userID` 建立映射。
 
-`IMUser` 的主要字段包括 `userID`、`nickname`、`faceURL`、`ex`、`createTime`、`globalRecvMsgOpt`、`attached` 和 `addFriendPermission`。展示其他用户资料时，不应暴露其账号级接收策略或把公开昵称覆盖好友备注、群内昵称和会话标题。
+## 返回结果
+
+Promise 成功后，`response.users` 返回已查询到的 `IMUser[]`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 用户 ID。 |
+| `nickname` | `string` | 账号级昵称。 |
+| `faceURL` | `string` | 账号级头像地址。 |
+| `ex` | `string` | 业务扩展字符串。 |
+| `createTime` | `number` | 用户记录创建时间，Unix 毫秒时间戳。 |
+| `globalRecvMsgOpt` | `GlobalRecvMsgOpt` | 全局消息接收方式。 |
+| `attached` | `string` | SDK 附加信息，按业务约定解析。 |
+| `addFriendPermission` <span className="enterprise-field-badge">商业版</span> | `AddFriendPermission` | 其他用户发起好友申请时的处理策略。 |
+
+展示用户资料时，应分别保留账号级昵称、好友备注、群内昵称和会话标题，不要用其中一个字段覆盖其他来源的数据。
 
 该查询不会触发当前用户资料事件；需要刷新时重新调用。

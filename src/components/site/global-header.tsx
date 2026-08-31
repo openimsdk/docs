@@ -15,7 +15,7 @@ import {
 import { SearchDialog } from '@/src/components/search/search-dialog';
 import { Logo } from '@/src/components/site/logo';
 import { ThemeToggle } from '@/src/components/site/theme-toggle';
-import { sdkPlatformSections } from '@/src/config/docs';
+import { getSdkPlatformSections } from '@/src/config/docs';
 import { siteConfig } from '@/src/config/site';
 import type { Locale } from '@/src/lib/i18n';
 import { localeFromPathname, stripLocaleFromPath, t, toLocalizedPath } from '@/src/lib/i18n';
@@ -49,6 +49,7 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
   const isMobileMenuOpen = mobileMenuOpenPath === pathname;
   const legacyDocsUrl =
     locale === 'zh' ? `${siteConfig.legacyDocsUrl}/zh-Hans/` : `${siteConfig.legacyDocsUrl}/`;
+  const sdkPlatformSections = getSdkPlatformSections(locale);
 
   useEffect(() => {
     if (!isSdkMenuOpen) return;
@@ -216,6 +217,7 @@ function MobilePrimaryMenu({
   const menuLabel = locale === 'zh' ? '文档主菜单' : 'Documentation menu';
   const legacyDocsUrl =
     locale === 'zh' ? `${siteConfig.legacyDocsUrl}/zh-Hans/` : `${siteConfig.legacyDocsUrl}/`;
+  const sdkPlatformSections = getSdkPlatformSections(locale);
 
   useEffect(() => {
     if (!open) return;

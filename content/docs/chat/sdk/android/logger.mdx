@@ -11,7 +11,7 @@ platform: 'android'
 sourcePath: '/sdk/android/logger'
 ---
 
-OpenIM Android SDK logs help diagnose initialization, connection, and business API problems. Development and staging builds can use more detailed output. Production builds should reduce log volume and must avoid recording tokens, complete message bodies, raw file URLs, call room credentials, and private user fields.
+OpenIM Android SDK logs help diagnose initialization, connection, and business API problems. Initialization options control the log level, standard output, and log directory.
 
 ## Configure logging during initialization
 
@@ -40,10 +40,10 @@ boolean initialized = OpenIMClient.getInstance().initSDK(
 | Field                 | Description                                                                                                                                     |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `logLevel`            | Controls verbosity with a `LogLevel` constant. Available values include `DebugWithSQL`, `Debug`, `Info`, `Warn`, `Error`, `Panic`, and `Fatal`. |
-| `isLogStandardOutput` | Writes SDK logs to Android standard output when enabled; use it for development diagnostics.                                                    |
-| `logFilePath`         | Optional log directory. Keep it within application-writable storage and manage its size and retention.                                          |
+| `isLogStandardOutput` | Writes SDK logs to Android standard output when enabled.                                                                                         |
+| `logFilePath`         | Optional log directory, which must be writable by the application.                                                                               |
 
-Use `Debug` for ordinary development diagnostics. Enable `DebugWithSQL` temporarily and only when diagnosing database problems. Production builds normally use `Warn` or `Error` and disable unnecessary standard output.
+`DebugWithSQL` includes database diagnostic details. `Debug`, `Info`, `Warn`, and `Error` progressively reduce the amount of output. Select the level that matches the current diagnostic scope.
 
 ## Write application logs
 
@@ -61,7 +61,7 @@ OpenIMClient.getInstance().logs(
 );
 ```
 
-`currentClassName` and `currentLineNum` identify the call site. `msgStr` is a short action description, and `errStr` is the error information. `Warn`, `Error`, `Panic`, and `Fatal` require a non-empty error string. Pass trailing `extra` values as key-value pairs and include only non-sensitive identifiers needed for diagnosis.
+`currentClassName` and `currentLineNum` identify the call site. `msgStr` is a short action description, and `errStr` is the error information. `Warn`, `Error`, `Panic`, and `Fatal` require a non-empty error string. Pass trailing `extra` values as key-value pairs.
 
 The older `logs()` overload with `OnBase<String>` and `Map` parameters is deprecated and should not be used in new code.
 
@@ -102,12 +102,12 @@ OpenIMClient.getInstance().uploadLogs(
 | `params`            | Legacy parameter that the current SDK does not use. Pass an empty list, such as `new ArrayList<>()`.                 |
 | `line`              | Number of log lines configured for this upload.                                                                        |
 | `cancelID`          | Stable identifier for this upload, such as an application-generated UUID.                                              |
-| `ex`                | Diagnostic context attached to the task, such as a support ticket ID. It must not contain credentials or private data. |
+| `ex`                | Context attached to the upload task, such as a support ticket ID.                                                     |
 | `UploadLogProgress` | Reports current progress and total work for the upload interface.                                                      |
 
 The success callback means that the log upload request completed.
 
-When investigating a problem or providing logs to support, include the time of the issue, user ID, action name, and any relevant `conversationID`, `clientMsgID`, `groupID`, or `roomID`. These non-sensitive business identifiers help locate the relevant records but do not replace the complete logs.
+After the upload completes, use the occurrence time, action name, and relevant `conversationID`, `clientMsgID`, `groupID`, or `roomID` to locate the corresponding call.
 
 ## Related pages
 

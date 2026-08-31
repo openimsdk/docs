@@ -1,10 +1,10 @@
 ---
 title: '日志与诊断'
-description: '配置 HarmonyOS SDK 日志、记录诊断上下文并上传用户授权的数据。'
+description: '配置 HarmonyOS SDK 日志、记录诊断上下文并上传诊断数据。'
 sourcePath: '/sdk/harmony/logger'
 ---
 
-开发环境可以输出较详细日志；生产环境应降低级别，并避免记录 Token、消息正文、文件地址、通话凭据和其他敏感信息。
+HarmonyOS SDK 可以将 Core 日志写入应用目录或系统日志，并提供临时调整日志级别、记录应用诊断信息和上传诊断数据的能力。
 
 ## 初始化日志配置
 
@@ -34,9 +34,9 @@ await sdk.initSDK(request);
 | 日志级别                          | 用途                                   |
 | --------------------------------- | -------------------------------------- |
 | `LevelFatal`、`LevelPanic`        | 最高严重级别。                         |
-| `LevelError`、`LevelWarn`         | 生产问题诊断。                         |
-| `LevelInfo`                       | 联调与有限运行信息。                   |
-| `LevelDebug`、`LevelDebugWithSQL` | 临时开发诊断，不应长期在生产环境开启。 |
+| `LevelError`、`LevelWarn`         | 错误与警告信息。                       |
+| `LevelInfo`                       | 常规运行和联调信息。                   |
+| `LevelDebug`、`LevelDebugWithSQL` | 更详细的诊断信息。                     |
 
 ## 临时调整日志级别
 
@@ -52,11 +52,11 @@ const request: SetTemporaryLogLevelReq = {
 await sdk.setTemporaryLogLevel(request);
 ```
 
-诊断结束后让临时级别自然到期；不要把高详细度日志作为长期默认值。
+`durationSeconds` 指定临时级别的持续秒数，到期后 SDK 恢复初始化时配置的日志级别。
 
 ## 记录应用诊断日志
 
-`log()` 可以把应用侧诊断信息交给 SDK 日志系统。除本页外，业务 API 通常不需要显式传 `operationID`；SDK 会在省略时生成。需要与一次支持工单精确关联时，可以由诊断层生成同一个不含敏感信息的追踪 ID。
+`log()` 可以把应用侧诊断信息交给 SDK 日志系统。除本页外，业务 API 通常不需要显式传 `operationID`；SDK 会在省略时生成。需要关联同一次调用链时，可以由应用生成并复用同一个追踪 ID。
 
 ```ts
 import sdk, { LogLevel, LogReq } from '@openimsdk/imsdk';
@@ -73,20 +73,20 @@ const operationID = createDiagnosticOperationID();
 await sdk.log(request, operationID);
 ```
 
-`setLogCallback()` 可在进程级诊断层接收原生日志字符串。回调只注册一次，内容在展示、持久化或上传前仍需脱敏。
+`setLogCallback()` 可在进程级诊断层接收原生日志字符串。后续再次调用会替换当前回调，因此应由统一的日志模块注册和分发。
 
 ```ts
 const handleNativeLog = (message: string): void => {
-  appendSanitizedSDKLog(sanitizeLogMessage(message));
+  appendSDKLog(message);
 };
 sdk.setLogCallback(handleNativeLog);
 ```
 
-后续再次调用会替换当前回调，应由统一的诊断层管理。低层 `emitLog()` 主要用于原生桥接调试，不作为常规业务日志入口。
+低层 `emitLog()` 主要用于原生桥接调试，不作为常规业务日志入口。
 
 ## 上传诊断数据
 
-只在用户主动提交诊断信息或运维明确要求时上传。`mode` 可以选择日志、数据库或两者；数据库可能含用户数据，必须取得更明确授权。
+`uploadSDKData()` 可按 `mode` 上传日志、数据库或两者，并通过上传进度事件更新界面。
 
 ```ts
 import sdk, {
@@ -114,4 +114,4 @@ await sdk.uploadSDKData(request);
 unsubscribeDiagnosticProgress();
 ```
 
-`line` 是上传读取的日志行数，`ex` 只写可公开的诊断标记。上传失败时可记录错误码和简短说明，不要再次输出完整日志正文。
+`line` 是上传读取的日志行数，`ex` 是随上传任务提交的扩展字符串。Promise 成功表示上传任务完成；失败时使用返回的错误码和错误信息定位问题。

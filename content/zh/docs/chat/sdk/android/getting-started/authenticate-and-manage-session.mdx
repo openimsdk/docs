@@ -11,15 +11,15 @@ OpenIM Android SDK 使用 `initSDK()` 初始化本机运行环境，再使用 `l
 1. 在应用级会话组件中创建稳定的 `OnConnListener`。
 2. 调用 `initSDK()` 并确认返回 `true`。
 3. 在登录前设置消息、用户、好友、会话、群组和通话信令 listener。
-4. 从可信后端取得对应的 `userID` 与 Token，然后调用 `login()`。
+4. 从业务后端取得对应的 `userID` 与 Token，然后调用 `login()`。
 5. 分别等待登录回调成功与 `onConnectSuccess()`，再开放依赖连接的业务操作。
 6. 主动退出或切换账号时调用 `logout()`，完成后清理当前账号的应用状态。
 
-下文中的 `apiAddr`、`wsAddr`、`userID` 和 `token` 均由可信后端提供。
+下文中的 `apiAddr`、`wsAddr`、`userID` 和 `token` 由应用配置或业务后端提供。
 
 ## 初始化并处理连接生命周期
 
-在 `Application` 生命周期内创建数据目录、初始化 SDK，并传入连接 listener。应用应保存连接状态，但不要在回调中记录 Token 或完整服务凭据。
+在 `Application` 生命周期内创建数据目录、初始化 SDK，并传入连接 listener。应用可以根据这些回调维护当前连接状态。
 
 ```java
 import android.app.Application;
@@ -95,7 +95,7 @@ if (!initialized) {
 | `apiAddr`             | `String`      | OpenIMServer HTTP API 地址。                               |
 | `wsAddr`              | `String`      | OpenIMServer WebSocket 地址。                              |
 | `dataDirectory`       | `File`        | SDK 数据库和日志使用的应用私有持久化目录。                 |
-| `config.logLevel`     | `int`         | 使用 `LogLevel` 常量；正式环境应主动收敛日志级别。          |
+| `config.logLevel`     | `int`         | 使用 `LogLevel` 常量设置 SDK 日志详细程度。                 |
 | `isLogStandardOutput` | `boolean`     | 是否把 SDK 日志输出到标准日志流。                         |
 
 SDK 只应在 `Application` 或应用级会话组件中初始化一次。`networkChanged()` 用于通知 SDK 重新检查网络；只有在应用已经统一监听系统网络变化时才调用，不能由多个页面重复注册网络回调。
@@ -145,7 +145,7 @@ if (loginStatus == LoginStatus.Logged) {
 
 ## 处理 Token 和强制下线
 
-收到 `onUserTokenExpired()` 或 `onUserTokenInvalid()` 后，应重新向可信后端取得当前用户凭据，再按产品策略重新登录或返回登录页。收到 `onKickedOffline()` 时，应清理当前用户的会话列表、消息视图、未读数和其他业务状态，不能把它当作用户主动退出。
+收到 `onUserTokenExpired()` 或 `onUserTokenInvalid()` 后，可以向业务后端取得当前用户的新凭据，再重新登录或进入应用的登录流程。`onKickedOffline()` 表示当前账号被其他设备或服务端强制下线，与用户主动退出是不同状态。
 
 这些是当前登录账号级别的回调。切换账号前必须停止旧账号的异步任务和页面订阅，并清理旧账号状态。
 

@@ -73,7 +73,7 @@ In the Dart model, `clientMsgID`, `sendID`, `recvID`, `groupID`, and `sessionTyp
 
 If the current chat screen already has a `conversationID`, merge query and send results directly into that conversation. A global receive event has no such context, so first derive `sourceID`: for a group, use the non-empty `groupID`; for a one-to-one conversation, choose `recvID` or `sendID` depending on whether `sendID` is the current user. Then pass `sourceID` and `sessionType` to `getConversationIDBySessionType()`.
 
-If required routing fields are missing, skip the message and record non-sensitive diagnostic information. Never substitute an array position, display name, or current list length for a conversation or message identifier.
+If required routing fields are missing, skip the message. Never substitute an array position, display name, or current list length for a conversation or message identifier.
 
 ## Browse by task
 
@@ -99,7 +99,7 @@ See [Load message history](/sdk/flutter/message/retrieving-messages/load-older-m
 
 ### Search messages
 
-`searchLocalMessages()` searches messages already synchronized to the current account's local store. For a group search, use the group conversation's `conversationID`, not the `groupID` used when sending. Do not describe filters that the pinned implementation does not use as operational.
+`searchLocalMessages()` searches messages already synchronized to the current account's local store. For a group search, use the group conversation's `conversationID`, not the `groupID` used when sending. `keywordListMatchType` and `senderUserIDList` do not currently participate in the search.
 
 See [Search messages](/sdk/flutter/message/searching-messages/search-messages) for the complete flow.
 
@@ -111,7 +111,7 @@ Related pages include [Create a forwarded message](/sdk/flutter/message/creating
 
 ### Mark messages as read
 
-Clear a conversation's unread count with `markConversationMessageAsRead()`. The pinned Flutter SDK can receive one-to-one read receipts, but it does not expose the WASM APIs for reporting group-message member-level read receipts, querying read or unread members, or listening for group receipts. Do not infer which group members have read a message from the conversation unread count.
+Clear a conversation's unread count with `markConversationMessageAsRead()`. The Flutter SDK can receive one-to-one read receipts, but it does not provide member-level group read reporting, read or unread member queries, or a group-receipt listener. A conversation unread count does not indicate which group members have read a message.
 
 One-to-one read-receipt handling is documented on [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read).
 
@@ -135,7 +135,7 @@ See [Create a custom message](/sdk/flutter/message/creating-messages/create-cust
 
 ### Transcribe audio
 
-`speechToText()` accepts an audio-file path readable by the current device and returns nullable recognized text. Flutter's `speechToTextCapabilities()` returns only `Future<void>` and does not expose the format, sample-rate, duration, or size fields available in the WASM capability object.
+`speechToText()` accepts an audio-file path readable by the current device and returns nullable recognized text. `speechToTextCapabilities()` returns `Future<void>` and does not provide format, sample-rate, duration, or size fields.
 
 You can store the transcript in the voice message's `soundElem.text` with `setMessageLocalContent()`, but the result is saved only on the current device. It is not synchronized to other members and does not trigger a shared message event. See [Transcribe audio](/sdk/flutter/message/composing-messages/transcribe-audio) for the complete boundaries.
 
@@ -145,4 +145,4 @@ Message events belong to their respective capability pages; this overview only e
 
 Message creation and query-only APIs use their Future results to establish objects or snapshots; do not describe them as triggering shared events. For state-changing calls, handle the Future result, event increment, and query-based reconciliation as separate stages.
 
-The Flutter enterprise SDK exposes message modification, pinned conversation messages, and audio transcription. The APIs, models, and listeners on those pages are verified against the pinned enterprise SDK commit. The current SDK does not expose an API for creating targeted group messages, so client documentation must not simulate that capability.
+The Flutter enterprise SDK provides message modification, pinned conversation messages, and audio transcription. The Flutter SDK does not provide an API for creating targeted group messages.

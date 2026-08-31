@@ -10,7 +10,7 @@ uni-app / uni-app x SDK 先通过 `initSDK()` 初始化原生 Core，再通过 `
 
 1. 调用 `initSDK()` 完成目标平台的 SDK 初始化。
 2. 在登录前注册连接、Token 和账号下线事件。
-3. 从可信后端获取当前用户的 `userID` 与 Token。
+3. 从业务后端获取当前用户的 `userID` 与 Token。
 4. 调用 `login()`，等待 Promise 成功，并继续等待连接成功事件确认长连接可用。
 5. 连接可用后再查询用户、关系链、会话、群组和消息数据。
 6. 用户主动退出或切换账号时调用 `logout()`，然后清理应用状态和事件订阅。
@@ -92,7 +92,7 @@ const sessionSubscriptions = [
 ]
 ```
 
-`onConnectFailed` 和 `onUserTokenInvalid` 的处理器分别接收 `errCode` 与 `errMsg`，不是 WASM SDK 的事件对象形式。不要把 WASM 的事件注册示例直接复制到 UTS 插件中。
+`onConnectFailed` 和 `onUserTokenInvalid` 的处理器都接收两个参数：数值类型的 `errCode` 和字符串类型的 `errMsg`。其余连接事件处理器不接收参数。
 
 ## 登录当前用户
 
@@ -104,13 +104,13 @@ import { login } from '@/uni_modules/unix-openim-sdk'
 await login(userID, token)
 ```
 
-`userID` 必须与 Token 对应，并由可信业务后端返回。`login()` 的 Promise 成功表示登录调用完成；连接成功事件到达后，才表示 SDK 长连接已可用于依赖连接的业务 API。不要把这两个阶段合并判断。
+`userID` 必须与 Token 对应，并由业务后端返回。`login()` 的 Promise 成功表示登录调用完成；连接成功事件到达后，才表示 SDK 长连接已可用于依赖连接的业务 API。不要把这两个阶段合并判断。
 
 重复点击登录时，应复用正在进行的登录任务，避免并发调用 `login()`。切换账号时先等待旧账号退出完成，再登录新账号。
 
 ## 处理 Promise 结果
 
-UTS 插件的异步 API 直接返回业务结果，不包含 WASM SDK 的 `{ data }` 响应外层。调用失败时，Promise 抛出的错误包含 `errCode` 和 `errMsg`。
+UTS 插件的异步 API 直接返回业务结果，不包含额外的响应外层。调用失败时，Promise 抛出的错误包含 `errCode` 和 `errMsg`。
 
 ```uts
 import {
@@ -167,7 +167,7 @@ const nextToken = await requestOpenIMTokenFromBackend()
 await updateToken({ token: nextToken })
 ```
 
-新 Token 仍应由可信后端签发。更新成功表示 SDK 已接受本次 Token 更新；如果账号已经被强制下线、Token 无效或当前会话无法继续使用，应按产品策略清理状态并重新进入登录流程。
+新 Token 仍由业务后端提供。更新成功表示 SDK 已接受本次 Token 更新；如果账号已经被强制下线、Token 无效或当前会话无法继续使用，则结束当前会话并重新进入登录流程。
 
 ## 上报 App 生命周期
 
