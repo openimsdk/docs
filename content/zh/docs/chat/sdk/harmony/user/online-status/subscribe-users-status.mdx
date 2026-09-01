@@ -1,0 +1,42 @@
+---
+title: '订阅用户在线状态'
+description: '订阅指定用户的在线平台，并处理后续状态变化。'
+sourcePath: '/sdk/harmony/user/online-status/subscribe-users-status'
+---
+
+在线状态表示用户是否连接 OpenIMServer，不表示用户正在查看应用或某个会话。只订阅当前界面确实需要展示的用户；单账号订阅数量应控制在 3000 以内。
+
+```ts
+import sdk, {
+  EventOnUserOnlineStatusChangedData,
+  OpenIMSDKEvent,
+  SubscribeUsersOnlineStatusReq,
+  SubscribeUsersOnlineStatusResp,
+} from '@openimsdk/imsdk';
+
+const request: SubscribeUsersOnlineStatusReq = {
+  userIDs: ['user_a', 'user_b'],
+};
+const response: SubscribeUsersOnlineStatusResp = await sdk.subscribeUsersOnlineStatus(request);
+
+for (let index = 0; index < response.status.length; index += 1) {
+  const state = response.status[index];
+  presenceByUserID.set(state.userID, state.platforms);
+}
+
+const handleStatusChanged = (data: EventOnUserOnlineStatusChangedData): void => {
+  presenceByUserID.set(data.userID, data.platforms);
+};
+const unsubscribeStatusEvent = sdk.on(
+  OpenIMSDKEvent.EventOnUserOnlineStatusChanged,
+  handleStatusChanged,
+);
+
+export function removeOnlineStatusListener(): void {
+  unsubscribeStatusEvent();
+}
+```
+
+订阅响应直接返回当前在线平台列表；`platforms` 为空表示本次查询未发现在线端。后续事件按 `userID` 合并增量，不要根据平台数量推断“正在使用应用”。
+
+退出账号或销毁状态层时调用 `unsubscribeStatusEvent()`；页面不再展示某些用户时，还应调用取消订阅 API。

@@ -7,7 +7,10 @@ import {
   resolveLocalizedRouteTitle,
   resolvePlatformRoutes,
 } from './build-client-sdk-zh-content.mjs';
-import { clientSdkPlatformIds, getClientSdkPlatform } from './lib/client-sdk-platforms.mjs';
+import {
+  clientSdkStructurePlatformIds,
+  getClientSdkPlatform,
+} from './lib/client-sdk-platforms.mjs';
 
 const root = process.cwd();
 
@@ -112,7 +115,7 @@ export function validateLocalizedSdkData({
 
 async function main() {
   const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'));
-  const platformIds = requested.length > 0 ? requested : clientSdkPlatformIds;
+  const platformIds = requested.length > 0 ? requested : clientSdkStructurePlatformIds;
   const routesData = await readJson('src/generated/routes.json');
   let failed = false;
 

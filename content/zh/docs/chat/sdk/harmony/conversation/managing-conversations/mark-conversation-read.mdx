@@ -1,0 +1,33 @@
+---
+title: '标记会话已读'
+description: '将指定会话中当前已接收的消息标记为已读。'
+sourcePath: '/sdk/harmony/conversation/managing-conversations/mark-conversation-read'
+---
+
+用户确实阅读当前消息后再调用，不要在后台通知预览时提前清零。
+
+```ts
+import sdk, {
+  EventOnRecvC2CReadReceiptData,
+  MarkConversationMessageAsReadReq,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: MarkConversationMessageAsReadReq = {
+  conversationID: conversationID,
+};
+await sdk.markConversationMessageAsRead(request);
+
+const handleC2CReceipt = (data: EventOnRecvC2CReadReceiptData): void => {
+  for (let index = 0; index < data.msgReceiptList.length; index += 1) {
+    mergeC2CReadReceipt(data.msgReceiptList[index]);
+  }
+};
+const unsubscribeReceipt = sdk.on(OpenIMSDKEvent.EventOnRecvC2CReadReceipt, handleC2CReceipt);
+
+export function removeC2CReadReceiptListener(): void {
+  unsubscribeReceipt();
+}
+```
+
+Promise 成功表示已读请求完成。会话未读数通过会话变化事件更新；单聊对端通过本页的回执事件维护消息已读状态。群聊成员级已读使用独立能力。退出账号或销毁消息状态层时移除监听。

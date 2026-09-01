@@ -1,0 +1,81 @@
+---
+title: '上传文件'
+description: '使用 UniApp SDK 独立上传本地文件并取得远端资源信息。'
+sourcePath: '/sdk/uniapp/file-uploads/upload-file'
+---
+
+`uploadFile()` 是独立文件上传能力，可用于用户头像、群头像、资料附件或其他业务文件。它不从属于消息，也不会自动创建或发送消息。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `filepath` | `string` | 是 | 原生 SDK 能够读取的本地文件路径。 |
+| `name` | `string` | 是 | 带扩展名的文件名。 |
+| `contentType` | `string` | 是 | 文件的 MIME 类型。 |
+| `uuid` | `string` | 是 | 业务为本次上传生成的唯一任务 ID。 |
+| `cancelID` | `string` 或 `null` | 否 | 取消任务时使用的 ID；需要支持取消时应在上传前生成并保存。 |
+| `cause` | `string` 或 `null` | 否 | 上传原因或业务上下文；没有明确业务约定时可以省略。 |
+
+从相册、文件选择器或录音接口取得的临时路径可以直接用于本次上传，但临时文件可能被系统清理。需要稍后重试或长期保存时，先用 `uni.getFileSystemManager()` 把文件移动到 `uni.env.USER_DATA_PATH`，再保存新路径。
+
+```uts
+import { uploadFile } from '@/uni_modules/unix-openim-sdk'
+
+const uploadTaskID = `avatar-${Date.now()}`
+const cancelID = `cancel-${uploadTaskID}`
+
+const result = await uploadFile({
+  filepath: selectedImagePath,
+  name: 'avatar.jpg',
+  contentType: 'image/jpeg',
+  uuid: uploadTaskID,
+  cancelID,
+})
+
+if (result?.url != null) {
+  await updateProfileAvatar(result.url!)
+}
+```
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMUploadFileResult | null`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `url` | `string` 或 `null` | 可供业务使用的远端资源地址。 |
+| `uri` | `string` 或 `null` | 服务端返回的资源标识或地址。 |
+| `uuid` | `string` 或 `null` | 本次上传对应的任务 ID。 |
+| `size` | `number` 或 `null` | 文件大小，单位以当前存储服务返回值为准。 |
+| `typ` | `number` 或 `null` | 存储服务返回的资源类型。 |
+| `mediaID` | `string` 或 `null` | 媒体资源 ID。 |
+
+只使用业务实际需要且非空的字段。Promise 成功表示上传请求已完成，不表示用户资料已经更新，也不表示消息已经创建或发送；这些后续操作需要分别调用对应 API。
+
+## 监听上传进度
+
+`onUploadFileProgress()` 直接返回 `OpenIMUploadFileProgressEvent | null`，其中只有 `progress`。当前 UTS 契约没有在进度事件中公开任务 ID，因此多个文件并发上传时不能仅靠该事件判断属于哪个任务；需要逐任务展示准确进度时，应限制并发或在业务层串行上传。
+
+```uts
+import {
+  OpenIMUploadFileProgressEvent,
+  off,
+  onUploadFileProgress,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleUploadProgress = (
+  event: OpenIMUploadFileProgressEvent | null,
+) => {
+  if (event == null) return
+  setCurrentUploadProgress(event.progress)
+}
+
+const uploadProgressSubscription =
+  onUploadFileProgress(handleUploadProgress)
+
+// 上传状态层销毁或账号切换时：
+off(uploadProgressSubscription)
+```
+
+需要终止任务时，使用上传前保存的 `cancelID`，见[取消文件上传](/sdk/uniapp/file-uploads/cancel-upload)。

@@ -1,0 +1,60 @@
+---
+title: '获取收到的好友申请'
+description: '分页查询当前用户收到的好友申请，并处理申请事件。'
+sourcePath: '/sdk/harmony/user/friend-applications/get-friend-application-list-as-recipient'
+---
+
+`send: false` 表示查询当前用户收到的申请。`handleResults` 为空数组时不限制处理结果。
+
+```ts
+import sdk, {
+  EventOnFriendApplicationAcceptedData,
+  EventOnFriendApplicationAddedData,
+  EventOnFriendApplicationDeletedData,
+  EventOnFriendApplicationRejectedData,
+  GetFriendApplicationReq,
+  GetFriendApplicationResp,
+  HandleResult,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetFriendApplicationReq = {
+  send: false,
+  handleResults: [HandleResult.ResultDefault],
+  pagination: {
+    pageNumber: 1,
+    showNumber: 20,
+  },
+};
+const response: GetFriendApplicationResp = await sdk.getFriendApplication(request);
+replaceReceivedApplications(response.applications);
+
+const handleAdded = (data: EventOnFriendApplicationAddedData): void => {
+  mergeFriendApplication(data.application);
+};
+const handleAccepted = (data: EventOnFriendApplicationAcceptedData): void => {
+  mergeFriendApplication(data.application);
+};
+const handleRejected = (data: EventOnFriendApplicationRejectedData): void => {
+  mergeFriendApplication(data.application);
+};
+const handleDeleted = (data: EventOnFriendApplicationDeletedData): void => {
+  removeFriendApplication(data.application.fromUserID, data.application.toUserID);
+};
+
+const unsubscribeAdded = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationAdded, handleAdded);
+const unsubscribeAccepted = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationAccepted, handleAccepted);
+const unsubscribeRejected = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationRejected, handleRejected);
+const unsubscribeDeleted = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationDeleted, handleDeleted);
+
+export function removeReceivedFriendApplicationListeners(): void {
+  unsubscribeAdded();
+  unsubscribeAccepted();
+  unsubscribeRejected();
+  unsubscribeDeleted();
+}
+```
+
+`HandleResult.ResultDefault`、`ResultAccept`、`ResultDecline` 分别表示待处理、已同意和已拒绝。申请使用 `fromUserID:toUserID` 作为稳定标识。
+
+分页期间收到变化时重置分页。申请被同意后，好友列表仍通过 `EventOnFriendAdded` 单独更新。退出账号时调用四个取消订阅函数。

@@ -1,0 +1,68 @@
+---
+title: '获取会话列表'
+description: '分页获取当前用户的会话列表，并同步后续会话变化。'
+sourcePath: '/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list'
+---
+
+使用分页接口建立当前账号的会话列表，不使用一次性完整列表接口。
+
+```ts
+import sdk, {
+  EventOnConversationChangedData,
+  EventOnNewConversationData,
+  GetConversationListSplitReq,
+  GetConversationListSplitResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetConversationListSplitReq = {
+  pagination: {
+    pageNumber: 1,
+    showNumber: 50,
+  },
+};
+const response: GetConversationListSplitResp = await sdk.getConversationListSplit(request);
+mergeConversations(response.conversationList);
+
+const handleNewConversation = (data: EventOnNewConversationData): void => {
+  mergeConversations(data.conversationList);
+};
+const handleConversationChanged = (data: EventOnConversationChangedData): void => {
+  mergeConversations(data.conversationList);
+};
+const unsubscribeNew = sdk.on(OpenIMSDKEvent.EventOnNewConversation, handleNewConversation);
+const unsubscribeChanged = sdk.on(
+  OpenIMSDKEvent.EventOnConversationChanged,
+  handleConversationChanged,
+);
+
+export function removeConversationListListeners(): void {
+  unsubscribeNew();
+  unsubscribeChanged();
+}
+```
+
+每次按 `conversationID` 去重。Promise 成功后，`response.conversationList` 返回当前分页的 `IMConversation[]`：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `string` | 会话 ID，也是列表去重和事件合并标识。 |
+| `conversationType` | `SessionType` | 会话类型。 |
+| `userID`、`groupID` | `string` | 单聊用户 ID 或群组 ID；按会话类型读取。 |
+| `showName`、`faceURL` | `string` | 会话显示名称和头像地址。 |
+| `recvMsgOpt` | `ConvRecvMsgOpt` | 当前会话的消息接收方式。 |
+| `unreadCount` | `number` | 当前未读数。 |
+| `groupAtType` | `ConvGroupAtType` | 群聊 @ 状态。 |
+| `latestMsg` | `IMMessage` | 当前最新一条消息。 |
+| `latestMsgSendTime` | `number` | 最新消息发送时间，Unix 毫秒时间戳。 |
+| `draftText`、`draftTextTime` | `string`、`number` | 会话草稿和草稿更新时间。 |
+| `isPinned` | `boolean` | 是否置顶。 |
+| `isPrivateChat` <span className="enterprise-field-badge">商业版</span> | `boolean` | 是否开启阅后即焚。 |
+| `burnDuration` <span className="enterprise-field-badge">商业版</span> | `number` | 阅后即焚倒计时，单位为秒。 |
+| `isMsgDestruct` <span className="enterprise-field-badge">商业版</span> | `boolean` | 是否定期删除服务端消息。 |
+| `msgDestructTime` <span className="enterprise-field-badge">商业版</span> | `number` | 服务端消息保留时长，单位为秒。 |
+| `remark` <span className="enterprise-field-badge">商业版</span> | `string` | 当前用户设置的会话备注。 |
+| `isMarked` <span className="enterprise-field-badge">商业版</span> | `boolean` | 是否标记会话，可与会话分组中的“标记”分组配合使用。 |
+| `ex` | `string` | 会话扩展字符串。 |
+
+退出账号或销毁会话状态层时调用两个取消订阅函数。事件到达并不代表当前分页已经完整；重连同步完成后可从第一页重新校准。

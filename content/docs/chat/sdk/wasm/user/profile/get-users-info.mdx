@@ -13,7 +13,7 @@ sourcePath: '/sdk/wasm/user/profile/get-users-info'
 
 Use `getUsersInfo()` to query application users' public profiles by `userID`. It is suitable for displaying friend candidates and profile cards for users who are not friends.
 
-If your product searches users by nickname, phone number, organization, email, or another application field, perform the search and permission checks on the application backend first, then pass the returned `userID` values to `getUsersInfo()`. Administrator tokens must remain on a trusted backend, and user directory administration must also be performed by the backend.
+If your product searches users by nickname, phone number, organization, email, or another application field, perform the search on the application backend first, then pass the returned `userID` values to `getUsersInfo()`. This API retrieves public profiles only by user ID.
 
 ## Query public profiles
 
@@ -38,10 +38,7 @@ try {
   const users = response.data ?? [];
   const usersByID = new Map(users.map((user) => [user.userID, user]));
 } catch (error) {
-  console.error('getUsersInfo failed', {
-    error,
-    userIDList,
-  });
+  handleOpenIMError(error);
   throw error;
 }
 ```
@@ -54,7 +51,7 @@ The WASM SDK has no general change event for arbitrary public user profiles. `Sd
 
 ## Search for users to add as friends
 
-When searching for and adding friends, the application backend normally returns candidate `userID` values first. The browser then calls `getUsersInfo()` to display their public profiles. After the user confirms a target, continue to the friend application flow.
+When searching for and adding friends, the application backend normally returns candidate `userID` values first. The browser then calls `getUsersInfo()` to display their public profiles. After selecting a target user, continue to the friend application flow.
 
 ```ts
 async function searchUsersForFriendRequest(keyword: string) {
@@ -74,13 +71,13 @@ async function searchUsersForFriendRequest(keyword: string) {
       avatar: user.faceURL,
     }));
   } catch (error) {
-    console.error('getUsersInfo failed', { error, userIDs });
+    handleOpenIMError(error);
     throw error;
   }
 }
 ```
 
-If your product supports only exact lookup by user ID, omit the backend search endpoint and pass the input directly to `getUsersInfo()` as a `userID`. For fuzzy search or sensitive fields, the backend must handle authorization, rate limiting, redaction, and auditing.
+If your product supports only exact lookup by user ID, omit the backend search endpoint and pass the input directly to `getUsersInfo()` as a `userID`. Fuzzy search and other application-field searches are implemented by the backend search service.
 
 ## Choose display data by context
 

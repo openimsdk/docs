@@ -1,0 +1,79 @@
+---
+title: '分页查询群成员'
+description: '按角色和页码分页查询指定群组的成员。'
+sourcePath: '/sdk/harmony/group/retrieving-group-members/get-group-member-list'
+---
+
+该查询用于构建群成员列表，也可以通过 `filter` 只读取指定角色。
+
+## 参数说明
+
+| 参数                    | 类型                | 是否必填 | 说明                |
+| ----------------------- | ------------------- | -------- | ------------------- |
+| `groupID`               | `string`            | 是       | 目标群组 ID。       |
+| `filter`                | `GroupMemberFilter` | 是       | 成员角色筛选。      |
+| `pagination.pageNumber` | `number`            | 是       | 页码，从 `1` 开始。 |
+| `pagination.showNumber` | `number`            | 是       | 每页读取数量。      |
+
+```ts
+import sdk, {
+  EventOnGroupMemberAddedData,
+  EventOnGroupMemberDeletedData,
+  EventOnGroupMemberInfoChangedData,
+  GetGroupMembersReq,
+  GetGroupMembersResp,
+  GroupMemberFilter,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetGroupMembersReq = {
+  groupID: groupID,
+  filter: GroupMemberFilter.All,
+  pagination: { pageNumber: 1, showNumber: 50 },
+};
+const response: GetGroupMembersResp = await sdk.getGroupMembers(request);
+const members = response.members;
+
+const handleMemberAdded = (data: EventOnGroupMemberAddedData): void => {
+  upsertGroupMember(data.member);
+};
+const handleMemberDeleted = (data: EventOnGroupMemberDeletedData): void => {
+  removeGroupMember(data.member.groupID, data.member.userID);
+};
+const handleMemberChanged = (data: EventOnGroupMemberInfoChangedData): void => {
+  upsertGroupMember(data.member);
+};
+
+const unsubscribeMemberAdded = sdk.on(OpenIMSDKEvent.EventOnGroupMemberAdded, handleMemberAdded);
+const unsubscribeMemberDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnGroupMemberDeleted,
+  handleMemberDeleted,
+);
+const unsubscribeMemberChanged = sdk.on(
+  OpenIMSDKEvent.EventOnGroupMemberInfoChanged,
+  handleMemberChanged,
+);
+
+export function removeGroupMemberListeners(): void {
+  unsubscribeMemberAdded();
+  unsubscribeMemberDeleted();
+  unsubscribeMemberChanged();
+}
+```
+
+`GroupMemberFilter` 支持全部、群主、管理员、普通成员、管理员与普通成员、群主与管理员等组合。成员资料以 `groupID:userID` 为稳定标识；分页期间发生成员新增或删除时，应重置分页并从第一页重新加载。
+
+## 主要成员字段
+
+| 字段                  | 类型                   | 说明                            |
+| --------------------- | ---------------------- | ------------------------------- |
+| `groupID`、`userID`   | `string`               | 共同识别一条成员记录。          |
+| `nickname`、`faceURL` | `string`               | 当前群内昵称和头像。            |
+| `roleLevel`           | `GroupMemberRoleLevel` | 普通成员、管理员或群主。        |
+| `muteEndTime`         | `number`               | 禁言结束时间，Unix 毫秒时间戳。 |
+| `joinTime`            | `number`               | 入群时间，Unix 毫秒时间戳。     |
+| `joinSource`          | `GroupJoinSource`      | 入群途径。                      |
+| `inviterUserID`       | `string`               | 邀请人的用户 ID。               |
+| `ex`                  | `string`               | 群成员扩展字符串。              |
+
+群内资料属于指定群组，不要用它覆盖账号级用户资料。退出账号或销毁成员状态层时应移除监听。

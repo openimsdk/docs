@@ -1,0 +1,117 @@
+---
+title: '日志与诊断'
+description: '配置 HarmonyOS SDK 日志、记录诊断上下文并上传诊断数据。'
+sourcePath: '/sdk/harmony/logger'
+---
+
+HarmonyOS SDK 可以将 Core 日志写入应用目录或系统日志，并提供临时调整日志级别、记录应用诊断信息和上传诊断数据的能力。
+
+## 初始化日志配置
+
+日志目录必须是应用可写路径。`isLogStandardOutput` 控制是否同时输出到系统日志。
+
+```ts
+import sdk, { HttpClientMode, InitSDKReq, LogLevel } from '@openimsdk/imsdk';
+
+const request: InitSDKReq = {
+  config: {
+    apiAddr: apiAddress,
+    wsAddr: websocketAddress,
+    dataDir: context.filesDir,
+    dbPath: context.databaseDir,
+    logFilePath: context.filesDir + '/openim-logs',
+    logLevel: LogLevel.LevelInfo,
+    isLogStandardOutput: false,
+    StopGoroutineOnBackground: false,
+    LogRemainCount: 7,
+    diagnoseHashSalt: diagnoseHashSalt,
+    httpClientMode: HttpClientMode.TCPFirst,
+  },
+};
+await sdk.initSDK(request);
+```
+
+| 日志级别                          | 用途                                   |
+| --------------------------------- | -------------------------------------- |
+| `LevelFatal`、`LevelPanic`        | 最高严重级别。                         |
+| `LevelError`、`LevelWarn`         | 错误与警告信息。                       |
+| `LevelInfo`                       | 常规运行和联调信息。                   |
+| `LevelDebug`、`LevelDebugWithSQL` | 更详细的诊断信息。                     |
+
+## 临时调整日志级别
+
+商业版可以在限定时长内提高日志级别，避免永久修改初始化配置。
+
+```ts
+import sdk, { LogLevel, SetTemporaryLogLevelReq } from '@openimsdk/imsdk';
+
+const request: SetTemporaryLogLevelReq = {
+  logLevel: LogLevel.LevelDebug,
+  durationSeconds: 600,
+};
+await sdk.setTemporaryLogLevel(request);
+```
+
+`durationSeconds` 指定临时级别的持续秒数，到期后 SDK 恢复初始化时配置的日志级别。
+
+## 记录应用诊断日志
+
+`log()` 可以把应用侧诊断信息交给 SDK 日志系统。除本页外，业务 API 通常不需要显式传 `operationID`；SDK 会在省略时生成。需要关联同一次调用链时，可以由应用生成并复用同一个追踪 ID。
+
+```ts
+import sdk, { LogLevel, LogReq } from '@openimsdk/imsdk';
+
+const request: LogReq = {
+  logLevel: LogLevel.LevelInfo,
+  file: 'ConversationStore.ets',
+  line: 120,
+  msg: 'conversation reload requested',
+  err: '',
+  kvs: [],
+};
+const operationID = createDiagnosticOperationID();
+await sdk.log(request, operationID);
+```
+
+`setLogCallback()` 可在进程级诊断层接收原生日志字符串。后续再次调用会替换当前回调，因此应由统一的日志模块注册和分发。
+
+```ts
+const handleNativeLog = (message: string): void => {
+  appendSDKLog(message);
+};
+sdk.setLogCallback(handleNativeLog);
+```
+
+低层 `emitLog()` 主要用于原生桥接调试，不作为常规业务日志入口。
+
+## 上传诊断数据
+
+`uploadSDKData()` 可按 `mode` 上传日志、数据库或两者，并通过上传进度事件更新界面。
+
+```ts
+import sdk, {
+  EventOnUploadSDKDataProgressData,
+  OpenIMSDKEvent,
+  UploadSDKDataMode,
+  UploadSDKDataReq,
+} from '@openimsdk/imsdk';
+
+const handleDiagnosticProgress = (data: EventOnUploadSDKDataProgressData): void => {
+  setDiagnosticUploadProgress(data.progress);
+};
+const unsubscribeDiagnosticProgress = sdk.on(
+  OpenIMSDKEvent.EventOnUploadSDKDataProgress,
+  handleDiagnosticProgress,
+);
+
+const request: UploadSDKDataReq = {
+  line: 2000,
+  ex: 'user-approved-diagnostic-session',
+  mode: UploadSDKDataMode.UploadLogs,
+  cancelID: `diagnostic-${Date.now()}`,
+};
+await sdk.uploadSDKData(request);
+unsubscribeDiagnosticProgress();
+```
+
+`line` 是上传读取的日志行数，`ex` 是随上传任务提交的扩展字符串。Promise 成功表示上传任务完成；失败时使用返回的错误码和错误信息定位问题。

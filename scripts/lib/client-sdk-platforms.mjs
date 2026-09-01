@@ -38,6 +38,33 @@ const clientSdkPlatforms = {
     sdkTag: '3.8.3+hotfix.12',
     sdkCommit: '95889be7a26dce6fe896ef22096c9036cc25fc9b',
   },
+  uniapp: {
+    id: 'uniapp',
+    contextKey: 'chat/sdk/uniapp',
+    routePrefix: '/sdk/uniapp',
+    manualRoot: 'content/zh/docs/chat/sdk/uniapp',
+    auditPath: 'data/structure/uniapp-content-audit.json',
+    labelsPath: 'data/structure/uniapp-navigation-labels.json',
+    sidebarPath: 'data/structure/uniapp-sidebar.json',
+    localizedOutputPath: 'src/generated/uniapp-sdk-zh-content.json',
+    sdkSourceKey: 'uniappSdk',
+    sdkTag: '0.2.3',
+    sdkCommit: 'sha256:8de6339b8c5c8f02a031892589de8e519de03240a34c22cb3548b501212308c3',
+    previousSdkCommits: ['sha256:c4390e829a89ee2d3a5b781228102983d25e04dadfab3f7164a80a68fe01a90c'],
+  },
+  harmony: {
+    id: 'harmony',
+    contextKey: 'chat/sdk/harmony',
+    routePrefix: '/sdk/harmony',
+    manualRoot: 'content/zh/docs/chat/sdk/harmony',
+    auditPath: 'data/structure/harmony-content-audit.json',
+    labelsPath: 'data/structure/harmony-navigation-labels.json',
+    sidebarPath: 'data/structure/harmony-sidebar.json',
+    localizedOutputPath: 'src/generated/harmony-sdk-zh-content.json',
+    sdkSourceKey: 'harmonySdk',
+    sdkTag: '1.0.2',
+    sdkCommit: '77bd15d59c9f91118ba24cbb51f2fd72195ff465',
+  },
   wasm: {
     id: 'wasm',
     contextKey: 'chat/sdk/wasm',
@@ -63,7 +90,16 @@ const clientSdkPlatforms = {
   },
 };
 
-export const clientSdkPlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));
+// Locale publication remains explicit. UniApp and HarmonyOS participate in
+// structure and content validation, while their English documentation remains deferred.
+export const clientSdkPlatformIds = Object.freeze([
+  'android',
+  'ios',
+  'flutter',
+  'wasm',
+  'react-native',
+]);
+export const clientSdkStructurePlatformIds = Object.freeze(Object.keys(clientSdkPlatforms));
 
 export function getClientSdkPlatform(id) {
   const platform = clientSdkPlatforms[id];

@@ -66,7 +66,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 当前聊天页已经持有 `conversationID` 时，直接把查询结果和发送结果合并到该会话。全局接收事件没有这一上下文，应先解析 `sourceID`：群聊使用非空 `groupID`；单聊根据 `sendID` 是否等于当前登录用户，在 `recvID` 与 `sendID` 中选择对端用户 ID。随后把 `sourceID` 和 `sessionType` 传给 `getConversationIDBySessionType()`。
 
-解析所需字段缺失时跳过该条消息并记录非敏感诊断信息。不要使用数组位置、展示名称或当前列表长度代替会话与消息标识。
+解析所需字段缺失时跳过该条消息。不要使用数组位置、展示名称或当前列表长度代替会话与消息标识。
 
 ## 按主题查看能力
 
@@ -92,7 +92,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 ### 搜索消息
 
-`searchLocalMessages()` 搜索当前账号已经同步到本地的消息。群聊搜索使用群会话的 `conversationID`，不是发送消息时的 `groupID`；固定实现未使用的筛选字段不能描述为已经生效。
+`searchLocalMessages()` 搜索当前账号已经同步到本地的消息。群聊搜索使用群会话的 `conversationID`，不是发送消息时的 `groupID`；`keywordListMatchType` 和 `senderUserIDList` 当前不参与搜索。
 
 搜索流程见[搜索消息](/sdk/flutter/message/searching-messages/search-messages)。
 
@@ -104,7 +104,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 ### 标记已读
 
-会话未读数通过 `markConversationMessageAsRead()` 清理。固定 Flutter SDK 支持接收单聊已读回执，但没有 WASM 的群消息成员级已读回执上报、已读／未读成员查询和群回执 listener，不能根据会话未读数推断群成员阅读情况。
+会话未读数通过 `markConversationMessageAsRead()` 清理。Flutter SDK 支持接收单聊已读回执，但不提供群消息成员级已读回执上报、已读／未读成员查询和群回执 listener。会话未读数不表示群成员阅读情况。
 
 单聊已读回执的处理也归入[标记会话已读](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)。
 
@@ -128,7 +128,7 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 ### 将音频转为文字
 
-`speechToText()` 接收当前设备可读取的音频文件路径并返回 nullable 的识别文字。Flutter 的 `speechToTextCapabilities()` 只返回 `Future<void>`，不公开 WASM 能力对象中的格式、采样率、时长和大小字段。
+`speechToText()` 接收当前设备可读取的音频文件路径并返回 nullable 的识别文字。`speechToTextCapabilities()` 返回 `Future<void>`，不提供格式、采样率、时长和大小等字段。
 
 转写结果可以通过 `setMessageLocalContent()` 写入语音消息的 `soundElem.text`，但只保存到当前设备，不会同步给其他成员或触发共享消息事件。完整边界见[将音频转为文字](/sdk/flutter/message/composing-messages/transcribe-audio)。
 
@@ -138,4 +138,4 @@ Flutter 的 `Message` 模型没有 `conversationID` 字段。历史、搜索和�
 
 创建消息对象和纯查询 API 直接使用 Future 返回的对象或列表，不应描述为触发共享事件。会改变状态的调用应分别处理 Future 结果、后续事件，并在需要时重新查询确认最终状态。
 
-Flutter enterprise SDK 公开消息修改、置顶会话消息和音频转写能力；这些页面的 API、model 与 listener 以固定 enterprise SDK commit 核对。当前 SDK 没有公开定向群消息创建 API，不应在客户端文档中模拟该能力。
+Flutter enterprise SDK 提供消息修改、置顶会话消息和音频转写能力。Flutter SDK 不提供创建定向群消息的 API。

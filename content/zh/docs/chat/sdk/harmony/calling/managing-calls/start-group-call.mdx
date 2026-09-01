@@ -1,0 +1,41 @@
+---
+title: '发起群聊通话'
+description: '邀请指定群成员加入音频或视频通话。'
+sourcePath: '/sdk/harmony/calling/managing-calls/start-group-call'
+---
+
+群聊邀请只面向 `inviteeUserIDList` 中列出的成员，不会因为填写 `groupID` 自动邀请全群。每次通话使用独立房间 ID，不要直接复用群组 ID。
+
+```ts
+import sdk, {
+  Platform,
+  SessionType,
+  SignalingInvitationInfo,
+  SignalingInviteInGroupReq,
+  SignalingInviteInGroupResp,
+  SignalingMediaType,
+} from '@openimsdk/imsdk';
+
+const invitation: SignalingInvitationInfo = {
+  inviterUserID: currentUserID,
+  inviteeUserIDList: selectedMemberIDs,
+  customData: JSON.stringify({ source: 'group-call' }),
+  groupID: groupID,
+  roomID: createCallRoomID(),
+  timeout: 30,
+  mediaType: SignalingMediaType.SignalingMediaTypeVideo,
+  platformID: Platform.HarmonyOS,
+  sessionType: SessionType.WriteGroup,
+  initiateTime: Date.now(),
+  busyLineUserIDList: [],
+};
+const request: SignalingInviteInGroupReq = {
+  userID: primaryInviteeUserID,
+  invitation: invitation,
+  offlinePush: offlinePush,
+  participant: participant,
+};
+const response: SignalingInviteInGroupResp = await sdk.signalingInviteInGroup(request);
+```
+
+邀请列表应排除发起人、空值和重复用户。`userID` 是当前请求的主要被邀请人，应同时出现在邀请列表中；`sessionType` 使用实际群会话类型。响应中的忙线用户不影响其他成员的邀请，成功也不表示任何成员已接听。

@@ -1,0 +1,37 @@
+---
+title: '反向加载历史消息'
+description: '从消息锚点向较新消息方向分页读取历史记录。'
+sourcePath: '/sdk/uniapp/message/retrieving-messages/load-newer-messages'
+---
+
+从搜索结果、回复消息或其他锚点进入聊天页，需要补齐锚点之后的消息时，调用 `getHistoryMessageList()` 并将 `isReverse` 设为 `true`。这不是实时接收接口；后续新消息仍由[接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)中的事件处理。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 锚点消息所属的会话 ID。 |
+| `startClientMsgID` | `string` | 是 | 向较新方向读取时使用的锚点消息 ID。 |
+| `count` | `number` | 是 | 本次最多读取的消息数量。 |
+| `isReverse` | `boolean` | 是 | 传 `true`，表示从锚点向较新消息方向读取。 |
+| `viewType` | `number` | 否 | 历史消息视图传 `0`；省略时插件也按 `0` 处理。 |
+
+```uts
+import { getHistoryMessageList } from '@/uni_modules/unix-openim-sdk'
+
+const page = await getHistoryMessageList({
+  conversationID: conversationID,
+  startClientMsgID: anchorMessage.clientMsgID ?? '',
+  count: 30,
+  isReverse: true,
+  viewType: 0,
+})
+
+if (page != null && page.errCode == 0) {
+  appendMessages(page.messageList)
+}
+```
+
+锚点必须具有非空 `clientMsgID`；无法取得消息 ID 时，应先[按 ID 查找消息](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)或重新加载当前会话。继续分页时更新 `startClientMsgID`；`isEnd` 表示向较新方向是否已经到达当前历史边界。
+
+返回对象字段与[加载历史消息](/sdk/uniapp/message/retrieving-messages/load-older-messages)相同。不要在同一个滚动边界交替使用两个方向；加入列表时按 `conversationID:clientMsgID` 去重。

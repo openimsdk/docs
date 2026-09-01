@@ -1,0 +1,107 @@
+---
+title: '会话分组概览'
+description: '了解会话分组的数据结构、能力边界和同步方式。'
+sourcePath: '/sdk/harmony/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组属于商业版能力，用于整理当前账号的会话列表，例如“工作”“未读”或“稍后处理”。它只管理 `conversationID` 与分组的关联，不会创建聊天群组、修改群成员，也不会改变消息的发送目标。
+
+## 分组类型
+
+| 枚举值                                                 | 说明                                       |
+| ------------------------------------------------------ | ------------------------------------------ |
+| `ConversationGroupType.ConversationGroupTypeNormal`    | 普通自定义分组，可由用户创建和维护。       |
+| `ConversationGroupType.ConversationGroupTypeFilter`    | 按 SDK 或服务端规则维护的筛选分组。        |
+| `ConversationGroupQueryType.ConversationGroupQueryAll` | 仅在查询时表示全部类型，不能用于创建分组。 |
+
+筛选分组的生成规则由当前 OpenIMServer 部署决定，不要只根据名称在客户端伪造系统分组。
+
+## 分组数据
+
+`IMConversationGroup` 表示一个会话分组。合并查询结果或事件时，以 `conversationGroupID` 作为稳定标识。
+
+| 字段                    | 类型                    | 说明                                 |
+| ----------------------- | ----------------------- | ------------------------------------ |
+| `conversationGroupID`   | `string`                | 会话分组 ID。                        |
+| `name`                  | `string`                | 分组名称。                           |
+| `order`                 | `number`                | 分组顺序值，排序方向由产品统一约定。 |
+| `conversationGroupType` | `ConversationGroupType` | 分组类型。                           |
+| `hidden`                | `boolean`               | 分组是否隐藏。                       |
+| `unreadCount`           | `number`                | 分组内会话的汇总未读数。             |
+| `conversationIDs`       | `string[]`              | 当前属于该分组的会话 ID。            |
+| `createTime`            | `number`                | 可选的创建时间，为 Unix 毫秒时间戳。 |
+| `ex`                    | `string`                | 应用约定的分组扩展字符串。           |
+
+## 监听分组变化
+
+新增、删除、资料变化以及会话加入或移出分组分别对应五个事件。事件载荷包含受影响的分组；成员变化事件还包含受影响的会话。更新状态时使用稳定 ID 合并，并在连接恢复后重新查询校准。
+
+```ts
+import sdk, {
+  EventOnConversationGroupAddedData,
+  EventOnConversationGroupChangedData,
+  EventOnConversationGroupDeletedData,
+  EventOnConversationGroupMemberAddedData,
+  EventOnConversationGroupMemberDeletedData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleGroupAdded = (data: EventOnConversationGroupAddedData): void => {
+  mergeConversationGroups(data.conversationGroupList);
+};
+const handleGroupChanged = (data: EventOnConversationGroupChangedData): void => {
+  mergeConversationGroups(data.conversationGroupList);
+};
+const handleGroupDeleted = (data: EventOnConversationGroupDeletedData): void => {
+  removeConversationGroups(data.conversationGroupList);
+};
+const handleGroupMemberAdded = (data: EventOnConversationGroupMemberAddedData): void => {
+  mergeConversationGroup(data.conversationGroup, data.conversations);
+};
+const handleGroupMemberDeleted = (data: EventOnConversationGroupMemberDeletedData): void => {
+  mergeConversationGroup(data.conversationGroup, data.conversations);
+};
+
+const unsubscribeGroupAdded = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupAdded,
+  handleGroupAdded,
+);
+const unsubscribeGroupChanged = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupChanged,
+  handleGroupChanged,
+);
+const unsubscribeGroupDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupDeleted,
+  handleGroupDeleted,
+);
+const unsubscribeGroupMemberAdded = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupMemberAdded,
+  handleGroupMemberAdded,
+);
+const unsubscribeGroupMemberDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupMemberDeleted,
+  handleGroupMemberDeleted,
+);
+
+export function removeConversationGroupListeners(): void {
+  unsubscribeGroupAdded();
+  unsubscribeGroupChanged();
+  unsubscribeGroupDeleted();
+  unsubscribeGroupMemberAdded();
+  unsubscribeGroupMemberDeleted();
+}
+```
+
+退出账号或销毁会话状态层时应移除监听。Promise 成功、事件到达和重新查询是三个不同阶段；不要把一次请求成功当作所有端已经完成同步。
+
+## 相关操作
+
+- [创建会话分组](/sdk/harmony/conversation/managing-conversation-groups/create-conversation-group)
+- [查询会话分组列表](/sdk/harmony/conversation/managing-conversation-groups/get-conversation-groups)
+- [查询分组内会话](/sdk/harmony/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [查询会话所属分组](/sdk/harmony/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [更新会话分组](/sdk/harmony/conversation/managing-conversation-groups/update-conversation-group)
+- [调整会话分组顺序](/sdk/harmony/conversation/managing-conversation-groups/set-conversation-group-order)
+- [添加会话到分组](/sdk/harmony/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [从分组移除会话](/sdk/harmony/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [删除会话分组](/sdk/harmony/conversation/managing-conversation-groups/delete-conversation-group)

@@ -1,0 +1,35 @@
+---
+title: '删除群聊中指定用户的全部消息'
+description: '删除指定用户在目标群聊会话中的全部消息。'
+sourcePath: '/sdk/harmony/message/managing-messages/delete-user-messages'
+---
+
+这是高影响的群组管控操作，不应放入普通单条消息菜单；权限由 OpenIMServer 校验。
+
+```ts
+import sdk, {
+  DeleteUserAllMessagesInConvReq,
+  EventOnDeleteUserAllMsgsInConvData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: DeleteUserAllMessagesInConvReq = {
+  conversationID: conversationID,
+  userID: targetUserID,
+};
+await sdk.deleteUserAllMessagesInConv(request);
+
+const handleUserMessagesDeleted = (data: EventOnDeleteUserAllMsgsInConvData): void => {
+  reloadGroupHistory(data.conversationID, data.userID);
+};
+const unsubscribeUserMessagesDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnDeleteUserAllMsgsInConv,
+  handleUserMessagesDeleted,
+);
+
+export function removeUserMessagesDeletedListener(): void {
+  unsubscribeUserMessagesDeleted();
+}
+```
+
+`conversationID` 必须是群聊会话 ID。Promise 成功不表示其他客户端已经刷新；事件到达后重新加载受影响会话的历史。销毁状态层时移除监听。

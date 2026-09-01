@@ -16,16 +16,16 @@ OpenIM iOS SDK establishes the current user's session through `login:token:onSuc
 The complete flow is:
 
 1. Initialize the SDK with `OIMInitConfig` and provide connection, token, and forced-logout callbacks.
-2. Obtain the current user's `userID` and token from a trusted backend.
+2. Obtain the current user's `userID` and token from the application backend.
 3. Call the login method, wait for its success callback, and continue waiting for `onConnectSuccess`.
 4. Query users, friends, conversations, groups, and messages only after the connection becomes available.
 5. When logging out or changing accounts, call the logout method and then clear application state for the current account.
 
 ## Obtain credentials for the current user
 
-Obtain the current user's `userID` and OpenIMSDK token from a trusted backend. `userID` is only the OpenIMSDK user identifier, not an authentication credential, and it must correspond to the token.
+Obtain the current user's `userID` and OpenIMSDK token from the application backend. `userID` is the OpenIMSDK user identifier and must correspond to the token.
 
-The iOS client consumes credentials returned by the backend; it does not create OpenIM users or issue tokens. Do not bundle an administrator token in the application or write a complete token to ordinary logs.
+The iOS client consumes credentials returned by the backend; it does not create OpenIM users or issue tokens.
 
 ## Initialize and handle the connection lifecycle
 
@@ -53,11 +53,11 @@ BOOL accepted = [[OIMManager manager]
 
 A `YES` return value from `initSDKWithConfig:...` means only that the SDK accepted initialization. It does not mean the user is logged in or the persistent connection is ready. Initialize centrally once per application process; do not let multiple views create independent initialization flows.
 
-These callbacks have no business-entity merge key. Isolate their state by SDK instance and signed-in account. They are retained by the initialization flow and do not use the WASM `on()`/`off()` model. Before changing accounts or rebuilding the SDK, stop asynchronous work for the old account so its callbacks cannot update the new account's interface.
+These callbacks have no business-entity merge key. Isolate their state by SDK instance and signed-in account. They are retained by the initialization flow. Before changing accounts or rebuilding the SDK, stop asynchronous work for the old account so its callbacks cannot update the new account's interface.
 
 ## Log in the current user
 
-After obtaining the `userID` and token for the current business account from a trusted backend, call the login API:
+After obtaining the `userID` and token for the current business account from the application backend, call the login API:
 
 ```objc
 [[OIMManager manager] login:userID
@@ -70,7 +70,7 @@ After obtaining the `userID` and token for the current business account from a t
                      }];
 ```
 
-`userID` must be the current OpenIMSDK user ID, and `token` must have been issued by a trusted backend for that same user. The nullable string in the success callback is not a user snapshot. Query the current user's profile separately after login when it is needed.
+`userID` must be the current OpenIMSDK user ID, and `token` must belong to that same user. The nullable string in the success callback is not a user snapshot. Query the current user's profile separately after login when it is needed.
 
 The login success callback means the login call completed. The initialization flow's `onConnectSuccess` means the persistent connection is ready for business APIs. These are separate stages. Do not start connection-dependent message, conversation, group, or user operations solely because the login callback succeeded.
 
@@ -100,9 +100,9 @@ When changing accounts, do not overwrite the current session with new parameters
 
 ## Handle token state and forced logout
 
-After `onUserTokenExpired` or `onUserTokenInvalid`, request fresh credentials from a trusted backend, then log in again or return to the sign-in screen according to product policy. The iOS login flow passes only the OpenIMSDK token to the login method; it does not distinguish “access token” and “session token” on the client. The business backend and OpenIMServer determine token issuance, lifetime, refresh, and revocation policies.
+After `onUserTokenExpired` or `onUserTokenInvalid`, request fresh credentials from the application backend, then log in again or enter the application's sign-in flow. The iOS login flow passes only the OpenIMSDK token to the login method; it does not distinguish “access token” and “session token” on the client. The application backend and OpenIMServer determine token issuance, lifetime, refresh, and revocation.
 
-When `onKickedOffline` arrives, the SDK has already ended the current session. Clear the user, conversation, message, unread-count, and view state maintained by your application. Do not call logout concurrently. Depending on product policy, explain that the account signed in on another device or return to the sign-in screen.
+When `onKickedOffline` arrives, the SDK has already ended the current session. This state is distinct from an explicit user sign-out. The application can end the current account's screens and asynchronous work and enter its sign-in flow.
 
 ## Log out explicitly
 

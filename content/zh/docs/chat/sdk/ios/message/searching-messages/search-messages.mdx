@@ -6,7 +6,7 @@ sourcePath: '/sdk/ios/message/searching-messages/search-messages'
 
 `searchLocalMessages:onSuccess:onFailure:` 搜索当前用户在 iOS SDK 本地数据库中可见的消息。群消息搜索的目标是群聊对应的 `conversationID`，不是发送消息时使用的 `groupID`。
 
-搜索范围取决于 SDK 已同步到本地的消息。跨用户审计、服务端全量检索、复杂权限过滤或跨会话全局排序，应由后端搜索服务处理，再把命中的 `conversationID` 和 `clientMsgID` 交给客户端定位。
+搜索范围取决于 SDK 已同步到本地的消息。服务端全量检索或跨会话全局排序不属于本方法的能力范围；这类结果可以由后端搜索服务返回对应的 `conversationID` 和 `clientMsgID`，再由客户端定位。
 
 ## 创建搜索条件
 
@@ -48,20 +48,20 @@ param.count = 20;
 | 字段 | 类型 | 是否可空 | 说明 |
 | --- | --- | --- | --- |
 | `conversationID` | `NSString *` | 否 | 目标会话；空字符串表示跨本地会话搜索。群聊仍传会话 ID，不传 `groupID`。 |
-| `keywordList` | `NSArray<NSString *> *` | 否 | 关键词数组；固定版本目前只支持一个关键词。 |
-| `keywordListMatchType` | `NSInteger` | 值类型 | 多关键词匹配字段，固定版本标示为当前未使用。 |
-| `senderUserIDList` | `NSArray * _Nullable` | 是 | 发送者筛选字段，固定版本标示为当前未使用。 |
+| `keywordList` | `NSArray<NSString *> *` | 否 | 关键词数组；当前只支持一个关键词。 |
+| `keywordListMatchType` | `NSInteger` | 值类型 | 多关键词匹配字段，当前未使用。 |
+| `senderUserIDList` | `NSArray * _Nullable` | 是 | 发送者筛选字段，当前未使用。 |
 | `messageTypeList` | `NSArray * _Nullable` | 是 | 可选的消息类型数值数组，例如文本消息。 |
 | `searchTimePosition` | `NSInteger` | 值类型 | UTC 秒级时间起点；`0` 表示从当前时间开始。 |
 | `searchTimePeriod` | `NSInteger` | 值类型 | 从起点计算的秒级时间范围；`0` 表示不限。 |
 | `pageIndex` | `NSInteger` | 值类型 | 会话内分页从 `1` 开始；跨会话搜索时无效。 |
 | `count` | `NSInteger` | 值类型 | 会话内每页数量；跨会话搜索时无效。 |
 
-`keywordListMatchType` 和 `senderUserIDList` 在固定 Objective-C header 中标示为当前未使用，不应依赖它们实现多关键词或发送者筛选。若产品需要这些条件，应先以实际 SDK 版本验证，或改由后端搜索服务提供。
+`keywordListMatchType` 和 `senderUserIDList` 当前未参与搜索。多关键词或发送者筛选可由其他业务搜索能力提供。
 
 ## 处理分页结果
 
-成功 callback 参数按固定声明可以为 `nil`，应先处理空结果。非空的 `OIMSearchResultInfo` 包含：
+成功 callback 参数可以为 `nil`，应先处理空结果。非空的 `OIMSearchResultInfo` 包含：
 
 | 属性 | 类型 | 说明 |
 | --- | --- | --- |

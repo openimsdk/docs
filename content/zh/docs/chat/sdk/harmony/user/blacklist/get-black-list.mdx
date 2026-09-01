@@ -1,0 +1,35 @@
+---
+title: '获取黑名单'
+description: '查询当前用户主动加入黑名单的用户，并处理黑名单事件。'
+sourcePath: '/sdk/harmony/user/blacklist/get-black-list'
+---
+
+黑名单与好友关系、群成员管理和平台封禁相互独立。`getBlacks()` 不接收业务参数。
+
+```ts
+import sdk, {
+  EventOnBlackAddedData,
+  EventOnBlackDeletedData,
+  GetBlacksResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const response: GetBlacksResp = await sdk.getBlacks();
+replaceBlockedUsers(response.blacks);
+
+const handleBlackAdded = (data: EventOnBlackAddedData): void => {
+  mergeBlockedUser(data.black);
+};
+const handleBlackDeleted = (data: EventOnBlackDeletedData): void => {
+  removeBlockedUser(data.black.blockUserID);
+};
+const unsubscribeAdded = sdk.on(OpenIMSDKEvent.EventOnBlackAdded, handleBlackAdded);
+const unsubscribeDeleted = sdk.on(OpenIMSDKEvent.EventOnBlackDeleted, handleBlackDeleted);
+
+export function removeBlacklistListeners(): void {
+  unsubscribeAdded();
+  unsubscribeDeleted();
+}
+```
+
+`IMBlack` 使用 `blockUserID` 标识被加入黑名单的用户，并包含昵称、头像、关系所有者、创建时间和扩展字段。退出账号时调用两个取消订阅函数；事件可能遗漏时重新查询。

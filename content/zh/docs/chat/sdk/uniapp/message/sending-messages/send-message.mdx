@@ -1,0 +1,62 @@
+---
+title: '发送消息'
+description: '将待发送消息发送给单聊用户或群组。'
+sourcePath: '/sdk/uniapp/message/sending-messages/send-message'
+---
+
+`sendMessage()` 发送由消息创建 API 返回的 `OpenIMMessageItem`。单聊只填写 `recvID`，群聊只填写 `groupID`。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `message` | `OpenIMMessageItem` | 是 | 非空的待发送消息对象。 |
+| `recvID` | `string` | 条件必填 | 单聊时填写接收方用户 ID；群聊时传空字符串。 |
+| `groupID` | `string` | 条件必填 | 群聊时填写目标群组 ID；单聊时传空字符串。 |
+| `offlinePushInfo` | `OpenIMOfflinePush` | 否 | 离线推送标题、描述和平台配置。 |
+| `isOnlineOnly` | `boolean` | 否 | 是否仅向在线客户端投递；仅在线消息不进入本地历史。 |
+
+```uts
+import { sendMessage } from '@/uni_modules/unix-openim-sdk'
+
+const sentMessage = await sendMessage({
+  message: message,
+  recvID: receiverUserID,
+  groupID: '',
+  offlinePushInfo: null,
+  isOnlineOnly: false,
+})
+
+if (sentMessage.clientMsgID != null) {
+  replacePendingMessage(sentMessage.clientMsgID, sentMessage)
+}
+```
+
+Promise 成功后返回发送结果中的 `OpenIMMessageItem`。发送端应按 `clientMsgID` 替换本地待发送项；其他客户端收到新消息事件是另一个阶段，不能由本次 Promise 成功直接推断。
+
+## 监听上传进度
+
+发送本地图片、音频、视频或文件时，可以通过 `onSendMessageProgress()` 更新对应消息的上传进度。事件返回 `clientMsgID` 和 `progress`，不要按列表下标关联进度。
+
+```uts
+import {
+  OpenIMSendMessageProgressEvent,
+  off,
+  onSendMessageProgress,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleSendProgress = (
+  progress: OpenIMSendMessageProgressEvent | null,
+) => {
+  if (progress == null) return
+  updateMessageProgress(progress.clientMsgID, progress.progress)
+}
+
+const progressSubscription = onSendMessageProgress(handleSendProgress)
+
+function removeSendProgressListener() {
+  off(progressSubscription)
+}
+```
+
+组件卸载、退出登录或切换账号时调用 `removeSendProgressListener()`。进度到达不代表消息发送成功，最终仍以 `sendMessage()` 的 Promise 结果和消息状态为准。

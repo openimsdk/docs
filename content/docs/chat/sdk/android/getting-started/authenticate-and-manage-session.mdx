@@ -18,15 +18,15 @@ The complete flow is:
 1. Create a stable `OnConnListener` in an application-level session component.
 2. Call `initSDK()` and confirm that it returns `true`.
 3. Register message, user, relationship, conversation, group, and call-signaling listeners before login.
-4. Obtain the matching `userID` and token from a trusted backend, then call `login()`.
+4. Obtain the matching `userID` and token from the application backend, then call `login()`.
 5. Wait separately for login success and `onConnectSuccess()` before enabling operations that require the persistent connection.
 6. On sign-out or account switching, call `logout()` and then clear application state owned by the current account.
 
-The `apiAddr`, `wsAddr`, `userID`, and `token` used below are all provided by a trusted backend.
+The `apiAddr`, `wsAddr`, `userID`, and `token` used below come from application configuration or the application backend.
 
 ## Initialize and handle the connection lifecycle
 
-During the `Application` lifecycle, create the data directory, initialize the SDK, and provide the connection listener. Store connection state without recording tokens or complete service credentials in callback logs.
+During the `Application` lifecycle, create the data directory, initialize the SDK, and provide the connection listener. The application can use these callbacks to maintain its current connection state.
 
 ```java
 import android.app.Application;
@@ -102,7 +102,7 @@ A `true` return value means that the local SDK runtime initialized successfully.
 | `apiAddr`             | `String`      | OpenIMServer HTTP API endpoint.                                           |
 | `wsAddr`              | `String`      | OpenIMServer WebSocket endpoint.                                          |
 | `dataDirectory`       | `File`        | Application-private persistent directory for the SDK database and logs.   |
-| `config.logLevel`     | `int`         | A `LogLevel` constant; reduce the logging level explicitly in production. |
+| `config.logLevel`     | `int`         | A `LogLevel` constant that controls SDK log verbosity.                    |
 | `isLogStandardOutput` | `boolean`     | Whether SDK logs are emitted to the standard log stream.                  |
 
 Initialize the SDK only once in `Application` or an application-level session component. `networkChanged()` asks the SDK to re-evaluate network connectivity; call it only when the application already has one centralized system-network observer, not from multiple screens.
@@ -152,7 +152,7 @@ if (loginStatus == LoginStatus.Logged) {
 
 ## Handle token failure and forced logout
 
-After `onUserTokenExpired()` or `onUserTokenInvalid()`, obtain new credentials for the current user from a trusted backend, then reauthenticate or return to the sign-in flow according to product policy. After `onKickedOffline()`, clear conversations, message views, unread counts, and other state owned by the current account. Do not treat forced logout as an explicit user sign-out.
+After `onUserTokenExpired()` or `onUserTokenInvalid()`, obtain new credentials for the current user from the application backend, then sign in again or enter the application's sign-in flow. `onKickedOffline()` indicates that the account was forced offline by another device or the server; it is distinct from an explicit user sign-out.
 
 These callbacks apply to the current logged-in account. Before switching accounts, stop asynchronous work and screen subscriptions for the previous account, then clear its state.
 

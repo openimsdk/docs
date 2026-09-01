@@ -1,0 +1,104 @@
+---
+title: '消息概览'
+description: '了解消息的创建、发送、接收、查询和状态同步边界。'
+sourcePath: '/sdk/uniapp/message/overview-message'
+---
+
+UniApp SDK 使用 `OpenIMMessageItem` 表示一条消息。发送消息分为两个阶段：先根据内容创建待发送对象，再将该对象发送到单聊用户或群组。创建方法不会发送消息；发送方法的 Promise 成功也不等于其他客户端已经收到消息。
+
+消息列表应使用所属会话和 `clientMsgID` 定位一条消息。`conversationID` 来自当前会话、查询条件、搜索结果或事件上下文，不是 `OpenIMMessageItem` 自身字段。
+
+## 消息处理流程
+
+| 阶段 | 主要操作 | 说明 |
+| --- | --- | --- |
+| 创建 | 调用对应的 `create*Message()` 方法 | 返回 `OpenIMMessageItem` 或 `null`，不会发送或触发新消息事件。 |
+| 发送 | 调用 `sendMessage()` 或 `sendMessageNotOss()` | 单聊填写 `recvID`，群聊填写 `groupID`；另一个目标字段传空字符串。 |
+| 接收 | 监听新消息事件 | 确定目标会话后按 `clientMsgID` 合并，重复事件不应插入第二条消息。 |
+| 查询 | 加载历史、搜索或按 ID 定位 | 返回调用时可读取到的消息，不触发新消息事件。 |
+| 更新 | 删除、撤回、修改、置顶或上报已读 | 分别处理 Promise 结果、相关事件和必要的重新查询。 |
+
+本地图片、音频、视频和文件消息由 `sendMessage()` 进入 SDK 上传与发送流程。资源已由业务上传并具有远端 URL 时，先创建 URL 型消息，再使用 `sendMessageNotOss()`，避免重复上传。
+
+## 常用消息字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `clientMsgID` | `string` 或 `null` | 客户端消息 ID，用于列表去重和状态更新；创建结果中应检查其是否存在。 |
+| `serverMsgID` | `string` 或 `null` | 服务端消息 ID；待发送或发送失败时可能为空。 |
+| `sessionType` | `OpenIMSessionType` | 会话类型，例如单聊或群聊。 |
+| `sendID` | `string` 或 `null` | 发送者用户 ID。 |
+| `recvID` | `string` 或 `null` | 单聊接收方用户 ID；群聊消息通常为空。 |
+| `groupID` | `string` 或 `null` | 群聊对应的群组 ID；单聊消息通常为空。 |
+| `msgFrom` | `number` | 消息来源类型。 |
+| `contentType` | `OpenIMMessageType` | 消息内容类型，决定应读取哪个内容字段。 |
+| `createTime` | `number` | 消息对象创建时间，Unix 毫秒时间戳。 |
+| `sendTime` | `number` | 消息发送时间，Unix 毫秒时间戳。 |
+| `seq` | `number` | 服务端消息序号；未发送成功时可能没有可用序号。 |
+| `senderPlatformID` | `OpenIMPlatform` | 发送消息的客户端平台。 |
+| `senderNickname` | `string` 或 `null` | 消息中记录的发送者昵称。 |
+| `senderFaceUrl` | `string` 或 `null` | 消息中记录的发送者头像地址。 |
+| `status` | `OpenIMMessageStatus` | 消息当前发送状态。 |
+| `isRead` | `boolean` | 查询或接收该消息时记录的已读状态。 |
+| `offlinePush` | `OpenIMOfflinePush` 或 `null` | 发送时使用的离线推送配置。 |
+| `content` | `string` 或 `null` | SDK 保留的序列化内容；渲染时优先读取具体内容字段。 |
+| `attachedInfo` | `string` 或 `null` | SDK 附加信息，只按已确认的业务约定解析。 |
+| `ex` | `string` 或 `null` | 随消息同步到其他客户端的扩展字符串。 |
+| `localEx` | `string` 或 `null` | 只保存在当前设备的扩展字符串。 |
+
+消息正文位于与 `contentType` 对应的内容字段中：
+
+| 消息内容 | 对应字段 |
+| --- | --- |
+| 文本 | `textElem` |
+| 图片、音频、视频、文件 | `pictureElem`、`soundElem`、`videoElem`、`fileElem` |
+| @ 消息、回复消息 | `atTextElem`、`quoteElem` |
+| 合并转发、自定义消息 | `mergeElem`、`customElem` |
+| 名片、位置、表情 | `cardElem`、`locationElem`、`faceElem` |
+| 高级文本、输入状态 | `advancedTextElem`、`typingElem` |
+| 通知及附加状态 | `notificationElem`、`attachedInfoElem` |
+
+不要根据展示文本、数组位置或当前分页长度判断消息身份。消息状态通常按 `conversationID:clientMsgID` 合并；只影响当前设备展示的状态应写入 `localEx`，需要同步给会话成员的业务数据才写入消息内容或 `ex`。
+
+## 当前消息入口
+
+- [创建文本消息](/sdk/uniapp/message/creating-messages/create-text-message)
+- [创建 @ 消息](/sdk/uniapp/message/creating-messages/create-text-at-message)
+- [创建自定义消息](/sdk/uniapp/message/creating-messages/create-custom-message)
+- [使用本地图片创建消息](/sdk/uniapp/message/creating-messages/create-image-message-by-file)
+- [使用 URL 创建图片消息](/sdk/uniapp/message/creating-messages/create-image-message-by-url)
+- [使用本地音频创建消息](/sdk/uniapp/message/creating-messages/create-sound-message-by-file)
+- [使用 URL 创建音频消息](/sdk/uniapp/message/creating-messages/create-sound-message-by-url)
+- [使用本地视频创建消息](/sdk/uniapp/message/creating-messages/create-video-message-by-file)
+- [使用 URL 创建视频消息](/sdk/uniapp/message/creating-messages/create-video-message-by-url)
+- [使用本地文件创建消息](/sdk/uniapp/message/creating-messages/create-file-message-by-file)
+- [使用 URL 创建文件消息](/sdk/uniapp/message/creating-messages/create-file-message-by-url)
+- [创建联系人名片消息](/sdk/uniapp/message/creating-messages/create-card-message)
+- [创建位置消息](/sdk/uniapp/message/creating-messages/create-location-message)
+- [创建表情消息](/sdk/uniapp/message/creating-messages/create-face-message)
+- [创建回复消息](/sdk/uniapp/message/creating-messages/create-quote-message)
+- [创建 Markdown 消息](/sdk/uniapp/message/creating-messages/create-markdown-message)
+- [创建逐条转发消息](/sdk/uniapp/message/creating-messages/create-forward-message)
+- [创建合并转发消息](/sdk/uniapp/message/creating-messages/create-merger-message)
+- [发送消息](/sdk/uniapp/message/sending-messages/send-message)
+- [发送已上传的媒体消息](/sdk/uniapp/message/sending-messages/send-message-not-oss)
+- [接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)
+- [接收服务端业务通知](/sdk/uniapp/message/receiving-messages/receive-custom-business-messages)
+- [加载历史消息](/sdk/uniapp/message/retrieving-messages/load-older-messages)
+- [反向加载历史消息](/sdk/uniapp/message/retrieving-messages/load-newer-messages)
+- [按 ID 查找消息](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [读取消息上下文](/sdk/uniapp/message/retrieving-messages/load-message-context)
+- [搜索消息](/sdk/uniapp/message/searching-messages/search-messages)
+- [上报输入状态](/sdk/uniapp/message/composing-messages/update-typing-status)
+- [接收和查询输入状态](/sdk/uniapp/message/composing-messages/get-typing-status)
+- [查询语音识别能力](/sdk/uniapp/message/composing-messages/check-speech-to-text)
+- [识别音频文字](/sdk/uniapp/message/composing-messages/transcribe-audio)
+- [更新本地消息内容](/sdk/uniapp/message/composing-messages/save-local-transcript)
+- [修改消息](/sdk/uniapp/message/managing-messages/modify-a-message)
+- [撤回消息](/sdk/uniapp/message/managing-messages/revoke-a-message)
+- [批量删除消息](/sdk/uniapp/message/managing-messages/delete-saved-messages)
+- [设置消息本地扩展](/sdk/uniapp/message/managing-messages/set-message-local-ex)
+- [查询会话置顶消息](/sdk/uniapp/message/managing-messages/get-pinned-messages)
+- [上报群消息已读](/sdk/uniapp/message/managing-read-status/send-group-read-receipts)
+
+创建消息对象和纯查询操作只返回本次调用结果，不会触发共享消息事件。对于会改变状态的操作，Promise 成功、事件到达和重新查询最新数据是三个独立阶段。

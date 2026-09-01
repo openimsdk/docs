@@ -46,6 +46,18 @@ test('recognizes only generator-owned deferred English skeletons', () => {
     ),
     true,
   );
+  assert.equal(
+    isGeneratedClientSdkSkeleton(
+      "---\nstatus: 'draft'\ncontext: 'chat/sdk/uniapp'\n---\n",
+    ),
+    true,
+  );
+  assert.equal(
+    isGeneratedClientSdkSkeleton(
+      "---\nstatus: 'draft'\ncontext: 'chat/sdk/uniapp'\n---\n\n## Overview\n\nReviewed English content.\n",
+    ),
+    false,
+  );
 });
 
 test('replaces legacy platform route records with the reviewed active tree', () => {
@@ -71,9 +83,26 @@ test('replaces legacy platform route records with the reviewed active tree', () 
   assert.ok(ios.every((route) => !nonIosSourceIndexes.has(route.sourceIndex)));
 });
 
+test('uses the same title baseline for skeletons and replacement route records', () => {
+  const routes = readJson('src/generated/routes.json');
+  const sidebar = readJson('data/structure/uniapp-sidebar.json');
+  const skeletonTitles = new Map(
+    resolveClientSdkSkeletonRoutes({ platformId: 'uniapp', sidebar, routes }).map((route) => [
+      route.path,
+      route.title,
+    ]),
+  );
+  const replaced = replaceClientSdkRouteRecords({ platformId: 'uniapp', sidebar, routes });
+  const uniappRoutes = replaced.filter((route) => route.contextKey === 'chat/sdk/uniapp');
+
+  for (const route of uniappRoutes) {
+    assert.equal(skeletonTitles.get(route.path), route.title, route.path);
+  }
+});
+
 test('resolves every active native suffix against the current WASM routes', () => {
   const routes = readJson('src/generated/routes.json');
-  for (const platformId of ['android', 'ios', 'flutter', 'react-native']) {
+  for (const platformId of ['android', 'ios', 'flutter', 'react-native', 'uniapp', 'harmony']) {
     const sidebar = readJson(`data/structure/${platformId}-sidebar.json`);
     const resolved = resolveClientSdkSkeletonRoutes({ platformId, sidebar, routes });
     assert.equal(resolved.length, getSidebarPathCount(sidebar));
@@ -85,7 +114,11 @@ test('resolves every active native suffix against the current WASM routes', () =
           ? 'Android'
           : platformId === 'react-native'
             ? 'React Native'
-            : 'Flutter';
+            : platformId === 'uniapp'
+              ? 'uni-app / uni-app x'
+              : platformId === 'harmony'
+                ? 'HarmonyOS'
+                : 'Flutter';
     assert.equal(resolved[0].title, `OpenIM SDK for ${displayName}`);
   }
 });

@@ -1,0 +1,40 @@
+---
+title: '音视频通话概览'
+description: '了解 UniApp SDK 的通话信令、房间凭据和事件边界。'
+sourcePath: '/sdk/uniapp/calling/overview-calling'
+---
+
+UniApp SDK 提供发起、接受、拒绝、取消和挂断通话所需的信令 API，也可以查询群组当前房间、重新获取入会凭据，并恢复尚未处理的邀请。
+
+SDK 只负责信令和房间信息，不负责采集摄像头画面、播放远端音视频或渲染通话界面。应用需要把返回的 `roomID`、`token` 和 `liveURL` 交给所选实时音视频引擎，并自行处理权限、媒体轨道、弱网策略和界面状态。
+
+## 基本流程
+
+1. 使用 `signalingInvite()` 发起单聊通话，或使用 `signalingInviteInGroup()` 发起群聊通话。
+2. 被邀请方收到通话事件后，恢复当前待处理邀请，并选择接受或拒绝。
+3. 接受方调用 `signalingAccept()`，再使用返回的房间凭据连接媒体引擎。
+4. 通话中根据邀请、参与者和挂断事件更新界面；媒体状态由所接入的媒体引擎维护。
+5. 发起方可以取消尚未接通的邀请，任一参与者都可以挂断已建立的通话。
+
+## 核心数据
+
+| 数据 | 说明 |
+| --- | --- |
+| `OpenIMSignalingInvitationInfo` | 邀请人、被邀请人、群组、房间、媒体类型、超时时间和会话类型。 |
+| `OpenIMSignalingInviteResult` | 发起邀请后返回的邀请数据、房间凭据和忙线用户列表。 |
+| `OpenIMSignalingAcceptResult` | 接受邀请后返回的房间凭据。 |
+| `OpenIMSignalingGetRoomByGroupIDResult` | 当前群通话的房间 ID 和邀请数据。 |
+
+Promise 成功、事件到达和重新查询是三个不同阶段。Promise 成功只表示当前信令请求已完成；事件反映其他参与端之后看到的变化；应用恢复前台或重新连接时，还需要查询当前房间或待处理邀请。
+
+当前 UTS 契约把通话事件公开为 `string`，没有声明字符串内部字段。应用可将事件作为状态刷新信号，并通过查询接口取得类型明确的通话数据；完整处理方式见[处理通话事件](/sdk/uniapp/calling/managing-calls/handle-call-events)。通话状态使用 `roomID` 识别，参与者状态再结合用户 ID。
+
+## 按任务查找页面
+
+| 任务 | 页面 |
+| --- | --- |
+| 发起通话 | [发起单聊通话](/sdk/uniapp/calling/managing-calls/start-single-call)、[发起群聊通话](/sdk/uniapp/calling/managing-calls/start-group-call) |
+| 接受或拒绝邀请 | [接受通话](/sdk/uniapp/calling/managing-calls/accept-call)、[拒绝通话](/sdk/uniapp/calling/managing-calls/reject-call) |
+| 取消或挂断 | [取消通话邀请](/sdk/uniapp/calling/managing-calls/cancel-call)、[挂断通话](/sdk/uniapp/calling/managing-calls/hang-up-call) |
+| 恢复通话信息 | [恢复待处理的通话邀请](/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation)、[查询群组通话房间](/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id)、[获取通话房间凭据](/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id) |
+| 通话内业务协商 | [发送自定义信令](/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal) |

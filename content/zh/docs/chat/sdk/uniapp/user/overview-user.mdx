@@ -1,0 +1,43 @@
+---
+title: '用户'
+description: '了解 uni-app / uni-app x SDK 中的用户资料、账号级设置和在线状态。'
+sourcePath: '/sdk/uniapp/user/overview-user'
+---
+
+uni-app / uni-app x SDK 使用 `userID` 标识 OpenIMSDK 用户。用户领域负责当前账号资料、其他用户的公开资料、账号级消息接收策略、加好友权限和在线状态；好友、好友申请与黑名单属于独立的“关系链”领域，群内昵称和成员角色则属于群组领域。
+
+## 用户资料类型
+
+UTS 插件公开的用户资料主要包括以下类型：
+
+| 类型 | 适用场景 | 获取方式 |
+| --- | --- | --- |
+| `OpenIMUserInfo` | 当前登录用户资料，也作为公开用户资料的基础结构 | `getSelfUserInfo()`、`getUsersInfo()` |
+| `OpenIMPublicUserItem` | 其他应用用户的公开资料，是 `OpenIMUserInfo` 的类型别名 | `getUsersInfo()` |
+| `OpenIMFriendUserItem` | 好友关系中的资料、备注、置顶状态和关系扩展字段 | 关系链中的好友查询 API |
+| `OpenIMBlackUserItem` | 当前账号黑名单中的用户资料 | 关系链中的黑名单查询 API |
+| `OpenIMUserStatusItem` | 指定用户的汇总在线状态和在线平台 | 在线状态订阅与查询 API |
+
+同一个 `userID` 可能同时出现在公开资料、好友资料、黑名单和群成员资料中。陌生人资料卡使用 `OpenIMPublicUserItem`；联系人列表优先使用 `OpenIMFriendUserItem`；群成员列表使用 `OpenIMGroupMemberItem`；会话列表和聊天页标题使用会话对象的 `showName`，不要把不同领域的数据直接互相覆盖。
+
+## 用户资料
+
+- [获取用户资料](/sdk/uniapp/user/profile/get-users-info)：按 `userID` 批量取得应用用户的账号级公开资料。
+- [获取当前用户资料](/sdk/uniapp/user/profile/get-self-user-info)：读取当前登录账号的昵称、头像、扩展字段和全局消息接收方式。
+- [更新当前用户资料](/sdk/uniapp/user/profile/set-self-info)：修改当前账号的昵称、头像或扩展字段。
+- [设置全局消息接收方式](/sdk/uniapp/user/profile/set-global-message-reception)：设置账号级消息接收与通知策略。
+- [设置加好友权限](/sdk/uniapp/user/profile/set-friend-add-permission)：设置其他用户添加当前账号时采用的处理策略。
+
+## 在线状态
+
+- [订阅用户在线状态](/sdk/uniapp/user/online-status/subscribe-users-status)：建立状态订阅，并集中处理后续状态变化事件。
+- [查询已订阅用户状态](/sdk/uniapp/user/online-status/get-subscribe-users-status)：取得已订阅用户的当前状态。
+- [取消订阅用户状态](/sdk/uniapp/user/online-status/unsubscribe-users-status)：停止跟踪当前界面或业务不再需要的用户。
+
+在线状态表示用户是否连接 OpenIMServer，不表示用户正在查看应用、某个会话或某条消息。需要展示“最近活跃”“正在输入”或业务在线状态时，应分别使用对应的业务数据，不能根据 OpenIMSDK 在线状态自行推断。
+
+## 数据更新原则
+
+首次进入页面时通过查询 API 建立数据；后续通过对应事件合并增量。当前用户资料使用 `userID` 替换缓存记录，在线状态事件可能一次携带多个 `OpenIMUserStatusItem`，应逐项按 `userID` 更新。
+
+Promise 成功、事件到达和重新查询是三个不同阶段。状态修改 API 的 Promise 成功后，可以等待对应事件更新界面；需要立即确认最终值时，再调用查询 API 获取最新数据。

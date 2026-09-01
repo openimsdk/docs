@@ -50,6 +50,7 @@ export const i18nText = {
       editPage: 'Edit page',
       scaffold: 'Scaffold',
       commercialBadge: 'Enterprise',
+      partialCommercialBadge: 'Includes Enterprise features',
     },
     chrome: {
       docs: 'Docs',
@@ -101,6 +102,7 @@ export const i18nText = {
       editPage: '编辑页面',
       scaffold: '占位页',
       commercialBadge: '商业版',
+      partialCommercialBadge: '含商业版能力',
     },
     chrome: {
       docs: '文档',

@@ -1,0 +1,30 @@
+---
+title: '加载历史消息'
+description: '分页读取会话中更早的历史消息。'
+sourcePath: '/sdk/harmony/message/retrieving-messages/load-older-messages'
+---
+
+第一页的 `startClientMsgID` 传空字符串；继续向上翻页时传当前最早消息的客户端消息 ID。
+
+```ts
+import sdk, {
+  ErrorCode,
+  GetHistoryMessageListReq,
+  GetHistoryMessageListResp,
+  ViewType,
+} from '@openimsdk/imsdk';
+
+const request: GetHistoryMessageListReq = {
+  conversationID: conversationID,
+  startClientMsgID: oldestClientMsgID,
+  count: 30,
+  isReverse: false,
+  viewType: ViewType.ViewHistory,
+};
+const response: GetHistoryMessageListResp = await sdk.getHistoryMessageList(request);
+if (response.errCode === ErrorCode.NoError) {
+  prependMessages(response.messageList);
+}
+```
+
+`isEnd` 为 `true` 时停止向更早方向请求。Promise 被拒绝和响应中的非零 `errCode` 都应作为加载失败处理。查询不会触发新消息事件；合并结果时限定当前 `conversationID` 并按 `clientMsgID` 去重。

@@ -1,0 +1,100 @@
+---
+title: '群组概览'
+description: '了解群资料、成员关系、入群申请、角色和群组事件之间的关系。'
+sourcePath: '/sdk/harmony/group/overview-group'
+---
+
+OpenIMSDK 通过群组组织多人聊天中的共享资料、成员关系和权限。发送群消息、维护群资料、管理成员和处理入群申请时使用 `groupID`；会话列表中的群聊状态由 `conversationID` 标识，两者不能混用。
+
+## 核心数据类型
+
+| 类型                 | 用途                                                   |
+| -------------------- | ------------------------------------------------------ |
+| `IMGroup`            | 群名称、头像、公告、群主、验证配置、成员数和扩展字段。 |
+| `IMGroupMember`      | 用户在指定群内的昵称、角色、禁言和入群信息。           |
+| `IMGroupApplication` | 入群申请及其处理状态。                                 |
+
+成员角色使用 `GroupMemberRoleLevel`：普通成员为 `GroupOrdinaryUsers`、管理员为 `GroupAdmin`、群主为 `GroupOwner`。客户端可以据此控制操作入口，但最终权限始终由 OpenIMServer 校验。
+
+## 群资料字段
+
+| 字段                | 类型                     | 说明                                                          |
+| ------------------- | ------------------------ | ------------------------------------------------------------- |
+| `groupID`           | `string`                 | 群组的稳定 ID，也是合并群组事件的标识。                       |
+| `groupName`         | `string`                 | 群名称。                                                      |
+| `faceURL`           | `string`                 | 群头像地址。                                                  |
+| `notification`      | `string`                 | 群公告。                                                      |
+| `introduction`      | `string`                 | 群简介。                                                      |
+| `ownerUserID`       | `string`                 | 当前群主的用户 ID。                                           |
+| `creatorUserID`     | `string`                 | 创建群组的用户 ID。                                           |
+| `memberCount`       | `number`                 | 查询时的成员数量。                                            |
+| `needVerification`  | `GroupNeedVerification`  | 入群验证策略。                                                |
+| `lookMemberInfo`    | `GroupLookMemberInfo`    | 群成员资料查看权限。                                          |
+| `applyMemberFriend` | `GroupApplyMemberFriend` | 通过群成员关系添加好友的权限。                                |
+| `status`            | `GroupStatus`            | 群组状态。                                                    |
+| `createTime`        | `number`                 | 创建时间，Unix 毫秒时间戳。                                   |
+| `ex`                | `string`                 | 群组扩展字符串。                                              |
+| `attachedInfo`      | `string`                 | SDK 附加信息，只按已确认的业务约定解析。                      |
+| `isShowGroupRead` <span className="enterprise-field-badge">商业版</span> | `boolean` | 服务端返回的群消息已读显示配置；客户端不通过群资料 API 修改。 |
+
+## 同步群组变化
+
+本页负责群资料变化、当前账号加入或退出群组以及群组解散事件的完整监听。事件载荷中的 `group` 为最新群资料，使用 `groupID` 合并或移除。
+
+```ts
+import sdk, {
+  EventOnGroupDismissedData,
+  EventOnGroupInfoChangedData,
+  EventOnJoinedGroupAddedData,
+  EventOnJoinedGroupDeletedData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleJoinedGroupAdded = (data: EventOnJoinedGroupAddedData): void => {
+  mergeGroup(data.group);
+};
+const handleJoinedGroupDeleted = (data: EventOnJoinedGroupDeletedData): void => {
+  removeJoinedGroup(data.group.groupID);
+};
+const handleGroupInfoChanged = (data: EventOnGroupInfoChangedData): void => {
+  mergeGroup(data.group);
+};
+const handleGroupDismissed = (data: EventOnGroupDismissedData): void => {
+  markGroupDismissed(data.group.groupID);
+};
+
+const unsubscribeJoinedGroupAdded = sdk.on(
+  OpenIMSDKEvent.EventOnJoinedGroupAdded,
+  handleJoinedGroupAdded,
+);
+const unsubscribeJoinedGroupDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnJoinedGroupDeleted,
+  handleJoinedGroupDeleted,
+);
+const unsubscribeGroupInfoChanged = sdk.on(
+  OpenIMSDKEvent.EventOnGroupInfoChanged,
+  handleGroupInfoChanged,
+);
+const unsubscribeGroupDismissed = sdk.on(
+  OpenIMSDKEvent.EventOnGroupDismissed,
+  handleGroupDismissed,
+);
+
+export function removeGroupListeners(): void {
+  unsubscribeJoinedGroupAdded();
+  unsubscribeJoinedGroupDeleted();
+  unsubscribeGroupInfoChanged();
+  unsubscribeGroupDismissed();
+}
+```
+
+退出账号或销毁群组状态层时移除监听。Promise 成功、事件到达和重新查询得到最新数据是三个阶段；分页期间收到新增或删除事件时，应重置分页并重新加载。
+
+## 相关能力
+
+- [更新群名称、简介和头像](/sdk/harmony/group/update-group-profile)
+- [设置入群验证方式](/sdk/harmony/group/set-group-join-verification)
+- [设置群组全员禁言](/sdk/harmony/group/change-group-mute)
+- [查询已加入群组](/sdk/harmony/group/retrieving-groups/get-joined-group-list-page)
+- [处理入群申请](/sdk/harmony/group/group-applications/get-group-application-list-as-recipient)
+- [查询和管理群成员](/sdk/harmony/group/retrieving-group-members/get-group-member-list)

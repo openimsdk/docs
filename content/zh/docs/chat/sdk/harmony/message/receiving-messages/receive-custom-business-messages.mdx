@@ -1,0 +1,26 @@
+---
+title: '接收服务端业务通知'
+description: '监听服务端下发的自定义业务通知。'
+sourcePath: '/sdk/harmony/message/receiving-messages/receive-custom-business-messages'
+---
+
+该事件接收服务端下发的业务通知，不是通过 `createCustomMessage()` 发送的聊天自定义消息；后者仍由普通新消息事件处理。
+
+```ts
+import sdk, { EventOnRecvCustomBusinessMessageData, OpenIMSDKEvent } from '@openimsdk/imsdk';
+
+const handleBusinessMessage = (data: EventOnRecvCustomBusinessMessageData): void => {
+  const payload = parseAndValidateBusinessPayload(data.businessMessage);
+  applyBusinessPayload(data.clientMsgID, payload);
+};
+const unsubscribeBusinessMessage = sdk.on(
+  OpenIMSDKEvent.EventOnRecvCustomBusinessMessage,
+  handleBusinessMessage,
+);
+
+export function removeBusinessMessageListener(): void {
+  unsubscribeBusinessMessage();
+}
+```
+
+先校验字符串格式、业务类型、版本和必要字段，再更新应用状态。可使用 `clientMsgID` 去重，但需要当前业务状态时仍应调用对应业务接口重新查询。退出账号或销毁状态层时调用 `unsubscribeBusinessMessage()`。

@@ -1,0 +1,58 @@
+---
+title: '更新当前用户资料'
+description: '更新当前登录用户的昵称、头像或账号级扩展字段。'
+sourcePath: '/sdk/uniapp/user/profile/set-self-info'
+---
+
+`setSelfInfo()` 更新当前登录用户的基础展示资料。只传本次需要修改的 `nickname`、`faceURL` 或 `ex`，不要在保存昵称或头像时顺带覆盖账号级策略字段。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `nickname` | `string` 或 `null` | 否 | 新的账号级昵称。 |
+| `faceURL` | `string` 或 `null` | 否 | 新的账号级头像地址。 |
+| `ex` | `string` 或 `null` | 否 | 新的账号级扩展字符串，会完整覆盖旧值。 |
+
+至少传入一个实际需要更新的字段。
+
+```uts
+import { setSelfInfo } from '@/uni_modules/unix-openim-sdk'
+
+await setSelfInfo({
+  nickname: nickname.trim(),
+  faceURL,
+  ex: mergedExtra,
+})
+```
+
+`ex` 是完整字符串，SDK 不会自动合并 JSON。多个业务模块共用时，应先读取当前值，在业务层合并各自的命名空间，再提交完整新值。
+
+`setSelfInfo()` 还支持两个相对独立的账号策略字段：全局消息接收方式见[设置全局消息接收方式](/sdk/uniapp/user/profile/set-global-message-reception)，加好友权限见[设置加好友权限](/sdk/uniapp/user/profile/set-friend-add-permission)。这些设置应由各自页面和交互单独提交。
+
+Promise 成功表示更新请求已经完成，不等同于资料事件已经到达。需要立即确认最终资料时，可以等待事件，或重新调用 `getSelfUserInfo()` 获取最新资料。
+
+## 监听当前用户资料变化
+
+本页负责 `onSelfInfoUpdated()` 的完整监听。事件携带更新后的 `OpenIMUserInfo | null`；收到非空资料后，按 `userID` 替换当前登录用户的缓存记录。
+
+```uts
+import {
+  OpenIMUserInfo,
+  off,
+  onSelfInfoUpdated,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleSelfInfoUpdated = (user: OpenIMUserInfo | null) => {
+  if (user == null) return
+  setCurrentUser(user)
+}
+
+const selfInfoSubscription = onSelfInfoUpdated(handleSelfInfoUpdated)
+
+function removeSelfInfoListener() {
+  off(selfInfoSubscription)
+}
+```
+
+退出登录、切换账号或销毁用户状态层时调用 `removeSelfInfoListener()`，避免重新进入页面后重复处理同一事件。

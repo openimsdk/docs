@@ -1,0 +1,30 @@
+---
+title: '接收服务端业务通知'
+description: '监听服务端下发的自定义业务通知。'
+sourcePath: '/sdk/uniapp/message/receiving-messages/receive-custom-business-messages'
+---
+
+`onRecvCustomBusinessMessage()` 接收服务端下发的业务通知。回调参数是业务字符串，不是 `OpenIMMessageItem`；通过 `createCustomMessage()` 发送的聊天自定义消息仍由[接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)中的新消息事件处理。
+
+```uts
+import {
+  off,
+  onRecvCustomBusinessMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleCustomBusinessMessage = (payload: string) => {
+  const businessMessage = parseAndValidateBusinessPayload(payload)
+  applyBusinessPayload(businessMessage)
+}
+
+const businessMessageSubscription =
+  onRecvCustomBusinessMessage(handleCustomBusinessMessage)
+
+function removeBusinessMessageListener() {
+  off(businessMessageSubscription)
+}
+```
+
+先校验字符串格式、业务类型、版本和必要字段，再更新应用状态。业务协议应提供稳定的通知 ID，接收端按该 ID 去重；不要依赖事件到达顺序，也不要执行通知中未经信任的脚本或表达式。
+
+组件卸载、退出登录或切换账号前调用 `removeBusinessMessageListener()`。需要当前业务状态时，应由对应业务接口重新查询；事件只提供增量通知。

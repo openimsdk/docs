@@ -1,0 +1,51 @@
+---
+title: '发送第一条消息'
+description: '使用 HarmonyOS SDK 创建并发送第一条单聊或群聊文本消息。'
+sourcePath: '/sdk/harmony/getting-started/send-first-message'
+---
+
+开始前应已经完成 SDK 初始化和登录，并等待连接成功与服务端同步完成。发送消息分为“创建待发送对象”和“发送到目标”两个阶段。
+
+## 发送单聊消息
+
+```ts
+import sdk, { CreateTextMessageResp, SendMessageReq, SendMessageResp } from '@openimsdk/imsdk';
+
+const created: CreateTextMessageResp = await sdk.createTextMessage({
+  text: '你好，OpenIMSDK',
+});
+
+const request: SendMessageReq = {
+  message: created.message,
+  recvID: 'user_b',
+  groupID: '',
+  isOnlineOnly: false,
+};
+
+const sent: SendMessageResp = await sdk.sendMessage(request);
+appendOutgoingMessage(sent.message);
+```
+
+`recvID` 必须是实际用户 ID，不能使用昵称、手机号或页面展示名称。`createTextMessage()` 只创建本地消息对象，不会发送消息。
+
+## 发送群聊消息
+
+```ts
+const created: CreateTextMessageResp = await sdk.createTextMessage({
+  text: '大家好',
+});
+
+const request: SendMessageReq = {
+  message: created.message,
+  recvID: '',
+  groupID: 'group_123',
+  isOnlineOnly: false,
+};
+
+const sent: SendMessageResp = await sdk.sendMessage(request);
+appendOutgoingMessage(sent.message);
+```
+
+当前用户必须已加入目标群组并具有发言权限。单聊只设置 `recvID`，群聊只设置 `groupID`，不要同时填写两个目标。
+
+Promise 成功后，使用返回消息的 `clientMsgID` 替换或更新本地待发送项。对端收到新消息事件是另一个阶段，完整监听见[接收消息](/sdk/harmony/message/receiving-messages/receive-messages)。

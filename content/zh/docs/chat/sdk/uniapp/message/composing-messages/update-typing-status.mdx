@@ -1,0 +1,28 @@
+---
+title: '上报输入状态'
+description: '使用 UniApp SDK 上报当前用户在会话中的输入状态。'
+sourcePath: '/sdk/uniapp/message/composing-messages/update-typing-status'
+---
+
+用户进入输入状态时传 `focus: true`；发送消息、输入框失焦、切换会话或停止输入时传 `false`。输入状态属于会话中的临时状态，不会保存为草稿，也不会写入消息列表。
+
+```uts
+import { changeInputStates } from '@/uni_modules/unix-openim-sdk'
+
+await changeInputStates({
+  conversationID,
+  focus: true,
+})
+
+// 停止输入时：
+await changeInputStates({
+  conversationID,
+  focus: false,
+})
+```
+
+`conversationID` 是当前会话 ID。`userID` 在公开参数类型中为可选字段，常规场景无需传入，SDK 会以上报者的当前登录账号为准。
+
+对开始输入操作做节流和状态去重，不要在每次键盘输入时重复调用。应用还应设置短时间超时：如果因网络中断或页面销毁没有成功上报 `false`，到期后主动清除界面上的输入提示。
+
+Promise 成功只表示本次上报请求已经完成，不表示其他客户端的界面已经更新。接收状态变化、维护其他成员输入状态的完整方式见[接收和查询输入状态](/sdk/uniapp/message/composing-messages/get-typing-status)。

@@ -1,0 +1,87 @@
+---
+title: '获取收到的入群申请'
+description: '分页查询当前账号有权处理的入群申请，并监听申请状态变化。'
+sourcePath: '/sdk/harmony/group/group-applications/get-group-application-list-as-recipient'
+---
+
+群主或管理员查询收到的申请时，将 `send` 设为 `false`。可以按群组和处理结果筛选；传空数组表示不限定对应条件。
+
+## 参数说明
+
+| 参数                    | 类型             | 是否必填 | 说明                                |
+| ----------------------- | ---------------- | -------- | ----------------------------------- |
+| `send`                  | `boolean`        | 是       | 收到的申请固定为 `false`。          |
+| `groupIDs`              | `string[]`       | 是       | 目标群组 ID；空数组表示不限定群组。 |
+| `handleResults`         | `HandleResult[]` | 是       | 处理结果筛选；空数组表示全部状态。  |
+| `pagination.pageNumber` | `number`         | 是       | 页码，从 `1` 开始。                 |
+| `pagination.showNumber` | `number`         | 是       | 每页读取数量。                      |
+
+```ts
+import sdk, {
+  EventOnGroupApplicationAcceptedData,
+  EventOnGroupApplicationAddedData,
+  EventOnGroupApplicationBadgeCountChangedData,
+  EventOnGroupApplicationDeletedData,
+  EventOnGroupApplicationRejectedData,
+  GetGroupApplicationReq,
+  GetGroupApplicationResp,
+  HandleResult,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetGroupApplicationReq = {
+  send: false,
+  groupIDs: [],
+  handleResults: [HandleResult.ResultDefault],
+  pagination: { pageNumber: 1, showNumber: 20 },
+};
+const response: GetGroupApplicationResp = await sdk.getGroupApplication(request);
+const applications = response.applications;
+
+const handleApplicationAdded = (data: EventOnGroupApplicationAddedData): void => {
+  mergeGroupApplication(data.application);
+};
+const handleApplicationAccepted = (data: EventOnGroupApplicationAcceptedData): void => {
+  mergeGroupApplication(data.application);
+};
+const handleApplicationRejected = (data: EventOnGroupApplicationRejectedData): void => {
+  mergeGroupApplication(data.application);
+};
+const handleApplicationDeleted = (data: EventOnGroupApplicationDeletedData): void => {
+  removeGroupApplication(data.application.groupID, data.application.userID);
+};
+const handleApplicationBadge = (data: EventOnGroupApplicationBadgeCountChangedData): void => {
+  setGroupApplicationBadge(data.count);
+};
+
+const unsubscribeApplicationAdded = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationAdded,
+  handleApplicationAdded,
+);
+const unsubscribeApplicationAccepted = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationAccepted,
+  handleApplicationAccepted,
+);
+const unsubscribeApplicationRejected = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationRejected,
+  handleApplicationRejected,
+);
+const unsubscribeApplicationDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationDeleted,
+  handleApplicationDeleted,
+);
+const unsubscribeApplicationBadge = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationBadgeCountChanged,
+  handleApplicationBadge,
+);
+
+export function removeGroupApplicationListeners(): void {
+  unsubscribeApplicationAdded();
+  unsubscribeApplicationAccepted();
+  unsubscribeApplicationRejected();
+  unsubscribeApplicationDeleted();
+  unsubscribeApplicationBadge();
+}
+```
+
+使用 `groupID:userID` 识别一条申请。申请记录中的昵称、头像和群资料是申请产生时的数据，需要展示最新资料时应另行查询。分页期间收到申请变化事件时，重置分页并重新加载；退出账号或销毁状态层时移除监听。

@@ -1,0 +1,122 @@
+---
+title: '工程与平台接入'
+description: '在 uni-app 与 uni-app x 工程中安装 UTS 插件，并完成 Android、iOS 和 HarmonyOS 初始化。'
+sourcePath: '/sdk/uniapp/getting-started/environment-specific-implementation'
+---
+
+传统 uni-app（Vue 2 / Vue 3）和 uni-app x 使用同一个 `unix-openim-sdk` 插件目录、根导入路径和 API 名称。平台差异主要集中在原生制品、构建基座、平台标识、系统权限和部分 HarmonyOS 能力边界；用户、关系链、会话、群组和消息的数据模型保持一致。
+
+开始前先完成[开始之前](/sdk/uniapp/getting-started/before-you-start)列出的服务、用户、Token 和构建环境准备。
+
+## 选择工程与目标平台
+
+| 工程类型 | Android | iOS | HarmonyOS | Web / 小程序 |
+| --- | --- | --- | --- | --- |
+| uni-app（Vue 2 / Vue 3） | 支持 | 支持 | 商业版支持 | 不支持 |
+| uni-app x | 支持 | 支持 | 商业版支持 | 不支持 |
+
+同一业务支持多个 App 平台时，建议先在 Android 自定义基座中验证插件安装、初始化、登录和核心 API，再分别使用 iOS 与 HarmonyOS 的自定义基座或正式安装包验证原生配置和平台差异。每个平台都应以真实构建产物为准，不能用标准基座或另一平台的运行结果代替验证。
+
+## 安装插件
+
+将发行包中的插件目录完整放入宿主工程：
+
+```text
+your-project/
+└── uni_modules/
+    └── unix-openim-sdk/
+        ├── package.json
+        └── utssdk/
+```
+
+如果工程中已有同名插件，先确认版本与发行来源，不要把两个版本的文件合并覆盖。商业交付包已经包含对应平台锁定的原生制品，不需要再从 Maven、CocoaPods 或 OHPM 添加另一份 OpenIM Core。
+
+安装完成后制作自定义基座，或构建正式安装包。标准基座只适合调试不依赖该原生插件的普通页面。
+
+## 从插件根路径导入
+
+传统 uni-app 的 JavaScript / TypeScript 页面和 uni-app x 的 UTS 页面都从插件根路径导入公开 API：
+
+```uts
+import {
+  OpenIMLogLevelWarn,
+  OpenIMPlatformAndroid,
+  OpenIMPlatformHarmony,
+  OpenIMPlatformIOS,
+  initSDK,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+示例使用 UTS 语法表达公开类型和 Promise 调用。传统 uni-app 页面使用相同的导出名称，不应直接访问插件内的 Kotlin、Swift、ArkTS 或分平台 `index.uts` 文件。
+
+## 初始化 SDK
+
+根据当前构建目标选择平台常量，不要直接填写数字平台值：
+
+| 目标平台 | `platformID` |
+| --- | --- |
+| Android App | `OpenIMPlatformAndroid` |
+| iOS App | `OpenIMPlatformIOS` |
+| HarmonyOS App | `OpenIMPlatformHarmony` |
+
+下面以 Android 为例初始化 SDK；iOS 和 HarmonyOS 构建只需要替换为对应平台常量，并使用该平台的自定义基座或正式安装包。
+
+```uts
+const initialized = await initSDK({
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://api.example.com',
+  wsAddr: 'wss://ws.example.com',
+  dataDir: '',
+  logFilePath: '',
+  logLevel: OpenIMLogLevelWarn,
+  isLogStandardOutput: false,
+  systemType: 'your-app',
+})
+
+if (!initialized) {
+  throw new Error('OpenIMClientSDK 初始化未完成')
+}
+```
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `platformID` | `OpenIMPlatform` | 是 | 当前 App 平台，应使用对应的导出常量。 |
+| `apiAddr` | `string` | 是 | OpenIMServer HTTP API 地址。生产环境应使用设备可访问的 HTTPS 地址。 |
+| `wsAddr` | `string` | 是 | OpenIMServer WebSocket 地址。生产环境应使用设备可连接的 WSS 地址。 |
+| `dataDir` | `string` | 否 | SDK 数据目录。通常传空字符串，让 SDK 使用 App 沙盒中的默认可写目录。 |
+| `logFilePath` | `string` | 否 | SDK 日志文件路径；不需要把日志写入本地文件时可以传空字符串。 |
+| `logLevel` | `OpenIMLogLevel` | 是 | SDK 日志级别，生产环境通常使用 `OpenIMLogLevelWarn` 或 `OpenIMLogLevelError`。 |
+| `isLogStandardOutput` | `boolean` | 是 | 是否把 Core 日志输出到标准输出；生产环境通常关闭。 |
+| `systemType` | `string` | 是 | 宿主应用的稳定系统标识，具体值按项目约定设置。 |
+
+`initSDK()` 的 Promise 返回 `true` 表示初始化调用完成。初始化和用户登录是两个阶段：完成初始化后仍需注册连接事件并调用 `login()`，不能把初始化成功视为已经连接 OpenIMServer。
+
+## 管理数据与文件路径
+
+通常保持 `dataDir` 为空字符串，由 SDK 选择 App 沙盒内的默认可写目录。不要把 `uni.env.USER_DATA_PATH` 字面量、`unifile://` 地址、页面相对路径、临时缓存目录或不可写目录用作 Core 数据目录。
+
+文件、图片、语音和视频消息使用的业务文件路径规则不同：这类 API 可以接收 App 可读的 POSIX 绝对路径，也可以接收基于 `uni.env.USER_DATA_PATH` 生成的 `unifile://` 路径。插件会在调用原生 Core 前转换 UTS 虚拟路径。文件必须真实存在，且宿主 App 已取得读取权限。
+
+## 处理平台差异
+
+- Android 和 iOS 支持当前公开的通用 UTS API 与事件。
+- HarmonyOS 的能力以取得的商业版发行包为准。HarmonyOS 不支持 `updateFcmToken()`，也不提供消息扩展三项事件、`onStreamChange` <span className="enterprise-field-badge">商业版</span> 和 `onMessageKvInfoChanged`。
+- 相册、相机、麦克风、文件和通知权限由宿主 App 按实际功能申请；仅安装插件不会自动获得权限。
+- 平台构建配置或原生制品发生变化后，需要重新制作自定义基座，旧基座不会自动包含新的原生依赖。
+
+## 销毁 SDK
+
+仅在应用确定不再使用 SDK、需要完整释放当前 SDK 作用域时调用 `unInitSDK()`。普通页面卸载不应反复初始化和反初始化全局 SDK；用户退出账号时优先使用 `logout()` 并清理事件订阅。
+
+```uts
+import { unInitSDK } from '@/uni_modules/unix-openim-sdk'
+
+unInitSDK()
+```
+
+## 下一步
+
+- [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [发送第一条消息](/sdk/uniapp/getting-started/send-first-message)

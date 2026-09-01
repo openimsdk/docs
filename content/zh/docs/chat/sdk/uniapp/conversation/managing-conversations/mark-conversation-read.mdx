@@ -1,0 +1,53 @@
+---
+title: '标记会话已读'
+description: '将指定会话中当前已接收的消息标记为已读。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversations/mark-conversation-read'
+---
+
+用户进入会话并阅读完当前可见消息后，调用 `markConversationMessageAsRead()`。不要在只预览通知或应用仍处于后台时提前标记已读。
+
+```uts
+import { markConversationMessageAsRead } from '@/uni_modules/unix-openim-sdk'
+
+await markConversationMessageAsRead(conversationID)
+```
+
+Promise 成功表示已读请求已经完成，不表示会话变化事件已经到达。随后通过 `onConversationChanged()` 获取变化后的会话，并按 `conversationID` 更新未读数；完整监听见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。需要立即确认结果时，可重新查询该会话。
+
+## 接收单聊消息已读回执
+
+当前用户标记单聊会话已读后，对端可以通过 `onRecvC2CReadReceipt()` 收到消息已读回执。本页负责该事件的完整监听。事件处理器收到 `OpenIMMessageReceiptListResult | null`，回执数组位于 `receipts`。
+
+```uts
+import {
+  OpenIMMessageReceiptListResult,
+  off,
+  onRecvC2CReadReceipt,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleC2CReadReceipts = (
+  result: OpenIMMessageReceiptListResult | null,
+) => {
+  if (result == null) return
+
+  result.receipts.forEach((receipt) => {
+    mergeC2CReadReceipt(
+      receipt.userID,
+      receipt.msgIDList,
+      receipt.readTime,
+    )
+  })
+}
+
+const c2cReadReceiptSubscription = onRecvC2CReadReceipt(
+  handleC2CReadReceipts,
+)
+
+function removeC2CReadReceiptListener() {
+  off(c2cReadReceiptSubscription)
+}
+```
+
+`userID` 标识单聊对端，`msgIDList` 是已读消息的 `clientMsgID` 列表，`readTime` 是 Unix 毫秒时间戳。退出登录、切换账号或销毁消息状态层时调用 `removeC2CReadReceiptListener()`。
+
+群聊中调用本方法只清理当前账号的会话未读数；群成员级消息已读状态需要使用群聊消息已读能力单独上报和查询。

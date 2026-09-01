@@ -38,7 +38,11 @@ import {
   isClientSdkLocalePublished,
   isClientSdkRoute,
 } from '@/src/lib/client-sdk-publication';
-import { getPageCommercialInfo, getPageCommercialNames } from '@/src/lib/client-sdk-commercial';
+import {
+  getClientSdkCommercialFieldNames,
+  getClientSdkCommercialNames,
+  getPageCommercialInfo,
+} from '@/src/lib/client-sdk-commercial';
 import type { BreadcrumbItem, TocItem } from '@/src/types/docs';
 
 export type DocumentationPageParams = {
@@ -143,13 +147,18 @@ export async function renderDocumentationPage(
     platform: page?.data.platform ?? route.platform,
   };
 
-  const shouldLoadMdx = effectiveRoute.template === 'landing' || (!localizedPage && !routeFilePage);
-  const loaded = page && shouldLoadMdx ? await page.data.load() : undefined;
-  const MdxContent = loaded?.body;
-  const sourceMarkdownPage =
-    !localizedPage && effectiveRoute.product === 'platform-api'
+  const sourcePage =
+    !localizedPage &&
+    (effectiveRoute.product === 'platform-api' || isClientSdkRoute(effectiveRoute.path))
       ? getSourceDocPage(effectiveRoute.contentFile)
       : undefined;
+  const sourceMarkdownPage =
+    sourcePage && !usesMdxScaffold(sourcePage.body) ? sourcePage : undefined;
+  const shouldLoadMdx =
+    effectiveRoute.template === 'landing' ||
+    (!localizedPage && !routeFilePage && !sourceMarkdownPage);
+  const loaded = page && shouldLoadMdx ? await page.data.load() : undefined;
+  const MdxContent = loaded?.body;
   const markdownPage = localizedPage ?? routeFilePage ?? sourceMarkdownPage;
   const toc = markdownPage?.headings ?? ((loaded?.toc ?? []) as TocItem[]);
 
@@ -170,7 +179,7 @@ export async function renderDocumentationPage(
     .filter(
       (item) =>
         item.product !== 'sdk' ||
-        isSdkPlatformVisible(item.platform) ||
+        isSdkPlatformVisible(item.platform, locale) ||
         item.platform === effectiveRoute.platform,
     )
     .map((item) => ({
@@ -204,11 +213,9 @@ export async function renderDocumentationPage(
   const tocFooter = platformApiServerVersion ? (
     <TocGithubLink version={platformApiServerVersion} />
   ) : undefined;
-  const commercial = isClientSdkRoute(effectiveRoute.path)
-    ? getPageCommercialInfo(effectiveRoute.path)
-    : undefined;
-  const commercialNames =
-    commercial?.kind === 'partial' ? getPageCommercialNames(effectiveRoute.path) : undefined;
+  const commercial = getPageCommercialInfo(effectiveRoute.path);
+  const commercialNames = getClientSdkCommercialNames(effectiveRoute.path);
+  const commercialFieldNames = getClientSdkCommercialFieldNames(effectiveRoute.path);
 
   const candidateSdkOverviewPlatform = getSdkOverviewPlatform(effectiveRoute.path);
   const sdkOverviewPlatform =
@@ -279,6 +286,7 @@ export async function renderDocumentationPage(
         {markdownPage ? (
           <MarkdownContent
             body={markdownPage.body}
+            commercialFieldNames={commercialFieldNames}
             commercialNames={commercialNames}
             locale={locale}
           />
@@ -290,6 +298,10 @@ export async function renderDocumentationPage(
       <Pagination locale={locale} next={neighbors.next} previous={neighbors.previous} />
     </DocsShell>
   );
+}
+
+function usesMdxScaffold(body: string): boolean {
+  return /<(?:ApiScaffold|DocScaffold|OverviewScaffold)\b/.test(body);
 }
 
 function getSdkOverviewPlatform(path: string): SdkOverviewPlatform | undefined {

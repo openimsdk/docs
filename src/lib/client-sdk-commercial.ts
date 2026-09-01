@@ -2,6 +2,8 @@ import flutterAudit from '@/data/structure/flutter-content-audit.json';
 import iosAudit from '@/data/structure/ios-content-audit.json';
 import androidAudit from '@/data/structure/android-content-audit.json';
 import reactNativeAudit from '@/data/structure/react-native-content-audit.json';
+import uniappAudit from '@/data/structure/uniapp-content-audit.json';
+import harmonyAudit from '@/data/structure/harmony-content-audit.json';
 import ownership from '@/data/structure/wasm-api-ownership.json';
 
 type OwnershipEntry = {
@@ -11,7 +13,13 @@ type OwnershipEntry = {
   commercial?: boolean;
 };
 
-type NativePlatform = 'android' | 'flutter' | 'ios' | 'react-native';
+type NativePlatform =
+  | 'android'
+  | 'flutter'
+  | 'ios'
+  | 'react-native'
+  | 'uniapp'
+  | 'harmony';
 
 type ClientSdkAuditPage = {
   currentPath: string;
@@ -42,6 +50,82 @@ const nativeAudits: Record<NativePlatform, ClientSdkAuditPage[]> = {
   flutter: flutterAudit.pages as ClientSdkAuditPage[],
   ios: iosAudit.pages as ClientSdkAuditPage[],
   'react-native': reactNativeAudit.pages as ClientSdkAuditPage[],
+  uniapp: uniappAudit.pages as ClientSdkAuditPage[],
+  harmony: harmonyAudit.pages as ClientSdkAuditPage[],
+};
+
+const sharedCommercialFieldNames = [
+  'burnDuration',
+  'displayIsRead',
+  'isMsgDestruct',
+  'isPrivateChat',
+  'msgDestructTime',
+  'muteBypassUserIDs',
+];
+
+const platformCommercialFieldNames: Record<'wasm' | NativePlatform, string[]> = {
+  android: [...sharedCommercialFieldNames, 'addFriendPermission'],
+  flutter: sharedCommercialFieldNames,
+  harmony: [
+    ...sharedCommercialFieldNames,
+    'addFriendPermission',
+    'isMarked',
+    'isShowGroupRead',
+    'searchText',
+  ],
+  ios: sharedCommercialFieldNames,
+  'react-native': [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked'],
+  uniapp: [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked'],
+  wasm: [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked', 'searchText'],
+};
+
+const pageCommercialFieldNames: Record<string, string[]> = {
+  '/sdk/android/user/user-profile/get-self-local-user-info': ['attachedInfo'],
+  '/sdk/harmony/conversation/managing-conversations/set-conversation-remark': ['remark'],
+  '/sdk/harmony/conversation/overview-conversation': ['remark'],
+  '/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
+  '/sdk/harmony/message/retrieving-messages/load-newer-messages': ['isReverse'],
+  '/sdk/react-native/conversation/managing-conversations/set-conversation-remark': ['remark'],
+  '/sdk/react-native/conversation/overview-conversation': ['remark'],
+  '/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list': [
+    'remark',
+  ],
+  '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark': ['remark'],
+  '/sdk/uniapp/conversation/overview-conversation': ['remark'],
+  '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
+  '/sdk/uniapp/message/retrieving-messages/load-newer-messages': ['isReverse'],
+  '/sdk/wasm/conversation/managing-conversations/set-conversation-remark': ['remark'],
+  '/sdk/wasm/conversation/overview-conversation': ['remark'],
+  '/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
+  '/sdk/wasm/user/profile/get-self-user-info': ['attachedInfo'],
+};
+
+const pageCommercialSymbolNames: Record<string, string[]> = {
+  '/sdk/android/conversation/managing-conversations/set-burn-duration': [
+    'setConversationBurnDuration',
+  ],
+  '/sdk/android/conversation/managing-conversations/set-message-destruct': [
+    'setMsgDestruct',
+    'setMsgDestructTime',
+  ],
+  '/sdk/android/conversation/managing-conversations/set-private-chat': [
+    'setOneConversationPrivateChat',
+  ],
+  '/sdk/android/user/user-profile/set-friend-add-permission': ['setAddFriendPermission'],
+  '/sdk/ios/conversation/managing-conversations/set-burn-duration': [
+    'setConversationBurnDuration',
+  ],
+  '/sdk/ios/conversation/managing-conversations/set-message-destruct': [
+    'setConversationIsMsgDestruct',
+  ],
+  '/sdk/ios/conversation/managing-conversations/set-message-destruct-time': [
+    'setConversationMsgDestructTime',
+  ],
+  '/sdk/ios/conversation/managing-conversations/set-private-chat': [
+    'setConversationPrivateChat',
+  ],
+  '/sdk/ios/message/composing-messages/save-local-transcript': ['setMessageLocalEx'],
+  '/sdk/harmony/logger': ['setTemporaryLogLevel'],
 };
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
@@ -77,28 +161,289 @@ const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
   'react-native': {
     getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
   },
+  uniapp: {
+    getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
+    getSpeechToTextCapabilities: 'speechToTextCapabilities',
+    signalingGetInvitationInfoStartApp: 'getSignalingInvitationInfoStartApp',
+  },
+  harmony: {
+    getConversationGroupByConversationID: 'getConversationGroupIDsByConversationID',
+    getSpeechToTextCapabilities: 'speechToTextCapabilities',
+    EventOnMessageDeleted: 'OnMsgDeleted',
+  },
 };
 
 const partialCommercialConceptSources: Record<string, string[]> = {
+  '/sdk/wasm/conversation/overview-conversation': [
+    '/sdk/wasm/conversation/managing-conversation-groups/overview-conversation-groups',
+    '/sdk/wasm/conversation/managing-conversations/mark-conversation',
+    '/sdk/wasm/conversation/managing-conversations/set-conversation-remark',
+    '/sdk/wasm/conversation/managing-conversations/set-private-chat',
+    '/sdk/wasm/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/android/conversation/overview-conversation': [
+    '/sdk/android/conversation/managing-conversations/set-private-chat',
+    '/sdk/android/conversation/managing-conversations/set-burn-duration',
+    '/sdk/android/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/flutter/conversation/overview-conversation': [
+    '/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups',
+    '/sdk/flutter/conversation/managing-conversations/set-private-chat',
+    '/sdk/flutter/conversation/managing-conversations/set-burn-duration',
+    '/sdk/flutter/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/ios/conversation/overview-conversation': [
+    '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups',
+    '/sdk/ios/conversation/managing-conversations/set-private-chat',
+    '/sdk/ios/conversation/managing-conversations/set-burn-duration',
+    '/sdk/ios/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/react-native/conversation/overview-conversation': [
+    '/sdk/react-native/conversation/managing-conversation-groups/overview-conversation-groups',
+    '/sdk/react-native/conversation/managing-conversations/mark-conversation',
+    '/sdk/react-native/conversation/managing-conversations/set-conversation-remark',
+    '/sdk/react-native/conversation/managing-conversations/set-private-chat',
+    '/sdk/react-native/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/uniapp/conversation/overview-conversation': [
+    '/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups',
+    '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
+    '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark',
+    '/sdk/uniapp/conversation/managing-conversations/set-private-chat',
+    '/sdk/uniapp/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/harmony/conversation/overview-conversation': [
+    '/sdk/harmony/conversation/managing-conversation-groups/overview-conversation-groups',
+    '/sdk/harmony/conversation/managing-conversations/mark-conversation',
+    '/sdk/harmony/conversation/managing-conversations/set-conversation-remark',
+    '/sdk/harmony/conversation/managing-conversations/set-private-chat',
+    '/sdk/harmony/conversation/managing-conversations/set-message-destruct',
+  ],
+  '/sdk/wasm/events/overview-events': [
+    '/sdk/wasm/group/group-applications/get-group-application-list-as-recipient',
+    '/sdk/wasm/message/managing-messages/delete-saved-messages',
+    '/sdk/wasm/message/managing-messages/modify-a-message',
+    '/sdk/wasm/message/managing-messages/set-message-pinned',
+    '/sdk/wasm/calling/managing-calls/handle-call-events',
+  ],
+  '/sdk/android/events/overview-events': [
+    '/sdk/android/group/overview-group',
+    '/sdk/android/message/managing-messages/delete-saved-messages',
+    '/sdk/android/message/managing-messages/modify-a-message',
+    '/sdk/android/message/managing-messages/set-message-pinned',
+    '/sdk/android/calling/managing-calls/handle-call-events',
+  ],
+  '/sdk/react-native/events/overview-events': [
+    '/sdk/react-native/group/group-applications/get-group-application-list-as-recipient',
+    '/sdk/react-native/message/managing-messages/delete-saved-messages',
+    '/sdk/react-native/message/managing-messages/modify-a-message',
+    '/sdk/react-native/calling/managing-calls/handle-call-events',
+  ],
+  '/sdk/uniapp/events/overview-events': [
+    '/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient',
+    '/sdk/uniapp/message/managing-messages/delete-saved-messages',
+    '/sdk/uniapp/message/managing-messages/modify-a-message',
+    '/sdk/uniapp/message/managing-messages/set-message-pinned',
+    '/sdk/uniapp/calling/managing-calls/handle-call-events',
+  ],
+  '/sdk/harmony/events/overview-events': [
+    '/sdk/harmony/group/group-applications/get-group-application-list-as-recipient',
+    '/sdk/harmony/message/managing-messages/delete-saved-messages',
+    '/sdk/harmony/message/managing-messages/modify-a-message',
+    '/sdk/harmony/message/managing-messages/set-message-pinned',
+    '/sdk/harmony/calling/managing-calls/handle-call-events',
+  ],
+  '/sdk/wasm/group/overview-group': [
+    '/sdk/wasm/group/group-applications/get-group-application-list-as-recipient',
+  ],
+  '/sdk/ios/group/overview-group': [
+    '/sdk/ios/group/group-applications/overview-group-applications',
+  ],
+  '/sdk/react-native/group/overview-group': [
+    '/sdk/react-native/group/group-applications/get-group-application-list-as-recipient',
+  ],
+  '/sdk/uniapp/group/overview-group': [
+    '/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient',
+  ],
+  '/sdk/harmony/group/overview-group': [
+    '/sdk/harmony/group/group-applications/get-group-application-list-as-recipient',
+  ],
+  '/sdk/wasm/message/overview-message': [
+    '/sdk/wasm/message/composing-messages/check-speech-to-text',
+    '/sdk/wasm/message/composing-messages/save-local-transcript',
+    '/sdk/wasm/message/composing-messages/transcribe-audio',
+    '/sdk/wasm/message/managing-messages/delete-saved-messages',
+    '/sdk/wasm/message/managing-messages/modify-a-message',
+    '/sdk/wasm/message/managing-messages/set-message-pinned',
+    '/sdk/wasm/message/managing-read-status/send-group-read-receipts',
+    '/sdk/wasm/message/retrieving-messages/load-message-context',
+    '/sdk/wasm/message/retrieving-messages/load-newer-messages',
+  ],
+  '/sdk/react-native/message/overview-message': [
+    '/sdk/react-native/message/composing-messages/check-speech-to-text',
+    '/sdk/react-native/message/composing-messages/save-local-transcript',
+    '/sdk/react-native/message/composing-messages/transcribe-audio',
+    '/sdk/react-native/message/managing-messages/delete-saved-messages',
+    '/sdk/react-native/message/managing-messages/modify-a-message',
+    '/sdk/react-native/message/managing-read-status/send-group-read-receipts',
+    '/sdk/react-native/message/retrieving-messages/load-message-context',
+    '/sdk/react-native/message/retrieving-messages/load-newer-messages',
+  ],
+  '/sdk/uniapp/message/overview-message': [
+    '/sdk/uniapp/message/composing-messages/check-speech-to-text',
+    '/sdk/uniapp/message/composing-messages/save-local-transcript',
+    '/sdk/uniapp/message/composing-messages/transcribe-audio',
+    '/sdk/uniapp/message/managing-messages/delete-saved-messages',
+    '/sdk/uniapp/message/managing-messages/modify-a-message',
+    '/sdk/uniapp/message/managing-messages/set-message-pinned',
+    '/sdk/uniapp/message/managing-read-status/send-group-read-receipts',
+    '/sdk/uniapp/message/retrieving-messages/load-message-context',
+    '/sdk/uniapp/message/retrieving-messages/load-newer-messages',
+  ],
+  '/sdk/harmony/message/overview-message': [
+    '/sdk/harmony/message/composing-messages/check-speech-to-text',
+    '/sdk/harmony/message/composing-messages/save-local-transcript',
+    '/sdk/harmony/message/composing-messages/transcribe-audio',
+    '/sdk/harmony/message/managing-messages/delete-saved-messages',
+    '/sdk/harmony/message/managing-messages/modify-a-message',
+    '/sdk/harmony/message/managing-messages/set-message-pinned',
+    '/sdk/harmony/message/managing-read-status/send-group-read-receipts',
+    '/sdk/harmony/message/retrieving-messages/load-message-context',
+    '/sdk/harmony/message/retrieving-messages/load-newer-messages',
+    '/sdk/harmony/message/translating-messages/translate-text',
+    '/sdk/harmony/message/translating-messages/translate-message',
+  ],
+  '/sdk/wasm/user/overview-user': [
+    '/sdk/wasm/user/friend-applications/get-friend-application-list-as-recipient',
+    '/sdk/wasm/user/profile/set-friend-add-permission',
+  ],
+  '/sdk/android/user/overview-user': [
+    '/sdk/android/user/overview-relationships',
+    '/sdk/android/user/user-profile/set-friend-add-permission',
+  ],
+  '/sdk/flutter/user/overview-user': [
+    '/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient',
+  ],
+  '/sdk/ios/user/overview-user': [
+    '/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient',
+  ],
+  '/sdk/react-native/user/overview-user': [
+    '/sdk/react-native/user/friend-applications/get-friend-application-list-as-recipient',
+    '/sdk/react-native/user/profile/set-friend-add-permission',
+  ],
+  '/sdk/uniapp/user/overview-user': [
+    '/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient',
+    '/sdk/uniapp/user/profile/set-friend-add-permission',
+  ],
+  '/sdk/harmony/user/overview-user': [
+    '/sdk/harmony/user/friend-applications/get-friend-application-list-as-recipient',
+    '/sdk/harmony/user/profile/set-friend-add-permission',
+  ],
+  '/sdk/android/message/overview-message': [
+    '/sdk/android/message/managing-messages/delete-saved-messages',
+    '/sdk/android/message/managing-read-status/send-group-read-receipts',
+  ],
+  '/sdk/android/user/overview-relationships': [
+    '/sdk/android/user/friend-applications/get-recv-friend-application-list',
+  ],
+  '/sdk/flutter/message/overview-message': [
+    '/sdk/flutter/message/composing-messages/check-speech-to-text',
+    '/sdk/flutter/message/composing-messages/save-local-transcript',
+    '/sdk/flutter/message/composing-messages/transcribe-audio',
+    '/sdk/flutter/message/managing-messages/delete-saved-message',
+    '/sdk/flutter/message/managing-messages/modify-a-message',
+    '/sdk/flutter/message/managing-messages/set-message-pinned',
+  ],
+  '/sdk/ios/events/overview-events': [
+    '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups',
+  ],
+  '/sdk/ios/message/overview-message': [
+    '/sdk/ios/message/managing-messages/modify-a-message',
+    '/sdk/ios/message/managing-messages/set-message-pinned',
+  ],
   '/sdk/wasm/calling/overview-calling': [
+    '/sdk/wasm/calling/managing-calls/accept-call',
+    '/sdk/wasm/calling/managing-calls/cancel-call',
+    '/sdk/wasm/calling/managing-calls/hang-up-call',
+    '/sdk/wasm/calling/managing-calls/reject-call',
+    '/sdk/wasm/calling/managing-calls/start-group-call',
     '/sdk/wasm/calling/managing-calls/start-single-call',
     '/sdk/wasm/calling/managing-calls/handle-call-events',
+    '/sdk/wasm/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/wasm/calling/retrieving-call-information/get-token-by-room-id',
     '/sdk/wasm/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/flutter/calling/overview-calling': [
+    '/sdk/flutter/calling/managing-calls/accept-call',
+    '/sdk/flutter/calling/managing-calls/cancel-call',
+    '/sdk/flutter/calling/managing-calls/hang-up-call',
+    '/sdk/flutter/calling/managing-calls/reject-call',
+    '/sdk/flutter/calling/managing-calls/start-group-call',
     '/sdk/flutter/calling/managing-calls/start-single-call',
     '/sdk/flutter/calling/managing-calls/handle-call-events',
+    '/sdk/flutter/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/flutter/calling/retrieving-call-information/get-token-by-room-id',
     '/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/ios/calling/overview-calling': [
+    '/sdk/ios/calling/managing-calls/accept-call',
+    '/sdk/ios/calling/managing-calls/cancel-call',
+    '/sdk/ios/calling/managing-calls/hang-up-call',
+    '/sdk/ios/calling/managing-calls/reject-call',
+    '/sdk/ios/calling/managing-calls/start-group-call',
     '/sdk/ios/calling/managing-calls/start-single-call',
     '/sdk/ios/calling/managing-calls/handle-call-events',
+    '/sdk/ios/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/ios/calling/retrieving-call-information/get-token-by-room-id',
     '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation',
   ],
   '/sdk/android/calling/overview-calling': [
+    '/sdk/android/calling/managing-calls/accept-call',
+    '/sdk/android/calling/managing-calls/cancel-call',
+    '/sdk/android/calling/managing-calls/hang-up-call',
+    '/sdk/android/calling/managing-calls/reject-call',
+    '/sdk/android/calling/managing-calls/start-group-call',
     '/sdk/android/calling/managing-calls/start-single-call',
     '/sdk/android/calling/managing-calls/handle-call-events',
+    '/sdk/android/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/android/calling/retrieving-call-information/get-token-by-room-id',
     '/sdk/android/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/react-native/calling/overview-calling': [
+    '/sdk/react-native/calling/managing-calls/accept-call',
+    '/sdk/react-native/calling/managing-calls/cancel-call',
+    '/sdk/react-native/calling/managing-calls/hang-up-call',
+    '/sdk/react-native/calling/managing-calls/reject-call',
+    '/sdk/react-native/calling/managing-calls/start-group-call',
+    '/sdk/react-native/calling/managing-calls/start-single-call',
+    '/sdk/react-native/calling/managing-calls/handle-call-events',
+    '/sdk/react-native/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/react-native/calling/retrieving-call-information/get-token-by-room-id',
+    '/sdk/react-native/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/uniapp/calling/overview-calling': [
+    '/sdk/uniapp/calling/managing-calls/accept-call',
+    '/sdk/uniapp/calling/managing-calls/cancel-call',
+    '/sdk/uniapp/calling/managing-calls/hang-up-call',
+    '/sdk/uniapp/calling/managing-calls/reject-call',
+    '/sdk/uniapp/calling/managing-calls/start-group-call',
+    '/sdk/uniapp/calling/managing-calls/start-single-call',
+    '/sdk/uniapp/calling/managing-calls/handle-call-events',
+    '/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/uniapp/calling/retrieving-call-information/get-token-by-room-id',
+    '/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation',
+  ],
+  '/sdk/harmony/calling/overview-calling': [
+    '/sdk/harmony/calling/managing-calls/accept-call',
+    '/sdk/harmony/calling/managing-calls/cancel-call',
+    '/sdk/harmony/calling/managing-calls/hang-up-call',
+    '/sdk/harmony/calling/managing-calls/reject-call',
+    '/sdk/harmony/calling/managing-calls/start-group-call',
+    '/sdk/harmony/calling/managing-calls/start-single-call',
+    '/sdk/harmony/calling/managing-calls/handle-call-events',
+    '/sdk/harmony/calling/retrieving-call-information/get-room-by-group-id',
+    '/sdk/harmony/calling/retrieving-call-information/get-token-by-room-id',
+    '/sdk/harmony/calling/retrieving-call-information/restore-pending-invitation',
   ],
 };
 
@@ -131,13 +476,35 @@ const fullCommercialConceptPages = new Set([
   '/sdk/react-native/conversation/managing-conversations/set-private-chat',
   '/sdk/react-native/conversation/managing-conversations/set-burn-duration',
   '/sdk/react-native/conversation/managing-conversations/set-message-destruct',
+  '/sdk/uniapp/conversation/managing-conversations/set-private-chat',
+  '/sdk/uniapp/conversation/managing-conversations/set-burn-duration',
+  '/sdk/uniapp/conversation/managing-conversations/set-message-destruct',
+  '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/uniapp/conversation/managing-conversations/mark-conversation',
+  '/sdk/uniapp/message/composing-messages/save-local-transcript',
+  '/sdk/uniapp/message/retrieving-messages/load-newer-messages',
+  '/sdk/uniapp/user/profile/set-friend-add-permission',
+  '/sdk/harmony/conversation/managing-conversations/set-private-chat',
+  '/sdk/harmony/conversation/managing-conversations/set-burn-duration',
+  '/sdk/harmony/conversation/managing-conversations/set-message-destruct',
+  '/sdk/harmony/conversation/managing-conversations/set-conversation-remark',
+  '/sdk/harmony/conversation/managing-conversations/mark-conversation',
+  '/sdk/harmony/message/composing-messages/save-local-transcript',
+  '/sdk/harmony/message/translating-messages/translate-text',
+  '/sdk/harmony/message/translating-messages/translate-message',
+  '/sdk/harmony/message/retrieving-messages/load-newer-messages',
+  '/sdk/harmony/user/profile/set-friend-add-permission',
 ]);
+
+const partialCommercialConceptPages = new Set(['/sdk/harmony/logger']);
 
 function applyCommercialConceptOverride(
   pagePath: string,
   info: PageCommercialInfo,
 ): PageCommercialInfo {
-  return fullCommercialConceptPages.has(pagePath) ? { ...info, kind: 'full' } : info;
+  if (fullCommercialConceptPages.has(pagePath)) return { ...info, kind: 'full' };
+  if (partialCommercialConceptPages.has(pagePath)) return { ...info, kind: 'partial' };
+  return info;
 }
 
 function getWasmPageCommercialInfo(pagePath: string): PageCommercialInfo {
@@ -177,7 +544,9 @@ function parseClientSdkPath(
   | { platform: 'wasm'; wasmPath: string }
   | { platform: NativePlatform; wasmPath: string }
   | undefined {
-  const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|react-native)(\/.*)$/);
+  const match = pagePath.match(
+    /^\/sdk\/(android|wasm|flutter|ios|react-native|uniapp|harmony)(\/.*)$/,
+  );
   if (!match) return undefined;
 
   const platform = match[1] as 'wasm' | NativePlatform;
@@ -197,6 +566,9 @@ function normalizePlatformSymbol(
   if (alias) return alias;
   if (type === 'event' && selectorBase.startsWith('on')) {
     return `On${selectorBase.slice(2)}`;
+  }
+  if (type === 'event' && selectorBase.startsWith('EventOn')) {
+    return selectorBase.slice('Event'.length);
   }
   return selectorBase;
 }
@@ -258,6 +630,47 @@ export function getPageCommercialNames(pagePath: string): Set<string> {
   const info = getPageCommercialInfo(pagePath);
   const symbols = [...info.methods, ...info.events];
   return new Set(symbols.flatMap((name) => [name, name.split(':', 1)[0]]));
+}
+
+/** Return every commercial SDK symbol for the platform referenced by this route. */
+export function getClientSdkCommercialNames(pagePath: string): Set<string> {
+  const route = parseClientSdkPath(pagePath);
+  if (!route) return new Set();
+
+  if (route.platform === 'wasm') {
+    return new Set(
+      [
+        ...commercialMethodNames,
+        ...commercialEventNames,
+        ...(pageCommercialSymbolNames[pagePath] ?? []),
+      ].flatMap((name) => [name, name.split(':', 1)[0]]),
+    );
+  }
+
+  const symbols = nativeAudits[route.platform].flatMap((page) => [
+    ...page.sdkMethods.filter((name) =>
+      commercialMethodNames.has(normalizePlatformSymbol(route.platform, name, 'method')),
+    ),
+    ...page.sdkEvents.filter((name) =>
+      commercialEventNames.has(normalizePlatformSymbol(route.platform, name, 'event')),
+    ),
+  ]);
+
+  return new Set(
+    [...symbols, ...(pageCommercialSymbolNames[pagePath] ?? [])].flatMap((name) => [
+      name,
+      name.split(':', 1)[0],
+    ]),
+  );
+}
+
+/** Return unambiguous commercial-only field names for the SDK platform. */
+export function getClientSdkCommercialFieldNames(pagePath: string): Set<string> {
+  const route = parseClientSdkPath(pagePath);
+  return new Set([
+    ...(route ? platformCommercialFieldNames[route.platform] : []),
+    ...(pageCommercialFieldNames[pagePath] ?? []),
+  ]);
 }
 
 /** Match inline code containing an SDK method or event to a commercial symbol. */

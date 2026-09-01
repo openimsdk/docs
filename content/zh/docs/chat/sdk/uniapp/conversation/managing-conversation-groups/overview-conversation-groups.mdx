@@ -1,0 +1,92 @@
+---
+title: '会话分组概览'
+description: '了解会话分组的数据模型、能力边界和同步方式。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups'
+---
+
+会话分组属于商业版能力，用于整理当前登录用户的会话列表，例如“工作”“未读”或“稍后处理”。它管理的是 `conversationID` 与分组的关联，不会创建聊天群组、修改群成员，也不会改变消息发送目标。
+
+## 分组类型
+
+会话分组类型使用数值联合类型，没有导出具名常量。应用可以集中定义含义明确的常量。
+
+| 数值 | 用途 |
+| --- | --- |
+| `0` | 普通自定义分组，可由用户创建和维护。 |
+| `1` | 按 SDK 或服务端规则维护的筛选分组。 |
+| `2` | 仅用于查询全部类型，不能作为创建分组的类型。 |
+
+创建分组时 `conversationGroupType` 的类型为 `0 | 1`；查询分组时可以传 `0 | 1 | 2`。筛选分组的生成规则由当前 OpenIMServer 部署决定，不要只根据名称在客户端伪造系统分组。
+
+## 分组数据
+
+`OpenIMConversationGroupItem` 表示一个会话分组。各字段均可能为空，使用前应先判断；合并查询结果时以 `conversationGroupID` 作为稳定标识。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationGroupID` | `string` 或 `null` | 会话分组 ID。 |
+| `name` | `string` 或 `null` | 分组名称。 |
+| `order` | `number` 或 `null` | 分组顺序值，排序方向由应用约定。 |
+| `conversationGroupType` | `number` 或 `null` | 分组类型。 |
+| `hidden` | `boolean` 或 `null` | 分组是否隐藏。 |
+| `unreadCount` | `number` 或 `null` | 查询时分组内会话的汇总未读数。 |
+| `conversationIDs` | `string[]` 或 `null` | 当前属于该分组的会话 ID。 |
+| `createTime` | `number` 或 `null` | 分组创建时间；存在值时为 Unix 毫秒时间戳。 |
+| `ex` | `string` 或 `null` | 应用约定的分组扩展字符串。 |
+
+## 可用操作
+
+- [创建会话分组](/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group)
+- [查询会话分组列表](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups)
+- [查询分组内会话](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [查询会话所属分组](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [更新会话分组](/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group)
+- [调整会话分组顺序](/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order)
+- [添加会话到分组](/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [从分组移除会话](/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [删除会话分组](/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group)
+
+## 监听分组变化
+
+UTS 插件的五个会话分组事件都把载荷声明为 `string`，没有定义字符串内部结构。收到事件后，将其作为“分组数据可能变化”的刷新信号并重新查询分组。
+
+```uts
+import {
+  off,
+  onConversationGroupAdded,
+  onConversationGroupChanged,
+  onConversationGroupDeleted,
+  onConversationGroupMemberAdded,
+  onConversationGroupMemberDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleConversationGroupRefresh = (_payload: string) => {
+  reloadConversationGroups()
+}
+
+const groupAddedSubscription = onConversationGroupAdded(
+  handleConversationGroupRefresh,
+)
+const groupChangedSubscription = onConversationGroupChanged(
+  handleConversationGroupRefresh,
+)
+const groupDeletedSubscription = onConversationGroupDeleted(
+  handleConversationGroupRefresh,
+)
+const groupMemberAddedSubscription = onConversationGroupMemberAdded(
+  handleConversationGroupRefresh,
+)
+const groupMemberDeletedSubscription = onConversationGroupMemberDeleted(
+  handleConversationGroupRefresh,
+)
+
+function removeConversationGroupListeners() {
+  off(groupAddedSubscription)
+  off(groupChangedSubscription)
+  off(groupDeletedSubscription)
+  off(groupMemberAddedSubscription)
+  off(groupMemberDeletedSubscription)
+}
+```
+
+`reloadConversationGroups()` 应做防抖或合并并发请求，避免短时间内多个事件触发重复查询。退出登录、切换账号或销毁会话分组状态层时调用 `removeConversationGroupListeners()`。

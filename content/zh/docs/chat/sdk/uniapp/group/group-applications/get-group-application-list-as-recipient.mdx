@@ -1,0 +1,109 @@
+---
+title: '获取收到的入群申请'
+description: '查询当前用户有权处理的入群申请，并监听申请状态变化。'
+sourcePath: '/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient'
+---
+
+群主或管理员使用 `getGroupApplicationListAsRecipient()` 查询需要自己处理或已经处理过的入群申请。当前 UTS 合同只提供偏移量分页，不支持按群组 ID 或处理结果筛选。
+
+## 参数说明
+
+参数可以省略；需要分页时传入以下字段：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 否 | 起始偏移量，第一页传 `0`。 |
+| `count` | `number` | 否 | 本次读取数量。 |
+
+```uts
+import {
+  getGroupApplicationListAsRecipient,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await getGroupApplicationListAsRecipient({
+  offset: 0,
+  count: 20,
+})
+const applications = result != null ? result.applications : []
+```
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMGroupApplicationListResult | null`；非空结果的 `applications` 是当前页 `OpenIMGroupApplicationItem[]`。
+
+### 入群申请字段
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `string` | 申请加入的群组 ID。 |
+| `userID` | `string` | 申请人的用户 ID；与 `groupID` 共同识别一条申请。 |
+| `nickname` | `string` | 申请记录中保存的申请人昵称。 |
+| `userFaceURL` | `string` | 申请记录中保存的申请人头像。 |
+| `reqMsg` | `string` | 入群申请附言。 |
+| `reqTime` | `number` | 申请时间，Unix 毫秒时间戳。 |
+| `joinSource` | `number` | 入群途径，例如邀请、搜索或二维码。 |
+| `inviterUserID` | `string` | 邀请人的用户 ID；自主申请时可能为空字符串。 |
+| `handleResult` | `number` | 处理结果：`0` 待处理、`1` 已同意、`-1` 已拒绝。 |
+| `handleUserID` | `string` | 处理人的用户 ID；未处理时可能为空字符串。 |
+| `handledMsg` | `string` | 处理说明。 |
+| `handledTime` | `number` | 处理时间；未处理时不要作为有效时间展示。 |
+| `groupName` | `string` | 申请记录中保存的群名称。 |
+| `groupFaceURL` | `string` | 申请记录中保存的群头像。 |
+| `groupType` | `number` 或 `null` | 群类型。 |
+| `ownerUserID` | `string` | 群主用户 ID。 |
+| `creatorUserID` | `string` | 群组创建者用户 ID。 |
+| `introduction` | `string` | 申请记录中保存的群简介。 |
+| `notification` | `string` | 申请记录中保存的群公告。 |
+| `memberCount` | `number` | 申请记录中保存的群成员数量。 |
+| `status` | `number` | 申请记录中保存的群组状态。 |
+| `createTime` | `number` | 申请记录创建时间，Unix 毫秒时间戳。 |
+| `ex` | `string` | 申请记录扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+申请记录中的昵称、头像、群名称和成员数不保证是当前最新值。需要展示最新资料时，应分别查询用户资料或群资料，不要用申请记录覆盖资料缓存。
+
+## 监听申请变化
+
+本页集中说明并监听入群申请事件。申请事件直接返回 `OpenIMGroupApplicationItem | null`，使用 `groupID:userID` 合并记录；角标事件直接返回最新数量。
+
+```uts
+import {
+  OpenIMGroupApplicationItem,
+  off,
+  onGroupApplicationAccepted,
+  onGroupApplicationAdded,
+  onGroupApplicationBadgeCountChanged,
+  onGroupApplicationDeleted,
+  onGroupApplicationRejected,
+} from '@/uni_modules/unix-openim-sdk'
+
+const mergeApplication = (application: OpenIMGroupApplicationItem | null) => {
+  if (application == null) return
+  mergeGroupApplication(application)
+}
+
+const deleteApplication = (application: OpenIMGroupApplicationItem | null) => {
+  if (application == null) return
+  removeGroupApplication(application.groupID, application.userID)
+}
+
+const updateBadge = (count: number) => {
+  setGroupApplicationBadge(count)
+}
+
+const addedSubscription = onGroupApplicationAdded(mergeApplication)
+const acceptedSubscription = onGroupApplicationAccepted(mergeApplication)
+const rejectedSubscription = onGroupApplicationRejected(mergeApplication)
+const deletedSubscription = onGroupApplicationDeleted(deleteApplication)
+const badgeSubscription = onGroupApplicationBadgeCountChanged(updateBadge)
+
+function removeGroupApplicationListeners() {
+  off(addedSubscription)
+  off(acceptedSubscription)
+  off(rejectedSubscription)
+  off(deletedSubscription)
+  off(badgeSubscription)
+}
+```
+
+分页期间发生新增、处理或删除时，应重置分页并重新加载。组件卸载、退出登录或切换账号时调用 `removeGroupApplicationListeners()`。

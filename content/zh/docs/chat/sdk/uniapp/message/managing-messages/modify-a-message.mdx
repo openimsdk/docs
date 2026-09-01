@@ -1,0 +1,62 @@
+---
+title: '修改消息'
+description: '使用 UniApp SDK 修改已发送消息的内容并同步结果。'
+sourcePath: '/sdk/uniapp/message/managing-messages/modify-a-message'
+---
+
+修改消息属于商业版能力。它会替换已存在消息的内容并同步给其他客户端，与只影响当前账号可见性的删除、以及将消息变为撤回提示的撤回不同。
+
+```uts
+import {
+  OpenIMMessageItem,
+  modifyMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const updatedMessage = JSON.parse<OpenIMMessageItem>(
+  JSON.stringify(message),
+)
+const textElem = updatedMessage.textElem
+if (textElem == null) return
+
+textElem.content = editedText
+updatedMessage.textElem = textElem
+
+const result = await modifyMessage({
+  conversationID,
+  message: updatedMessage,
+})
+
+const modifiedMessage = result?.message
+if (modifiedMessage != null) {
+  replaceMessage(conversationID, modifiedMessage)
+}
+```
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | 是 | 消息所属的会话 ID。 |
+| `message` | `OpenIMMessageItem` | 是 | 修改后的完整消息对象；必须保留原 `clientMsgID` 和其他必要字段。 |
+
+该方法不是局部更新。应从当前消息创建独立副本，只替换与 `contentType` 对应的目标内容。示例使用 `JSON.parse<OpenIMMessageItem>()` 恢复声明类型，避免把 TypeScript 对象展开语法直接用于 UTS。允许修改的发送者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留编辑结果。
+
+Promise 成功后返回 `OpenIMModifyMessageResult | null`，修改后的消息位于 `message`，该字段仍可能为空。非空时可按 `conversationID:clientMsgID` 替换当前列表记录。Promise 成功不表示所有客户端已经更新。
+
+## 接收消息修改通知
+
+`onMessageModified()` 的载荷在当前 UTS 合同中公开为 `string`，没有声明字符串内部结构。将事件作为消息内容可能变化的刷新信号，并重新查询正在显示的消息，不依赖合同未声明的对象字段。
+
+```uts
+import { off, onMessageModified } from '@/uni_modules/unix-openim-sdk'
+
+const handleMessageModified = (_payload: string) => {
+  reloadVisibleMessages()
+}
+
+const messageModifiedSubscription =
+  onMessageModified(handleMessageModified)
+
+// 页面卸载或账号切换时：
+off(messageModifiedSubscription)
+```
+
+完整查询可以使用[按 ID 查找消息](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)或重新加载当前会话历史。

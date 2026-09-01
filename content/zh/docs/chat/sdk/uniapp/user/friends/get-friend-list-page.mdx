@@ -1,0 +1,83 @@
+---
+title: '分页获取好友列表'
+description: '分页查询当前用户的好友关系资料。'
+sourcePath: '/sdk/uniapp/user/friends/get-friend-list-page'
+---
+
+`getFriendListPage()` 用于建立好友列表的当前数据。首次加载从 `offset: 0` 开始，继续加载时按已请求的条目数增加偏移量；好友关系发生增删后，应重置分页并重新查询。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `number` | 是 | 分页偏移量，首页传 `0`。 |
+| `count` | `number` | 是 | 本次请求的好友数量。 |
+
+```uts
+import { getFriendListPage } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendListPage({
+  offset: 0,
+  count: 50,
+})
+const friends = result?.friends ?? []
+replaceFriends(friends)
+```
+
+UTS 插件的分页参数不包含 `filterBlack`。好友关系与黑名单关系应分别维护；需要判断某位好友是否同时在黑名单中时，按 `userID` 与[黑名单查询结果](/sdk/uniapp/user/blacklist/get-black-list)进行对应。
+
+## 返回结果
+
+Promise 成功后返回 `OpenIMFriendListResult | null`，好友数组位于 `friends`。`OpenIMFriendUserItem` 包含以下字段：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `string` | 好友的用户 ID，也是合并好友变化的稳定标识。 |
+| `nickname` | `string` | 好友的账号级昵称。 |
+| `faceURL` | `string` | 好友的账号级头像地址。 |
+| `remark` | `string` | 当前账号为该好友设置的备注。 |
+| `isPinned` | `boolean` | 该好友是否在联系人列表中置顶。 |
+| `ownerUserID` | `string` | 这条好友关系所属的用户 ID，通常是当前账号。 |
+| `operatorUserID` | `string` | 建立或更新这条关系的操作用户 ID。 |
+| `addSource` | `number` | 好友关系的添加来源值。 |
+| `createTime` | `number` | 好友关系创建时间，Unix 毫秒时间戳。 |
+| `ex` | `string` | 好友关系扩展字符串。 |
+| `attachedInfo` | `string` | SDK 附加信息，只按已确认的业务约定解析。 |
+
+`nickname` 和 `faceURL` 是账号资料，`remark`、`isPinned` 和 `ex` 属于好友关系。不要把好友备注写回账号昵称，也不要用好友关系对象覆盖陌生人的公开资料。
+
+## 同步好友变化
+
+本页负责好友关系事件的完整监听。查询用于建立列表，事件用于合并增量；收到事件时使用 `userID` 新增、更新或删除对应好友。
+
+```uts
+import {
+  OpenIMFriendUserItem,
+  off,
+  onFriendAdded,
+  onFriendDeleted,
+  onFriendInfoChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleFriendChanged = (friend: OpenIMFriendUserItem | null) => {
+  if (friend == null) return
+  mergeFriend(friend)
+}
+
+const handleFriendDeleted = (friend: OpenIMFriendUserItem | null) => {
+  if (friend == null) return
+  removeFriend(friend.userID)
+}
+
+const friendAddedSubscription = onFriendAdded(handleFriendChanged)
+const friendChangedSubscription = onFriendInfoChanged(handleFriendChanged)
+const friendDeletedSubscription = onFriendDeleted(handleFriendDeleted)
+
+function removeFriendListeners() {
+  off(friendAddedSubscription)
+  off(friendChangedSubscription)
+  off(friendDeletedSubscription)
+}
+```
+
+退出登录、切换账号或销毁联系人状态层时调用 `removeFriendListeners()`。如果事件可能遗漏，应重新查询列表，并用最新结果更新本地状态。

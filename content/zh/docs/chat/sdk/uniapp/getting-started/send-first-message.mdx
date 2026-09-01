@@ -1,0 +1,101 @@
+---
+title: '发送第一条消息'
+description: '在 uni-app 或 uni-app x App 中验证单聊或群聊文本消息的收发流程。'
+sourcePath: '/sdk/uniapp/getting-started/send-first-message'
+---
+
+本页说明如何在 uni-app 或 uni-app x App 中发送第一条文本消息。开始前，请先完成[开始之前](/sdk/uniapp/getting-started/before-you-start)中的环境准备，并按照[认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)完成 SDK 初始化、事件注册和用户登录。
+
+OpenIMSDK 消息可以发送给用户或群组。单聊消息使用目标用户 `recvID`；群聊消息使用目标群组 `groupID`。
+
+## 准备消息目标
+
+| 场景 | 需要准备的目标标识 |
+| --- | --- |
+| 单聊 | 已存在的接收方用户 ID，发送时写入 `recvID`，`groupID` 为空字符串。 |
+| 群聊 | 已存在的 `groupID`，发送时写入 `groupID`，`recvID` 为空字符串。 |
+
+首条消息通常用于验证完整接入流程。发送前确认：
+
+- 单聊接收方用户已经存在，并且服务端策略允许当前用户向其发送消息。
+- 群聊目标已经存在，当前用户是群成员，并且群组状态和权限允许其发言。
+- 当前客户端已经收到连接成功事件，而不只是 `login()` 的 Promise 返回成功。
+
+## 导入消息 API
+
+传统 uni-app 与 uni-app x 都从插件根路径导入 API：
+
+```uts
+import {
+  createTextMessage,
+  sendMessage,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+## 发送单聊消息
+
+发送消息分为两步：先创建待发送的 `OpenIMMessageItem`，再把该对象和目标标识传给 `sendMessage()`。
+
+```uts
+async function sendFirstDirectMessage() {
+  const message = await createTextMessage('你好，OpenIMSDK')
+  if (message == null) return
+
+  const sentMessage = await sendMessage({
+    message,
+    recvID: 'user_b',
+    groupID: '',
+    offlinePushInfo: null,
+    isOnlineOnly: false,
+  })
+
+  appendOutgoingMessage(sentMessage)
+}
+```
+
+`recvID` 应替换为真实存在的目标用户 ID。不要把昵称、手机号、页面展示名称或当前登录用户 ID 误作接收方 ID。
+
+## 发送群聊消息
+
+群聊消息只设置 `groupID`，不再指定某个群成员：
+
+```uts
+async function sendFirstGroupMessage() {
+  const message = await createTextMessage('大家好')
+  if (message == null) return
+
+  const sentMessage = await sendMessage({
+    message,
+    recvID: '',
+    groupID: 'group_123',
+    offlinePushInfo: null,
+    isOnlineOnly: false,
+  })
+
+  appendOutgoingMessage(sentMessage)
+}
+```
+
+`groupID` 应替换为真实存在的 OpenIMSDK 群组 ID。可以复用业务系统中已有的群组，也可以先通过管理后台、业务后端或群组 API 创建测试群。
+
+## 理解发送结果
+
+`createTextMessage()` 的 Promise 返回一个尚未发送的消息对象，返回 `null` 时不应继续调用发送 API。创建消息不会把消息发送到 OpenIMServer，也不会触发新消息事件。
+
+`sendMessage()` 的 Promise 返回发送后的 `OpenIMMessageItem`。Promise 成功表示本次发送调用完成，当前客户端可以按 `clientMsgID` 更新本地待发送消息；对方客户端收到新消息事件是另一个阶段，应分别验证。
+
+发送失败时，Promise 抛出的错误包含 `errCode` 和 `errMsg`，可结合当前调用上下文与 OpenIMServer 日志定位问题。
+
+## 验证消息收发流程
+
+1. 在当前客户端确认 `sendMessage()` 返回的消息状态和 `clientMsgID`。
+2. 在另一个已登录客户端确认收到新消息事件。先根据消息中的发送方、接收方或群组信息确定目标 `conversationID`，再将消息合并到正确会话。
+3. 分别测试单聊和群聊，避免只验证其中一种目标类型。
+4. 断网后恢复网络并重新测试，确认 App 生命周期与网络状态已正确上报。
+
+完整的消息事件注册、订阅清理和会话合并规则将在“接收消息”页面统一说明，本页不重复注册同一事件。
+
+## 下一步
+
+- [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)

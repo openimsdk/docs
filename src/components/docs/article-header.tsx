@@ -27,7 +27,9 @@ export function ArticleHeader({
   const enterpriseBadge =
     route.edition === 'enterprise' || commercial?.kind === 'full'
       ? text.article.commercialBadge
-      : undefined;
+      : commercial?.kind === 'partial'
+        ? text.article.partialCommercialBadge
+        : undefined;
   const badges = [
     getProductLabel(route.product, locale),
     getPlatformLabel(route.platform),
@@ -45,7 +47,10 @@ export function ArticleHeader({
         {badges.map((badge) => (
           <span
             className={
-              badge === '商业版' || badge === 'Enterprise' ? 'enterprise-badge' : undefined
+              badge === text.article.commercialBadge ||
+              badge === text.article.partialCommercialBadge
+                ? 'enterprise-badge'
+                : undefined
             }
             key={badge}
           >

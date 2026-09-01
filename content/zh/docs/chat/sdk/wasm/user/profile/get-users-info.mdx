@@ -6,7 +6,7 @@ sourcePath: '/sdk/wasm/user/profile/get-users-info'
 
 `getUsersInfo()` 可以按 `userID` 查询应用用户的公开资料，适合展示好友候选人和陌生人资料卡。
 
-如果产品需要按昵称、手机号、组织、邮箱或其他业务字段检索用户，应先由业务后端完成搜索和权限校验，再把返回的 `userID` 传给 `getUsersInfo()`。管理员 Token 只能保存在可信后端，用户目录的管理操作也必须由后端执行。
+如果产品需要按昵称、手机号、组织、邮箱或其他业务字段检索用户，应先由业务后端完成搜索，再把返回的 `userID` 传给 `getUsersInfo()`。本接口只按用户 ID 查询公开资料。
 
 ## 查询公开资料
 
@@ -31,10 +31,7 @@ try {
   const users = response.data ?? [];
   const usersByID = new Map(users.map((user) => [user.userID, user]));
 } catch (error) {
-  console.error('getUsersInfo failed', {
-    error,
-    userIDList,
-  });
+  handleOpenIMError(error);
   throw error;
 }
 ```
@@ -47,7 +44,7 @@ WASM SDK 没有面向任意公开用户资料的通用变更事件。`SdkEvent.O
 
 ## 搜索添加好友
 
-搜索并添加好友时，通常先由业务后端返回候选 `userID`，再由浏览器调用 `getUsersInfo()` 展示公开资料。用户确认目标后，再进入好友申请流程。
+搜索并添加好友时，通常先由业务后端返回候选 `userID`，再由浏览器调用 `getUsersInfo()` 展示公开资料。选择目标用户后，再进入好友申请流程。
 
 ```ts
 async function searchUsersForFriendRequest(keyword: string) {
@@ -67,13 +64,13 @@ async function searchUsersForFriendRequest(keyword: string) {
       avatar: user.faceURL,
     }));
   } catch (error) {
-    console.error('getUsersInfo failed', { error, userIDs });
+    handleOpenIMError(error);
     throw error;
   }
 }
 ```
 
-如果产品只支持按用户 ID 精确搜索，可以省略后端搜索接口，直接把输入值作为 `userID` 调用 `getUsersInfo()`。模糊搜索或按敏感字段搜索时，应由后端负责鉴权、限流、脱敏和审计。
+如果产品只支持按用户 ID 精确搜索，可以省略后端搜索接口，直接把输入值作为 `userID` 调用 `getUsersInfo()`。模糊搜索和其他业务字段搜索由后端搜索服务实现。
 
 ## 按场景选择展示数据
 

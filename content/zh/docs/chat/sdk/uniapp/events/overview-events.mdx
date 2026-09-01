@@ -1,0 +1,77 @@
+---
+title: '事件概览'
+description: '按应用和账号生命周期注册、使用并清理 UniApp SDK 事件。'
+sourcePath: '/sdk/uniapp/events/overview-events'
+---
+
+UniApp SDK 为连接、同步、用户、关系链、会话、群组、消息、上传和通话分别提供 `onXxx()` 事件注册函数。每次注册都会返回 `OpenIMSDKEventSubscription`，清理时把该订阅对象传给 `off()`。
+
+事件处理函数必须保持稳定引用，不要在每次组件更新时重复注册。全局连接、消息和通话事件适合放在账号状态层；只影响单个页面的事件应在页面卸载时取消。
+
+## 建议的注册位置
+
+| 事件范围 | 建议生命周期 | 对应页面 |
+| --- | --- | --- |
+| 连接、Token 和账号下线 | 登录前注册，切换账号时清理 | [认证与管理登录会话](/sdk/uniapp/getting-started/authenticate-and-manage-session) |
+| 用户、好友和黑名单 | 联系人状态层初始化时注册 | [用户](/sdk/uniapp/user/overview-user) |
+| 会话列表与未读数 | 会话状态层初始化时注册 | [获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)、[获取消息总未读数](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count) |
+| 群组与群成员 | 群组状态层初始化时注册 | [群组概览](/sdk/uniapp/group/overview-group) |
+| 入群申请 | 群申请状态层初始化时注册 | [获取收到的入群申请](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |
+| 消息 | 消息状态层初始化时注册 | [接收消息](/sdk/uniapp/message/receiving-messages/receive-messages) |
+| 文件上传 | 上传任务开始前注册 | [上传文件](/sdk/uniapp/file-uploads/upload-file) |
+| 通话 | 通话功能初始化时注册 | [处理通话事件](/sdk/uniapp/calling/managing-calls/handle-call-events) |
+
+## 监听数据同步
+
+登录后 SDK 会同步 OpenIMServer 数据。以下四个事件用于维护全局同步状态：
+
+| 事件 | 回调参数 | 说明 |
+| --- | --- | --- |
+| `onSyncServerStart` | `boolean` | 开始本轮数据同步。 |
+| `onSyncServerProgress` | `number` | 当前同步进度。 |
+| `onSyncServerFinish` | `boolean` | 本轮同步完成。 |
+| `onSyncServerFailed` | `boolean` | 本轮同步失败。 |
+
+当前 UTS 契约只给三个阶段事件声明了布尔值，没有为该值命名业务字段。应用应使用事件名判断阶段，不要自行给布尔值扩展未经确认的含义。
+
+```uts
+import {
+  off,
+  onSyncServerFailed,
+  onSyncServerFinish,
+  onSyncServerProgress,
+  onSyncServerStart,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleSyncStart = (_value: boolean) => {
+  setSyncState('syncing', 0)
+}
+
+const handleSyncProgress = (progress: number) => {
+  setSyncState('syncing', progress)
+}
+
+const handleSyncFinish = (_value: boolean) => {
+  setSyncState('ready', 100)
+  void reloadVisibleData()
+}
+
+const handleSyncFailed = (_value: boolean) => {
+  setSyncState('failed', 0)
+}
+
+const syncSubscriptions = [
+  onSyncServerStart(handleSyncStart),
+  onSyncServerProgress(handleSyncProgress),
+  onSyncServerFinish(handleSyncFinish),
+  onSyncServerFailed(handleSyncFailed),
+]
+
+function removeSyncListeners() {
+  syncSubscriptions.forEach((subscription) => {
+    off(subscription)
+  })
+}
+```
+
+同步事件描述 SDK 的整体过程，不对应某一个查询 API。同步完成后应重新获取当前界面需要的数据，之后继续通过各功能页面归属的事件更新。事件可能重复或交错到达，列表状态仍应使用用户 ID、`conversationID`、`groupID`、`groupID:userID` 或 `clientMsgID` 等稳定标识合并。

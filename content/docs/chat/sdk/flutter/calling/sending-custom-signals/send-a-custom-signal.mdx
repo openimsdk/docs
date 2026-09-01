@@ -32,7 +32,7 @@ await OpenIM.iMManager.signalingManager.signalingSendCustomSignal(
 );
 ```
 
-Future completion means that OpenIMServer accepted the send request; it does not mean that other participants have processed the signal. Keep custom signals compact and include a protocol version and business idempotency ID. Do not put large files, chat history, long-lived state, or sensitive credentials in `customInfo`.
+Future completion means that OpenIMServer accepted the send request; it does not mean that other participants have processed the signal. `customInfo` can include a protocol version and business idempotency ID. Custom signaling is intended for lightweight, temporary call negotiation; it does not transfer or retain large files, chat history, or durable state.
 
 ## Receive signals
 
@@ -56,6 +56,6 @@ Future<void> registerCustomSignalListener() {
 }
 ```
 
-This page is the complete owner of `onReceiveCustomSignal`. `SignalingManager` retains only one listener, and a later configuration replaces the previous Dart instance. In production, combine this callback with every other call callback in one application-level `OnSignalingListener`; do not configure separate listeners in individual widgets. The pinned SDK has no remove or unset API. When switching accounts, stop dispatching to the previous account's state and replace the listener with the complete instance for the new account.
+This page is the complete owner of `onReceiveCustomSignal`. `SignalingManager` retains only one listener, and a later configuration replaces the previous Dart instance. Combine this callback with every other call callback in one application-level `OnSignalingListener`; do not configure separate listeners in individual widgets. The SDK has no remove or unset API. When switching accounts, stop dispatching to the previous account's state and replace the listener with the complete instance for the new account.
 
-`parseAndValidateCallSignal()` should validate the JSON structure, protocol version, `eventID`, `type`, and business fields. Apply each signal idempotently by `roomID:eventID`. Do not rely on event order, and do not trust client signaling to grant host, payment, or privacy permissions. After reconnecting, reconcile long-lived state through a room query or trusted backend.
+`parseAndValidateCallSignal()` parses the JSON structure, protocol version, `eventID`, `type`, and application fields. Apply each signal idempotently by `roomID:eventID` without relying on event order. Custom signaling is not a replayable record of durable state; after reconnecting, reconcile state through a room query or application data.

@@ -1,0 +1,224 @@
+---
+title: '认证与管理登录会话'
+description: '初始化 UTS 插件、登录当前用户、处理连接事件、更新 Token 并退出账号。'
+sourcePath: '/sdk/uniapp/getting-started/authenticate-and-manage-session'
+---
+
+uni-app / uni-app x SDK 先通过 `initSDK()` 初始化原生 Core，再通过 `login()` 建立当前用户的登录会话。开始前，请先完成[开始之前](/sdk/uniapp/getting-started/before-you-start)和[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)中的准备与插件安装。
+
+完整登录流程如下：
+
+1. 调用 `initSDK()` 完成目标平台的 SDK 初始化。
+2. 在登录前注册连接、Token 和账号下线事件。
+3. 从业务后端获取当前用户的 `userID` 与 Token。
+4. 调用 `login()`，等待 Promise 成功，并继续等待连接成功事件确认长连接可用。
+5. 连接可用后再查询用户、关系链、会话、群组和消息数据。
+6. 用户主动退出或切换账号时调用 `logout()`，然后清理应用状态和事件订阅。
+
+## 初始化 SDK
+
+下面仅保留登录流程所需的初始化示例。字段、平台常量和目录规则见[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)。
+
+```uts
+import {
+  OpenIMLogLevelWarn,
+  OpenIMPlatformAndroid,
+  initSDK,
+} from '@/uni_modules/unix-openim-sdk'
+
+await initSDK({
+  platformID: OpenIMPlatformAndroid,
+  apiAddr,
+  wsAddr,
+  dataDir: '',
+  logFilePath: '',
+  logLevel: OpenIMLogLevelWarn,
+  isLogStandardOutput: false,
+  systemType: 'your-app',
+})
+```
+
+初始化成功只表示原生 SDK 已准备好，不表示当前用户已经登录，也不表示 WebSocket 已连接。
+
+## 在登录前注册事件
+
+连接、Token 和账号下线事件应在 `login()` 前注册。每个 `onXxx` 方法返回一个 `OpenIMSDKEventSubscription`，后续使用该订阅对象精确取消监听。
+
+```uts
+import {
+  off,
+  onConnectFailed,
+  onConnectSuccess,
+  onConnecting,
+  onKickedOffline,
+  onUserTokenExpired,
+  onUserTokenInvalid,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleConnecting = () => {
+  setConnectionState('connecting')
+}
+
+const handleConnectSuccess = () => {
+  setConnectionState('connected')
+}
+
+const handleConnectFailed = (errCode: number, errMsg: string) => {
+  setConnectionState('failed')
+  console.error('OpenIMClientSDK 连接失败', errCode, errMsg)
+}
+
+const handleKickedOffline = () => {
+  clearCurrentSession()
+  showSignedInElsewhereDialog()
+}
+
+const handleUserTokenExpired = () => {
+  void refreshOpenIMToken()
+}
+
+const handleUserTokenInvalid = (errCode: number, errMsg: string) => {
+  console.error('OpenIMClientSDK Token 无效', errCode, errMsg)
+  redirectToSignIn()
+}
+
+const sessionSubscriptions = [
+  onConnecting(handleConnecting),
+  onConnectSuccess(handleConnectSuccess),
+  onConnectFailed(handleConnectFailed),
+  onKickedOffline(handleKickedOffline),
+  onUserTokenExpired(handleUserTokenExpired),
+  onUserTokenInvalid(handleUserTokenInvalid),
+]
+```
+
+`onConnectFailed` 和 `onUserTokenInvalid` 的处理器都接收两个参数：数值类型的 `errCode` 和字符串类型的 `errMsg`。其余连接事件处理器不接收参数。
+
+## 登录当前用户
+
+`login()` 只接收当前用户的 `userID` 和 Token。OpenIMServer 地址与平台信息已经在 `initSDK()` 时设置，不需要在登录时重复传入。
+
+```uts
+import { login } from '@/uni_modules/unix-openim-sdk'
+
+await login(userID, token)
+```
+
+`userID` 必须与 Token 对应，并由业务后端返回。`login()` 的 Promise 成功表示登录调用完成；连接成功事件到达后，才表示 SDK 长连接已可用于依赖连接的业务 API。不要把这两个阶段合并判断。
+
+重复点击登录时，应复用正在进行的登录任务，避免并发调用 `login()`。切换账号时先等待旧账号退出完成，再登录新账号。
+
+## 处理 Promise 结果
+
+UTS 插件的异步 API 直接返回业务结果，不包含额外的响应外层。调用失败时，Promise 抛出的错误包含 `errCode` 和 `errMsg`。
+
+```uts
+import {
+  OpenIMError,
+  getSelfUserInfo,
+} from '@/uni_modules/unix-openim-sdk'
+
+try {
+  const currentUser = await getSelfUserInfo()
+  useCurrentUser(currentUser)
+} catch (error) {
+  const sdkError = error as OpenIMError
+  console.error('获取当前用户资料失败', sdkError.errCode, sdkError.errMsg)
+}
+```
+
+查询 API 的 Promise 结果是调用时的数据；状态变更 API 的 Promise 成功只表示本次调用完成到该页面说明的阶段。事件到达和重新查询最新数据应分别处理。
+
+## 查询登录状态
+
+`getLoginStatus()` 和 `getLoginUserID()` 都不接收业务参数：
+
+```uts
+import {
+  OpenIMLoginStatusLogged,
+  getLoginStatus,
+  getLoginUserID,
+} from '@/uni_modules/unix-openim-sdk'
+
+const status = await getLoginStatus()
+
+if (status == OpenIMLoginStatusLogged) {
+  const currentUserID = await getLoginUserID()
+  restoreSessionFor(currentUserID)
+}
+```
+
+| 状态 | 说明 |
+| --- | --- |
+| `OpenIMLoginStatusLogout` | 当前 SDK 未登录。 |
+| `OpenIMLoginStatusLogging` | 登录流程正在进行，不要再发起并行登录。 |
+| `OpenIMLoginStatusLogged` | SDK 已登录；仍需结合连接事件判断当前长连接是否可用。 |
+
+`getLoginUserID()` 返回 SDK 当前登录的用户 ID，适合校验业务账号与 SDK 账号是否一致，但不能替代业务身份认证。这两个查询不会触发连接事件。
+
+## 更新 Token
+
+Token 即将过期或业务后端完成续期后，可以把新 Token 传给 `updateToken()`：
+
+```uts
+import { updateToken } from '@/uni_modules/unix-openim-sdk'
+
+const nextToken = await requestOpenIMTokenFromBackend()
+await updateToken({ token: nextToken })
+```
+
+新 Token 仍由业务后端提供。更新成功表示 SDK 已接受本次 Token 更新；如果账号已经被强制下线、Token 无效或当前会话无法继续使用，则结束当前会话并重新进入登录流程。
+
+## 上报 App 生命周期
+
+宿主 App 进入后台时调用 `setAppBackgroundStatus(true)`，回到前台时调用 `setAppBackgroundStatus(false)`。网络恢复或重新进入前台后，可以调用 `networkStatusChanged()` 通知 SDK 检查连接。
+
+```uts
+import {
+  networkStatusChanged,
+  setAppBackgroundStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+function reportAppHidden() {
+  void setAppBackgroundStatus(true)
+}
+
+function reportAppVisible() {
+  void setAppBackgroundStatus(false)
+  void networkStatusChanged()
+}
+```
+
+在宿主 App 的 `onHide` 与 `onShow` 生命周期中分别调用这两个函数。它们只上报运行环境变化，不会创建新的登录会话，也不能替代 `login()` 或 Token 更新。
+
+## 退出当前账号
+
+用户主动退出或切换账号时调用 `logout()`。Promise 成功后，再清理当前账号的会话、消息、未读数和业务状态。
+
+```uts
+import { logout } from '@/uni_modules/unix-openim-sdk'
+
+await logout()
+clearCurrentSession()
+```
+
+收到账号下线事件时，SDK 会结束当前登录状态。事件处理器应清理应用自身状态并提示用户，不要再把它当作主动退出流程重复调用 `logout()`。
+
+## 清理事件订阅
+
+页面作用域销毁、账号切换或 SDK 作用域重建时，使用注册时保存的订阅对象取消监听：
+
+```uts
+function removeSessionListeners() {
+  sessionSubscriptions.forEach((subscription) => {
+    off(subscription)
+  })
+}
+```
+
+需要清理某类事件的全部订阅时可以使用 `offAll(eventName)`，但普通页面优先使用 `off(subscription)`，避免移除其他模块仍在使用的监听。
+
+## 下一步
+
+- [发送第一条消息](/sdk/uniapp/getting-started/send-first-message)
+- [工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)

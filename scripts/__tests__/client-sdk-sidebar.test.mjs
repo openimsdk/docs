@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { clientSdkPlatformIds, getClientSdkPlatform } from '../lib/client-sdk-platforms.mjs';
+import {
+  clientSdkPlatformIds,
+  clientSdkStructurePlatformIds,
+  getClientSdkPlatform,
+} from '../lib/client-sdk-platforms.mjs';
 import {
   buildClientSdkSidebar,
   decideClientSdkSidebarApplication,
@@ -13,6 +17,15 @@ const wasmSidebar = readJson('data/structure/wasm-sidebar.json');
 
 test('registers the supported client SDK platforms and their structure paths', () => {
   assert.deepEqual(clientSdkPlatformIds, ['android', 'ios', 'flutter', 'wasm', 'react-native']);
+  assert.deepEqual(clientSdkStructurePlatformIds, [
+    'android',
+    'ios',
+    'flutter',
+    'uniapp',
+    'harmony',
+    'wasm',
+    'react-native',
+  ]);
   assert.deepEqual(getClientSdkPlatform('android'), {
     id: 'android',
     contextKey: 'chat/sdk/android',
@@ -40,6 +53,20 @@ test('registers the supported client SDK platforms and their structure paths', (
     sdkCommit: '17fb969fd3a360f00fe65f476435b81857e274f8',
   });
   assert.equal(getClientSdkPlatform('flutter').contextKey, 'chat/sdk/flutter');
+  assert.equal(getClientSdkPlatform('uniapp').contextKey, 'chat/sdk/uniapp');
+  assert.deepEqual(getClientSdkPlatform('harmony'), {
+    id: 'harmony',
+    contextKey: 'chat/sdk/harmony',
+    routePrefix: '/sdk/harmony',
+    manualRoot: 'content/zh/docs/chat/sdk/harmony',
+    auditPath: 'data/structure/harmony-content-audit.json',
+    labelsPath: 'data/structure/harmony-navigation-labels.json',
+    sidebarPath: 'data/structure/harmony-sidebar.json',
+    localizedOutputPath: 'src/generated/harmony-sdk-zh-content.json',
+    sdkSourceKey: 'harmonySdk',
+    sdkTag: '1.0.2',
+    sdkCommit: '77bd15d59c9f91118ba24cbb51f2fd72195ff465',
+  });
   assert.equal(getClientSdkPlatform('wasm').contextKey, 'chat/sdk/wasm');
   assert.throws(() => getClientSdkPlatform('unknown'), /Unknown client SDK platform: unknown/);
   assert.equal(getClientSdkPlatform('react-native').contextKey, 'chat/sdk/react-native');
@@ -49,7 +76,7 @@ test('native sidebars keep unique platform routes and may extend the WASM struct
   const wasmPaths = getClientSdkSidebarPaths(wasmSidebar);
   const wasmSuffixes = new Set(wasmPaths.map((path) => path.replace('/sdk/wasm/', '')));
 
-  for (const platform of ['ios', 'flutter']) {
+  for (const platform of ['ios', 'flutter', 'harmony']) {
     const sidebar = readJson(`data/structure/${platform}-sidebar.json`);
     const paths = getClientSdkSidebarPaths(sidebar);
     assert.equal(new Set(paths).size, paths.length, platform);
@@ -67,7 +94,7 @@ test('native sidebars keep unique platform routes and may extend the WASM struct
 test('keeps relationships beside users and account settings beside user profiles', () => {
   const navigation = readJson('src/generated/navigation.json');
 
-  for (const platform of ['wasm', 'ios', 'flutter', 'android']) {
+  for (const platform of ['wasm', 'ios', 'flutter', 'android', 'uniapp', 'harmony']) {
     const sidebar = readJson(`data/structure/${platform}-sidebar.json`);
     const user = sidebar.nodes.find((node) => node.id === 'user');
     const relationships = sidebar.nodes.find((node) => node.id === 'relationships');
@@ -78,29 +105,34 @@ test('keeps relationships beside users and account settings beside user profiles
     const profile = user.children.find((node) => node.id === 'user/user-profile');
     const onlineStatus = user.children.find((node) => node.id === 'user/online-status');
     const globalReceptionPath =
-      platform === 'wasm'
-        ? '/sdk/wasm/user/profile/set-global-message-reception'
+      platform === 'wasm' || platform === 'uniapp' || platform === 'harmony'
+        ? `/sdk/${platform}/user/profile/set-global-message-reception`
         : platform === 'android'
           ? '/sdk/android/user/user-profile/set-global-message-reception'
           : `/sdk/${platform}/user/retrieving-and-updating-user-information/set-global-message-reception`;
     const onlineStatusPaths =
-      platform === 'wasm'
+      platform === 'harmony'
         ? [
-            '/sdk/wasm/user/online-status/subscribe-users-status',
-            '/sdk/wasm/user/online-status/get-subscribe-users-status',
-            '/sdk/wasm/user/online-status/unsubscribe-users-status',
+            '/sdk/harmony/user/online-status/subscribe-users-status',
+            '/sdk/harmony/user/online-status/unsubscribe-users-status',
           ]
-        : platform === 'android'
+        : platform === 'wasm' || platform === 'uniapp'
           ? [
-              '/sdk/android/user/online-status/subscribe-users-online-status',
-              '/sdk/android/user/online-status/get-subscribe-online-users-status',
-              '/sdk/android/user/online-status/unsubscribe-users-online-status',
+              `/sdk/${platform}/user/online-status/subscribe-users-status`,
+              `/sdk/${platform}/user/online-status/get-subscribe-users-status`,
+              `/sdk/${platform}/user/online-status/unsubscribe-users-status`,
             ]
-          : [
-              `/sdk/${platform}/user/retrieving-and-updating-user-information/subscribe-user-status`,
-              `/sdk/${platform}/user/retrieving-and-updating-user-information/get-subscribed-user-status`,
-              `/sdk/${platform}/user/retrieving-and-updating-user-information/unsubscribe-user-status`,
-            ];
+          : platform === 'android'
+            ? [
+                '/sdk/android/user/online-status/subscribe-users-online-status',
+                '/sdk/android/user/online-status/get-subscribe-online-users-status',
+                '/sdk/android/user/online-status/unsubscribe-users-online-status',
+              ]
+            : [
+                `/sdk/${platform}/user/retrieving-and-updating-user-information/subscribe-user-status`,
+                `/sdk/${platform}/user/retrieving-and-updating-user-information/get-subscribed-user-status`,
+                `/sdk/${platform}/user/retrieving-and-updating-user-information/unsubscribe-user-status`,
+              ];
 
     assert.ok(profile, platform);
     assert.ok(onlineStatus, platform);
@@ -149,9 +181,7 @@ test('keeps relationships beside users and account settings beside user profiles
     const runtimeProfile = runtimeUser.children.find((node) => node.id === 'user/user-profile');
 
     assert.deepEqual(
-      runtimeRelationships.children
-        .filter((node) => node.type === 'folder')
-        .map((node) => node.id),
+      runtimeRelationships.children.filter((node) => node.type === 'folder').map((node) => node.id),
       ['user/friends', 'user/blacklist'],
       `${platform}: generated navigation should expose the relationship groups`,
     );

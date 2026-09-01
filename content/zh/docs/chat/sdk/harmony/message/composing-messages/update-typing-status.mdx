@@ -1,0 +1,43 @@
+---
+title: '上报输入状态'
+description: '上报当前账号在会话中的输入状态。'
+sourcePath: '/sdk/harmony/message/composing-messages/update-typing-status'
+---
+
+## 上报会话输入状态
+
+用户开始输入时传 `focus: true`；发送消息、输入框失焦、切换会话或停止输入时传 `false`。该状态不会保存为草稿或消息。
+
+```ts
+import sdk, { ChangeInputStatesReq } from '@openimsdk/imsdk';
+
+const startRequest: ChangeInputStatesReq = {
+  conversationID: conversationID,
+  focus: true,
+};
+await sdk.changeInputStates(startRequest);
+
+const stopRequest: ChangeInputStatesReq = {
+  conversationID: conversationID,
+  focus: false,
+};
+await sdk.changeInputStates(stopRequest);
+```
+
+对开始输入做节流和状态去重，不要在每次键盘输入时重复调用。Promise 成功只表示本次上报请求已完成，不表示其他客户端界面已经更新。
+
+## 发送单聊输入提示
+
+HarmonyOS SDK 还提供按接收用户发送提示字符串的 `typingStatusUpdate()`。它不使用 `conversationID`，适用于已有业务协议依赖 `msgTip` 的单聊场景。
+
+```ts
+import sdk, { TypingStatusUpdateReq } from '@openimsdk/imsdk';
+
+const request: TypingStatusUpdateReq = {
+  recvID: receiverUserID,
+  msgTip: 'typing',
+};
+await sdk.typingStatusUpdate(request);
+```
+
+新实现优先使用可查询、可按平台同步的会话输入状态接口。两种接口不要同时高频发送，以免接收端出现重复提示。

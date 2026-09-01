@@ -1,0 +1,41 @@
+---
+title: '删除群聊中指定用户的全部消息'
+description: '使用 UniApp SDK 删除指定用户在群聊中的全部消息。'
+sourcePath: '/sdk/uniapp/message/managing-messages/delete-user-messages'
+---
+
+该能力只用于群聊，可删除指定用户在目标群会话中的全部消息。这是高影响的群组管控操作，不应放入普通单条消息菜单；操作者权限由 OpenIMServer 校验。
+
+```uts
+import { deleteUserAllMessagesInConv } from '@/uni_modules/unix-openim-sdk'
+
+await deleteUserAllMessagesInConv({
+  conversationID,
+  userID: targetUserID,
+})
+```
+
+`conversationID` 必须是目标群聊会话 ID，`userID` 是要清理消息的发送者用户 ID。Promise 成功表示删除请求已经完成，不表示其他客户端已经刷新。
+
+## 接收删除通知
+
+`onDeleteUserAllMsgsInConv()` 的事件载荷在当前 UTS 合同中公开为 `string`，没有声明字符串内部结构。将事件作为群消息可能变化的刷新信号，并重新加载正在显示的群聊历史，不依赖合同未声明的对象字段。
+
+```uts
+import {
+  off,
+  onDeleteUserAllMsgsInConv,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleUserMessagesDeleted = (_payload: string) => {
+  reloadCurrentGroupHistory()
+}
+
+const userMessagesDeletedSubscription =
+  onDeleteUserAllMsgsInConv(handleUserMessagesDeleted)
+
+// 页面卸载或账号切换时：
+off(userMessagesDeletedSubscription)
+```
+
+Promise 成功、事件到达和重新查询历史是三个独立阶段。

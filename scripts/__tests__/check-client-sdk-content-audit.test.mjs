@@ -155,6 +155,81 @@ test('rejects conversationID on the Flutter Message model', () => {
   assert.ok(errors.some((error) => error.includes('does not expose conversationID')));
 });
 
+test('rejects TypeScript-only syntax in UniApp SDK examples', () => {
+  const platform = getClientSdkPlatform('uniapp');
+  const path = '/sdk/uniapp/message/managing-messages/modify-a-message';
+  const page = auditPage(path, platform.sdkCommit);
+  page.openimSources = [platform.sdkCommit];
+  const errors = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit: {
+      schemaVersion: 1,
+      sources: { uniappSdk: { tag: platform.sdkTag, commit: platform.sdkCommit } },
+      pages: [page],
+    },
+    manualPages: new Map([
+      [
+        path,
+        '```ts\nimport { type OpenIMMessageItem } from "sdk"\nconst next = { ...message }\n```',
+      ],
+    ]),
+  });
+
+  assert.ok(errors.some((error) => error.includes('requires a UTS example')));
+  assert.ok(errors.some((error) => error.includes('must use UTS code fences')));
+});
+
+test('requires stable HarmonyOS listeners with retained cleanup functions', () => {
+  const platform = getClientSdkPlatform('harmony');
+  const path = '/sdk/harmony/message/receiving-messages/receive-messages';
+  const page = auditPage(path, platform.sdkCommit);
+  page.openimSources = [`local-source:openim-sdk-harmony/tree/${platform.sdkCommit}`];
+  page.sdkMethods = [];
+  page.sdkEvents = ['EventOnRecvNewMessage'];
+  const audit = {
+    schemaVersion: 1,
+    sources: { harmonySdk: { tag: platform.sdkTag, commit: platform.sdkCommit } },
+    pages: [page],
+  };
+  const invalid = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit,
+    manualPages: new Map([
+      [path, '```ts\nsdk.on(OpenIMSDKEvent.EventOnRecvNewMessage, (data) => merge(data));\n```'],
+    ]),
+  });
+  assert.ok(invalid.some((error) => error.includes('stable named handler')));
+  assert.ok(invalid.some((error) => error.includes('retain its unsubscribe function')));
+
+  const valid = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit,
+    manualPages: new Map([
+      [
+        path,
+        '```ts\nconst handleMessage = (data: EventData): void => merge(data);\nconst unsubscribeMessage = sdk.on(OpenIMSDKEvent.EventOnRecvNewMessage, handleMessage);\nunsubscribeMessage();\n```',
+      ],
+    ]),
+  });
+  assert.deepEqual(valid, []);
+
+  const validFormatted = validateClientSdkAudit({
+    platform,
+    sidebar: { nodes: [path] },
+    audit,
+    manualPages: new Map([
+      [
+        path,
+        '```ts\nconst unsubscribes: Array<() => void> = [];\nconst handleMessage = (data: EventData): void => merge(data);\nunsubscribes.push(\n  sdk.on(\n    OpenIMSDKEvent.EventOnRecvNewMessage,\n    handleMessage,\n  ),\n);\nfor (let index = 0; index < unsubscribes.length; index += 1) {\n  unsubscribes[index]();\n}\n```',
+      ],
+    ]),
+  });
+  assert.deepEqual(validFormatted, []);
+});
+
 function auditPage(path, commit) {
   return {
     currentPath: path,

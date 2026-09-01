@@ -1,0 +1,43 @@
+---
+title: '获取消息总未读数'
+description: '查询并持续维护当前账号的会话消息总未读数。'
+sourcePath: '/sdk/uniapp/conversation/managing-conversations/get-total-unread-count'
+---
+
+`getTotalUnreadMsgCount()` 返回调用时当前账号所有会话的总未读数。不要只把当前已加载分页中的 `unreadCount` 相加，因为尚未加载的会话也可能存在未读消息。
+
+```uts
+import { getTotalUnreadMsgCount } from '@/uni_modules/unix-openim-sdk'
+
+const totalUnread = await getTotalUnreadMsgCount()
+if (totalUnread != null) {
+  updateApplicationBadge(totalUnread)
+}
+```
+
+Promise 成功后返回 `number | null`；非空数值是查询时的总未读数。查询本身不会触发事件。
+
+## 监听总未读数变化
+
+本页负责 `onTotalUnreadMessageCountChanged()` 的完整监听。事件处理器直接收到新的总未读数。
+
+```uts
+import {
+  off,
+  onTotalUnreadMessageCountChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleTotalUnreadChanged = (count: number) => {
+  updateApplicationBadge(count)
+}
+
+const totalUnreadSubscription = onTotalUnreadMessageCountChanged(
+  handleTotalUnreadChanged,
+)
+
+function removeTotalUnreadListener() {
+  off(totalUnreadSubscription)
+}
+```
+
+组件卸载、退出登录或切换账号时调用 `removeTotalUnreadListener()`。重新登录、重连完成或事件可能遗漏时，应再次查询总未读数，并用最新结果更新角标。

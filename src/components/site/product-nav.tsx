@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDownIcon } from '@/src/components/ui/icons';
-import { sdkPlatformSections, type SdkPlatformSection } from '@/src/config/docs';
+import { getSdkPlatformSections, type SdkPlatformSection } from '@/src/config/docs';
 import { localeFromPathname, toLocalizedPath, type Locale } from '@/src/lib/i18n';
 
 export function ProductNav() {
   const pathname = usePathname();
   const locale = localeFromPathname(pathname);
+  const sdkPlatformSections = getSdkPlatformSections(locale);
 
   return (
     <div className="product-nav-shell">

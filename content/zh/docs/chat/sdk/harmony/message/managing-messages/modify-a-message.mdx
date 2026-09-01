@@ -1,0 +1,53 @@
+---
+title: '修改消息'
+description: '修改已发送消息的内容并同步结果。'
+sourcePath: '/sdk/harmony/message/managing-messages/modify-a-message'
+---
+
+修改消息属于商业版能力。它会替换已有消息内容并同步，与仅影响本机的更新或删除不同。
+
+```ts
+import sdk, {
+  EventOnMessageEditedData,
+  EventOnMessageModifiedData,
+  IMMessage,
+  ModifyMessageReq,
+  ModifyMessageResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const editedMessage: IMMessage = cloneMessage(message);
+if (editedMessage.textElem !== undefined) {
+  editedMessage.textElem.content = editedText;
+}
+const request: ModifyMessageReq = {
+  conversationID: conversationID,
+  message: editedMessage,
+};
+const response: ModifyMessageResp = await sdk.modifyMessage(request);
+replaceMessage(conversationID, response.message);
+
+const handleMessageModified = (data: EventOnMessageModifiedData): void => {
+  const targetConversationID = resolveMessageConversationID(data.message);
+  replaceMessage(targetConversationID, data.message);
+};
+const unsubscribeMessageModified = sdk.on(
+  OpenIMSDKEvent.EventOnMessageModified,
+  handleMessageModified,
+);
+
+const handleMessageEdited = (data: EventOnMessageEditedData): void => {
+  const targetConversationID = resolveMessageConversationID(data.message);
+  replaceMessage(targetConversationID, data.message);
+};
+const unsubscribeMessageEdited = sdk.on(OpenIMSDKEvent.EventOnMessageEdited, handleMessageEdited);
+
+export function removeMessageEditListeners(): void {
+  unsubscribeMessageModified();
+  unsubscribeMessageEdited();
+}
+```
+
+修改对象必须保留原 `clientMsgID` 和其他必要字段。允许修改的发送者、时间窗口和消息类型由 OpenIMServer 校验。Promise 成功后可立即替换本地项；其他客户端通过事件更新。
+
+`EventOnMessageModified` 和 `EventOnMessageEdited` 都携带最新的 `IMMessage`，应使用 `conversationID` 定位会话，再按 `clientMsgID` 替换消息。两个事件代表不同的底层编辑通知途径，不应假定 `modifyMessage()` 必然同时触发两者。销毁状态层时移除监听。

@@ -1,6 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { clientSdkPlatformIds, getClientSdkPlatform } from './lib/client-sdk-platforms.mjs';
+import {
+  clientSdkStructurePlatformIds,
+  getClientSdkPlatform,
+} from './lib/client-sdk-platforms.mjs';
 import {
   buildClientSdkSidebar,
   decideClientSdkSidebarApplication,
@@ -15,7 +18,7 @@ const routes = JSON.parse(await readFile(routesPath, 'utf8'));
 const navigation = JSON.parse(await readFile(navigationPath, 'utf8'));
 const clientSdkSidebars = new Map(
   await Promise.all(
-    clientSdkPlatformIds.map(async (platformId) => {
+    clientSdkStructurePlatformIds.map(async (platformId) => {
       const platform = getClientSdkPlatform(platformId);
       const sidebar = JSON.parse(await readFile(resolve(root, platform.sidebarPath), 'utf8'));
       return [platformId, sidebar];
@@ -45,7 +48,7 @@ for (const route of routes) {
 }
 
 const sidebarDecisions = new Map(
-  clientSdkPlatformIds.map((platformId) => {
+  clientSdkStructurePlatformIds.map((platformId) => {
     const platform = getClientSdkPlatform(platformId);
     return [
       platformId,
@@ -58,7 +61,7 @@ const sidebarDecisions = new Map(
   }),
 );
 
-for (const platformId of clientSdkPlatformIds) {
+for (const platformId of clientSdkStructurePlatformIds) {
   if (sidebarDecisions.get(platformId).mode === 'skip') continue;
   changed += applyClientSdkSidebarOrder(
     routes,
@@ -68,8 +71,34 @@ for (const platformId of clientSdkPlatformIds) {
 }
 
 const routeMap = new Map(routes.map((route) => [route.path, route]));
+for (const platformId of clientSdkStructurePlatformIds) {
+  if (sidebarDecisions.get(platformId).mode === 'skip') continue;
+  const platform = getClientSdkPlatform(platformId);
+  if (navigation.contexts.some((context) => context.key === platform.contextKey)) continue;
+
+  const overviewPath = `${platform.routePrefix}/overview`;
+  const overview = routeMap.get(overviewPath);
+  if (!overview)
+    throw new Error(`Cannot create missing ${platformId} context without ${overviewPath}`);
+  const context = {
+    key: platform.contextKey,
+    title: overview.contextTitle,
+    rootPath: platform.routePrefix,
+    overviewPath,
+    product: 'sdk',
+    version: overview.version ?? 'v4',
+    platform: platform.id,
+    nodes: [],
+  };
+  const wasmIndex = navigation.contexts.findIndex((item) => item.key === 'chat/sdk/wasm');
+  const insertIndex =
+    platformId === 'harmony' && wasmIndex >= 0 ? wasmIndex : navigation.contexts.length;
+  navigation.contexts.splice(insertIndex, 0, context);
+  changed += 1;
+}
+
 for (const context of navigation.contexts) {
-  const platform = clientSdkPlatformIds
+  const platform = clientSdkStructurePlatformIds
     .map((platformId) => getClientSdkPlatform(platformId))
     .find((item) => item.contextKey === context.key);
   if (platform && sidebarDecisions.get(platform.id).mode === 'apply') {
@@ -90,11 +119,19 @@ for (const context of navigation.contexts) {
   }
 }
 
-for (const platformId of clientSdkPlatformIds) {
+for (const platformId of clientSdkStructurePlatformIds) {
   if (sidebarDecisions.get(platformId).mode === 'skip') {
     const pageCount = getClientSdkSidebarPaths(clientSdkSidebars.get(platformId)).length;
     const platformName =
-      platformId === 'ios' ? 'iOS' : platformId === 'android' ? 'Android' : 'Flutter';
+      platformId === 'ios'
+        ? 'iOS'
+        : platformId === 'android'
+          ? 'Android'
+          : platformId === 'uniapp'
+            ? 'uni-app / uni-app x'
+            : platformId === 'harmony'
+              ? 'HarmonyOS'
+              : 'Flutter';
     console.log(
       `Skipped ${platformName} client SDK sidebar sync: native route tree has not migrated to all ${pageCount} reviewed paths.`,
     );

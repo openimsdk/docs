@@ -18,6 +18,7 @@ type MarkdownBlock =
   | { type: 'table'; rows: string[][] };
 
 type InlineRenderOptions = {
+  commercialFieldNames?: ReadonlySet<string>;
   commercialNames?: ReadonlySet<string>;
   locale: Locale;
 };
@@ -25,13 +26,19 @@ type InlineRenderOptions = {
 export async function MarkdownContent({
   body,
   locale,
+  commercialFieldNames,
   commercialNames,
 }: {
   body: string;
   locale: Locale;
+  commercialFieldNames?: ReadonlySet<string>;
   commercialNames?: ReadonlySet<string>;
 }) {
-  const inlineOptions: InlineRenderOptions = { commercialNames, locale };
+  const inlineOptions: InlineRenderOptions = {
+    commercialFieldNames,
+    commercialNames,
+    locale,
+  };
 
   return (
     <>
@@ -347,10 +354,20 @@ function renderInlineMarkdown(value: string, options: InlineRenderOptions): Reac
       }
     } else if (match[5] !== undefined) {
       const codeText = match[5];
-      const commercial = matchCommercialSymbol(codeText, options.commercialNames ?? new Set());
-      if (commercial) {
+      const commercialApi = matchCommercialSymbol(codeText, options.commercialNames ?? new Set());
+      const commercialField = matchCommercialSymbol(
+        codeText,
+        options.commercialFieldNames ?? new Set(),
+      );
+      const explicitBadgeFollows = value
+        .slice(match.index + match[0].length)
+        .match(/^\s*<span className="enterprise-field-badge">(?:商业版|Enterprise)<\/span>/);
+      if ((commercialApi || commercialField) && !explicitBadgeFollows) {
         nodes.push(
-          <span className="commercial-api-ref" key={`${match.index}-code`}>
+          <span
+            className={commercialApi ? 'commercial-api-ref' : 'commercial-field-ref'}
+            key={`${match.index}-code`}
+          >
             <code>{codeText}</code>
             <span className="enterprise-field-badge">{badgeLabel}</span>
           </span>,

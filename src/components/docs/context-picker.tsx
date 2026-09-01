@@ -39,7 +39,7 @@ export function ContextPicker({
       .filter(
         (platform) =>
           current.product !== 'sdk' ||
-          isSdkPlatformVisible(platform) ||
+          isSdkPlatformVisible(platform, locale) ||
           platform === current.platform,
       ),
   );

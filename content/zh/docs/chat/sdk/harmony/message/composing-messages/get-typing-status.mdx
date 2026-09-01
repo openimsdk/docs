@@ -1,0 +1,37 @@
+---
+title: '接收和查询输入状态'
+description: '查询指定成员的输入平台，并接收后续状态变化。'
+sourcePath: '/sdk/harmony/message/composing-messages/get-typing-status'
+---
+
+进入会话、连接恢复或事件状态可能不完整时，先查询指定成员当前处于输入状态的平台。
+
+```ts
+import sdk, {
+  EventOnConversationUserInputStatusChangedData,
+  GetInputStatesReq,
+  GetInputStatesResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetInputStatesReq = {
+  conversationID: conversationID,
+  userID: memberUserID,
+};
+const response: GetInputStatesResp = await sdk.getInputStates(request);
+setTyping(memberUserID, response.platforms.length > 0);
+
+const handleInputStatusChanged = (data: EventOnConversationUserInputStatusChangedData): void => {
+  updateTypingState(data.conversationID, data.userID, data.platforms);
+};
+const unsubscribeInputStatus = sdk.on(
+  OpenIMSDKEvent.EventOnConversationUserInputStatusChanged,
+  handleInputStatusChanged,
+);
+
+export function removeInputStatusListener(): void {
+  unsubscribeInputStatus();
+}
+```
+
+空平台数组表示查询或事件发生时没有平台正在输入。使用 `conversationID:userID` 合并成员状态；事件不替代首次查询，也不保证永久保留。连接恢复后重新查询当前界面需要展示的成员，群聊中不要持续轮询全部成员。销毁状态层时调用 `unsubscribeInputStatus()`。

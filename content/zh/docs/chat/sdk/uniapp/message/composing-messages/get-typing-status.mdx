@@ -1,0 +1,53 @@
+---
+title: '接收和查询输入状态'
+description: '使用 UniApp SDK 接收输入状态变化，并查询指定成员当前处于输入状态的平台。'
+sourcePath: '/sdk/uniapp/message/composing-messages/get-typing-status'
+---
+
+进入会话、连接恢复或事件状态可能不完整时，可以查询指定成员当前处于输入状态的平台：
+
+```uts
+import { getInputStates } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getInputStates({
+  conversationID,
+  userID: memberUserID,
+})
+
+const platformIDs = result?.platforms ?? []
+setTyping(memberUserID, platformIDs.length > 0)
+```
+
+`conversationID` 是目标会话 ID，`userID` 是要查询的成员 ID。Promise 成功后返回 `OpenIMGetInputStatesResult | null`；非空结果的 `platforms` 是该成员仍处于输入状态的平台枚举值数组。空数组表示查询时没有任何平台正在输入。查询只建立当前状态，不会触发输入状态事件。
+
+## 接收后续变化
+
+完整事件监听集中在本页。事件载荷包含会话 ID、成员 ID 和当前仍在输入的平台 ID。用 `conversationID:userID` 作为成员输入状态的合并标识，不要使用昵称或列表位置。
+
+```uts
+import {
+  off,
+  onConversationUserInputStatusChanged,
+  OpenIMConversationInputStatusItem,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleInputStatusChanged = (
+  status: OpenIMConversationInputStatusItem | null,
+) => {
+  if (status == null) return
+
+  updateTypingState(
+    status.conversationID,
+    status.userID,
+    status.platformIDs,
+  )
+}
+
+const inputStatusSubscription =
+  onConversationUserInputStatusChanged(handleInputStatusChanged)
+
+// 页面卸载或账号切换时：
+off(inputStatusSubscription)
+```
+
+事件用于合并查询后的增量变化；它不替代首次查询，也不保证永久保留状态。连接恢复后应重新查询当前会话中需要展示的成员，群聊中不要持续轮询全部成员。

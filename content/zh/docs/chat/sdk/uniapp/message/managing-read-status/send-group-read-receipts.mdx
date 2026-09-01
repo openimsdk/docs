@@ -1,0 +1,40 @@
+---
+title: '上报群消息已读'
+description: '使用 UniApp SDK 上报群消息的成员级已读回执。'
+sourcePath: '/sdk/uniapp/message/managing-read-status/send-group-read-receipts'
+---
+
+群消息成员级已读属于商业版能力。同一批消息必须属于目标群聊会话：
+
+```uts
+import { sendGroupMessageReadReceipt } from '@/uni_modules/unix-openim-sdk'
+
+await sendGroupMessageReadReceipt({
+  conversationID,
+  clientMsgIDs: visibleUnreadMessageIDs,
+})
+```
+
+`conversationID` 是群聊会话 ID，`clientMsgIDs` 是本次上报已读的客户端消息 ID 数组。不要混入其他会话的消息，也不要重复上报尚未展示给用户的消息。
+
+Promise 成功只表示本次回执上报请求已经完成，不等于其他客户端已经更新。会话未读数由会话级已读能力独立维护，本页方法用于群聊成员级阅读明细。
+
+## 接收群消息已读变化
+
+`onRecvGroupReadReceipt()` 的载荷在当前 UTS 合同中公开为 `string`，没有声明字符串内部结构。将事件作为当前群消息已读明细可能变化的刷新信号，重新查询正在展示的消息成员列表。
+
+```uts
+import { off, onRecvGroupReadReceipt } from '@/uni_modules/unix-openim-sdk'
+
+const handleGroupReadReceipt = (_payload: string) => {
+  reloadVisibleGroupMessageReaders()
+}
+
+const groupReadReceiptSubscription =
+  onRecvGroupReadReceipt(handleGroupReadReceipt)
+
+// 页面卸载或账号切换时：
+off(groupReadReceiptSubscription)
+```
+
+上报 Promise、回执事件和[查询群消息已读成员](/sdk/uniapp/message/managing-read-status/get-group-message-readers)返回的查询结果是三个独立阶段。

@@ -4,7 +4,7 @@ description: '配置 OpenIM Flutter SDK 日志，写入应用诊断信息并上�
 sourcePath: '/sdk/flutter/logger'
 ---
 
-开发和预发布环境可以输出较详细的 SDK 日志；生产环境应降低级别并关闭不必要的标准输出。不要记录 Token、完整消息正文、原始文件 URL 或用户隐私字段。
+OpenIM Flutter SDK 日志用于定位初始化、连接和业务 API 调用问题。初始化参数可以控制日志级别、标准输出和日志文件路径。
 
 ## 初始化日志配置
 
@@ -33,11 +33,11 @@ await OpenIM.iMManager.initSDK(
 
 | 参数 | 说明 |
 | --- | --- |
-| `logLevel` | SDK 日志级别数字；固定 SDK 默认值为 `6`，应按部署环境选择。 |
-| `isLogStandardOutput` | 是否输出到平台标准日志；开发诊断时开启。 |
-| `logFilePath` | 可选日志文件路径；应放在应用可写目录。 |
+| `logLevel` | SDK 日志级别数字，默认值为 `6`。 |
+| `isLogStandardOutput` | 是否输出到平台标准日志。 |
+| `logFilePath` | 可选日志文件路径，需要位于应用可写目录。 |
 
-生产环境建议关闭标准输出并只保留必要级别。日志目录受平台权限与生命周期约束，不要硬编码其他应用或系统目录。
+日志级别越详细，产生的日志内容越多。日志目录受平台文件权限与生命周期约束。
 
 ## 写入与上传日志
 
@@ -52,7 +52,7 @@ await OpenIM.iMManager.logs(
 );
 ```
 
-需要由用户主动提交诊断日志时，可以监听上传进度并调用 `uploadLogs()`：
+可以监听上传进度并调用 `uploadLogs()`：
 
 ```dart
 OpenIM.iMManager.setUploadLogsListener(
@@ -66,6 +66,6 @@ OpenIM.iMManager.setUploadLogsListener(
 await OpenIM.iMManager.uploadLogs(ex: 'user initiated diagnostics');
 ```
 
-`setUploadLogsListener()` 保存的是 manager 级 singleton listener，后一次设置会覆盖前一次。固定 SDK 没有 remove 或 unset API，因此应在应用统一的 SDK 绑定层设置一次，并由该层把进度分发给当前界面；不要在每个页面或组件重复设置。退出登录或切换账号时，清空应用层订阅和上一账号的上传状态，避免进度或错误显示到新账号界面。
+`setUploadLogsListener()` 保存的是 manager 级 singleton listener，后一次设置会覆盖前一次。SDK 没有 remove 或 unset API，因此应在应用统一的 SDK 绑定层设置一次，并由该层把进度分发给当前界面；切换账号时可清空应用层订阅和上一账号的上传状态。
 
-上传前应向用户说明收集范围，并按隐私与合规要求处理日志。
+`uploadLogs()` 的 Future 成功表示本次日志上传请求已完成。

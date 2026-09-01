@@ -9,16 +9,16 @@ OpenIM Flutter SDK 使用 `initSDK()` 初始化本机 SDK，再使用 `login()` 
 完整流程如下：
 
 1. 调用 `initSDK()`，同时设置 `OnConnectListener`。
-2. 从可信后端取得 `userID`、Token、`apiAddr` 和 `wsAddr`。
+2. 从业务后端取得 `userID`、Token、`apiAddr` 和 `wsAddr`。
 3. 调用 `login()`，等待 Future 完成，并继续等待 `onConnectSuccess`。
 4. 连接可用后再查询用户、好友、会话、群组和消息数据。
 5. 主动退出或切换账号时调用 `logout()`，再清理当前账号的应用状态。
 
 ## 获取当前用户的登录信息
 
-应用应从可信后端取得当前用户的 `userID`、Token，以及环境对应的 `apiAddr` 和 `wsAddr`。接口职责和安全边界见[开始之前](/sdk/flutter/getting-started/before-you-start)。
+应用从业务后端取得当前用户的 `userID`、Token，以及环境对应的 `apiAddr` 和 `wsAddr`。所需数据见[开始之前](/sdk/flutter/getting-started/before-you-start)。
 
-`userID` 只是 OpenIMSDK 用户标识，不是认证凭据，并且必须与 Token 对应。移动端只使用后端返回的登录信息，不负责创建 OpenIM 用户或签发 Token；不要把管理员 Token 打包进应用。
+`userID` 是 OpenIMSDK 用户标识，必须与 Token 对应。移动端使用后端返回的登录信息，不负责创建 OpenIM 用户或签发 Token。
 
 ## 初始化并设置连接生命周期
 
@@ -71,7 +71,7 @@ if (initialized != true) {
 
 `initSDK()` 的 Future 成功并返回 `true` 表示本机 SDK 初始化完成，不表示用户已经登录或长连接已经可用。同一个应用进程应集中初始化一次，不要由多个 Widget 各自创建初始化流程。
 
-`OnConnectListener` 是 Dart 回调对象，不是 WASM 的 `on()`/`off()` 事件模型。固定版本没有公开的移除连接 listener 方法；应用应集中持有一个 listener，避免在 Widget 重建时重复初始化。
+`OnConnectListener` 由 `initSDK()` 持有，SDK 没有公开的连接 listener 移除方法。应用应集中持有一个 listener，避免在 Widget 重建时重复初始化。
 
 ## 登录当前用户
 
@@ -89,7 +89,7 @@ setCurrentUser(currentUser);
 | 字段 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
 | `userID` | `String` | 是 | 当前 OpenIMSDK 用户 ID，必须与 Token 对应。 |
-| `token` | `String` | 是 | 可信后端返回的当前用户 Token。 |
+| `token` | `String` | 是 | 业务后端返回的当前用户 Token。 |
 | `checkLoginStatus` | `bool` | 否 | 是否先检查 SDK 登录状态，默认 `true`。 |
 | `defaultValue` | `Future<UserInfo> Function()?` | 否 | 读取登录用户资料失败时的回退函数；通常不设置，以便暴露真实错误。 |
 
@@ -122,7 +122,7 @@ if (status == LoginStatus.logged) {
 
 ## 处理 Token 和强制下线
 
-Token 过期或无效时，重新向可信后端取得凭据，再按产品策略重新登录或返回登录页。收到 `onKickedOffline` 时，清理应用自身保存的用户、列表和页面状态；不要把它误当作用户主动点击退出。
+Token 过期或无效时，可以向业务后端取得新凭据，再重新登录或进入应用的登录流程。`onKickedOffline` 表示当前账号被其他设备或服务端强制下线，与用户主动退出是不同状态。
 
 Flutter 登录流程只向 `login()` 传入 OpenIMSDK Token，不区分客户端侧的“访问 Token”和“会话 Token”。Token 的签发、有效期、刷新和撤销策略由业务后端与 OpenIMServer 配置决定。
 
