@@ -45,7 +45,7 @@ const landingCopy = {
     heroSecondary: 'Open Platform API',
     heroTitle: 'Build instant messaging with OpenIMSDK',
     sampleDescription:
-      'Browse demos maintained by the OpenIMSDK GitHub organization to see how each platform integrates OpenIMClientSDK.',
+      'Browse demos and integration examples maintained by the OpenIMSDK GitHub organization to see how each platform integrates OpenIMClientSDK.',
     sampleEyebrow: 'OPEN SOURCE',
     sampleTitle: 'Sample apps',
     sdkAction: 'Browse WASM SDK',
@@ -80,7 +80,7 @@ const landingCopy = {
     heroSecondary: '查看 Platform API',
     heroTitle: '使用 OpenIMSDK 构建即时通讯应用',
     sampleDescription:
-      '查看 OpenIMSDK GitHub 组织维护的 Demo，对照各平台接入 OpenIMClientSDK 的实际方式。',
+      '查看 OpenIMSDK GitHub 组织维护的 Demo 与集成示例，对照各平台接入 OpenIMClientSDK 的实际方式。',
     sampleEyebrow: '开源 Demo',
     sampleTitle: '示例应用',
     sdkAction: '查看 WASM SDK',
@@ -99,11 +99,39 @@ const sdkCards: HomeCard[] = [
     meta: 'Swift',
   },
   {
+    title: 'Android',
+    href: '/sdk/android/overview',
+    description:
+      'Integrate login, users, conversations, groups, and messages in native Android apps.',
+    meta: 'Kotlin / Java',
+  },
+  {
     title: 'Flutter',
     href: '/sdk/flutter/overview',
     description:
       'Use one OpenIMClientSDK integration path across mobile and supported desktop targets.',
     meta: 'Dart',
+  },
+  {
+    title: 'React Native',
+    href: '/sdk/react-native/overview',
+    description:
+      'Integrate OpenIMClientSDK into React Native apps for Android and iOS, including Expo development builds.',
+    meta: 'TypeScript / RN',
+  },
+  {
+    title: 'HarmonyOS',
+    href: '/sdk/harmony/overview',
+    description:
+      'Build native HarmonyOS apps with typed ArkTS APIs for phones, tablets, and 2in1 devices.',
+    meta: 'ArkTS / Enterprise',
+  },
+  {
+    title: 'uni-app / uni-app x',
+    href: '/sdk/uniapp/overview',
+    description:
+      'Use one UTS plugin integration across native Android, iOS, and HarmonyOS app targets.',
+    meta: 'UTS / HBuilderX',
   },
   {
     title: 'Electron',
@@ -175,6 +203,32 @@ const sampleApps: HomeCard[] = [
     href: 'https://github.com/openimsdk/openim-flutter-demo',
     description: 'Flutter demo for a single codebase covering mobile targets.',
     meta: 'GitHub / Flutter',
+  },
+  {
+    title: 'Android demo',
+    href: 'https://github.com/openimsdk/open-im-android-demo',
+    description: 'Native Android demo for login, conversations, messaging, and offline push.',
+    meta: 'GitHub / Android',
+  },
+  {
+    title: 'React Native demo',
+    href: 'https://github.com/openimsdk/openim-reactnative-demo',
+    description: 'React Native demo for running OpenIMClientSDK on Android and iOS.',
+    meta: 'GitHub / RN',
+  },
+  {
+    title: 'uni-app / uni-app x example',
+    href: 'https://github.com/openimsdk/openim-sdk-unix',
+    description:
+      'UTS plugin repository with an integration example for uni-app and uni-app x projects.',
+    meta: 'GitHub / UTS',
+  },
+  {
+    title: 'HarmonyOS example',
+    href: 'https://github.com/openimsdk/openim-sdk-harmony',
+    description:
+      'HarmonyOS SDK repository with an ArkTS entry application for integration testing.',
+    meta: 'GitHub / HarmonyOS',
   },
 ];
 
@@ -511,8 +565,13 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'React Native': {
     title: 'React Native',
-    description: '在 React Native 应用中接入 OpenIMClientSDK，并处理移动端运行时差异。',
-    meta: 'RN',
+    description: '在 Android 与 iOS React Native 应用中接入 OpenIMClientSDK，支持 Expo 开发构建。',
+    meta: 'TypeScript / RN',
+  },
+  HarmonyOS: {
+    title: 'HarmonyOS',
+    description: '通过类型化 ArkTS API，为手机、平板和 2in1 设备构建原生 HarmonyOS 应用。',
+    meta: 'ArkTS / 商业版',
   },
   'Unread counts': {
     title: '未读数',
@@ -528,10 +587,10 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     title: '用户',
     description: '创建和查询用户、更新资料，并为客户端登录签发 Token。',
   },
-  'uni-app': {
-    title: 'uni-app',
-    description: '在 uni-app 工程中一次接入，覆盖 App、H5 和支持的小程序目标。',
-    meta: 'Vue / uni-app',
+  'uni-app / uni-app x': {
+    title: 'uni-app / uni-app x',
+    description: '通过同一套 UTS 插件接入 Android、iOS 与 HarmonyOS 原生 App。',
+    meta: 'UTS / HBuilderX',
   },
   'Android demo': {
     title: 'Android Demo',
@@ -605,18 +664,23 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'React Native demo': {
     title: 'React Native Demo',
-    description: '查看 React Native Demo 的移动端运行环境与 SDK 接入方式。',
+    description: '查看 React Native Demo 在 Android 与 iOS 上的运行环境和 SDK 接入方式。',
     meta: 'GitHub / RN',
+  },
+  'HarmonyOS example': {
+    title: 'HarmonyOS 示例',
+    description: '查看 HarmonyOS SDK 仓库中的 ArkTS entry 应用，验证工程接入与 SDK 调用。',
+    meta: 'GitHub / HarmonyOS',
   },
   'Send messages': {
     title: '发送消息',
     description: '从可信服务端向单聊用户或群组发送消息。',
     meta: '消息',
   },
-  'uni-app demo': {
-    title: 'uni-app Demo',
-    description: '查看 uni-app Demo，覆盖 App、H5 和支持的小程序目标。',
-    meta: 'GitHub / uni-app',
+  'uni-app / uni-app x example': {
+    title: 'uni-app / uni-app x 示例',
+    description: '查看 UTS 插件仓库中的集成示例，在 uni-app 与 uni-app x 工程中验证 SDK。',
+    meta: 'GitHub / UTS',
   },
   'User directory': {
     title: '查询用户',

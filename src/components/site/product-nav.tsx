@@ -9,7 +9,7 @@ import { localeFromPathname, toLocalizedPath, type Locale } from '@/src/lib/i18n
 export function ProductNav() {
   const pathname = usePathname();
   const locale = localeFromPathname(pathname);
-  const sdkPlatformSections = getSdkPlatformSections(locale);
+  const sdkPlatformSections = getSdkPlatformSections();
 
   return (
     <div className="product-nav-shell">
@@ -64,16 +64,21 @@ function Dropdown({
               <p className="sdk-menu-section-title">
                 <span>{locale === 'zh' ? section.labelZh : section.label}</span>
                 {section.description ? (
-                  <small>
-                    {locale === 'zh' ? section.descriptionZh : section.description}
-                  </small>
+                  <small>{locale === 'zh' ? section.descriptionZh : section.description}</small>
                 ) : null}
               </p>
             ) : null}
             <div className="sdk-menu-section-items">
               {section.items.map((item) => (
                 <Link href={toLocalizedPath(item.href, locale)} key={item.href}>
-                  {locale === 'zh' ? (item.labelZh ?? item.label) : item.label}
+                  <span className="sdk-menu-item-label">
+                    <span>{locale === 'zh' ? (item.labelZh ?? item.label) : item.label}</span>
+                    {item.edition === 'enterprise' ? (
+                      <span className="sdk-menu-enterprise-badge">
+                        {locale === 'zh' ? '商业版' : 'Enterprise'}
+                      </span>
+                    ) : null}
+                  </span>
                 </Link>
               ))}
             </div>

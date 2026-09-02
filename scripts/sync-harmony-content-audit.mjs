@@ -24,11 +24,15 @@ const intentionallyUndocumentedMethods = new Set([
   'getAllConversationList',
   'deleteMessage',
   'createTargetedGroupMessage',
+  'networkStatusChanged',
+  'setAppBackgroundStatus',
 ]);
 
 async function main() {
   await verifyPinnedSource();
   const sidebar = await readJson(platform.sidebarPath);
+  const previousAudit = await readJson(platform.auditPath);
+  const activePaths = new Set(getClientSdkSidebarPaths(sidebar));
   const sdkTypes = await readFile(resolve(sourceRoot, 'imsdk/src/main/ets/sdk-types.ets'), 'utf8');
   const sourceMethods = extractPromiseMethods(sdkTypes);
   const sourceEvents = extractSourceEvents(sdkTypes);
@@ -119,6 +123,9 @@ async function main() {
     throw new Error(`Undocumented public HarmonyOS SDK events: ${missingEvents.join(', ')}`);
   }
 
+  const omittedPages = (previousAudit.pages ?? []).filter(
+    (page) => page.disposition === 'omit' && !activePaths.has(page.currentPath),
+  );
   const audit = {
     schemaVersion: 1,
     sources: {
@@ -128,7 +135,7 @@ async function main() {
         commit: sourceCommit,
       },
     },
-    pages,
+    pages: [...pages, ...omittedPages],
   };
   await writeFile(resolve(root, platform.auditPath), `${JSON.stringify(audit, null, 2)}\n`);
   console.log(

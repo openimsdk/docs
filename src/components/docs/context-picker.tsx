@@ -1,6 +1,14 @@
 'use client';
 
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 import { useRouter } from 'next/navigation';
+import { CheckIcon, ChevronDownIcon } from '@/src/components/ui/icons';
 import {
   getPlatformLabel,
   isSdkPlatformVisible,
@@ -39,7 +47,7 @@ export function ContextPicker({
       .filter(
         (platform) =>
           current.product !== 'sdk' ||
-          isSdkPlatformVisible(platform, locale) ||
+          isSdkPlatformVisible(platform) ||
           platform === current.platform,
       ),
   );
@@ -48,7 +56,8 @@ export function ContextPicker({
       .filter((option) => !current.platform || option.platform === current.platform)
       .map((option) => option.version),
   );
-  const hasPlatformSwitch = current.product === 'sdk' && !current.platform ? false : platforms.length > 0;
+  const hasPlatformSwitch =
+    current.product === 'sdk' && !current.platform ? false : platforms.length > 0;
   const hasVersionSwitch = shouldShowVersion(current.version, versions);
   const platformSections = groupPlatforms(platforms, locale);
 
@@ -62,64 +71,225 @@ export function ContextPicker({
   return (
     <div className={`context-picker ${hasPlatformSwitch && hasVersionSwitch ? '' : 'is-single'}`}>
       {hasPlatformSwitch ? (
-        <label>
-          <span>{locale === 'zh' ? '平台' : 'Platform'}</span>
-          <select
-            onChange={(event) =>
-              navigate(
-                options.filter(
-                  (option) =>
-                    option.product === current.product && option.platform === event.target.value,
-                ),
-              )
-            }
-            value={current.platform ?? platforms[0]}
-          >
-            {platformSections.map((section, index) =>
-              section.label ? (
-                <optgroup key={section.label} label={section.label}>
-                  {section.platforms.map((platform) => (
-                    <option key={platform} value={platform}>
-                      {getPlatformLabel(platform)}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : (
-                section.platforms.map((platform) => (
-                  <option key={`${index}-${platform}`} value={platform}>
-                    {getPlatformLabel(platform)}
-                  </option>
-                ))
+        <ContextSelect
+          label={locale === 'zh' ? '平台' : 'Platform'}
+          onChange={(platform) =>
+            navigate(
+              options.filter(
+                (option) => option.product === current.product && option.platform === platform,
               ),
-            )}
-          </select>
-        </label>
+            )
+          }
+          sections={platformSections.map((section) => ({
+            label: section.label,
+            options: section.platforms.map((platform) => ({
+              label: getPlatformLabel(platform) ?? platform,
+              value: platform,
+            })),
+          }))}
+          value={current.platform ?? platforms[0]}
+        />
       ) : null}
 
       {hasVersionSwitch ? (
-        <label>
-          <span>{locale === 'zh' ? '版本' : 'Version'}</span>
-          <select
-            onChange={(event) =>
-              navigate(
-                options.filter(
-                  (option) =>
-                    option.product === current.product &&
-                    option.platform === current.platform &&
-                    option.version === event.target.value,
-                ),
-                event.target.value,
-              )
-            }
-            value={current.version ?? versions[0]}
-          >
-            {versions.map((version) => (
-              <option key={version} value={version}>
-                {version}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ContextSelect
+          label={locale === 'zh' ? '版本' : 'Version'}
+          onChange={(version) =>
+            navigate(
+              options.filter(
+                (option) =>
+                  option.product === current.product &&
+                  option.platform === current.platform &&
+                  option.version === version,
+              ),
+              version,
+            )
+          }
+          sections={[
+            {
+              options: versions.map((version) => ({ label: version, value: version })),
+            },
+          ]}
+          value={current.version ?? versions[0]}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+interface ContextSelectSection {
+  label?: string;
+  options: { label: string; value: string }[];
+}
+
+function ContextSelect({
+  label,
+  onChange,
+  sections,
+  value,
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  sections: ContextSelectSection[];
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeValue, setActiveValue] = useState(value);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef(new Map<string, HTMLButtonElement>());
+  const id = useId();
+  const labelId = `${id}-label`;
+  const listboxId = `${id}-listbox`;
+  const options = sections.flatMap((section) => section.options);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (!fieldRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [open]);
+
+  if (!selected) return null;
+
+  function focusOption(nextValue: string) {
+    setActiveValue(nextValue);
+    requestAnimationFrame(() => optionRefs.current.get(nextValue)?.focus());
+  }
+
+  function openAndFocus(direction: 'first' | 'last' | 'selected' = 'selected') {
+    const nextValue =
+      direction === 'first'
+        ? options[0]?.value
+        : direction === 'last'
+          ? options.at(-1)?.value
+          : selected.value;
+    setOpen(true);
+    if (nextValue) focusOption(nextValue);
+  }
+
+  function moveFocus(offset: number) {
+    const currentIndex = Math.max(
+      0,
+      options.findIndex((option) => option.value === activeValue),
+    );
+    const nextIndex = (currentIndex + offset + options.length) % options.length;
+    const nextValue = options[nextIndex]?.value;
+    if (nextValue) focusOption(nextValue);
+  }
+
+  function selectOption(nextValue: string) {
+    setOpen(false);
+    setActiveValue(nextValue);
+    triggerRef.current?.focus();
+    if (nextValue !== value) onChange(nextValue);
+  }
+
+  function handleTriggerKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      openAndFocus(event.key === 'ArrowDown' ? 'first' : 'last');
+    } else if (event.key === 'Escape' && open) {
+      event.preventDefault();
+      setOpen(false);
+    }
+  }
+
+  function handleOptionKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, optionValue: string) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveFocus(event.key === 'ArrowDown' ? 1 : -1);
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      const nextValue = event.key === 'Home' ? options[0]?.value : options.at(-1)?.value;
+      if (nextValue) focusOption(nextValue);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      selectOption(optionValue);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    } else if (event.key === 'Tab') {
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="context-field" ref={fieldRef}>
+      <span className="context-field-label" id={labelId}>
+        {label}
+      </span>
+      <button
+        aria-controls={listboxId}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-labelledby={`${labelId} ${id}-value`}
+        className="context-select-trigger"
+        onClick={() => (open ? setOpen(false) : openAndFocus())}
+        onKeyDown={handleTriggerKeyDown}
+        ref={triggerRef}
+        type="button"
+      >
+        <span id={`${id}-value`}>{selected.label}</span>
+        <ChevronDownIcon />
+      </button>
+      {open ? (
+        <div
+          aria-labelledby={labelId}
+          className="context-select-menu"
+          id={listboxId}
+          role="listbox"
+        >
+          {sections.map((section, sectionIndex) => {
+            const sectionId = `${id}-section-${sectionIndex}`;
+            return (
+              <div
+                aria-labelledby={section.label ? sectionId : undefined}
+                className="context-select-section"
+                key={section.label ?? `section-${sectionIndex}`}
+                role={section.label ? 'group' : undefined}
+              >
+                {section.label ? (
+                  <div className="context-select-section-label" id={sectionId}>
+                    {section.label}
+                  </div>
+                ) : null}
+                {section.options.map((option) => {
+                  const isSelected = option.value === value;
+                  const isActive = option.value === activeValue;
+                  return (
+                    <button
+                      aria-selected={isSelected}
+                      className="context-select-option"
+                      data-active={isActive || undefined}
+                      key={option.value}
+                      onClick={() => selectOption(option.value)}
+                      onFocus={() => setActiveValue(option.value)}
+                      onKeyDown={(event) => handleOptionKeyDown(event, option.value)}
+                      onMouseEnter={() => setActiveValue(option.value)}
+                      ref={(node) => {
+                        if (node) optionRefs.current.set(option.value, node);
+                        else optionRefs.current.delete(option.value);
+                      }}
+                      role="option"
+                      tabIndex={isActive ? 0 : -1}
+                      type="button"
+                    >
+                      <span>{option.label}</span>
+                      {isSelected ? <CheckIcon /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       ) : null}
     </div>
   );
@@ -151,10 +321,7 @@ function groupPlatforms(
   const webCompatible = platforms.filter((platform) =>
     (webCompatibleSdkPlatforms as readonly string[]).includes(platform),
   );
-  const groups = [
-    platforms.filter((platform) => !webCompatible.includes(platform)),
-    webCompatible,
-  ];
+  const groups = [platforms.filter((platform) => !webCompatible.includes(platform)), webCompatible];
 
   return groups
     .map((group, index) => ({

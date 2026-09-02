@@ -41,9 +41,11 @@ OpenIMSDK 的 Web 侧 SDK 接入需要先确认运行环境。浏览器页面、
 使用 pnpm 安装浏览器 WASM SDK，并在构建或部署阶段复制 SDK 运行资源。下面示例把资源发布到站点静态资源根目录。
 
 ```bash
-pnpm add @openim/wasm-client-sdk@3.8.3-patch.15.1
+pnpm add @openim/wasm-client-sdk
 cp -R node_modules/@openim/wasm-client-sdk/assets/* public/
 ```
+
+团队项目应提交锁定文件；需要固定 SDK 版本时，在项目依赖中选择经过验证的版本，不要从文档正文复制长期不变的版本号。
 
 如果应用部署在 CDN、子路径或 Electron 打包目录下，示例中的路径应替换为目标运行时实际可访问的 URL。
 
@@ -87,27 +89,7 @@ await openimsdk.login(
 - `wasm_exec.js`、`openIM.wasm` 和 `sql-wasm.wasm` 必须在生产路径可访问，不能只在本地开发服务器可访问。
 - OpenIMServer 的 HTTP API 和 WebSocket 地址必须允许当前页面访问，并正确处理 HTTPS/WSS 混合内容限制。
 - SDK 本地缓存依赖浏览器存储能力。应用不要直接读写 SDK 的 IndexedDB 或 sql.js 内部结构；应通过 SDK API 和事件同步到自己的状态层。
-- 如果浏览器网络恢复、页面前后台切换或应用重新获得焦点，可以结合业务状态调用 `networkStatusChanged()` 或 `setAppBackgroundStatus()`。
-
-```ts
-const handleOnline = () => {
-  void openimsdk.networkStatusChanged();
-};
-
-const handleVisibilityChange = () => {
-  void openimsdk.setAppBackgroundStatus(document.hidden);
-};
-
-window.addEventListener('online', handleOnline);
-document.addEventListener('visibilitychange', handleVisibilityChange);
-
-function removeBrowserLifecycleListeners() {
-  window.removeEventListener('online', handleOnline);
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
-}
-```
-
-销毁 SDK 作用域或卸载应用时调用 `removeBrowserLifecycleListeners()`，避免重新挂载后重复上报浏览器生命周期变化。
+- 浏览器网络变化、页面前后台切换和重新获得焦点等运行状态应由 SDK 包装层统一适配，业务组件不应重复注册底层状态监听。
 
 ### SSR 框架
 

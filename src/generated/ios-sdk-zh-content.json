@@ -1,8 +1,8 @@
 {
   "sourceContext": "chat/sdk/ios",
   "sourceRoot": "content/zh/docs/chat/sdk/ios",
-  "pageCount": 164,
-  "manualPageCount": 164,
+  "pageCount": 165,
+  "manualPageCount": 165,
   "pendingPaths": [],
   "reviewStates": {
     "/sdk/ios/overview": "published",
@@ -129,6 +129,7 @@
     "/sdk/ios/message/sending-messages/send-message-not-oss": "published",
     "/sdk/ios/message/receiving-messages/receive-messages": "published",
     "/sdk/ios/message/receiving-messages/custom-business-listener": "published",
+    "/sdk/ios/message/set-app-badge": "published",
     "/sdk/ios/message/retrieving-messages/load-older-messages": "published",
     "/sdk/ios/message/retrieving-messages/load-newer-messages": "published",
     "/sdk/ios/message/retrieving-messages/find-messages-by-id": "published",
@@ -404,6 +405,7 @@
     "Pin or unpin a message": "置顶或取消置顶消息",
     "Publish a group announcement": "发布或更新群公告",
     "Receive custom business messages": "接收自定义业务消息",
+    "Set the app badge count": "设置应用角标数量",
     "Receive messages": "接收消息",
     "receive-messages": "接收消息",
     "Receiving messages": "接收消息",
@@ -1080,7 +1082,7 @@
       "title": "标记会话已读"
     },
     "/sdk/ios/conversation/managing-conversations/get-total-unread-count": {
-      "body": "该查询返回当前账号所有会话在调用时的总未读数，不要把当前分页中的 `unreadCount` 简单相加。\n\n```objc\n[[OIMManager manager] getTotalUnreadMsgCountWithOnSuccess:^(NSInteger count) {\n    [badgeStore setTotalUnread:count];\n} onFailure:nil];\n```\n\n查询本身不触发 delegate。后续总数变化由本页唯一处理：\n\n```objc\n@interface TotalUnreadSync : NSObject <OIMConversationListener>\n@end\n\n@implementation TotalUnreadSync\n- (void)onTotalUnreadMessageCountChanged:(NSInteger)count {\n    [badgeStore setTotalUnread:count];\n}\n@end\n\n[[OIMManager callbacker] addConversationListener:totalUnreadSync];\n// 账号作用域结束时：\n[[OIMManager callbacker] removeConversationListener:totalUnreadSync];\n```",
+      "body": "该查询返回当前账号所有会话在调用时的总未读数，不要把当前分页中的 `unreadCount` 简单相加。\n\n```objc\n[[OIMManager manager] getTotalUnreadMsgCountWithOnSuccess:^(NSInteger count) {\n    [badgeStore setTotalUnread:count];\n} onFailure:nil];\n```\n\n查询本身不触发 delegate。后续总数变化由本页唯一处理：\n\n```objc\n@interface TotalUnreadSync : NSObject <OIMConversationListener>\n@end\n\n@implementation TotalUnreadSync\n- (void)onTotalUnreadMessageCountChanged:(NSInteger)count {\n    [badgeStore setTotalUnread:count];\n}\n@end\n\n[[OIMManager callbacker] addConversationListener:totalUnreadSync];\n// 账号作用域结束时：\n[[OIMManager callbacker] removeConversationListener:totalUnreadSync];\n```\n\n需要把该数值同步给 SDK 的推送角标状态时，参见[设置应用角标数量](/sdk/ios/message/set-app-badge)。",
       "description": "使用 iOS SDK 获取并持续维护账号总未读数。",
       "headings": [],
       "sourcePath": "/sdk/ios/conversation/managing-conversations/get-total-unread-count",
@@ -1448,7 +1450,7 @@
       "title": "搜索群组"
     },
     "/sdk/ios/group/group-applications/overview-group-applications": {
-      "body": "本菜单分别说明收到的申请、发出的申请、未处理数量、同意、拒绝和删除记录。固定 iOS SDK 没有独立的服务端角标查询或清除 selector。\n\n```objc\n- (void)startApplicationEvents { [[OIMManager callbacker] addGroupListener:self]; }\n- (void)stopApplicationEvents { [[OIMManager callbacker] removeGroupListener:self]; }\n- (void)onGroupApplicationAdded:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }\n- (void)onGroupApplicationAccepted:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }\n- (void)onGroupApplicationRejected:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }\n- (void)onGroupApplicationDeleted:(OIMGroupApplicationInfo *)item { [self removeApplication:item]; }\n```\n\n事件按 `groupID:userID` 合并。分页期间发生变化时，从第一页重新加载。",
+      "body": "本菜单分别说明收到的申请、发出的申请、未处理数量、同意、拒绝和删除记录。iOS SDK 没有独立查询或清除服务端角标的 selector。\n\n```objc\n- (void)startApplicationEvents { [[OIMManager callbacker] addGroupListener:self]; }\n- (void)stopApplicationEvents { [[OIMManager callbacker] removeGroupListener:self]; }\n- (void)onGroupApplicationAdded:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }\n- (void)onGroupApplicationAccepted:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }\n- (void)onGroupApplicationRejected:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }\n- (void)onGroupApplicationDeleted:(OIMGroupApplicationInfo *)item { [self removeApplication:item]; }\n```\n\n事件按 `groupID:userID` 合并。分页期间发生变化时，从第一页重新加载。",
       "description": "查询、处理和监听 iOS 入群申请。",
       "headings": [],
       "sourcePath": "/sdk/ios/group/group-applications/overview-group-applications",
@@ -1920,6 +1922,13 @@
       "headings": [],
       "sourcePath": "/sdk/ios/message/receiving-messages/custom-business-listener",
       "title": "接收自定义业务消息"
+    },
+    "/sdk/ios/message/set-app-badge": {
+      "body": "`setAppBadge:onSuccess:onFailure:` 用于向 SDK 上报应用当前展示的消息总未读数。\n\n```objc\n[[OIMManager manager] setAppBadge:totalUnreadCount\n                        onSuccess:^(NSString * _Nullable data) {\n                            // SDK 已接受本次角标值。\n                        }\n                        onFailure:^(NSInteger code, NSString * _Nullable msg) {\n                            // 根据业务需要处理错误。\n                        }];\n```\n\n`totalUnreadCount` 应为非负整数。通常在消息总未读数变化、登录同步完成或清空未读消息后更新；不要把单个会话的未读数作为应用总角标。\n\n成功回调只表示 SDK 已接受本次角标值，不会改变会话的本地未读数。若应用需要在系统桌面图标上展示角标，还应按 iOS 的通知与角标机制更新系统界面。消息总未读数的查询和持续维护见[获取消息总未读数](/sdk/ios/conversation/managing-conversations/get-total-unread-count)。",
+      "description": "把应用当前未读数同步给 OpenIMClientSDK 的推送角标状态。",
+      "headings": [],
+      "sourcePath": "/sdk/ios/message/set-app-badge",
+      "title": "设置应用角标数量"
     },
     "/sdk/ios/message/retrieving-messages/load-older-messages": {
       "body": "进入聊天页时用该 selector 加载第一页历史消息，继续上拉时传入当前边界消息的 `clientMsgID`。\n\n```objc\nOIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];\nparam.conversationID = conversationID;\nparam.startClientMsgID = startClientMsgID;\nparam.count = 20;\nparam.viewType = OIMGetHistoryViewTypeHistory;\n\n[[OIMManager manager] getAdvancedHistoryMessageList:param\n    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {\n        [self prependMessages:result.messageList ?: @[]];\n    }\n    onFailure:nil];\n```\n\n第一页的 `startClientMsgID` 可以为 `nil`。成功结果也允许为 `nil`，应先检查；非空时用 `messageList` 和 `isEnd` 更新分页状态。查询不触发新消息 delegate，合并时按 `conversationID:clientMsgID` 去重。",

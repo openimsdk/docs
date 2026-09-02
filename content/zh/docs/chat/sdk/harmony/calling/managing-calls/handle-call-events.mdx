@@ -19,10 +19,7 @@ import sdk, {
   EventOnRoomParticipantConnectedData,
   EventOnRoomParticipantDisconnectedData,
   OpenIMSDKEvent,
-  OpenIMSDKUnsubscribe,
 } from '@openimsdk/imsdk';
-
-const unsubscribes: OpenIMSDKUnsubscribe[] = [];
 const handleIncoming = (data: EventOnReceiveNewInvitationData): void => {
   showIncomingCall(data.invitation, data.offlinePush, data.participant);
 };
@@ -54,29 +51,40 @@ const handleParticipantDisconnected = (data: EventOnRoomParticipantDisconnectedD
   replaceCallParticipants(data.invitation.roomID, data.participants);
 };
 
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnReceiveNewInvitation, handleIncoming));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInviteeAccepted, handleAccepted));
-unsubscribes.push(
-  sdk.on(OpenIMSDKEvent.EventOnInviteeAcceptedByOtherDevice, handleAcceptedElsewhere),
+const unsubscribeIncoming = sdk.on(OpenIMSDKEvent.EventOnReceiveNewInvitation, handleIncoming);
+const unsubscribeAccepted = sdk.on(OpenIMSDKEvent.EventOnInviteeAccepted, handleAccepted);
+const unsubscribeAcceptedElsewhere = sdk.on(
+  OpenIMSDKEvent.EventOnInviteeAcceptedByOtherDevice,
+  handleAcceptedElsewhere,
 );
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInviteeRejected, handleRejected));
-unsubscribes.push(
-  sdk.on(OpenIMSDKEvent.EventOnInviteeRejectedByOtherDevice, handleRejectedElsewhere),
+const unsubscribeRejected = sdk.on(OpenIMSDKEvent.EventOnInviteeRejected, handleRejected);
+const unsubscribeRejectedElsewhere = sdk.on(
+  OpenIMSDKEvent.EventOnInviteeRejectedByOtherDevice,
+  handleRejectedElsewhere,
 );
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInvitationCancelled, handleCancelled));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnInvitationTimeout, handleTimeout));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnHangUp, handleHangUp));
-unsubscribes.push(
-  sdk.on(OpenIMSDKEvent.EventOnRoomParticipantConnected, handleParticipantConnected),
+const unsubscribeCancelled = sdk.on(OpenIMSDKEvent.EventOnInvitationCancelled, handleCancelled);
+const unsubscribeTimeout = sdk.on(OpenIMSDKEvent.EventOnInvitationTimeout, handleTimeout);
+const unsubscribeHangUp = sdk.on(OpenIMSDKEvent.EventOnHangUp, handleHangUp);
+const unsubscribeParticipantConnected = sdk.on(
+  OpenIMSDKEvent.EventOnRoomParticipantConnected,
+  handleParticipantConnected,
 );
-unsubscribes.push(
-  sdk.on(OpenIMSDKEvent.EventOnRoomParticipantDisconnected, handleParticipantDisconnected),
+const unsubscribeParticipantDisconnected = sdk.on(
+  OpenIMSDKEvent.EventOnRoomParticipantDisconnected,
+  handleParticipantDisconnected,
 );
 
 export function removeCallListeners(): void {
-  for (let index = 0; index < unsubscribes.length; index += 1) {
-    unsubscribes[index]();
-  }
+  unsubscribeIncoming();
+  unsubscribeAccepted();
+  unsubscribeAcceptedElsewhere();
+  unsubscribeRejected();
+  unsubscribeRejectedElsewhere();
+  unsubscribeCancelled();
+  unsubscribeTimeout();
+  unsubscribeHangUp();
+  unsubscribeParticipantConnected();
+  unsubscribeParticipantDisconnected();
 }
 ```
 

@@ -26,10 +26,8 @@ import sdk, {
   EventOnSyncServerProgressData,
   EventOnSyncServerStartData,
   OpenIMSDKEvent,
-  OpenIMSDKUnsubscribe,
 } from '@openimsdk/imsdk';
 
-const syncUnsubscribes: OpenIMSDKUnsubscribe[] = [];
 const handleSyncStart = (data: EventOnSyncServerStartData): void => {
   setSyncState('syncing', 0, data.reinstalled);
 };
@@ -44,15 +42,19 @@ const handleSyncFailed = (data: EventOnSyncServerFailedData): void => {
   setSyncState('failed', 0, data.reinstalled);
 };
 
-syncUnsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnSyncServerStart, handleSyncStart));
-syncUnsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnSyncServerProgress, handleSyncProgress));
-syncUnsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnSyncServerFinish, handleSyncFinish));
-syncUnsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnSyncServerFailed, handleSyncFailed));
+const unsubscribeSyncStart = sdk.on(OpenIMSDKEvent.EventOnSyncServerStart, handleSyncStart);
+const unsubscribeSyncProgress = sdk.on(
+  OpenIMSDKEvent.EventOnSyncServerProgress,
+  handleSyncProgress,
+);
+const unsubscribeSyncFinish = sdk.on(OpenIMSDKEvent.EventOnSyncServerFinish, handleSyncFinish);
+const unsubscribeSyncFailed = sdk.on(OpenIMSDKEvent.EventOnSyncServerFailed, handleSyncFailed);
 
 export function removeSyncListeners(): void {
-  for (let index = 0; index < syncUnsubscribes.length; index += 1) {
-    syncUnsubscribes[index]();
-  }
+  unsubscribeSyncStart();
+  unsubscribeSyncProgress();
+  unsubscribeSyncFinish();
+  unsubscribeSyncFailed();
 }
 ```
 
@@ -66,10 +68,8 @@ import sdk, {
   EventOnMigrationProgressData,
   OpenIMSDKEmptyPayload,
   OpenIMSDKEvent,
-  OpenIMSDKUnsubscribe,
 } from '@openimsdk/imsdk';
 
-const migrationUnsubscribes: OpenIMSDKUnsubscribe[] = [];
 const handleMigrationStart = (data: OpenIMSDKEmptyPayload): void => {
   setMigrationState('running', 0, '');
 };
@@ -83,20 +83,29 @@ const handleMigrationFailed = (data: EventOnMigrationFailedData): void => {
   setMigrationFailed(data.errCode, data.errMsg);
 };
 
-migrationUnsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnMigrationStart, handleMigrationStart));
-migrationUnsubscribes.push(
-  sdk.on(OpenIMSDKEvent.EventOnMigrationProgress, handleMigrationProgress),
+const unsubscribeMigrationStart = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationStart,
+  handleMigrationStart,
 );
-migrationUnsubscribes.push(
-  sdk.on(OpenIMSDKEvent.EventOnMigrationFinished, handleMigrationFinished),
+const unsubscribeMigrationProgress = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationProgress,
+  handleMigrationProgress,
 );
-migrationUnsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnMigrationFailed, handleMigrationFailed));
+const unsubscribeMigrationFinished = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationFinished,
+  handleMigrationFinished,
+);
+const unsubscribeMigrationFailed = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationFailed,
+  handleMigrationFailed,
+);
 
 export function removeMigrationListeners(): void {
-  for (let index = 0; index < migrationUnsubscribes.length; index += 1) {
-    migrationUnsubscribes[index]();
-  }
+  unsubscribeMigrationStart();
+  unsubscribeMigrationProgress();
+  unsubscribeMigrationFinished();
+  unsubscribeMigrationFailed();
 }
 ```
 
-退出账号或销毁全局状态层时，依次调用两个订阅数组中的函数。事件可能重复或交错到达，领域数据仍需用用户 ID、`conversationID`、`groupID`、`groupID:userID` 和 `clientMsgID` 等稳定标识合并。
+退出账号或销毁全局状态层时，分别调用 `removeSyncListeners()` 和 `removeMigrationListeners()`。事件可能重复或交错到达，领域数据仍需用用户 ID、`conversationID`、`groupID`、`groupID:userID` 和 `clientMsgID` 等稳定标识合并。

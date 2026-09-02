@@ -49,7 +49,7 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
   const isMobileMenuOpen = mobileMenuOpenPath === pathname;
   const legacyDocsUrl =
     locale === 'zh' ? `${siteConfig.legacyDocsUrl}/zh-Hans/` : `${siteConfig.legacyDocsUrl}/`;
-  const sdkPlatformSections = getSdkPlatformSections(locale);
+  const sdkPlatformSections = getSdkPlatformSections();
 
   useEffect(() => {
     if (!isSdkMenuOpen) return;
@@ -148,7 +148,14 @@ export function GlobalHeader({ locale: localeProp }: { locale?: Locale }) {
                         key={item.href}
                         onClick={closeSdkMenu}
                       >
-                        {locale === 'zh' ? (item.labelZh ?? item.label) : item.label}
+                        <span className="sdk-menu-item-label">
+                          <span>{locale === 'zh' ? (item.labelZh ?? item.label) : item.label}</span>
+                          {item.edition === 'enterprise' ? (
+                            <span className="sdk-menu-enterprise-badge">
+                              {locale === 'zh' ? '商业版' : 'Enterprise'}
+                            </span>
+                          ) : null}
+                        </span>
                       </Link>
                     ))}
                   </div>
@@ -217,7 +224,7 @@ function MobilePrimaryMenu({
   const menuLabel = locale === 'zh' ? '文档主菜单' : 'Documentation menu';
   const legacyDocsUrl =
     locale === 'zh' ? `${siteConfig.legacyDocsUrl}/zh-Hans/` : `${siteConfig.legacyDocsUrl}/`;
-  const sdkPlatformSections = getSdkPlatformSections(locale);
+  const sdkPlatformSections = getSdkPlatformSections();
 
   useEffect(() => {
     if (!open) return;
@@ -303,7 +310,16 @@ function MobilePrimaryMenu({
                           key={item.href}
                           onClick={closeMenu}
                         >
-                          {locale === 'zh' ? (item.labelZh ?? item.label) : item.label}
+                          <span className="sdk-menu-item-label">
+                            <span>
+                              {locale === 'zh' ? (item.labelZh ?? item.label) : item.label}
+                            </span>
+                            {item.edition === 'enterprise' ? (
+                              <span className="sdk-menu-enterprise-badge">
+                                {locale === 'zh' ? '商业版' : 'Enterprise'}
+                              </span>
+                            ) : null}
+                          </span>
                         </Link>
                       ))}
                     </div>

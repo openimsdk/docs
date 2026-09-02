@@ -169,30 +169,6 @@ if (loginStatus === LoginStatus.LoggedIn) {
 
 When switching accounts, do not overwrite the current session by calling `login()` with new parameters. Call `logout()` first and clear the previous account's state, then call `login()` with the new account.
 
-## Report browser runtime state
-
-Call `networkStatusChanged()` when browser connectivity is restored so the SDK can check its connection again. It accepts no business parameters. Call `setAppBackgroundStatus()` when the page moves between foreground and background: pass `true` when entering the background and `false` when returning to the foreground. While the application is in the background, newly delivered messages generally arrive through `OnRecvOfflineNewMessages`. See [Receive messages](/sdk/wasm/message/receiving-messages/receive-messages) for the complete listener.
-
-```ts
-const handleOnline = () => {
-  void openimsdk.networkStatusChanged();
-};
-
-const handleVisibilityChange = () => {
-  void openimsdk.setAppBackgroundStatus(document.hidden);
-};
-
-window.addEventListener('online', handleOnline);
-document.addEventListener('visibilitychange', handleVisibilityChange);
-
-function removeRuntimeListeners() {
-  window.removeEventListener('online', handleOnline);
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
-}
-```
-
-These methods only report runtime changes. They do not establish a new user session and cannot replace `login()` or token refresh. Call `removeRuntimeListeners()` when unmounting the application. See [Integrate by runtime](/sdk/wasm/getting-started/environment-specific-implementation) for other environments.
-
 ### Use access tokens
 
 The application backend issues the OpenIMSDK token and returns it to the browser. The frontend passes it to `login()` and restarts authentication when the token expires, becomes invalid, or the user switches accounts.
@@ -249,7 +225,7 @@ A successful `logout()` Promise means that the current SDK session has signed ou
 
 ### Disconnect only the WebSocket
 
-The OpenIM WASM SDK does not provide a separate method that disconnects only the WebSocket while retaining the signed-in session. Use `logout()` to deliberately end the current user's session. To report foreground/background or network changes, use the application lifecycle, `setAppBackgroundStatus()`, and `networkStatusChanged()` together with connection events.
+The OpenIM WASM SDK does not provide a separate method that disconnects only the WebSocket while retaining the signed-in session. Use `logout()` to deliberately end the current user's session. The SDK wrapper handles network recovery and page foreground/background transitions; continue to use connection events to update application state.
 
 ## Remove session event listeners
 

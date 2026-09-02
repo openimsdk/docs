@@ -82,14 +82,12 @@ const handleUserTokenInvalid = (errCode: number, errMsg: string) => {
   redirectToSignIn()
 }
 
-const sessionSubscriptions = [
-  onConnecting(handleConnecting),
-  onConnectSuccess(handleConnectSuccess),
-  onConnectFailed(handleConnectFailed),
-  onKickedOffline(handleKickedOffline),
-  onUserTokenExpired(handleUserTokenExpired),
-  onUserTokenInvalid(handleUserTokenInvalid),
-]
+const connectingSubscription = onConnecting(handleConnecting)
+const connectSuccessSubscription = onConnectSuccess(handleConnectSuccess)
+const connectFailedSubscription = onConnectFailed(handleConnectFailed)
+const kickedOfflineSubscription = onKickedOffline(handleKickedOffline)
+const tokenExpiredSubscription = onUserTokenExpired(handleUserTokenExpired)
+const tokenInvalidSubscription = onUserTokenInvalid(handleUserTokenInvalid)
 ```
 
 `onConnectFailed` 和 `onUserTokenInvalid` 的处理器都接收两个参数：数值类型的 `errCode` 和字符串类型的 `errMsg`。其余连接事件处理器不接收参数。
@@ -169,28 +167,6 @@ await updateToken({ token: nextToken })
 
 新 Token 仍由业务后端提供。更新成功表示 SDK 已接受本次 Token 更新；如果账号已经被强制下线、Token 无效或当前会话无法继续使用，则结束当前会话并重新进入登录流程。
 
-## 上报 App 生命周期
-
-宿主 App 进入后台时调用 `setAppBackgroundStatus(true)`，回到前台时调用 `setAppBackgroundStatus(false)`。网络恢复或重新进入前台后，可以调用 `networkStatusChanged()` 通知 SDK 检查连接。
-
-```uts
-import {
-  networkStatusChanged,
-  setAppBackgroundStatus,
-} from '@/uni_modules/unix-openim-sdk'
-
-function reportAppHidden() {
-  void setAppBackgroundStatus(true)
-}
-
-function reportAppVisible() {
-  void setAppBackgroundStatus(false)
-  void networkStatusChanged()
-}
-```
-
-在宿主 App 的 `onHide` 与 `onShow` 生命周期中分别调用这两个函数。它们只上报运行环境变化，不会创建新的登录会话，也不能替代 `login()` 或 Token 更新。
-
 ## 退出当前账号
 
 用户主动退出或切换账号时调用 `logout()`。Promise 成功后，再清理当前账号的会话、消息、未读数和业务状态。
@@ -210,9 +186,12 @@ clearCurrentSession()
 
 ```uts
 function removeSessionListeners() {
-  sessionSubscriptions.forEach((subscription) => {
-    off(subscription)
-  })
+  off(connectingSubscription)
+  off(connectSuccessSubscription)
+  off(connectFailedSubscription)
+  off(kickedOfflineSubscription)
+  off(tokenExpiredSubscription)
+  off(tokenInvalidSubscription)
 }
 ```
 

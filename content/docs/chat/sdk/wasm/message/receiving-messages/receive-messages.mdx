@@ -78,7 +78,7 @@ function handleNewMessages({ data }: { data: MessageItem[] }) {
 openimsdk.on(SdkEvent.OnRecvNewMessages, handleNewMessages);
 ```
 
-After the application calls `setAppBackgroundStatus(true)` to enter the background, newly arrived messages generally use `SdkEvent.OnRecvOfflineNewMessages` instead of the foreground `OnRecvNewMessages` event. Call `setAppBackgroundStatus(false)` when returning to the foreground. Handle these messages in the same way as real-time messages: filter for the current conversation, deduplicate by `clientMsgID`, and preserve chronological order. For foreground and background state calls, see [Authenticate and manage the session](/sdk/wasm/getting-started/authenticate-and-manage-session).
+While the application is in the background, newly arrived messages generally use `SdkEvent.OnRecvOfflineNewMessages` instead of the foreground `OnRecvNewMessages` event. Handle these messages in the same way as real-time messages: filter for the current conversation, deduplicate by `clientMsgID`, and preserve chronological order. The SDK wrapper handles foreground and background state, so business screens only need to process the corresponding message events.
 
 ```ts
 function handleOfflineMessages({ data }: { data: MessageItem[] }) {
@@ -128,7 +128,7 @@ If message events are registered in a global state layer, do not register the sa
 
 - Send a message to the target `groupID` from another signed-in account and confirm that the current browser receives it through `SdkEvent.OnRecvNewMessages`.
 - Confirm that the callback filters messages by the current group conversation's `conversationID` and renders each message only once after deduplication by `clientMsgID`.
-- Call `setAppBackgroundStatus(true)`, send another message from the other client, and confirm that the current client receives it through `SdkEvent.OnRecvOfflineNewMessages`. Call `setAppBackgroundStatus(false)` after returning to the foreground.
+- Move the application to the background, send another message from the other client, and confirm that the current client receives it through `SdkEvent.OnRecvOfflineNewMessages`. Return to the foreground and confirm that ordinary new-message events continue to work.
 - Set `isOnlineOnly` to `true` on the sending client and confirm that the receiving client gets the message through `SdkEvent.OnRecvOnlineOnlyMessage` and that the message does not enter local storage or history.
 - Revoke a group message and confirm that `SdkEvent.OnNewRecvMessageRevoked` updates the corresponding `clientMsgID` to the revoked state on the receiving client.
 - After opening the group chat, call `markConversationMessageAsRead(conversationID)` and confirm that the conversation unread count and total unread badge update through their events.

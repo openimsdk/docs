@@ -49,8 +49,11 @@ const clientSdkPlatforms = {
     localizedOutputPath: 'src/generated/uniapp-sdk-zh-content.json',
     sdkSourceKey: 'uniappSdk',
     sdkTag: '0.2.3',
-    sdkCommit: 'sha256:8de6339b8c5c8f02a031892589de8e519de03240a34c22cb3548b501212308c3',
-    previousSdkCommits: ['sha256:c4390e829a89ee2d3a5b781228102983d25e04dadfab3f7164a80a68fe01a90c'],
+    sdkCommit: 'git:30b9f9df560f17cab6488205bc07fd3ddd3ae612',
+    previousSdkCommits: [
+      'sha256:8de6339b8c5c8f02a031892589de8e519de03240a34c22cb3548b501212308c3',
+      'sha256:c4390e829a89ee2d3a5b781228102983d25e04dadfab3f7164a80a68fe01a90c',
+    ],
   },
   harmony: {
     id: 'harmony',

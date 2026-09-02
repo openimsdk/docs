@@ -1,6 +1,8 @@
 import { createMDX } from 'fumadocs-mdx/next';
 import flutterLegacyRedirectAliases from './data/structure/flutter-legacy-redirect-aliases.json' with { type: 'json' };
 import flutterSidebar from './data/structure/flutter-sidebar.json' with { type: 'json' };
+import harmonyLegacyRedirectAliases from './data/structure/harmony-legacy-redirect-aliases.json' with { type: 'json' };
+import harmonySidebar from './data/structure/harmony-sidebar.json' with { type: 'json' };
 import iosLegacyRedirectAliases from './data/structure/ios-legacy-redirect-aliases.json' with { type: 'json' };
 import iosSidebar from './data/structure/ios-sidebar.json' with { type: 'json' };
 import wasmLegacyRedirectEntries from './data/structure/wasm-legacy-redirects.json' with { type: 'json' };
@@ -55,6 +57,12 @@ const nextConfig = {
         sidebar: flutterSidebar,
         wasmEntries: wasmLegacyRedirectEntries,
         aliases: flutterLegacyRedirectAliases,
+      }),
+      ...buildClientSdkLegacyRedirects({
+        platformId: 'harmony',
+        sidebar: harmonySidebar,
+        wasmEntries: wasmLegacyRedirectEntries,
+        aliases: harmonyLegacyRedirectAliases,
       }),
     ];
   },

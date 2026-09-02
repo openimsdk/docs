@@ -162,30 +162,6 @@ if (loginStatus === LoginStatus.LoggedIn) {
 
 切换账号时不要直接用新参数覆盖当前登录。先调用 `logout()` 完成旧账号退出并清理旧账号状态，再使用新账号参数调用 `login()`。
 
-## 上报浏览器运行状态
-
-浏览器网络恢复时调用 `networkStatusChanged()`，通知 SDK 重新检查连接；该方法不接收业务参数。页面前后台变化时调用 `setAppBackgroundStatus()`：传入 `true` 表示进入后台，传入 `false` 表示回到前台。进入后台后，新到达的消息一般通过 `OnRecvOfflineNewMessages` 进入客户端，完整监听见[接收消息](/sdk/wasm/message/receiving-messages/receive-messages)。
-
-```ts
-const handleOnline = () => {
-  void openimsdk.networkStatusChanged();
-};
-
-const handleVisibilityChange = () => {
-  void openimsdk.setAppBackgroundStatus(document.hidden);
-};
-
-window.addEventListener('online', handleOnline);
-document.addEventListener('visibilitychange', handleVisibilityChange);
-
-function removeRuntimeListeners() {
-  window.removeEventListener('online', handleOnline);
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
-}
-```
-
-这些方法只上报运行环境变化，不会建立新的用户登录会话，也不能替代 `login()` 或 Token 刷新。应用卸载时调用 `removeRuntimeListeners()`。其他运行环境的处理方式见[按运行环境接入](/sdk/wasm/getting-started/environment-specific-implementation)。
-
 ### 使用访问 Token
 
 OpenIMSDK Token 由业务后端签发并返回给浏览器。前端把 Token 传给 `login()`，并在 Token 过期、无效或用户切换账号时重新进入认证流程。
@@ -242,7 +218,7 @@ clearCurrentSession();
 
 ### 仅断开 WebSocket
 
-OpenIM WASM SDK 不提供「仅断开 WebSocket、但保留登录会话」的独立方法。需要主动结束当前用户的会话时，使用 `logout()`。需要表达前后台或网络变化时，使用应用生命周期、`setAppBackgroundStatus()` 和 `networkStatusChanged()`，并配合连接事件处理。
+OpenIM WASM SDK 不提供「仅断开 WebSocket、但保留登录会话」的独立方法。需要主动结束当前用户的会话时，使用 `logout()`。网络恢复和页面前后台切换由 SDK 包装层统一适配，应用仍应通过连接事件更新界面状态。
 
 ## 清理登录相关事件监听
 

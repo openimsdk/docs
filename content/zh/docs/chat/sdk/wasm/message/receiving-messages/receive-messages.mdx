@@ -71,7 +71,7 @@ function handleNewMessages({ data }: { data: MessageItem[] }) {
 openimsdk.on(SdkEvent.OnRecvNewMessages, handleNewMessages);
 ```
 
-应用通过 `setAppBackgroundStatus(true)` 进入后台后，新到达的消息一般会走 `SdkEvent.OnRecvOfflineNewMessages`，而不是前台常用的 `OnRecvNewMessages`。回到前台时应再调用 `setAppBackgroundStatus(false)`。处理方式与实时新消息相同：筛选当前会话、按 `clientMsgID` 去重，并保持时间顺序。前后台状态调用见[认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)。
+应用处于后台时，新到达的消息一般会走 `SdkEvent.OnRecvOfflineNewMessages`，而不是前台常用的 `OnRecvNewMessages`。处理方式与实时新消息相同：筛选当前会话、按 `clientMsgID` 去重，并保持时间顺序。应用前后台状态由 SDK 包装层统一适配，业务页面只需处理对应的消息事件。
 
 ```ts
 function handleOfflineMessages({ data }: { data: MessageItem[] }) {
@@ -121,7 +121,7 @@ SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。
 
 - 在另一个已登录账号中向目标 `groupID` 发送消息，确认当前浏览器通过 `SdkEvent.OnRecvNewMessages` 收到消息。
 - 确认回调使用当前群聊的 `conversationID` 过滤消息，并且列表按 `clientMsgID` 去重后只渲染一次。
-- 调用 `setAppBackgroundStatus(true)` 后，再由另一端发送消息，确认当前端通过 `SdkEvent.OnRecvOfflineNewMessages` 收到；回到前台后调用 `setAppBackgroundStatus(false)`。
+- 将应用切换到后台后，再由另一端发送消息，确认当前端通过 `SdkEvent.OnRecvOfflineNewMessages` 收到；回到前台后确认普通新消息事件继续正常工作。
 - 发送方将 `isOnlineOnly` 设为 `true` 后，确认接收端通过 `SdkEvent.OnRecvOnlineOnlyMessage` 收到，且该消息不会进入本地消息存储或历史列表。
 - 撤回一条群消息，确认接收端通过 `SdkEvent.OnNewRecvMessageRevoked` 把对应 `clientMsgID` 更新为撤回态。
 - 进入群聊后调用 `markConversationMessageAsRead(conversationID)`，确认会话未读数和总未读角标随事件更新。

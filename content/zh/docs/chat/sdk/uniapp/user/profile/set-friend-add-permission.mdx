@@ -6,24 +6,23 @@ sourcePath: '/sdk/uniapp/user/profile/set-friend-add-permission'
 
 `addFriendPermission` 控制其他用户添加当前账号时是否需要审核。该账号级策略属于商业版能力，与昵称、头像等普通资料相互独立。
 
-| 数值 | 含义 |
-| --- | --- |
-| `0` | 允许其他用户发起好友申请，需要当前用户审核。 |
-| `1` | 允许添加并直接建立好友关系，不需要当前用户审核。 |
-| `2` | 不允许其他用户添加当前账号。 |
+| 常量 | 数值 | 含义 |
+| --- | --- | --- |
+| `OpenIMAddFriendPermissionAllowed` | `0` | 允许其他用户发起好友申请，需要当前用户审核。 |
+| `OpenIMAddFriendPermissionAllowedNoReview` | `1` | 允许添加并直接建立好友关系，不需要当前用户审核。 |
+| `OpenIMAddFriendPermissionDenied` | `2` | 不允许其他用户添加当前账号。 |
 
 ```uts
-import { setSelfInfo } from '@/uni_modules/unix-openim-sdk'
-
-const requireReview: 0 | 1 | 2 = 0
+import {
+  OpenIMAddFriendPermissionAllowed,
+  setSelfInfo,
+} from '@/uni_modules/unix-openim-sdk'
 
 await setSelfInfo({
-  addFriendPermission: requireReview,
+  addFriendPermission: OpenIMAddFriendPermissionAllowed,
 })
 ```
 
-当前 UTS 合同没有为这三个值导出具名常量，因此业务代码应集中封装数值与产品选项的映射，避免在多个页面散落无说明的数字。
-
 该设置只影响后续添加行为，不会删除已有好友关系，也不会自动接受、拒绝或删除已经存在的好友申请。
 
-Promise 成功表示设置请求已经完成，不等同于 `onSelfInfoUpdated()` 已到达。当前 `getSelfUserInfo()` 返回类型也没有公开 `addFriendPermission` 字段，因此不能通过该查询确认当前策略；需要展示时，应由业务层保存已确认的设置，或以服务端后续提供的查询合同为准。
+Promise 成功表示设置请求已经完成，不等同于 `onSelfInfoUpdated()` 已到达。需要确认当前策略时，重新调用[获取当前用户资料](/sdk/uniapp/user/profile/get-self-user-info)，并读取返回结果中的 `addFriendPermission`。

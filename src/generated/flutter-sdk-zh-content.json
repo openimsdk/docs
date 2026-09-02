@@ -1,8 +1,8 @@
 {
   "sourceContext": "chat/sdk/flutter",
   "sourceRoot": "content/zh/docs/chat/sdk/flutter",
-  "pageCount": 158,
-  "manualPageCount": 158,
+  "pageCount": 159,
+  "manualPageCount": 159,
   "pendingPaths": [],
   "reviewStates": {
     "/sdk/flutter/overview": "published",
@@ -127,6 +127,7 @@
     "/sdk/flutter/message/sending-messages/set-msg-send-progress-listener": "published",
     "/sdk/flutter/message/receiving-messages/receive-messages": "published",
     "/sdk/flutter/message/receiving-messages/custom-business-listener": "published",
+    "/sdk/flutter/message/set-app-badge": "published",
     "/sdk/flutter/message/retrieving-messages/load-older-messages": "published",
     "/sdk/flutter/message/retrieving-messages/load-newer-messages": "published",
     "/sdk/flutter/message/retrieving-messages/locate-messages-by-id": "published",
@@ -386,6 +387,7 @@
     "Pin or unpin a message": "置顶或取消置顶消息",
     "Publish a group announcement": "发布或更新群公告",
     "Receive custom business messages": "接收自定义业务消息",
+    "Set the app badge count": "设置应用角标数量",
     "Receive messages": "接收消息",
     "receive-messages": "接收消息",
     "Receiving messages": "接收消息",
@@ -1080,14 +1082,14 @@
       "title": "重置群聊 @ 状态"
     },
     "/sdk/flutter/conversation/managing-conversations/mark-conversation-read": {
-      "body": "用户打开会话并阅读完当前可见消息后调用：\n\n```dart\nawait OpenIM.iMManager.conversationManager.markConversationMessageAsRead(\n  conversationID: conversationID,\n);\n```\n\n不要在只预览通知或后台收到消息时提前标记。Future 成功表示请求完成，不等于 `onConversationChanged` 已到达；随后按 `conversationID` 合并最新 `ConversationInfo`，需要立即确认时重新查询该会话。\n\n对于单聊，当前用户标记会话已读后，对端可通过 `onRecvC2CReadReceipt` 收到消息已读回执。本页是该回调的正文归属页。对每个 `ReadReceiptInfo` 先验证单聊 `sessionType` 和非空 `userID`，用对端用户解析 `conversationID`，再按 `msgIDList` 中的非空 `clientMsgID` 更新已读状态。\n\n```dart\nvoid handleC2CReadReceipts(List<ReadReceiptInfo> items) {\n  for (final receipt in items) {\n    mergeC2CReadReceipt(receipt);\n  }\n}\n```\n\n把 `handleC2CReadReceipts` 传给应用唯一 `OnAdvancedMsgListener` 的 `onRecvC2CReadReceipt`；集中设置方式见[事件概览](/sdk/flutter/events/overview-events)。固定 Flutter SDK 没有群消息成员级回执能力。",
+      "body": "用户打开会话并阅读完当前可见消息后调用：\n\n```dart\nawait OpenIM.iMManager.conversationManager.markConversationMessageAsRead(\n  conversationID: conversationID,\n);\n```\n\n不要在只预览通知或后台收到消息时提前标记。Future 成功表示请求完成，不等于 `onConversationChanged` 已到达；随后按 `conversationID` 合并最新 `ConversationInfo`，需要立即确认时重新查询该会话。\n\n对于单聊，当前用户标记会话已读后，对端可通过 `onRecvC2CReadReceipt` 收到消息已读回执。本页是该回调的正文归属页。对每个 `ReadReceiptInfo` 先验证单聊 `sessionType` 和非空 `userID`，用对端用户解析 `conversationID`，再按 `msgIDList` 中的非空 `clientMsgID` 更新已读状态。\n\n```dart\nvoid handleC2CReadReceipts(List<ReadReceiptInfo> items) {\n  for (final receipt in items) {\n    mergeC2CReadReceipt(receipt);\n  }\n}\n```\n\n把 `handleC2CReadReceipts` 传给应用唯一 `OnAdvancedMsgListener` 的 `onRecvC2CReadReceipt`；集中设置方式见[事件概览](/sdk/flutter/events/overview-events)。Flutter SDK 不提供群消息成员级回执能力。",
       "description": "使用 Flutter SDK 将指定会话的消息标记为已读。",
       "headings": [],
       "sourcePath": "/sdk/flutter/conversation/managing-conversations/mark-conversation-read",
       "title": "标记会话已读"
     },
     "/sdk/flutter/conversation/managing-conversations/get-total-unread-count": {
-      "body": "`getTotalUnreadMsgCount()` 返回当前账号所有会话在调用时的总未读数，不要把当前已加载分页中的 `unreadCount` 简单相加。\n\n```dart\nfinal value = await OpenIM.iMManager.conversationManager\n    .getTotalUnreadMsgCount();\nfinal totalUnread = int.tryParse(value.toString()) ?? 0;\nupdateApplicationBadge(totalUnread);\n```\n\n查询本身不会触发回调。后续总数变化由应用唯一的 `OnConversationListener.onTotalUnreadMessageCountChanged` 更新；组合 listener 与设置入口见[事件概览](/sdk/flutter/events/overview-events)。",
+      "body": "`getTotalUnreadMsgCount()` 返回当前账号所有会话在调用时的总未读数，不要把当前已加载分页中的 `unreadCount` 简单相加。\n\n```dart\nfinal value = await OpenIM.iMManager.conversationManager\n    .getTotalUnreadMsgCount();\nfinal totalUnread = int.tryParse(value.toString()) ?? 0;\nupdateApplicationBadge(totalUnread);\n```\n\n查询本身不会触发回调。后续总数变化由应用唯一的 `OnConversationListener.onTotalUnreadMessageCountChanged` 更新；组合 listener 与设置入口见[事件概览](/sdk/flutter/events/overview-events)。\n\n需要把该数值同步给 SDK 的推送角标状态时，参见[设置应用角标数量](/sdk/flutter/message/set-app-badge)。",
       "description": "使用 Flutter SDK 获取账号总未读数。",
       "headings": [],
       "sourcePath": "/sdk/flutter/conversation/managing-conversations/get-total-unread-count",
@@ -1222,7 +1224,7 @@
       "title": "查询会话所属分组"
     },
     "/sdk/flutter/conversation/managing-conversation-groups/update-conversation-group": {
-      "body": "使用 `updateConversationGroup()` 修改已有会话分组。`conversationGroupID` 必填，只传本次需要更新的字段。\n\n## 参数说明\n\n| 字段 | 说明 |\n| --- | --- |\n| `conversationGroupID` | 目标会话分组 ID，必填。 |\n| `name` | 可选的新名称。 |\n| `ex` | 可选的新扩展字符串。 |\n| `hidden` | 可选的隐藏状态。 |\n| `order` | 可选的顺序值。 |\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.updateConversationGroup(\n  req: UpdateConversationGroupReq(\n    conversationGroupID: conversationGroupID,\n    name: '重点工作',\n    hidden: false,\n  ),\n);\n```\n\n## 返回结果\n\n当前 Flutter 声明返回未具体化的 `Future`。成功只表示当前更新请求已完成，不应声称返回更新后的 `ConversationGroupInfo`。\n\n之后可通过 `onConversationGroupChanged` 更新分组，或重新查询确认当前结果；完整 listener 见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
+      "body": "使用 `updateConversationGroup()` 修改已有会话分组。`conversationGroupID` 必填，只传本次需要更新的字段。\n\n## 参数说明\n\n| 字段 | 说明 |\n| --- | --- |\n| `conversationGroupID` | 目标会话分组 ID，必填。 |\n| `name` | 可选的新名称。 |\n| `ex` | 可选的新扩展字符串。 |\n| `hidden` | 可选的隐藏状态。 |\n| `order` | 可选的顺序值。 |\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.updateConversationGroup(\n  req: UpdateConversationGroupReq(\n    conversationGroupID: conversationGroupID,\n    name: '重点工作',\n    hidden: false,\n  ),\n);\n```\n\n## 返回结果\n\n该方法返回未具体化的 `Future`。成功只表示当前更新请求已完成，不返回更新后的 `ConversationGroupInfo`。\n\n之后可通过 `onConversationGroupChanged` 更新分组，或重新查询确认当前结果；完整 listener 见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
       "description": "使用 updateConversationGroup 更新 Flutter 会话分组。",
       "headings": [
         {
@@ -1240,7 +1242,7 @@
       "title": "更新会话分组"
     },
     "/sdk/flutter/conversation/managing-conversation-groups/set-conversation-group-order": {
-      "body": "使用 `setConversationGroupOrder()` 批量调整会话分组顺序。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.setConversationGroupOrder(\n  orders: [\n    ConversationGroupOrder(groupID: firstGroupID, order: 100),\n    ConversationGroupOrder(groupID: secondGroupID, order: 200),\n  ],\n);\n```\n\n`ConversationGroupOrder.groupID` 表示 `conversationGroupID`，不是 OpenIM 聊天群组 ID。每一项同时提供目标分组和新的顺序值。\n\n## 返回结果\n\n当前 Flutter 声明返回未具体化的 `Future`。成功表示排序请求已完成；之后可通过 `onConversationGroupChanged` 更新顺序，或重新查询确认当前结果。\n\n完整 listener 见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
+      "body": "使用 `setConversationGroupOrder()` 批量调整会话分组顺序。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.setConversationGroupOrder(\n  orders: [\n    ConversationGroupOrder(groupID: firstGroupID, order: 100),\n    ConversationGroupOrder(groupID: secondGroupID, order: 200),\n  ],\n);\n```\n\n`ConversationGroupOrder.groupID` 表示 `conversationGroupID`，不是 OpenIM 聊天群组 ID。每一项同时提供目标分组和新的顺序值。\n\n## 返回结果\n\n该方法返回未具体化的 `Future`。成功表示排序请求已完成；之后可通过 `onConversationGroupChanged` 更新顺序，或重新查询确认当前结果。\n\n完整 listener 见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
       "description": "使用 setConversationGroupOrder 批量设置 Flutter 会话分组顺序。",
       "headings": [
         {
@@ -1253,7 +1255,7 @@
       "title": "调整会话分组顺序"
     },
     "/sdk/flutter/conversation/managing-conversation-groups/add-conversations-to-groups": {
-      "body": "使用 `addConversationsToGroups()` 将一个或多个会话加入一个或多个会话分组。该操作只增加关联，不会创建会话或改变消息发送目标。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.addConversationsToGroups(\n  conversationGroupIDs: [conversationGroupID],\n  conversationIDs: [conversationID],\n);\n```\n\n`conversationGroupIDs` 和 `conversationIDs` 都必填，分别表示目标分组和要加入的会话。\n\n## 返回结果\n\n固定 Flutter 声明返回未具体化的 `Future`。成功表示关联请求已完成，不等同于 listener 已到达所有端。\n\n之后新增的关联由 `onConversationGroupMemberAdded` 提供，完整处理见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
+      "body": "使用 `addConversationsToGroups()` 将一个或多个会话加入一个或多个会话分组。该操作只增加关联，不会创建会话或改变消息发送目标。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.addConversationsToGroups(\n  conversationGroupIDs: [conversationGroupID],\n  conversationIDs: [conversationID],\n);\n```\n\n`conversationGroupIDs` 和 `conversationIDs` 都必填，分别表示目标分组和要加入的会话。\n\n## 返回结果\n\n该方法返回未具体化的 `Future`。成功表示关联请求已完成，不等同于 listener 已到达所有端。\n\n之后新增的关联由 `onConversationGroupMemberAdded` 提供，完整处理见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
       "description": "使用 addConversationsToGroups 添加 Flutter 会话分组关联。",
       "headings": [
         {
@@ -1266,7 +1268,7 @@
       "title": "添加会话到分组"
     },
     "/sdk/flutter/conversation/managing-conversation-groups/remove-conversations-from-groups": {
-      "body": "使用 `removeConversationsFromGroups()` 从一个或多个会话分组移除会话。该操作只删除关联，不会删除会话或清空消息。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.removeConversationsFromGroups(\n  conversationGroupIDs: [conversationGroupID],\n  conversationIDs: [conversationID],\n);\n```\n\n`conversationGroupIDs` 和 `conversationIDs` 都必填，分别表示目标分组和要移除的会话。\n\n## 返回结果\n\n固定 Flutter 声明返回未具体化的 `Future`。成功表示关联移除请求已完成，不返回更新后的分组对象。\n\n之后的关联移除变化由 `onConversationGroupMemberDeleted` 提供，完整处理见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
+      "body": "使用 `removeConversationsFromGroups()` 从一个或多个会话分组移除会话。该操作只删除关联，不会删除会话或清空消息。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.removeConversationsFromGroups(\n  conversationGroupIDs: [conversationGroupID],\n  conversationIDs: [conversationID],\n);\n```\n\n`conversationGroupIDs` 和 `conversationIDs` 都必填，分别表示目标分组和要移除的会话。\n\n## 返回结果\n\n该方法返回未具体化的 `Future`。成功表示关联移除请求已完成，不返回更新后的分组对象。\n\n之后的关联移除变化由 `onConversationGroupMemberDeleted` 提供，完整处理见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
       "description": "使用 removeConversationsFromGroups 移除 Flutter 会话分组关联。",
       "headings": [
         {
@@ -1279,7 +1281,7 @@
       "title": "从分组移除会话"
     },
     "/sdk/flutter/conversation/managing-conversation-groups/delete-conversation-group": {
-      "body": "使用 `deleteConversationGroup()` 删除指定会话分组及其会话关联。该操作不会删除分组中的会话或消息。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.deleteConversationGroup(\n  conversationGroupID: conversationGroupID,\n);\n```\n\n`conversationGroupID` 表示会话分组 ID，不是 OpenIM 聊天群组 ID。\n\n## 返回结果\n\n当前 Flutter 声明返回未具体化的 `Future`。成功表示删除请求已完成；可以先按 `conversationGroupID` 移除本地分组，再通过 `onConversationGroupDeleted` 更新状态，或重新查询确认当前结果。\n\n完整 listener 见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
+      "body": "使用 `deleteConversationGroup()` 删除指定会话分组及其会话关联。该操作不会删除分组中的会话或消息。\n\n```dart\nawait OpenIM.iMManager.conversationGroupManager.deleteConversationGroup(\n  conversationGroupID: conversationGroupID,\n);\n```\n\n`conversationGroupID` 表示会话分组 ID，不是 OpenIM 聊天群组 ID。\n\n## 返回结果\n\n该方法返回未具体化的 `Future`。成功表示删除请求已完成；可以先按 `conversationGroupID` 移除本地分组，再通过 `onConversationGroupDeleted` 更新状态，或重新查询确认当前结果。\n\n完整 listener 见[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。",
       "description": "使用 deleteConversationGroup 删除 Flutter 会话分组。",
       "headings": [
         {
@@ -1437,7 +1439,7 @@
       "title": "搜索群组"
     },
     "/sdk/flutter/group/group-applications/overview-group-applications": {
-      "body": "固定 Flutter SDK 提供收到/发出申请、未处理数量、同意和拒绝五个方法，没有角标读取、角标清除或删除申请记录方法。\n\n申请事件通过应用唯一的 `OnGroupListener` 处理，按 `groupID:userID` 合并；分页期间发生变化时重置分页。",
+      "body": "Flutter SDK 提供查询收到和发出的申请、获取未处理数量、同意申请和拒绝申请的方法，不提供角标读取、角标清除或删除申请记录的方法。\n\n申请事件通过应用唯一的 `OnGroupListener` 处理，按 `groupID:userID` 合并；分页期间发生变化时重置分页。",
       "description": "查询、处理和监听 Flutter 入群申请。",
       "headings": [],
       "sourcePath": "/sdk/flutter/group/group-applications/overview-group-applications",
@@ -1869,7 +1871,7 @@
       "title": "发送不经 OSS 的消息"
     },
     "/sdk/flutter/message/sending-messages/set-msg-send-progress-listener": {
-      "body": "媒体消息通过 `sendMessage()` 上传时，在消息状态层设置一次发送进度 listener：\n\n```dart\nOpenIM.iMManager.messageManager.setMsgSendProgressListener(\n  OnMsgSendProgressListener(\n    onProgress: (clientMsgID, progress) {\n      updateMessageUploadProgress(clientMsgID, progress);\n    },\n  ),\n);\n```\n\n使用 `clientMsgID` 关联消息气泡，不要按文件名或列表位置匹配。进度到达 `100` 不代表发送成功，最终状态仍以 `sendMessage()` 的 Future 为准。\n\n固定 Flutter SDK 没有公开移除方法。应用应只设置一个 listener，并在切换账号时隔离旧状态。独立上传头像或业务文件见[上传文件](/sdk/flutter/file-uploads/upload-file)。",
+      "body": "媒体消息通过 `sendMessage()` 上传时，在消息状态层设置一次发送进度 listener：\n\n```dart\nOpenIM.iMManager.messageManager.setMsgSendProgressListener(\n  OnMsgSendProgressListener(\n    onProgress: (clientMsgID, progress) {\n      updateMessageUploadProgress(clientMsgID, progress);\n    },\n  ),\n);\n```\n\n使用 `clientMsgID` 关联消息气泡，不要按文件名或列表位置匹配。进度到达 `100` 不代表发送成功，最终状态仍以 `sendMessage()` 的 Future 为准。\n\nSDK 没有公开移除该 listener 的方法。应用应只设置一个 listener，并在切换账号时隔离旧状态。独立上传头像或业务文件见[上传文件](/sdk/flutter/file-uploads/upload-file)。",
       "description": "设置 Flutter 消息发送进度 listener。",
       "headings": [],
       "sourcePath": "/sdk/flutter/message/sending-messages/set-msg-send-progress-listener",
@@ -1909,6 +1911,13 @@
       "headings": [],
       "sourcePath": "/sdk/flutter/message/receiving-messages/custom-business-listener",
       "title": "接收自定义业务消息"
+    },
+    "/sdk/flutter/message/set-app-badge": {
+      "body": "`setAppBadge()` 用于向 SDK 上报应用当前展示的消息总未读数。\n\n```dart\nawait OpenIM.iMManager.messageManager.setAppBadge(totalUnreadCount);\n```\n\n`totalUnreadCount` 应为非负整数。通常在消息总未读数变化、登录同步完成或清空未读消息后更新；不要把单个会话的未读数作为应用总角标。\n\nFuture 成功只表示 SDK 已接受本次角标值，不会改变会话的本地未读数。若应用需要在系统桌面图标上展示角标，还应通过目标平台对应的通知或角标插件更新系统界面。消息总未读数的查询和持续维护见[获取消息总未读数](/sdk/flutter/conversation/managing-conversations/get-total-unread-count)。",
+      "description": "把应用当前未读数同步给 OpenIMClientSDK 的推送角标状态。",
+      "headings": [],
+      "sourcePath": "/sdk/flutter/message/set-app-badge",
+      "title": "设置应用角标数量"
     },
     "/sdk/flutter/message/retrieving-messages/load-older-messages": {
       "body": "第一页不传 `startMsg`；继续上拉时，把当前最早的完整 `Message` 作为游标。\n\n```dart\nfinal page = await OpenIM.iMManager.messageManager\n    .getAdvancedHistoryMessageList(\n  conversationID: conversationID,\n  startMsg: oldestMessage,\n  count: 30,\n  viewType: GetHistoryViewType.history,\n);\n\nprependMessages(page.messageList ?? const <Message>[]);\n```\n\n返回 `AdvancedMessage`；空列表且 `isEnd == true` 时停止分页。Flutter 使用完整消息而不是字符串 ID 作为边界，但列表仍应按非空 `clientMsgID` 去重。查询不会触发新消息 listener。",
@@ -2015,7 +2024,7 @@
       "title": "查询输入状态"
     },
     "/sdk/flutter/message/composing-messages/check-speech-to-text": {
-      "body": "```dart\ntry {\n  await OpenIM.iMManager.messageManager.speechToTextCapabilities();\n  setTranscriptionAvailable(true);\n} catch (error) {\n  setTranscriptionAvailable(false);\n}\n```\n\n固定 Flutter SDK 返回 `Future<void>`，成功只表示可以继续展示转写入口，不会返回格式、采样率、时长或大小字段。精确限制应来自与部署一致的业务配置，不能虚构能力对象。",
+      "body": "```dart\ntry {\n  await OpenIM.iMManager.messageManager.speechToTextCapabilities();\n  setTranscriptionAvailable(true);\n} catch (error) {\n  setTranscriptionAvailable(false);\n}\n```\n\n该方法返回 `Future<void>`。成功只表示可以继续展示转写入口，不会返回格式、采样率、时长或大小字段。精确限制应来自与部署一致的业务配置，不能虚构能力对象。",
       "description": "使用 Flutter SDK 检查当前部署是否支持语音识别。",
       "headings": [],
       "sourcePath": "/sdk/flutter/message/composing-messages/check-speech-to-text",
@@ -2043,7 +2052,7 @@
       "title": "删除本地消息"
     },
     "/sdk/flutter/message/managing-messages/delete-saved-message": {
-      "body": "```dart\nawait OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(\n  conversationID: conversationID,\n  clientMsgID: clientMsgID,\n);\n```\n\nFuture 成功不等于其他设备或成员的副本已删除，也不是撤回。固定 Flutter SDK 没有批量同步删除 API。\n\n`onMsgDeleted` 是本页归属事件，应纳入唯一的 `OnAdvancedMsgListener`。Flutter `Message` 没有 `conversationID`，应根据消息路由解析会话，再按 `conversationID:clientMsgID` 幂等移除；设置入口见[事件概览](/sdk/flutter/events/overview-events)。",
+      "body": "```dart\nawait OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(\n  conversationID: conversationID,\n  clientMsgID: clientMsgID,\n);\n```\n\nFuture 成功不等于其他设备或成员的副本已删除，也不是撤回。Flutter SDK 不提供批量同步删除 API。\n\n`onMsgDeleted` 是本页归属事件，应纳入唯一的 `OnAdvancedMsgListener`。Flutter `Message` 没有 `conversationID`，应根据消息路由解析会话，再按 `conversationID:clientMsgID` 幂等移除；设置入口见[事件概览](/sdk/flutter/events/overview-events)。",
       "description": "使用 Flutter SDK 删除当前账号在指定会话中的一条消息。",
       "headings": [],
       "sourcePath": "/sdk/flutter/message/managing-messages/delete-saved-message",
@@ -2155,7 +2164,7 @@
       "title": "设置消息本地扩展"
     },
     "/sdk/flutter/file-uploads/set-upload-file-listener": {
-      "body": "在统一上传状态层设置一次 `OnUploadFileListener`：\n\n```dart\nOpenIM.iMManager.setUploadFileListener(\n  OnUploadFileListener(\n    onUploadProgress: (id, fileSize, streamSize, storageSize) {\n      updateFileProgress(id, streamSize, fileSize);\n    },\n    onComplete: (id, size, url, type) {\n      completeFileUpload(id, size, url, type);\n    },\n  ),\n);\n```\n\n固定 Flutter SDK 只保存一个 listener，后设值会覆盖旧值，并且没有公开移除方法。切换账号时应停止旧状态分发并清空任务映射。回调按业务 `id` 合并，不要按文件名或列表位置关联。",
+      "body": "在统一上传状态层设置一次 `OnUploadFileListener`：\n\n```dart\nOpenIM.iMManager.setUploadFileListener(\n  OnUploadFileListener(\n    onUploadProgress: (id, fileSize, streamSize, storageSize) {\n      updateFileProgress(id, streamSize, fileSize);\n    },\n    onComplete: (id, size, url, type) {\n      completeFileUpload(id, size, url, type);\n    },\n  ),\n);\n```\n\nSDK 只保存一个 listener，后设置的 listener 会覆盖前一个，并且没有公开移除方法。切换账号时应停止旧状态分发并清空任务映射。回调按业务 `id` 合并，不要按文件名或列表位置关联。",
       "description": "设置 Flutter SDK 的独立文件上传 listener。",
       "headings": [],
       "sourcePath": "/sdk/flutter/file-uploads/set-upload-file-listener",

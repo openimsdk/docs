@@ -29,16 +29,13 @@ export const webCompatibleSdkPlatforms = ['wasm', 'electron', 'miniprogram'] as 
 /** Temporarily hidden from SDK nav, home cards, and platform switcher. Routes remain. */
 export const hiddenSdkPlatforms = [] as const;
 
-export function isSdkPlatformVisible(
-  platform?: string | null,
-  locale?: Locale,
-): boolean {
+export function isSdkPlatformVisible(platform?: string | null): boolean {
   if (!platform) return true;
-  if ((platform === 'uniapp' || platform === 'harmony') && locale === 'en') return false;
   return !(hiddenSdkPlatforms as readonly string[]).includes(platform);
 }
 
 export type SdkPlatformItem = {
+  edition?: 'enterprise';
   href: string;
   label: string;
   labelZh?: string;
@@ -60,7 +57,12 @@ export const sdkPlatformSections: SdkPlatformSection[] = [
       { label: 'Android', platform: 'android', href: '/sdk/android/overview' },
       { label: 'Flutter', platform: 'flutter', href: '/sdk/flutter/overview' },
       { label: 'React Native', platform: 'react-native', href: '/sdk/react-native/overview' },
-      { label: 'HarmonyOS', platform: 'harmony', href: '/sdk/harmony/overview' },
+      {
+        edition: 'enterprise',
+        label: 'HarmonyOS',
+        platform: 'harmony',
+        href: '/sdk/harmony/overview',
+      },
       {
         label: 'uni-app / uni-app x',
         platform: 'uniapp',
@@ -101,11 +103,11 @@ export const sdkPlatformSections: SdkPlatformSection[] = [
 
 export const sdkPlatformItems = sdkPlatformSections.flatMap((section) => section.items);
 
-export function getSdkPlatformSections(locale: Locale): SdkPlatformSection[] {
+export function getSdkPlatformSections(): SdkPlatformSection[] {
   return sdkPlatformSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => isSdkPlatformVisible(item.platform, locale)),
+      items: section.items.filter((item) => isSdkPlatformVisible(item.platform)),
     }))
     .filter((section) => section.items.length > 0);
 }

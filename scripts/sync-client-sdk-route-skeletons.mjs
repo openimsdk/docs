@@ -59,11 +59,12 @@ const uniappRouteTitles = {
   'file-uploads/cancel-upload': 'Cancel a file upload',
 };
 
+const sharedRouteTitles = {
+  'message/set-app-badge': 'Set the app badge count',
+};
+
 const harmonyRouteTitles = {
   'getting-started/get-sdk-version': 'Get the SDK version',
-  'app-integration/report-app-background-status': 'Report the app background status',
-  'app-integration/report-network-changes': 'Report network changes',
-  'app-integration/set-app-badge': 'Set the app badge count',
   'user/friends/get-friend-count': 'Get the friend count',
   'conversation/retrieving-conversations/get-active-conversation-count':
     'Get the active conversation count',
@@ -81,6 +82,7 @@ const harmonyRouteTitles = {
 };
 
 function getPlatformExtensionTitle(platformId, suffix) {
+  if (sharedRouteTitles[suffix]) return sharedRouteTitles[suffix];
   if (platformId === 'android') return androidRouteTitles[suffix];
   if (platformId === 'uniapp') return uniappRouteTitles[suffix];
   if (platformId === 'harmony') return harmonyRouteTitles[suffix];

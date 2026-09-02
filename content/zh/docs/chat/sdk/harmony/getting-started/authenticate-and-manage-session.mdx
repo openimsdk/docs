@@ -15,10 +15,7 @@ import sdk, {
   EventOnUserTokenInvalidData,
   OpenIMSDKEmptyPayload,
   OpenIMSDKEvent,
-  OpenIMSDKUnsubscribe,
 } from '@openimsdk/imsdk';
-
-const unsubscribes: OpenIMSDKUnsubscribe[] = [];
 
 const handleConnecting = (data: OpenIMSDKEmptyPayload): void => {
   setConnectionState('connecting');
@@ -41,12 +38,12 @@ const handleTokenInvalid = (data: EventOnUserTokenInvalidData): void => {
   showTokenInvalidMessage(data.errMsg);
 };
 
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnConnecting, handleConnecting));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnConnectSuccess, handleConnected));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnConnectFailed, handleConnectFailed));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnKickedOffline, handleKickedOffline));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnUserTokenExpired, handleTokenExpired));
-unsubscribes.push(sdk.on(OpenIMSDKEvent.EventOnUserTokenInvalid, handleTokenInvalid));
+const unsubscribeConnecting = sdk.on(OpenIMSDKEvent.EventOnConnecting, handleConnecting);
+const unsubscribeConnected = sdk.on(OpenIMSDKEvent.EventOnConnectSuccess, handleConnected);
+const unsubscribeConnectFailed = sdk.on(OpenIMSDKEvent.EventOnConnectFailed, handleConnectFailed);
+const unsubscribeKickedOffline = sdk.on(OpenIMSDKEvent.EventOnKickedOffline, handleKickedOffline);
+const unsubscribeTokenExpired = sdk.on(OpenIMSDKEvent.EventOnUserTokenExpired, handleTokenExpired);
+const unsubscribeTokenInvalid = sdk.on(OpenIMSDKEvent.EventOnUserTokenInvalid, handleTokenInvalid);
 ```
 
 同一账号在当前版本中按多端互斥处理。收到 `EventOnKickedOffline` 后，应结束当前登录会话、清理该账号的页面状态，并回到登录流程。
@@ -102,9 +99,12 @@ await sdk.updateToken(request);
 ```ts
 await sdk.logout();
 
-for (let index = 0; index < unsubscribes.length; index += 1) {
-  unsubscribes[index]();
-}
+unsubscribeConnecting();
+unsubscribeConnected();
+unsubscribeConnectFailed();
+unsubscribeKickedOffline();
+unsubscribeTokenExpired();
+unsubscribeTokenInvalid();
 ```
 
 退出成功后清理当前账号的业务状态。只有进程不再使用 SDK 时才继续调用 `unInitSDK()`；普通账号切换不需要销毁整个原生运行时。

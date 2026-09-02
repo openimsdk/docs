@@ -179,7 +179,7 @@ export async function renderDocumentationPage(
     .filter(
       (item) =>
         item.product !== 'sdk' ||
-        isSdkPlatformVisible(item.platform, locale) ||
+        isSdkPlatformVisible(item.platform) ||
         item.platform === effectiveRoute.platform,
     )
     .map((item) => ({

@@ -13,13 +13,7 @@ type OwnershipEntry = {
   commercial?: boolean;
 };
 
-type NativePlatform =
-  | 'android'
-  | 'flutter'
-  | 'ios'
-  | 'react-native'
-  | 'uniapp'
-  | 'harmony';
+type NativePlatform = 'android' | 'flutter' | 'ios' | 'react-native' | 'uniapp' | 'harmony';
 
 type ClientSdkAuditPage = {
   currentPath: string;
@@ -66,13 +60,7 @@ const sharedCommercialFieldNames = [
 const platformCommercialFieldNames: Record<'wasm' | NativePlatform, string[]> = {
   android: [...sharedCommercialFieldNames, 'addFriendPermission'],
   flutter: sharedCommercialFieldNames,
-  harmony: [
-    ...sharedCommercialFieldNames,
-    'addFriendPermission',
-    'isMarked',
-    'isShowGroupRead',
-    'searchText',
-  ],
+  harmony: [],
   ios: sharedCommercialFieldNames,
   'react-native': [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked'],
   uniapp: [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked'],
@@ -81,15 +69,9 @@ const platformCommercialFieldNames: Record<'wasm' | NativePlatform, string[]> = 
 
 const pageCommercialFieldNames: Record<string, string[]> = {
   '/sdk/android/user/user-profile/get-self-local-user-info': ['attachedInfo'],
-  '/sdk/harmony/conversation/managing-conversations/set-conversation-remark': ['remark'],
-  '/sdk/harmony/conversation/overview-conversation': ['remark'],
-  '/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
-  '/sdk/harmony/message/retrieving-messages/load-newer-messages': ['isReverse'],
   '/sdk/react-native/conversation/managing-conversations/set-conversation-remark': ['remark'],
   '/sdk/react-native/conversation/overview-conversation': ['remark'],
-  '/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list': [
-    'remark',
-  ],
+  '/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
   '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark': ['remark'],
   '/sdk/uniapp/conversation/overview-conversation': ['remark'],
   '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
@@ -112,20 +94,15 @@ const pageCommercialSymbolNames: Record<string, string[]> = {
     'setOneConversationPrivateChat',
   ],
   '/sdk/android/user/user-profile/set-friend-add-permission': ['setAddFriendPermission'],
-  '/sdk/ios/conversation/managing-conversations/set-burn-duration': [
-    'setConversationBurnDuration',
-  ],
+  '/sdk/ios/conversation/managing-conversations/set-burn-duration': ['setConversationBurnDuration'],
   '/sdk/ios/conversation/managing-conversations/set-message-destruct': [
     'setConversationIsMsgDestruct',
   ],
   '/sdk/ios/conversation/managing-conversations/set-message-destruct-time': [
     'setConversationMsgDestructTime',
   ],
-  '/sdk/ios/conversation/managing-conversations/set-private-chat': [
-    'setConversationPrivateChat',
-  ],
+  '/sdk/ios/conversation/managing-conversations/set-private-chat': ['setConversationPrivateChat'],
   '/sdk/ios/message/composing-messages/save-local-transcript': ['setMessageLocalEx'],
-  '/sdk/harmony/logger': ['setTemporaryLogLevel'],
 };
 
 const platformSymbolAliases: Record<NativePlatform, Record<string, string>> = {
@@ -496,14 +473,14 @@ const fullCommercialConceptPages = new Set([
   '/sdk/harmony/user/profile/set-friend-add-permission',
 ]);
 
-const partialCommercialConceptPages = new Set(['/sdk/harmony/logger']);
-
 function applyCommercialConceptOverride(
   pagePath: string,
   info: PageCommercialInfo,
 ): PageCommercialInfo {
+  if (pagePath === '/sdk/harmony' || pagePath.startsWith('/sdk/harmony/')) {
+    return { ...info, kind: 'full' };
+  }
   if (fullCommercialConceptPages.has(pagePath)) return { ...info, kind: 'full' };
-  if (partialCommercialConceptPages.has(pagePath)) return { ...info, kind: 'partial' };
   return info;
 }
 
@@ -577,7 +554,7 @@ export function getPageCommercialInfo(pagePath: string): PageCommercialInfo {
   const conceptSources = partialCommercialConceptSources[pagePath];
   if (conceptSources) {
     const sourceInfo = conceptSources.map((sourcePath) => getPageCommercialInfo(sourcePath));
-    return {
+    return applyCommercialConceptOverride(pagePath, {
       kind: 'partial',
       methods: [...new Set(sourceInfo.flatMap((info) => info.methods))].sort((left, right) =>
         left.localeCompare(right),
@@ -586,7 +563,7 @@ export function getPageCommercialInfo(pagePath: string): PageCommercialInfo {
       events: [...new Set(sourceInfo.flatMap((info) => info.events))].sort((left, right) =>
         left.localeCompare(right),
       ),
-    };
+    });
   }
 
   const route = parseClientSdkPath(pagePath);
@@ -632,10 +609,12 @@ export function getPageCommercialNames(pagePath: string): Set<string> {
   return new Set(symbols.flatMap((name) => [name, name.split(':', 1)[0]]));
 }
 
-/** Return every commercial SDK symbol for the platform referenced by this route. */
+/** Return commercial SDK symbols that need inline labels on this page. */
 export function getClientSdkCommercialNames(pagePath: string): Set<string> {
   const route = parseClientSdkPath(pagePath);
   if (!route) return new Set();
+  if (getPageCommercialInfo(pagePath).kind === 'full') return new Set();
+  if (route.platform === 'harmony') return new Set();
 
   if (route.platform === 'wasm') {
     return new Set(
@@ -664,9 +643,11 @@ export function getClientSdkCommercialNames(pagePath: string): Set<string> {
   );
 }
 
-/** Return unambiguous commercial-only field names for the SDK platform. */
+/** Return commercial-only field names that need inline labels on this page. */
 export function getClientSdkCommercialFieldNames(pagePath: string): Set<string> {
   const route = parseClientSdkPath(pagePath);
+  if (getPageCommercialInfo(pagePath).kind === 'full') return new Set();
+  if (route?.platform === 'harmony') return new Set();
   return new Set([
     ...(route ? platformCommercialFieldNames[route.platform] : []),
     ...(pageCommercialFieldNames[pagePath] ?? []),

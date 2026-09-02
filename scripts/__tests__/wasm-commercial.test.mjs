@@ -96,13 +96,7 @@ const sharedCommercialFieldNames = [
 const platformCommercialFieldNames = {
   android: [...sharedCommercialFieldNames, 'addFriendPermission'],
   flutter: sharedCommercialFieldNames,
-  harmony: [
-    ...sharedCommercialFieldNames,
-    'addFriendPermission',
-    'isMarked',
-    'isShowGroupRead',
-    'searchText',
-  ],
+  harmony: [],
   ios: sharedCommercialFieldNames,
   uniapp: [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked'],
   wasm: [...sharedCommercialFieldNames, 'addFriendPermission', 'isMarked', 'searchText'],
@@ -110,10 +104,6 @@ const platformCommercialFieldNames = {
 
 const pageCommercialFieldNames = {
   '/sdk/android/user/user-profile/get-self-local-user-info': ['attachedInfo'],
-  '/sdk/harmony/conversation/managing-conversations/set-conversation-remark': ['remark'],
-  '/sdk/harmony/conversation/overview-conversation': ['remark'],
-  '/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
-  '/sdk/harmony/message/retrieving-messages/load-newer-messages': ['isReverse'],
   '/sdk/uniapp/conversation/managing-conversations/set-conversation-remark': ['remark'],
   '/sdk/uniapp/conversation/overview-conversation': ['remark'],
   '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list': ['remark'],
@@ -136,20 +126,15 @@ const pageCommercialSymbolNames = {
     'setOneConversationPrivateChat',
   ],
   '/sdk/android/user/user-profile/set-friend-add-permission': ['setAddFriendPermission'],
-  '/sdk/ios/conversation/managing-conversations/set-burn-duration': [
-    'setConversationBurnDuration',
-  ],
+  '/sdk/ios/conversation/managing-conversations/set-burn-duration': ['setConversationBurnDuration'],
   '/sdk/ios/conversation/managing-conversations/set-message-destruct': [
     'setConversationIsMsgDestruct',
   ],
   '/sdk/ios/conversation/managing-conversations/set-message-destruct-time': [
     'setConversationMsgDestructTime',
   ],
-  '/sdk/ios/conversation/managing-conversations/set-private-chat': [
-    'setConversationPrivateChat',
-  ],
+  '/sdk/ios/conversation/managing-conversations/set-private-chat': ['setConversationPrivateChat'],
   '/sdk/ios/message/composing-messages/save-local-transcript': ['setMessageLocalEx'],
-  '/sdk/harmony/logger': ['setTemporaryLogLevel'],
 };
 
 const platformSymbolAliases = {
@@ -466,11 +451,11 @@ const fullCommercialConceptPages = new Set([
   '/sdk/harmony/user/profile/set-friend-add-permission',
 ]);
 
-const partialCommercialConceptPages = new Set(['/sdk/harmony/logger']);
-
 function applyCommercialConceptOverride(pagePath, info) {
+  if (pagePath === '/sdk/harmony' || pagePath.startsWith('/sdk/harmony/')) {
+    return { ...info, kind: 'full' };
+  }
   if (fullCommercialConceptPages.has(pagePath)) return { ...info, kind: 'full' };
-  if (partialCommercialConceptPages.has(pagePath)) return { ...info, kind: 'partial' };
   return info;
 }
 
@@ -518,7 +503,7 @@ function getPageCommercialInfo(pagePath) {
   const conceptSources = partialCommercialConceptSources[pagePath];
   if (conceptSources) {
     const sourceInfo = conceptSources.map((sourcePath) => getPageCommercialInfo(sourcePath));
-    return {
+    return applyCommercialConceptOverride(pagePath, {
       kind: 'partial',
       methods: [...new Set(sourceInfo.flatMap((info) => info.methods))].sort((left, right) =>
         left.localeCompare(right),
@@ -527,7 +512,7 @@ function getPageCommercialInfo(pagePath) {
       events: [...new Set(sourceInfo.flatMap((info) => info.events))].sort((left, right) =>
         left.localeCompare(right),
       ),
-    };
+    });
   }
 
   const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp|harmony)(\/.*)$/);
@@ -586,6 +571,8 @@ function getClientSdkCommercialNames(pagePath) {
   const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp|harmony)(\/.*)$/);
   if (!match) return new Set();
   const route = { platform: match[1], wasmPath: `/sdk/wasm${match[2]}` };
+  if (getPageCommercialInfo(pagePath).kind === 'full') return new Set();
+  if (route.platform === 'harmony') return new Set();
 
   if (route.platform === 'wasm') {
     return new Set(
@@ -628,6 +615,8 @@ function getClientSdkCommercialNames(pagePath) {
 
 function getClientSdkCommercialFieldNames(pagePath) {
   const match = pagePath.match(/^\/sdk\/(android|wasm|flutter|ios|uniapp|harmony)(?:\/.*)?$/);
+  if (getPageCommercialInfo(pagePath).kind === 'full') return new Set();
+  if (match?.[1] === 'harmony') return new Set();
   return new Set([
     ...(match ? platformCommercialFieldNames[match[1]] : []),
     ...(pageCommercialFieldNames[pagePath] ?? []),
@@ -666,7 +655,7 @@ test('does not mark open-source events as commercial', () => {
   }
 });
 
-test('marks only the commercial bypass field on group-wide mute', () => {
+test('marks the commercial bypass field while treating HarmonyOS at the SDK level', () => {
   const content = readFileSync('content/zh/docs/chat/sdk/wasm/group/change-group-mute.mdx', 'utf8');
   assert.match(
     content,
@@ -674,15 +663,11 @@ test('marks only the commercial bypass field on group-wide mute', () => {
   );
   assert.equal(getPageCommercialInfo('/sdk/wasm/group/change-group-mute').kind, 'none');
 
-  const harmonyContent = readFileSync(
-    'content/zh/docs/chat/sdk/harmony/group/change-group-mute.mdx',
-    'utf8',
+  assert.equal(getPageCommercialInfo('/sdk/harmony/group/change-group-mute').kind, 'full');
+  assert.equal(
+    getClientSdkCommercialFieldNames('/sdk/harmony/group/change-group-mute').size,
+    0,
   );
-  assert.match(
-    harmonyContent,
-    /`muteBypassUserIDs` <span className="enterprise-field-badge">商业版<\/span>/,
-  );
-  assert.equal(getPageCommercialInfo('/sdk/harmony/group/change-group-mute').kind, 'none');
 });
 
 test('marks enterprise-only fields in shared WASM return models', () => {
@@ -706,9 +691,7 @@ test('marks enterprise-only fields in shared WASM return models', () => {
   for (const field of ['isPrivateChat', 'burnDuration', 'isMsgDestruct', 'msgDestructTime']) {
     assert.match(
       conversationContent,
-      new RegExp(
-        `\`${field}\` <span className="enterprise-field-badge">商业版<\\/span>`,
-      ),
+      new RegExp(`\`${field}\` <span className="enterprise-field-badge">商业版<\\/span>`),
     );
   }
   assert.match(
@@ -717,7 +700,7 @@ test('marks enterprise-only fields in shared WASM return models', () => {
   );
 });
 
-test('marks commercial fields in native, UniApp, and HarmonyOS shared models', () => {
+test('marks commercial fields in native and UniApp shared models', () => {
   const filesAndFields = [
     [
       'content/zh/docs/chat/sdk/android/conversation/overview-conversation.mdx',
@@ -732,14 +715,6 @@ test('marks commercial fields in native, UniApp, and HarmonyOS shared models', (
       ['isMarked', 'remark', 'isPrivateChat', 'burnDuration', 'isMsgDestruct', 'msgDestructTime'],
     ],
     ['content/zh/docs/chat/sdk/uniapp/group/overview-group.mdx', ['displayIsRead']],
-    [
-      'content/zh/docs/chat/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list.mdx',
-      ['isMarked', 'remark', 'isPrivateChat', 'burnDuration', 'isMsgDestruct', 'msgDestructTime'],
-    ],
-    ['content/zh/docs/chat/sdk/harmony/group/overview-group.mdx', ['isShowGroupRead']],
-    ['content/zh/docs/chat/sdk/harmony/message/creating-messages/create-custom-message.mdx', ['searchText']],
-    ['content/zh/docs/chat/sdk/harmony/user/profile/get-self-user-info.mdx', ['addFriendPermission']],
-    ['content/zh/docs/chat/sdk/harmony/user/profile/get-users-info.mdx', ['addFriendPermission']],
   ];
 
   for (const [file, fields] of filesAndFields) {
@@ -747,9 +722,7 @@ test('marks commercial fields in native, UniApp, and HarmonyOS shared models', (
     for (const field of fields) {
       assert.match(
         content,
-        new RegExp(
-          `\`${field}\` <span className="enterprise-field-badge">商业版<\\/span>`,
-        ),
+        new RegExp(`\`${field}\` <span className="enterprise-field-badge">商业版<\\/span>`),
         `${file} must mark ${field} as commercial`,
       );
     }
@@ -803,9 +776,7 @@ test('keeps API-specific commercial fields marked in both published locales', ()
       for (const field of fields) {
         assert.match(
           content,
-          new RegExp(
-            `\`${field}\` <span className="enterprise-field-badge">${label}<\\/span>`,
-          ),
+          new RegExp(`\`${field}\` <span className="enterprise-field-badge">${label}<\\/span>`),
           `${root}/${relativePath} must mark ${field} as commercial`,
         );
       }
@@ -853,6 +824,59 @@ test('classifies full commercial pages', () => {
   );
   for (const pagePath of fullCommercialConceptPages) {
     assert.equal(getPageCommercialInfo(pagePath).kind, 'full', `${pagePath} must be commercial`);
+  }
+});
+
+test('classifies every active HarmonyOS SDK page as commercial', () => {
+  for (const page of harmonyAudit.pages.filter((entry) => entry.disposition !== 'omit')) {
+    assert.equal(
+      getPageCommercialInfo(page.currentPath).kind,
+      'full',
+      `${page.currentPath} must be commercial`,
+    );
+    assert.equal(
+      getClientSdkCommercialNames(page.currentPath).size,
+      0,
+      `${page.currentPath} must not repeat SDK-level commercial labels on API symbols`,
+    );
+    assert.equal(
+      getClientSdkCommercialFieldNames(page.currentPath).size,
+      0,
+      `${page.currentPath} must not repeat SDK-level commercial labels on fields`,
+    );
+
+    const content = readFileSync(`content/zh/docs/chat${page.currentPath}.mdx`, 'utf8');
+    assert.doesNotMatch(
+      content,
+      /enterprise-field-badge/,
+      `${page.currentPath} must not contain nested commercial badges`,
+    );
+  }
+});
+
+test('suppresses API and field badges when the whole page is commercial', () => {
+  const pages = [
+    ...fullCommercialConceptPages,
+    '/sdk/wasm/message/managing-messages/set-message-pinned',
+    '/sdk/wasm/calling/managing-calls/start-single-call',
+  ];
+
+  for (const pagePath of pages) {
+    assert.equal(
+      getPageCommercialInfo(pagePath).kind,
+      'full',
+      `${pagePath} must retain its page-level commercial badge`,
+    );
+    assert.equal(
+      getClientSdkCommercialNames(pagePath).size,
+      0,
+      `${pagePath} must not repeat commercial badges on API symbols`,
+    );
+    assert.equal(
+      getClientSdkCommercialFieldNames(pagePath).size,
+      0,
+      `${pagePath} must not repeat commercial badges on fields`,
+    );
   }
 });
 
@@ -1023,7 +1047,7 @@ test('marks calling overviews as mixed while preserving verified platform symbol
   assert.ok(androidOverview.methods.includes('getSignalingInvitationInfoStartApp'));
 
   const harmonyOverview = getPageCommercialInfo('/sdk/harmony/calling/overview-calling');
-  assert.equal(harmonyOverview.kind, 'partial');
+  assert.equal(harmonyOverview.kind, 'full');
   assert.ok(harmonyOverview.methods.includes('signalingInvite'));
   assert.ok(harmonyOverview.events.includes('EventOnReceiveNewInvitation'));
 
@@ -1041,7 +1065,6 @@ test('classifies native aggregate pages that reference commercial events as mixe
     ['/sdk/flutter/events/overview-events', 'onGroupApplicationDeleted'],
     ['/sdk/ios/group/group-applications/overview-group-applications', 'onGroupApplicationDeleted:'],
     ['/sdk/ios/message/overview-message', 'onChangedPinnedMsg:'],
-    ['/sdk/harmony/message/overview-message', 'EventOnMessageDeleted'],
   ]);
 
   for (const [pagePath, eventName] of expectedCommercialEvents) {
@@ -1057,6 +1080,10 @@ test('classifies native aggregate pages that reference commercial events as mixe
   const iosEventOverview = getPageCommercialInfo('/sdk/ios/events/overview-events');
   assert.equal(iosEventOverview.kind, 'partial');
   assert.ok(iosEventOverview.methods.includes('Open_im_sdkSetConversationGroupListener'));
+
+  const harmonyMessageOverview = getPageCommercialInfo('/sdk/harmony/message/overview-message');
+  assert.equal(harmonyMessageOverview.kind, 'full');
+  assert.ok(harmonyMessageOverview.events.includes('EventOnMessageDeleted'));
 });
 
 test('classifies domain overviews that include commercial capabilities as mixed', () => {
@@ -1066,24 +1093,19 @@ test('classifies domain overviews that include commercial capabilities as mixed'
     '/sdk/flutter/conversation/overview-conversation',
     '/sdk/ios/conversation/overview-conversation',
     '/sdk/uniapp/conversation/overview-conversation',
-    '/sdk/harmony/conversation/overview-conversation',
     '/sdk/wasm/events/overview-events',
     '/sdk/android/events/overview-events',
     '/sdk/uniapp/events/overview-events',
-    '/sdk/harmony/events/overview-events',
     '/sdk/wasm/group/overview-group',
     '/sdk/ios/group/overview-group',
     '/sdk/uniapp/group/overview-group',
-    '/sdk/harmony/group/overview-group',
     '/sdk/wasm/message/overview-message',
     '/sdk/uniapp/message/overview-message',
-    '/sdk/harmony/message/overview-message',
     '/sdk/wasm/user/overview-user',
     '/sdk/android/user/overview-user',
     '/sdk/flutter/user/overview-user',
     '/sdk/ios/user/overview-user',
     '/sdk/uniapp/user/overview-user',
-    '/sdk/harmony/user/overview-user',
   ];
 
   for (const pagePath of overviewPaths) {
@@ -1210,7 +1232,7 @@ test('matches commercial symbols in inline code text', () => {
   assert.equal(matchCommercialSymbol('getAdvancedHistoryMessageList()', names), null);
 });
 
-test('provides platform-wide commercial API names for inline references on every SDK page', () => {
+test('provides platform-wide commercial API names only on pages that need inline labels', () => {
   const wasm = getClientSdkCommercialNames('/sdk/wasm/user/blacklist/add-black');
   assert.ok(wasm.has('deleteMessages'));
   assert.ok(wasm.has('OnMsgDeleted'));
@@ -1219,10 +1241,11 @@ test('provides platform-wide commercial API names for inline references on every
   const android = getClientSdkCommercialNames('/sdk/android/user/blacklist/add-black');
   assert.ok(android.has('getConversationPinnedMsgs'));
   assert.ok(android.has('onRecvGroupMessageReadReceipt'));
-  assert.ok(
+  assert.equal(
     getClientSdkCommercialNames(
       '/sdk/android/conversation/managing-conversations/set-private-chat',
-    ).has('setOneConversationPrivateChat'),
+    ).size,
+    0,
   );
 
   const flutter = getClientSdkCommercialNames('/sdk/flutter/user/friends/check-friend');
@@ -1232,19 +1255,19 @@ test('provides platform-wide commercial API names for inline references on every
   const ios = getClientSdkCommercialNames('/sdk/ios/user/friends/check-friend');
   assert.ok(ios.has('modifyMessageWithConversationID:message:onSuccess:onFailure:'));
   assert.ok(ios.has('modifyMessageWithConversationID'));
-  assert.ok(
+  assert.equal(
     getClientSdkCommercialNames(
       '/sdk/ios/conversation/managing-conversations/set-message-destruct-time',
-    ).has('setConversationMsgDestructTime'),
+    ).size,
+    0,
   );
 
   const uniapp = getClientSdkCommercialNames('/sdk/uniapp/user/blacklist/add-black');
   assert.ok(uniapp.has('signalingGetInvitationInfoStartApp'));
 
   const harmony = getClientSdkCommercialNames('/sdk/harmony/user/blacklist/add-black');
-  assert.ok(harmony.has('getConversationGroupByConversationID'));
-  assert.ok(harmony.has('EventOnMessageDeleted'));
-  assert.ok(getClientSdkCommercialNames('/sdk/harmony/logger').has('setTemporaryLogLevel'));
+  assert.equal(harmony.size, 0);
+  assert.equal(getClientSdkCommercialNames('/sdk/harmony/logger').size, 0);
 });
 
 test('provides platform-specific commercial field names for inline text and examples', () => {
@@ -1264,35 +1287,31 @@ test('provides platform-specific commercial field names for inline text and exam
   assert.ok(ios.has('msgDestructTime'));
   assert.equal(ios.has('addFriendPermission'), false);
 
-  const uniapp = getClientSdkCommercialFieldNames(
-    '/sdk/uniapp/conversation/overview-conversation',
-  );
+  const uniapp = getClientSdkCommercialFieldNames('/sdk/uniapp/conversation/overview-conversation');
   assert.ok(uniapp.has('isMarked'));
   assert.ok(uniapp.has('muteBypassUserIDs'));
-  assert.ok(
+  assert.equal(
     getClientSdkCommercialFieldNames(
       '/sdk/uniapp/message/retrieving-messages/load-newer-messages',
-    ).has('isReverse'),
+    ).size,
+    0,
   );
 
   const harmony = getClientSdkCommercialFieldNames(
     '/sdk/harmony/conversation/overview-conversation',
   );
-  assert.ok(harmony.has('addFriendPermission'));
-  assert.ok(harmony.has('isMarked'));
-  assert.ok(harmony.has('isShowGroupRead'));
-  assert.ok(harmony.has('searchText'));
-  assert.ok(harmony.has('remark'));
-  assert.ok(
+  assert.equal(harmony.size, 0);
+  assert.equal(
     getClientSdkCommercialFieldNames(
       '/sdk/harmony/message/retrieving-messages/load-newer-messages',
-    ).has('isReverse'),
+    ).size,
+    0,
   );
 
   const wasmRemark = getClientSdkCommercialFieldNames(
     '/sdk/wasm/conversation/managing-conversations/set-conversation-remark',
   );
-  assert.ok(wasmRemark.has('remark'));
+  assert.equal(wasmRemark.size, 0);
   assert.equal(
     getClientSdkCommercialFieldNames('/sdk/wasm/user/friends/update-friends').has('remark'),
     false,

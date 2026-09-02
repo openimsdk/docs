@@ -48,9 +48,11 @@ Then check the requirements specific to the target runtime:
 Install the browser WASM SDK with pnpm and copy its runtime assets during your build or deployment. The following example publishes them at the root of the site's static assets:
 
 ```bash
-pnpm add @openim/wasm-client-sdk@3.8.3-patch.15.1
+pnpm add @openim/wasm-client-sdk
 cp -R node_modules/@openim/wasm-client-sdk/assets/* public/
 ```
+
+Commit the dependency lockfile for team projects. When the application must pin the SDK, select a version that your team has verified instead of copying a long-lived version number from this page.
 
 If the application is deployed behind a CDN, under a subpath, or inside an Electron package, replace the example paths with URLs that are actually accessible in that runtime.
 
@@ -94,27 +96,7 @@ For browsers, focus on assets, connectivity, and the local cache:
 - `wasm_exec.js`, `openIM.wasm`, and `sql-wasm.wasm` must be accessible from production paths, not only from the local development server.
 - The OpenIMServer HTTP API and WebSocket addresses must allow access from the current page and correctly handle HTTPS/WSS mixed-content restrictions.
 - The SDK local cache depends on browser storage. Do not read or write the SDK's IndexedDB or sql.js internals directly. Synchronize data into your application state through SDK APIs and events.
-- When the browser reconnects to the network, the page changes between foreground and background, or the application regains focus, call `networkStatusChanged()` or `setAppBackgroundStatus()` as appropriate for your application state.
-
-```ts
-const handleOnline = () => {
-  void openimsdk.networkStatusChanged();
-};
-
-const handleVisibilityChange = () => {
-  void openimsdk.setAppBackgroundStatus(document.hidden);
-};
-
-window.addEventListener('online', handleOnline);
-document.addEventListener('visibilitychange', handleVisibilityChange);
-
-function removeBrowserLifecycleListeners() {
-  window.removeEventListener('online', handleOnline);
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
-}
-```
-
-Call `removeBrowserLifecycleListeners()` when destroying the SDK scope or unmounting the application so that remounting does not report browser lifecycle changes more than once.
+- Network changes, page foreground/background transitions, and focus recovery should be handled centrally by the SDK wrapper. Business components should not register duplicate low-level runtime listeners.
 
 ### SSR frameworks
 
