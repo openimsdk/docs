@@ -4,7 +4,7 @@ description: '使用 Android SDK 在通话房间中发送和接收自定义信�
 sourcePath: '/sdk/android/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-`signalingSendCustomSignal()` 用于在指定通话房间内发送少量与通话相关的业务信息，例如举手、切换布局提示或临时状态同步。它不是聊天消息接口，也不适合发送大量数据或文件。
+在指定通话房间内发送少量与通话相关的业务信息，例如举手、切换布局提示或临时状态同步。该能力用于轻量临时信令同步，不适合作为持久化聊天消息或传输大量文件数据。
 
 ## 发送信令
 
@@ -35,7 +35,17 @@ OpenIMClient.getInstance().signalingManager.signalingSendCustomSignal(
 );
 ```
 
-成功回调只表示发送请求已完成，不表示其他参与者已收到或处理该信令。`customInfo` 可以包含协议版本和唯一的 `eventID`，以便接收方识别重复消息。自定义信令适合轻量、临时的通话协商，不提供大文件、聊天记录或长期状态的传输与保存能力。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `roomID` | `String` | 是 | 目标通话房间的 ID。 |
+| `customInfo` | `String` | 是 | 自定义信令内容，建议使用结构化 JSON 字符串。 |
+
+## 返回结果
+
+成功回调仅表示当前自定义信令已被服务端接收并分发，不代表对端已处理。信令载荷中建议携带协议版本与唯一 `eventID`，便于接收端去重。自定义信令适用于轻量级、临时性的房间状态协商，不适合作为持久化聊天消息。
 
 ## 接收信令
 
@@ -50,6 +60,6 @@ public void onReceiveCustomSignal(CustomSignalingInfo info) {
 
 如果业务需要避免重复处理，可以在自定义信令中携带唯一事件 ID，并在接收端记录已处理的事件。消息可能不会按发送顺序到达，因此不要依赖到达顺序决定业务状态。
 
-将 `onReceiveCustomSignal` 与其他通话回调一起注册到[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)中的 listener。`SignalingManager` 只保留一个 listener；重新设置会覆盖已有的其他通话回调。
+将信令接收回调与其他通话回调一起注册到[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)中的信令监听器。信令管理器在全局仅保留一个活跃监听器实例，重复设置会覆盖已注册的其他通话事件回调。
 
 自定义信令不是可重放的长期状态记录。连接恢复后，如需校准房间或业务状态，可重新查询房间信息或业务数据。

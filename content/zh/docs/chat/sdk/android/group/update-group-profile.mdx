@@ -1,21 +1,45 @@
 ---
 title: '更新群名称、简介和头像'
-description: '使用 setGroupInfo 更新群名称、头像、简介和其他群资料字段。'
+description: '更新群名称、头像、简介等群组基础资料。'
 sourcePath: '/sdk/android/group/update-group-profile'
 ---
 
-使用 `setGroupInfo()` 更新群资料。请求对象包含 `groupID` 和需要修改的字段，只提交本次要更新的内容。
+更新群组的基础资料，包括群名称、群头像和群简介。在传入的 `GroupInfo` 中指定 `groupID` 及需要更新的属性，未设置的属性将保持不变。
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
+update.setGroupID("group_123");
 update.setGroupName("移动端项目组");
 update.setIntroduction("Android 与 iOS 协作群");
+update.setFaceURL("https://example.com/group_avatar.png");
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 群资料更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理更新失败
+        }
+    }
+);
 ```
 
-群公告和扩展字段使用相同接口，分别见相关页面。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | 是 | 包含待更新字段的群资料对象，必须设置目标 `groupID` 以及需要更新的属性（如 `groupName`、`introduction`、`faceURL` 等）。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+群资料修改成功后，群内所有在线成员随后将收到 `onGroupInfoChanged` 事件通知，返回更新后的 `GroupInfo`。客户端应以 `groupID` 为标识合并群组缓存并刷新界面；完整监听见[群组概览](/sdk/android/group/overview-group)。
+
+关于群公告和自定义扩展属性的修改，请参阅[发布或更新群公告](/sdk/android/group/set-group-announcement)与[设置群组扩展字段](/sdk/android/group/set-group-extension)。

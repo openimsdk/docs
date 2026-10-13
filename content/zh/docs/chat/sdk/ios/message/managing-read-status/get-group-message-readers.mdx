@@ -4,16 +4,35 @@ description: '使用 iOS SDK 分页查询群消息的已读或未读成员。'
 sourcePath: '/sdk/ios/message/managing-read-status/get-group-message-readers'
 ---
 
+调用查询群消息阅读成员列表接口，可以分页获取某条特定群消息的已读成员或未读成员详情。
+
 ```objc
 [[OIMManager manager] getGroupMessageReaderList:conversationID
-    clientMsgID:clientMsgID
-    filter:0
-    offset:0
-    count:20
-    onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
-        [self replaceReaders:members ?: @[] clientMsgID:clientMsgID];
-    }
-    onFailure:nil];
+                                    clientMsgID:clientMsgID
+                                         filter:0
+                                         offset:0
+                                          count:20
+                                      onSuccess:^(NSArray<OIMGroupMemberInfo *> * _Nullable members) {
+    // 渲染当前页群成员列表
+    [self replaceReaders:members ?: @[] clientMsgID:clientMsgID];
+}
+                                      onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理查询失败
+}];
 ```
 
-`filter` 为 `0` 查询已读成员，为 `1` 查询未读成员。返回结果是当前页的成员列表，查询不触发回执 delegate；人数以最新回执计数为准，必要时重新查询。
+## 参数说明
+
+- `conversationID`：目标群聊会话 ID。
+- `clientMsgID`：目标群消息的客户端消息 ID。
+- `filter`：筛选类型。`0` 表示查询已读成员列表；`1` 表示查询未读成员列表。
+- `offset`：分页查询的起始偏移量（从 0 开始）。
+- `count`：每页期望获取的成员数量。
+- `onSuccess`：查询成功回调，返回群成员信息列表（`NSArray<OIMGroupMemberInfo *>`）。
+- `onFailure`：查询失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调返回指定消息在当前查询时刻的群成员快照列表。
+- 查询操作仅拉取本地或服务端状态，不会触发群消息已读回执事件。群成员状态合并标识为 `groupID:userID`。
+- 消息卡片上的已读与未读人数统计通常由回执事件驱动更新；若需了解群已读回执的上报与事件监听，见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。

@@ -99,7 +99,7 @@ function removeMessageListeners() {
 
 SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。新代码对普通和离线消息优先使用返回 `MessageItem[]` 的复数事件，便于统一批量处理；只在线消息使用正式的单条事件 `OnRecvOnlineOnlyMessage`。维护旧项目时，如果普通或离线消息只触发单条事件，应把 `data` 包装成数组，再复用相同的去重流程；不要同时监听同类消息的单数和复数事件名称，以免重复插入消息。
 
-这些消息接收事件的完整监听示例集中在本页。普通和离线消息事件的 `data` 是 `MessageItem[]`，只在线消息事件的 `data` 是单个 `MessageItem`；都应先根据消息路由字段确定目标会话，再用“目标会话 + `clientMsgID`”找到并更新对应消息。重复事件不应插入第二条消息。组件卸载、退出登录或切换账号时调用 `removeMessageListeners()`。
+本页集中提供了新消息接收事件的监听配置示例。普通新消息与离线消息事件的 `data` 为 `MessageItem[]` 列表，而只在线消息事件的 `data` 为单个 `MessageItem`。处理时建议先根据会话路由字段确认归属会话，再结合 `clientMsgID` 匹配本地消息进行去重或追加。在组件销毁、退出登录或切换账号时，请调用 `removeMessageListeners()` 统一注销监听。
 
 当会话成员撤回消息时，接收端通过 `SdkEvent.OnNewRecvMessageRevoked` 得到更新。建议把对应气泡更新为撤回态，而不是直接从列表中删除；事件处理器和清理方式见[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)。
 
@@ -113,9 +113,9 @@ SDK 同时导出单条事件 `OnRecvNewMessage` 和 `OnRecvOfflineNewMessage`。
 
 用户进入群聊并看到最新消息后，可以清理该会话的未读数。这个操作处理的是会话未读数，不等同于群消息成员级已读回执；调用方式和状态同步见[标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read)。
 
-会话列表和总未读角标分别通过[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)和[维护总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)中的事件处理器做最终同步。
+会话列表和总未读角标分别通过[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)和[获取总未读数](/sdk/wasm/conversation/managing-conversations/get-total-unread-count)中的事件处理器做最终同步。
 
-如果事件注册在全局消息状态层，不要在每次进入同一个群聊页面时重复注册全局处理器。首次进入会话、重新登录或重连后，先分页读取当前已有的历史消息，再把后续事件带来的消息变化合并到列表中；不要把事件到达视为某次历史查询或已读调用的完成回调。
+若事件监听注册在全局消息管理层，请避免在每次切换进入会话详情页时重复注册。在首次进入会话、重新登录或断网重连后，通常先主动分页拉取历史消息快照，再将后续由事件推送的增量消息合并进当前列表中，以确保消息展示完整有序。
 
 ## 验证接收流程
 

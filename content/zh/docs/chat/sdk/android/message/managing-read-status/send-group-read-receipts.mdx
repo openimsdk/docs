@@ -1,36 +1,55 @@
 ---
 title: '上报群消息已读'
-description: '使用 Android SDK 上报群消息已读回执。'
+description: '上报指定群聊消息的已读回执。'
 sourcePath: '/sdk/android/message/managing-read-status/send-group-read-receipts'
 ---
 
+在群聊中上报当前用户已浏览消息的已读回执。当消息列表滚动或进入可视区域时，将当前屏幕内已展示的消息 ID 列表上报至服务端，用于群内发信人统计已读与未读成员状态。
+
 ```java
-messageManager.sendGroupMessageReadReceipt(
+String conversationID = "g_group_123";
+List<String> visibleClientMsgIDs = Arrays.asList("msg_001", "msg_002");
+
+OpenIMClient.getInstance().messageManager.sendGroupMessageReadReceipt(
     conversationID,
     visibleClientMsgIDs,
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 已读回执已上报
+            // 已读回执上报成功
         }
 
         @Override
         public void onError(int code, String error) {
-            // 处理失败
+            // 处理上报失败
         }
     }
 );
 ```
 
-同一批消息必须属于目标群会话。成功回调只表示服务端接受上报，不代表其他客户端界面已经更新。会话未读数仍由 `markConversationMessageAsRead` 独立维护。
+## 参数说明
 
-其他客户端通过 `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt` 接收群消息已读回执：
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标群聊会话 ID。 |
+| `clientMsgIDs` | `List<String>` | 是 | 当前可视区域内需要标记已读的消息客户端 ID 列表。传入的消息必须均属于目标会话。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+群消息已读回执用于群内成员间同步细粒度的消息阅读状态；若需要清除当前会话在本地及服务器上的总未读计数，请调用[标记会话已读](/sdk/android/conversation/managing-conversations/mark-conversation-read)。
+
+## 监听群消息已读回执
+
+群内发信方及相关端通过 `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt` 接收群消息已读状态的增量更新：
 
 ```java
 @Override
 public void onRecvGroupMessageReadReceipt(GroupMessageReceipt receipt) {
-    // receipt 包含群消息已读回执。
+    // 根据 receipt 中记录的消息 clientMsgID 更新已读数及已读状态
 }
 ```
 
-需要查询某条群消息的已读或未读成员时，使用[查询群消息已读成员](/sdk/android/message/managing-read-status/get-group-message-readers)。
+如需查看某条具体消息的已读或未读成员明细，请参阅[查询群消息已读成员](/sdk/android/message/managing-read-status/get-group-message-readers)。

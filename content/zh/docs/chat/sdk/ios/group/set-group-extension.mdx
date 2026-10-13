@@ -4,6 +4,19 @@ description: '使用 iOS SDK 设置群组的业务扩展字符串。'
 sourcePath: '/sdk/ios/group/set-group-extension'
 ---
 
+更新群组的业务扩展字段（通常仅群主和管理员有权限操作）：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | 包含 `groupID` 和扩展字段键值对的字典对象。 |
+
+| 键名 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `ex` | `NSString *` | 自定义扩展字符串（如 JSON 串）。写入时整串覆盖，建议先读取旧值并保留其他模块的命名空间后再提交。 |
+
 ```objc
 NSDictionary *changes = @{
     @"groupID": groupID,
@@ -11,10 +24,16 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        [self showExtensionUpdated];
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        [self showErrorCode:code message:message];
+    }];
 ```
 
-`ex` 是完整字符串，SDK 不会自动合并 JSON。写入前应解析旧值并保留其他业务模块的命名空间。
+状态以 `groupID` 为合并标识。
 
-成功 callback、`onGroupInfoChanged:` 到达和重新查询是三个阶段，完整 delegate 见[群组概览](/sdk/ios/group/overview-group)。
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已接受扩展字段更新。群内各端随后会通过群资料变更事件收到更新后的 `OIMGroupInfo`，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

@@ -4,16 +4,34 @@ description: '从 iOS 群组移除成员。'
 sourcePath: '/sdk/ios/group/managing-group-members/kick-group-member'
 ---
 
-传入 `groupID`、移除说明和用户 ID 数组。不能用该 selector 移除群主。成功 callback 表示请求完成，成员列表随后通过 `onGroupMemberDeleted:` 更新；需要确认完整结果时重新查询。
+群主或管理员可以从群组中移除指定的一名或多名成员。注意普通管理员不能移除群主或其他管理员，且不可使用该方法移除群主：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `reason` | `NSString *` | 移除成员的原因或附言。 |
+| `usersID` | `NSArray<NSString *> *` | 待移除的成员用户 ID 列表。 |
 
 ```objc
-[[OIMManager manager] kickGroupMember:groupID
-  reason:@"移出项目讨论组"
-  usersID:@[targetUserID]
-  onSuccess:^(NSArray<OIMGroupInviteResult *> *results) {
-    [self handleKickResults:results];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] kickGroupMember:@"group_1001"
+                               reason:@"违反群组讨论规范"
+                              usersID:@[@"user_003"]
+                            onSuccess:^(NSArray<OIMGroupInviteResult *> *results) {
+                                for (OIMGroupInviteResult *item in results) {
+                                    NSLog(@"kicked user: %@, result: %ld", item.userID, (long)item.result);
+                                }
+                            }
+                            onFailure:^(NSInteger code, NSString *message) {
+                                NSLog(@"kickGroupMember failed: %ld %@", (long)code, message);
+                            }];
 ```
+
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回包含每个成员移除结果的 `NSArray<OIMGroupInviteResult *> *` 数组。
+
+成员被移除后，群内各端会收到 `onGroupMemberDeleted:` 事件（监听注册参见[群组概览](/sdk/ios/group/overview-group)），客户端应以 `groupID:userID` 为合并标识从群成员列表中删除该成员。更多群成员查询与管理请参见[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。

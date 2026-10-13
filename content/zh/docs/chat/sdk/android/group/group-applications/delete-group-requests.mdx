@@ -1,22 +1,43 @@
 ---
 title: '删除入群申请'
-description: '使用 deleteGroupRequests 批量删除指定的入群申请记录。'
+description: '批量删除历史入群申请记录。'
 sourcePath: '/sdk/android/group/group-applications/delete-group-requests'
 ---
 
-`deleteGroupRequests()` 接收 `DeleteGroupRequestsReq`，可传入多个 `SimpleGroupRequests` 批量删除申请记录。每个 `SimpleGroupRequests` 包含 `fromUserID` 和 `groupID`：`fromUserID` 为申请人的用户 ID，`groupID` 为申请加入的群组 ID。
+批量删除指定的入群申请历史记录。该操作仅用于从申请历史列表中清理已处理或失效的申请条目，不会改变申请本身的审批状态（如同意或拒绝）。如需拒绝待审批的入群申请，请使用[拒绝入群申请](/sdk/android/group/group-applications/refuse-group-application)。
 
 ```java
-SimpleGroupRequests[] groupRequests = {
-    new SimpleGroupRequests(firstApplicantUserID, firstGroupID),
-    new SimpleGroupRequests(secondApplicantUserID, secondGroupID)
+SimpleGroupRequests[] requests = {
+    new SimpleGroupRequests("user_a", "group_123"),
+    new SimpleGroupRequests("user_b", "group_456")
 };
-DeleteGroupRequestsReq request = new DeleteGroupRequestsReq(groupRequests);
+DeleteGroupRequestsReq deleteReq = new DeleteGroupRequestsReq(requests);
 
-OpenIMClient.getInstance().groupManager.deleteGroupRequests(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, request);
+OpenIMClient.getInstance().groupManager.deleteGroupRequests(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 删除申请记录成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理删除失败
+        }
+    },
+    deleteReq
+);
 ```
 
-删除申请记录不等于拒绝申请。需要拒绝申请时，使用 `refuseGroupApplication()`。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `deleteGroupRequestsReq` | `DeleteGroupRequestsReq` | 是 | 批量删除申请请求对象。其内部封装一组 `SimpleGroupRequests`，每个条目通过 `fromUserID`（申请人 ID）与 `groupID`（目标群组 ID）定位具体申请记录。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+删除成功代表服务端已移除指定的历史申请记录。客户端可据此从本地申请列表中移除对应 `groupID:userID` 的项，或重新调用[获取收到的入群申请](/sdk/android/group/group-applications/get-group-application-list-as-recipient)刷新列表。

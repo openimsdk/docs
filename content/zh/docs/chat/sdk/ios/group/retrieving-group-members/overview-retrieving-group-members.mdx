@@ -4,14 +4,45 @@ description: '查询 iOS 群成员并处理成员 delegate。'
 sourcePath: '/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members'
 ---
 
-群成员缓存使用 `groupID:userID` 作为键。本菜单提供分页、指定成员、成员关系、管理角色和搜索方法。
+群成员模块负责维护群内用户关系、群角色（群主、管理员、普通成员）、群内专属昵称与禁言状态。在客户端状态管理中，统一使用 `groupID:userID` 作为群成员记录的唯一合并标识。
+
+## 查询能力
+
+SDK 提供了多种维度的群成员查询接口：
+
+- [分页查询群成员](/sdk/ios/group/retrieving-group-members/get-group-member-list)：按角色过滤并分页拉取群成员列表。
+- [获取群主和管理员](/sdk/ios/group/retrieving-group-members/get-group-member-owner-and-admin)：快速获取群内管理层成员，无需遍历全量列表。
+- [查询指定群成员资料](/sdk/ios/group/retrieving-group-members/get-specified-group-members-info)：批量拉取已知用户的群成员名片快照。
+- [搜索群成员](/sdk/ios/group/retrieving-group-members/search-group-members)：根据成员用户 ID 或群内昵称进行关键字搜索。
+- [查询用户入群状态](/sdk/ios/group/retrieving-group-members/get-users-in-group)：轻量核验候选用户是否在群内。
+
+## 群成员事件监听
+
+群成员发生新增、被移出或资料变更时，SDK 会通过 `OIMGroupListener` 协议回调通知：
 
 ```objc
-- (void)startMemberEvents { [[OIMManager callbacker] addGroupListener:self]; }
-- (void)stopMemberEvents { [[OIMManager callbacker] removeGroupListener:self]; }
-- (void)onGroupMemberAdded:(OIMGroupMemberInfo *)item { [self upsertMember:item]; }
-- (void)onGroupMemberDeleted:(OIMGroupMemberInfo *)item { [self removeMember:item]; }
-- (void)onGroupMemberInfoChanged:(OIMGroupMemberInfo *)item { [self upsertMember:item]; }
+- (void)startMemberEvents {
+    [[OIMManager callbacker] addGroupListener:self];
+}
+
+- (void)stopMemberEvents {
+    [[OIMManager callbacker] removeGroupListener:self];
+}
+
+- (void)onGroupMemberAdded:(OIMGroupMemberInfo *)item {
+    // 新成员加入，按 groupID:userID 合并入本地列表
+    [self upsertMember:item];
+}
+
+- (void)onGroupMemberDeleted:(OIMGroupMemberInfo *)item {
+    // 成员离开或被踢出，按 groupID:userID 从本地列表中移除
+    [self removeMember:item];
+}
+
+- (void)onGroupMemberInfoChanged:(OIMGroupMemberInfo *)item {
+    // 成员角色、群内昵称或禁言变更，按 groupID:userID 覆盖更新
+    [self upsertMember:item];
+}
 ```
 
-分页期间如果发生成员增删，从第一页重新查询当前列表。
+应用应强引用稳定的监听器对象，并使用同一实例进行添加与移除。如果在分页加载群成员期间收到了成员增删事件，建议将分页偏移重置为 0 并重新拉取当前列表，以防列表产生跳页或错位。

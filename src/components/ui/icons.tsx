@@ -205,3 +205,18 @@ export function ServerIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path
+        d="M12 19V5M5 12l7-7 7 7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </IconBase>
+  );
+}
+

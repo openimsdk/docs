@@ -1,13 +1,39 @@
 ---
 title: '取消拉黑用户'
-description: '使用 Flutter SDK 将用户移出当前账号黑名单。'
+description: '使用 Flutter SDK 将指定用户移出当前账号黑名单。'
 sourcePath: '/sdk/flutter/user/moderating-a-user/unblock-user'
 ---
 
+将指定用户从当前登录用户的黑名单列表中移除：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `userID` | `String` | 是 | 待移出黑名单的目标用户 ID。 |
+
 ```dart
 await OpenIM.iMManager.friendshipManager.removeBlacklist(
-  userID: targetUserID,
+  userID: 'user_123',
 );
 ```
 
-Future 成功不等于事件已到达。`onBlackDeleted` 是本页归属事件，应纳入唯一 `OnFriendshipListener`，按非空 `userID` 从黑名单移除；需要确认完整结果时，通过已有的黑名单列表页面重新查询。
+## 返回结果
+
+Future 成功返回 `void`，表示解除黑名单请求已成功提交至服务端并在本地同步删除该条记录。
+
+该操作为状态变更接口。解除拉黑生效后，目标用户将恢复向当前用户发送单聊消息的权限。
+
+## 监听解除拉黑事件
+
+取消拉黑事件在此集中监听与处理。服务端移除生效后，当前端与其他在线端会触发 `onBlackDeleted` 事件通知。客户端应以 `userID` 为合并标识，从本地黑名单状态中移除对应记录：
+
+```dart
+void handleBlackDeleted(BlacklistInfo info) {
+  final userID = info.userID;
+  if (userID != null) removeBlockedUser(userID);
+}
+```
+
+Flutter SDK 在 `FriendshipManager` 中维护单个 `OnFriendshipListener` 实例。请将上述处理函数统一交由[事件概览](/sdk/flutter/events/overview-events)的应用级集中入口进行注册。若需校准本地黑名单数据，请参考[获取黑名单列表](/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users)。
+

@@ -4,12 +4,35 @@ description: '使用 iOS SDK 设置会话扩展字段。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-conversation-extension'
 ---
 
+为会话设置业务自定义的扩展字符串：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
+| `ex` | `NSString *` | 业务自定义扩展字符串（通常为 JSON 格式）。 |
+
 ```objc
-NSString *ex = @"{\"category\":\"work\"}";
-[[OIMManager manager] setConversationEx:conversationID
+NSString *ex = @"{\"category\":\"work\",\"tag\":\"important\"}";
+
+[[OIMManager manager] setConversationEx:@"c2c_user1002"
                                      ex:ex
-                              onSuccess:nil
-                              onFailure:nil];
+                              onSuccess:^(NSString * _Nullable data) {
+                                  NSLog(@"setConversationEx success");
+                              }
+                              onFailure:^(NSInteger code, NSString *message) {
+                                  NSLog(@"setConversationEx failed: %ld %@", (long)code, message);
+                              }];
 ```
 
-`ex` 是完整字符串，SDK 不会替应用合并 JSON。更新前应解析旧值并保留其他业务方拥有的字段。成功后通过 `onConversationChanged:` 合并最新会话。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，会话属性变更会通过 `onConversationChanged:` 事件广播，客户端按 `conversationID` 更新对应会话的 `ex` 扩展字段。
+
+`ex` 为全量覆盖的自定义字符串，SDK 不会自动解析或合并 JSON 内部键值。更新前如需保留已有业务字段，建议先拉取当前会话资料合并后再行保存。会话列表监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。
+

@@ -4,13 +4,34 @@ description: '批量删除 iOS 入群申请记录。'
 sourcePath: '/sdk/ios/group/group-applications/delete-group-requests'
 ---
 
+批量删除本地或服务端的入群申请记录：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `requests` | `NSArray<DeleteGroupRequest *> *` | 待删除的申请请求对象列表。 |
+
+`DeleteGroupRequest` 包含目标群组的 `groupID` 与申请人 `fromUserID`。
+
 ```objc
 DeleteGroupRequest *request =
-  [[DeleteGroupRequest alloc] initWithGroupID:application.groupID
-                                   fromUserID:application.userID];
+    [[DeleteGroupRequest alloc] initWithGroupID:@"group_1001"
+                                     fromUserID:@"user_003"];
+
 [[OIMManager manager] deleteGroupRequests:@[request]
-  onSuccess:^(NSString * _Nullable data) { [self reloadApplications]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+                                onSuccess:^(NSString * _Nullable data) {
+                                    [self reloadApplications];
+                                }
+                                onFailure:^(NSInteger code, NSString *message) {
+                                    NSLog(@"deleteGroupRequests failed: %ld %@", (long)code, message);
+                                }];
 ```
 
-删除记录不等于拒绝申请，也不改变成员关系。其他端通过 `onGroupApplicationDeleted:` 移除相同记录。
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+删除申请记录仅用于清理历史历史数据，并不代表同意或拒绝加群申请，亦不影响群成员关系。多端同步时会通过 `onGroupApplicationDeleted:` 事件通知其他端，客户端应以 `groupID:userID` 为合并标识从本地列表中移除对应申请记录。事件监听参见[入群申请概览](/sdk/ios/group/group-applications/overview-group-applications)。

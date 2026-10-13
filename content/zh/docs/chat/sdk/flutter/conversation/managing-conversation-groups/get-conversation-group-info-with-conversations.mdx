@@ -1,10 +1,17 @@
 ---
 title: '查询分组内会话'
-description: '使用 getConversationGroupInfoWithConversations 分页查询 Flutter 分组内会话。'
+description: '分页查询指定会话分组及其包含的会话列表。'
 sourcePath: '/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations'
 ---
 
-使用 `getConversationGroupInfoWithConversations()` 同时读取一个会话分组及其当前页会话详情。
+分页获取指定会话分组详情及其包含的会话列表。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `String` | 是 | 目标会话分组 ID（即 `conversationGroupID`，非群组 ID）。 |
+| `pagination` | `RequestPagination` | 是 | 分页配置，`pageNumber` 从 1 开始，`showNumber` 为每页拉取数量。 |
 
 ```dart
 final page = await OpenIM.iMManager.conversationGroupManager
@@ -18,10 +25,14 @@ final page = await OpenIM.iMManager.conversationGroupManager
 renderConversationGroup(page.group, page.conversationElems ?? const []);
 ```
 
-`groupID` 在这个 request 中表示 `conversationGroupID`。`pageNumber` 从 `1` 开始，`showNumber` 是每页数量。
-
 ## 返回结果
 
-响应提供 nullable 的 `group`、当前页 `conversationElems` 和 `isEnd`，不包含 `conversationTotal`。分页终止依据 `isEnd` 判断。
+Future 成功返回包含分组与会话列表的分页数据对象：
 
-该查询不会触发分组 listener；分页期间如果收到变化事件，可在本轮完成后重新查询确认当前结果。
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `group` | `ConversationGroupInfo?` | 当前会话分组资料。 |
+| `conversationElems` | `List<ConversationInfo>?` | 当前页包含的会话列表。 |
+| `isEnd` | `bool?` | 是否已拉取至最后一页；分页迭代应依据此字段判断。 |
+
+查询操作建立静态快照，不会触发事件通知。分页展示期间如果收到分组或成员变更通知，可在当前加载完成后重新查询校准，完整事件监听请参考[会话分组概览](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups)。

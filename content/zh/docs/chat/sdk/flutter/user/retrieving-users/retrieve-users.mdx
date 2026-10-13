@@ -4,11 +4,15 @@ description: '按 userID 批量查询应用用户公开资料（PublicUserInfo�
 sourcePath: '/sdk/flutter/user/retrieving-users/retrieve-users'
 ---
 
-`getUsersInfo()` 可以按 `userID` 查询应用用户的公开资料，适合展示好友候选人和陌生人资料卡。
+按 `userID` 批量查询应用用户的公开资料，适合展示好友候选人和陌生人资料卡：
 
-按昵称、手机号、组织或邮箱等业务字段检索用户时，可以先由业务后端返回候选 `userID`，再用本方法查询公开资料。
+按昵称、手机号、组织或邮箱等业务字段检索用户时，可以先由业务后端返回候选 `userID` 列表，再调用本接口查询公开基础资料。
 
-## 查询公开资料
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `userIDList` | `List<String>` | 是 | 待查询公开资料的目标用户 ID 列表。建议在调用前去重并控制单次查询数量。 |
 
 ```dart
 final userIDList = {'user_a', 'user_b'}.toList();
@@ -28,38 +32,24 @@ try {
 }
 ```
 
-`userIDList` 是必填的 OpenIMSDK 用户 ID 数组。调用前应去重并控制单次数量。
+## 返回结果
 
-### 返回结果
+Future 成功后返回公开用户信息列表（`List<PublicUserInfo>`）：
 
-Future 成功后返回 `List<PublicUserInfo>`：
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `String` | OpenIMSDK 用户唯一 ID。 |
+| `nickname` | `String?` | 账号级公开昵称。 |
+| `faceURL` | `String?` | 账号级公开头像地址。 |
+| `ex` | `String?` | 账号级扩展字符串，格式由业务约定。 |
 
-| 字段 | 说明 |
-| --- | --- |
-| `userID` | OpenIMSDK 用户 ID。 |
-| `nickname` | 账号级公开昵称。 |
-| `faceURL` | 账号级公开头像地址。 |
-| `ex` | 账号级扩展字符串，格式由业务约定。 |
+这里返回的 `ex` 仅用于读取其他账号的公开扩展资料。Flutter 客户端不能通过此接口修改其他账号的资料；当前登录用户自己的扩展字段修改请参考[更新当前用户资料](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile)。
 
-这里返回的 `ex` 只用于读取其他账号的公开扩展资料。Flutter 客户端不能通过 User API 修改其他账号的公开资料；当前用户自己的 `ex` 通过 `setSelfInfo()` 更新，完整值覆盖规则见[更新当前用户资料](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile)。
-
-## 调用结果与资料刷新
-
-查询成功后，以返回的 `List<PublicUserInfo>` 更新当前展示的公开资料。页面同时展示多个用户时，先收集可见项中的 `userID`，去重后批量查询，再按 `userID` 合并结果。
-
-该纯查询不会触发 `OnUserListener`。打开资料卡、用户主动刷新、断线重连或业务后端通知资料变化时，可重新调用 `getUsersInfo()` 获取最新资料。
-
-`OnUserListener.onSelfInfoUpdated` 只携带当前登录用户的 `UserInfo`，不能当作任意用户公开资料事件。
-
-## 搜索添加好友
-
-搜索并添加好友时，通常先由业务后端返回候选 `userID`，再调用 `getUsersInfo()` 展示公开资料。用户确认目标后，再进入好友申请流程。
-
-只支持按用户 ID 精确搜索时，可以直接把输入值作为 `userID` 查询。按昵称、手机号、组织、邮箱等字段进行模糊搜索时，由业务后端提供候选 ID。
+该查询为本地只读操作，不会触发用户相关的事件监听。打开资料卡、用户主动刷新、断线重连或业务通知资料变更时，可重新调用此接口拉取最新资料。
 
 ## 按场景选择展示数据
 
-同一个 `userID` 在不同场景中可能对应不同的展示名称和关系数据，应按当前界面选择数据源：
+同一个 `userID` 在不同场景中可能对应不同的展示名称和关系数据，应按当前界面合理选择数据模型：
 
 | 场景 | 优先使用 |
 | --- | --- |
@@ -67,10 +57,5 @@ Future 成功后返回 `List<PublicUserInfo>`：
 | 好友列表、联系人页、好友备注 | `FriendInfo` |
 | 群成员列表、群内昵称、群角色 | `GroupMembersInfo` |
 
-好友备注和群内昵称分别来自好友关系与群成员资料，不能用 `PublicUserInfo.nickname` 覆盖。相关读取方式见[分页获取好友列表](/sdk/flutter/user/friends/get-friend-list-page)、[查询指定好友资料](/sdk/flutter/user/friends/get-friends-info)和[群成员查询](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)。
+好友备注名和群内专属昵称分别来自好友关系与群成员资料，不应使用 `PublicUserInfo.nickname` 盲目覆盖。相关读取与维护方式请参考[分页获取好友列表](/sdk/flutter/user/friends/get-friend-list-page)、[查询指定好友资料](/sdk/flutter/user/friends/get-friends-info)和[群成员查询概览](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)。
 
-## 下一步
-
-- [分页获取好友列表](/sdk/flutter/user/friends/get-friend-list-page)
-- [查询指定好友资料](/sdk/flutter/user/friends/get-friends-info)
-- [获取收到的好友申请](/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient)

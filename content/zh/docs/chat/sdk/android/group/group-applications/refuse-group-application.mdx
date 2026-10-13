@@ -1,16 +1,45 @@
 ---
 title: '拒绝入群申请'
-description: '使用 Android SDK 拒绝指定用户的入群申请。'
+description: '拒绝指定用户的入群申请。'
 sourcePath: '/sdk/android/group/group-applications/refuse-group-application'
 ---
 
-拒绝操作同样使用申请所属 `groupID`、申请人 `userID` 和处理说明。
+群主或管理员拒绝指定用户的入群申请。调用时需提供申请的目标群组 ID、申请人用户 ID 以及拒绝原因说明。
 
 ```java
-OpenIMClient.getInstance().groupManager.refuseGroupApplication(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, applicantUserID, "当前群组人数已满");
+String groupID = "group_123";
+String applicantUserID = "user_applicant";
+String handleMsg = "当前群人数已达上限，暂不接收新成员";
+
+OpenIMClient.getInstance().groupManager.refuseGroupApplication(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 拒绝入群申请成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理操作失败
+        }
+    },
+    groupID,
+    applicantUserID,
+    handleMsg
+);
 ```
 
-成功回调表示拒绝请求已完成，不表示其他客户端已经收到变化。`onGroupApplicationRejected` 返回更新后的 `GroupApplicationInfo`；按 `groupID:userID` 更新申请状态，必要时重新查询申请列表。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 申请加入的目标群组全局唯一 ID。 |
+| `applicantUserID` | `String` | 是 | 发起入群申请的目标用户 ID。 |
+| `handleMsg` | `String` | 否 | 拒绝原因附言说明，可传空字符串。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+拒绝成功代表服务端已更新申请状态。本地及相关客户端随后将触发 `onGroupApplicationRejected` 事件通知，返回更新后的 `GroupApplicationInfo`。客户端应以 `groupID:userID` 为标识更新该申请的处理状态；完整监听见[群组概览](/sdk/android/group/overview-group)。

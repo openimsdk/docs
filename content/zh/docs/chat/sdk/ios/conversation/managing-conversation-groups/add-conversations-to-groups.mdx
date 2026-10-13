@@ -1,27 +1,48 @@
 ---
 title: '添加会话到分组'
-description: '使用 Open_im_sdkAddConversationsToGroups 添加会话分组关联。'
+description: '使用 iOS SDK 添加会话分组关联。'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/add-conversations-to-groups'
 ---
 
-使用 `Open_im_sdkAddConversationsToGroups` 将一个或多个会话加入一个或多个会话分组。它只增加关联，不会创建会话或改变消息发送目标。
+将一个或多个会话批量添加到指定的会话分组中。该操作仅建立分组关联，不会创建新会话亦不改变消息发送目标：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationIDs` | `NSArray<NSString *> *` | 待加入分组的会话 ID 列表。 |
+| `conversationGroupIDs` | `NSArray<NSString *> *` | 目标会话分组 ID 列表。 |
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSData *conversationData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"c2c_user1002"] options:0 error:nil];
 NSString *conversationIDsJSON =
     [[NSString alloc] initWithData:conversationData encoding:NSUTF8StringEncoding];
 
 NSData *groupData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationGroupID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"group_work_101"] options:0 error:nil];
 NSString *groupIDsJSON =
     [[NSString alloc] initWithData:groupData encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        NSLog(@"AddConversationsToGroups success");
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"AddConversationsToGroups failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkAddConversationsToGroups(callback, conversationIDsJSON, groupIDsJSON);
 ```
 
-将业务 callback、`conversationIDsJSON` 和 `groupIDsJSON` 交给 `Open_im_sdkAddConversationsToGroups`。两个 JSON 数组都必填，不能传空会话数组。
+状态以 `conversationGroupID` 与 `conversationID` 为合并标识。
 
 ## 返回结果
 
-成功 callback 表示关联请求已完成，不返回更新后的分组对象，也不等同于 listener 已到达所有端。
+成功回调 `onSuccess` 表示关联添加请求已完成。
 
-之后新增的关联由 `onConversationGroupMemberAdded:` 提供，完整处理见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+服务端处理完成后，各端会通过 `onConversationGroupMemberAdded:` 事件接收分组成员新增通知，客户端应结合 `conversationGroupID` 与 `conversationID` 更新分组成员列表。事件监听与详细处理请参见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+

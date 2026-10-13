@@ -1,15 +1,42 @@
 ---
 title: '查询指定群成员资料'
-description: '使用 getGroupMembersInfo 批量读取指定成员在群内的资料。'
+description: '批量获取指定群成员在群内的详细资料。'
 sourcePath: '/sdk/android/group/retrieving-group-members/get-specified-group-members-info'
 ---
 
-`getGroupMembersInfo()` 接收一个 `groupID` 和目标用户 ID 列表，返回这些用户在群内的 `GroupMembersInfo`。
+批量获取指定用户在特定群组内的成员资料（如群内昵称、角色等级、禁言状态等）。传入目标群组 ID 与用户 ID 列表，常用于消息气泡展示、群成员名片拉取等场景。
 
 ```java
+String groupID = "group_123";
+List<String> userIDs = Arrays.asList("user_a", "user_b");
+
 OpenIMClient.getInstance().groupManager.getGroupMembersInfo(
     new OnBase<List<GroupMembersInfo>>() {
-        @Override public void onSuccess(List<GroupMembersInfo> members) { /* members 是查询到的成员资料。 */ }
-        @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-    }, groupID, userIDs);
+        @Override
+        public void onSuccess(List<GroupMembersInfo> members) {
+            // members 为查询到的成员资料列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理查询失败
+        }
+    },
+    groupID,
+    userIDs
+);
 ```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupMembersInfo>>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `userIDs` | `List<String>` | 是 | 待查询的目标成员用户 ID 列表。 |
+
+## 返回结果
+
+成功回调返回指定成员的资料列表 `List<GroupMembersInfo>`。单条记录包含群内昵称 `nickname`、群内头像 `faceURL`、角色 `roleLevel`、禁言截止时间 `muteEndTime` 等属性。
+
+客户端应以 `groupID:userID` 为标识将返回的数据合并到本地群成员缓存中。修改成员信息请参阅[修改群内昵称](/sdk/android/group/managing-group-members/set-group-member-nickname)。

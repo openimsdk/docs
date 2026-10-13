@@ -10,7 +10,7 @@ sourcePath: '/sdk/ios/conversation/retrieving-conversations/retrieve-conversatio
 
 `offset` 是起始位置，`count` 是本页数量；第一页从 `0` 开始：
 
-### 参数说明
+## 参数说明
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
@@ -19,19 +19,27 @@ sourcePath: '/sdk/ios/conversation/retrieving-conversations/retrieve-conversatio
 
 ```objc
 NSInteger pageSize = 50;
-[[OIMManager manager] getConversationListSplitWithOffset:offset
-                                                    count:pageSize
-                                                onSuccess:^(NSArray<OIMConversationInfo *> *items) {
-                                                    [conversationStore mergeByConversationID:items ?: @[]];
-                                                }
-                                                onFailure:nil];
+[[OIMManager manager] getConversationListSplitWithOffset:0
+                                                   count:pageSize
+                                               onSuccess:^(NSArray<OIMConversationInfo *> *items) {
+                                                   [conversationStore mergeByConversationID:items ?: @[]];
+                                               }
+                                               onFailure:^(NSInteger code, NSString *message) {
+                                                   NSLog(@"getConversationListSplit failed: %ld %@", (long)code, message);
+                                               }];
 ```
 
-成功 callback 的数组声明为 nullable，没有数据时按空数组处理。继续加载时按已经请求的条目数量推进 `offset`，按 `conversationID` 去重；返回数量小于 `count` 时表示已经到达末尾。用户主动刷新时清空旧分页状态并从 `0` 重新读取。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回包含会话信息对象的数组 `NSArray<OIMConversationInfo *> *`。返回空数组或数量小于 `count` 时表示已拉取到列表末尾。
+
+继续加载下一页时，按已请求并成功返回的条目数量推进 `offset`，并在本地以 `conversationID` 进行幂等去重合并。用户主动下拉刷新时，应清空本地旧分页游标并从 `0` 重新读取第一页。
 
 ## 保持列表同步
 
-分页查询提供当前会话数据，`OIMConversationListener` 负责合并之后新增或发生变化的会话。SDK 初始化成功后、调用登录前添加 listener；`OIMCallbacker` 对 listener 是弱引用，应用必须用强属性保留同一实例，并在账号作用域结束时用该实例移除：
+分页查询用于建立首次渲染的会话数据快照，`OIMConversationListener` 负责接收后续新增会话或会话属性变更通知。SDK 初始化成功后添加监听器；`OIMCallbacker` 对监听器使用弱引用管理，应用应使用强属性保留该监听实例，并在退出登录或账号作用域结束时移除：
 
 ```objc
 @interface ConversationListSync : NSObject <OIMConversationListener>
@@ -53,11 +61,12 @@ NSInteger pageSize = 50;
 ConversationListSync *sync = [ConversationListSync new];
 self.conversationListSync = sync;
 [[OIMManager callbacker] addConversationListener:sync];
-// 账号作用域结束时：
+
+// 账号注销或控制器销毁时：
 [[OIMManager callbacker] removeConversationListener:self.conversationListSync];
 self.conversationListSync = nil;
 ```
 
-每次按 `conversationID` 幂等合并。总未读数由[维护总未读数](/sdk/ios/conversation/managing-conversations/get-total-unread-count)负责，输入状态由[上报输入状态](/sdk/ios/message/composing-messages/update-typing-status)负责。
+各端收到事件后均按 `conversationID` 进行幂等合并。账号级别的总未读数变化由[获取消息总未读数](/sdk/ios/conversation/managing-conversations/get-total-unread-count)统一监听，输入状态由[上报输入状态](/sdk/ios/message/composing-messages/update-typing-status)负责。
 
-不要用已加入群组列表替代会话列表。用户可能已经加入群组但尚未产生对应会话，也可能退出群组后仍保留历史会话记录。
+请勿使用已加入群组列表替代群会话列表：用户可能已加入群组但尚未产生消息会话，也可能退群后仍保留着历史会话快照。

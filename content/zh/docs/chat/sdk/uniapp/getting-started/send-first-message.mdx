@@ -19,7 +19,7 @@ OpenIMSDK 消息可以发送给用户或群组。单聊消息使用目标用户 
 
 - 单聊接收方用户已经存在，并且服务端策略允许当前用户向其发送消息。
 - 群聊目标已经存在，当前用户是群成员，并且群组状态和权限允许其发言。
-- 当前客户端已经收到连接成功事件，而不只是 `login()` 的 Promise 返回成功。
+- 当前客户端已经收到连接成功事件，而不只是登录 Promise 返回成功。
 
 ## 导入消息 API
 
@@ -34,7 +34,7 @@ import {
 
 ## 发送单聊消息
 
-发送消息分为两步：先创建待发送的 `OpenIMMessageItem`，再把该对象和目标标识传给 `sendMessage()`。
+发送消息分为两步：先通过[创建文本消息](/sdk/uniapp/message/creating-messages/create-text-message)创建待发送的 `OpenIMMessageItem`，再把该对象和目标标识传给[发送消息](/sdk/uniapp/message/sending-messages/send-message)。
 
 ```uts
 async function sendFirstDirectMessage() {
@@ -80,20 +80,20 @@ async function sendFirstGroupMessage() {
 
 ## 理解发送结果
 
-`createTextMessage()` 的 Promise 返回一个尚未发送的消息对象，返回 `null` 时不应继续调用发送 API。创建消息不会把消息发送到 OpenIMServer，也不会触发新消息事件。
+[创建文本消息](/sdk/uniapp/message/creating-messages/create-text-message)返回一个尚未发送的消息对象，返回 `null` 时不应继续调用发送 API。创建消息不会把消息发送到 OpenIMServer，也不会触发新消息事件。
 
-`sendMessage()` 的 Promise 返回发送后的 `OpenIMMessageItem`。Promise 成功表示本次发送调用完成，当前客户端可以按 `clientMsgID` 更新本地待发送消息；对方客户端收到新消息事件是另一个阶段，应分别验证。
+[发送消息](/sdk/uniapp/message/sending-messages/send-message)返回发送后的 `OpenIMMessageItem`。调用成功表示消息已成功提交并持久化，发送端可据此根据 `clientMsgID` 更新本地消息状态为已发送；对方客户端则会通过实时新消息事件接收并展示该消息，建议在双端分别验证。
 
 发送失败时，Promise 抛出的错误包含 `errCode` 和 `errMsg`，可结合当前调用上下文与 OpenIMServer 日志定位问题。
 
 ## 验证消息收发流程
 
-1. 在当前客户端确认 `sendMessage()` 返回的消息状态和 `clientMsgID`。
+1. 在当前客户端确认发送消息返回的结果状态和 `clientMsgID`。
 2. 在另一个已登录客户端确认收到新消息事件。先根据消息中的发送方、接收方或群组信息确定目标 `conversationID`，再将消息合并到正确会话。
 3. 分别测试单聊和群聊，避免只验证其中一种目标类型。
 4. 断网后恢复网络并重新测试，确认 App 生命周期与网络状态已正确上报。
 
-完整的消息事件注册、订阅清理和会话合并规则将在“接收消息”页面统一说明，本页不重复注册同一事件。
+完整的消息事件注册、订阅清理和会话合并规则请参考[接收消息](/sdk/uniapp/message/receiving-messages/receive-messages)。
 
 ## 下一步
 

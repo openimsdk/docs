@@ -4,10 +4,28 @@ description: '分页查询当前用户加入的 iOS 群组。'
 sourcePath: '/sdk/ios/group/retrieving-groups/get-joined-group-list-page'
 ---
 
+分页获取当前登录用户已加入的群组列表：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `offset` | `NSInteger` | 分页起始偏移量，首屏传 `0`。 |
+| `count` | `NSInteger` | 每页拉取的数据条数。 |
+
 ```objc
-[[OIMManager manager] getJoinedGroupListPageWithOffset:0 count:50
-    onSuccess:^(NSArray<OIMGroupInfo *> *groups) { [self replaceFirstPage:groups]; }
-    onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getJoinedGroupListPageWithOffset:0
+                                                 count:50
+                                             onSuccess:^(NSArray<OIMGroupInfo *> *groups) {
+                                                 [self replaceFirstPage:groups];
+                                             }
+                                             onFailure:^(NSInteger code, NSString *message) {
+                                                 [self showErrorCode:code message:message];
+                                             }];
 ```
 
-`offset` 从 `0` 开始，继续加载时按已请求条目数递增。分页期间收到群组增删事件时，从第一页重新查询当前列表。
+状态以 `groupID` 为合并标识。加载更多页时递增偏移量，并在客户端去重合并。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回当前分页的 `NSArray<OIMGroupInfo *> *` 数组。查询仅返回调用时刻的数据快照，不触发群组事件；运行过程中的群组变动由[群组概览](/sdk/ios/group/overview-group)中说明的回调监听处理。

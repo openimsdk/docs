@@ -4,7 +4,7 @@ description: '使用 iOS SDK 分页读取会话历史消息。'
 sourcePath: '/sdk/ios/message/retrieving-messages/load-older-messages'
 ---
 
-进入聊天页时用该 selector 加载第一页历史消息，继续上拉时传入当前边界消息的 `clientMsgID`。
+进入聊天页面或上拉加载更早的历史记录时，可调用高级历史消息拉取接口向过去方向分页查询消息列表。
 
 ```objc
 OIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];
@@ -14,10 +14,33 @@ param.count = 20;
 param.viewType = OIMGetHistoryViewTypeHistory;
 
 [[OIMManager manager] getAdvancedHistoryMessageList:param
-    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {
+    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo * _Nullable result) {
+        // 更新列表与分页边界
         [self prependMessages:result.messageList ?: @[]];
     }
-    onFailure:nil];
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // 处理拉取失败
+    }];
 ```
 
-第一页的 `startClientMsgID` 可以为 `nil`。成功结果也允许为 `nil`，应先检查；非空时用 `messageList` 和 `isEnd` 更新分页状态。查询不触发新消息 delegate，合并时按 `conversationID:clientMsgID` 去重。
+## 参数说明
+
+`OIMGetAdvancedHistoryMessageListParam` 请求参数字段：
+
+- `conversationID`：目标会话 ID。
+- `startClientMsgID`：分页锚点消息的客户端消息 ID（`clientMsgID`）。加载第一页最新历史时传 `nil`；向上翻页加载更早消息时传入当前列表顶部消息的 `clientMsgID`。
+- `count`：每页期望获取的消息数量。
+- `viewType`：视图查询类型，常用 `OIMGetHistoryViewTypeHistory`。
+
+## 返回结果
+
+- `onSuccess`：返回 `OIMGetAdvancedHistoryMessageListInfo` 对象。
+  - `messageList`：当前分页拉取到的消息数组（`NSArray<OIMMessageInfo *>`）。
+  - `isEnd`：是否已拉取到历史消息终点（即没有更早的消息）。为 `YES` 时应停止继续向上翻页。
+  - `lastMinSeq`：当前拉取分片的最小序列号。
+- `onFailure`：拉取失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 客户端状态合并
+
+- 查询历史消息接口用于建立本地消息快照，调用成功不会触发新消息接收监听。
+- 历史拉取结果与新消息推送可能存在部分重叠，客户端必须以 `clientMsgID`（限定当前 `conversationID`）为合并标识去重，避免界面出现重复消息项。若需要从指定锚点向较新方向反向补齐消息，见[反向加载历史消息](/sdk/ios/message/retrieving-messages/load-newer-messages)。

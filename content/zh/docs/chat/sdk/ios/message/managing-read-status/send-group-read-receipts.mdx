@@ -4,21 +4,44 @@ description: '使用 iOS SDK 上报群消息已读回执。'
 sourcePath: '/sdk/ios/message/managing-read-status/send-group-read-receipts'
 ---
 
+在群聊会话中，当用户屏幕内浏览了群消息后，可调用发送群消息已读回执接口上报已读状态。SDK 会将已读回执同步至服务端，并由服务端向群内其他成员推送阅读进度更新。
+
+## 发送群消息已读回执
+
 ```objc
 [[OIMManager manager] sendGroupMessageReadReceipt:conversationID
-    clientMsgIDs:visibleClientMsgIDs
-    onSuccess:nil
-    onFailure:nil];
+                                     clientMsgIDs:visibleClientMsgIDs
+                                        onSuccess:^(NSString * _Nullable data) {
+    // 已读回执已成功发送至服务端
+}
+                                        onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理上报失败
+}];
 ```
 
-同一批 ID 必须属于目标群会话。成功 callback 只表示上报请求完成，不等于其他客户端已收到回执。会话未读数由独立的会话已读 API 维护。
+## 参数说明
 
-其他客户端通过 `onRecvGroupReadReceipt:` 接收群聊成员级已读变化。本页是该 delegate 的正文归属页；按 `conversationID + clientMsgID` 合并已读人数、未读人数和成员信息。
+- `conversationID`：目标群聊会话 ID。
+- `clientMsgIDs`：当前屏幕已阅览的消息客户端消息 ID 列表（`NSArray<NSString *>`）。同一批 ID 必须属于同一个群聊会话。
+- `onSuccess`：上报成功回调，表示 SDK 已成功向服务端提交已读回执。
+- `onFailure`：上报失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 监听群消息已读回执事件
+
+群聊中其他成员阅读消息后，SDK 通过 `OIMAdvancedMsgListener` 协议的群已读回执方法推送更新：
 
 ```objc
 - (void)onRecvGroupReadReceipt:(OIMGroupMessageReceipt *)receipt {
+    if (receipt == nil) {
+        return;
+    }
+    // 依据 conversationID 与 clientMsgID 合并群消息的已读人数和状态
     [self mergeGroupReceipt:receipt];
 }
 ```
 
-承载该回调的稳定 listener 需要成对调用 `addAdvancedMsgListener:` 与 `removeAdvancedMsgListener:`，完整生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。上报 callback、群回执 delegate 和[查询群消息已读成员](/sdk/ios/message/managing-read-status/get-group-message-readers)得到的成员列表是三个独立阶段。
+## 客户端状态合并与注意事项
+
+- 客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。收到群回执时，应更新对应消息气泡上的已读人数与未读人数。
+- 监听群已读回执需在组件中实现 `OIMAdvancedMsgListener` 协议，并通过管理类成对添加与移除监听，具体监听生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+- 上报已读回执、接收远端回执事件与主动分页拉取成员是三个不同阶段。若需查看某条群消息的具体已读成员列表，见[查询群消息已读成员](/sdk/ios/message/managing-read-status/get-group-message-readers)。

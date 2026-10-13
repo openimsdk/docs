@@ -4,21 +4,34 @@ description: '使用 Objective-C API 将群主身份转让给另一名群成员�
 sourcePath: '/sdk/ios/group/managing-group-members/transfer-group-owner'
 ---
 
-只有当前群主可以调用 `transferGroupOwner:newOwner:onSuccess:onFailure:`，目标用户必须是有效群成员。`groupID` 是目标群组 ID，`newOwner` 是新群主的用户 ID，两个参数均为不可空的 `NSString *`。
+只有当前群主可以转让群主身份，目标用户必须是有效群成员：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `newOwner` | `NSString *` | 新群主的用户 ID。 |
 
 ```objc
-[[OIMManager manager] transferGroupOwner:groupID
-    newOwner:targetUserID
-    onSuccess:^(NSString * _Nullable data) { [self showTransferCompleted]; }
-    onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
-    }];
+[[OIMManager manager] transferGroupOwner:@"group_1001"
+                                newOwner:@"user_002"
+                               onSuccess:^(NSString * _Nullable data) {
+                                   NSLog(@"transferGroupOwner success");
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"transferGroupOwner failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-## 调用后的状态变化
+状态以 `groupID:userID` 为合并标识。
 
-成功 callback 表示 OpenIMServer 已完成转让：原群主变为普通成员，新群主获得群主角色。原群主和新群主的角色变化通过 `onGroupMemberInfoChanged:` 分别到达，一次转让可能产生两条成员变化，均按 `groupID:userID` 合并。
+## 返回结果
 
-不要只依赖 delegate 的到达数量判断转让结果。需要显示当前群主和管理员时，调用 `getGroupMemberOwnerAndAdmin:onSuccess:onFailure:` 重新取得当前列表；完整 listener 和合并代码见[查询群成员概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。
+成功回调 `onSuccess` 返回操作结果。
 
-群主需要退出群组时，必须先完成转让，再调用退出群组 selector。如果群组不再需要，群主也可以选择解散群组，但解散会影响所有成员，不能替代普通转让。
+服务端完成转让后：原群主降级为普通成员，新群主升级为群主角色。原群主和新群主的角色变更会通过 `onGroupMemberInfoChanged:` 事件分别通知各端，客户端以 `groupID:userID` 分别合并两名成员的最新角色。
+
+如需即时刷新群管理层资料，可调用[获取群主和管理员](/sdk/ios/group/retrieving-group-members/get-group-member-owner-and-admin)；群成员完整监听与查询说明参见[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。
+
+群主若需退出群组，必须先完成转让后再调用[退出群组](/sdk/ios/group/quit-group)；若该群已不再需要，群主也可以直接调用[解散群组](/sdk/ios/group/dismiss-group)。

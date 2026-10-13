@@ -4,7 +4,7 @@ description: '启用、关闭并配置指定会话的服务端消息定期删除
 sourcePath: '/sdk/wasm/conversation/managing-conversations/set-message-destruct'
 ---
 
-服务端消息定期删除由 `isMsgDestruct` 和 `msgDestructTime` 共同组成：前者控制开关，后者保存删除周期配置。这两个字段属于同一个业务操作，可以在一次调用中提交。
+服务端消息定期删除策略由 `isMsgDestruct`（策略开关）和 `msgDestructTime`（删除周期，单位为秒）共同控制。这两个字段属于同一业务配置项，支持在一次调用中同时提交：
 
 ```ts
 await openimsdk.setConversation({
@@ -14,8 +14,8 @@ await openimsdk.setConversation({
 });
 ```
 
-`msgDestructTime` 的单位为秒。关闭时传入 `isMsgDestruct: false`；是否保留原周期由产品交互决定。该能力用于定期删除服务端消息，不是阅后即焚，后者使用 `isPrivateChat` 和 `burnDuration`。
+若需关闭定期删除，可传入 `isMsgDestruct: false`。该功能由服务端按时间周期清理云端消息记录，区别于客户端已读后即时销毁的“阅后即焚”（后者由 `isPrivateChat` 与 `burnDuration` 负责控制）。
 
-达到删除周期后，策略只清理服务端保存的消息，不会主动删除当前设备或其他客户端已经同步到本地的消息。客户端卸载重装、清除本地数据或切换到尚未同步过这些消息的新设备后，已被服务端清理的消息无法再次拉取。
+当达到设定的周期后，服务端将自动清理其存储的历史消息；已同步到当前设备本地的消息不会被主动删除。若后续在新设备登录或本地数据清除后重新拉取历史记录，已被服务端清理的消息将无法再次获取。
 
-Promise 成功表示设置请求完成。收到 `OnConversationChanged` 后，使用 `conversationID` 更新对应会话的开关和周期；完整监听示例见[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。
+接口调用成功后，SDK 会触发 `SdkEvent.OnConversationChanged` 事件通知配置变更。业务层可根据 `conversationID` 更新对应会话的策略字段。完整的事件监听配置请参考[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。

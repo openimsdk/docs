@@ -4,11 +4,14 @@ description: '使用 OpenIM iOS SDK 在通话房间中发送和接收自定义�
 sourcePath: '/sdk/ios/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-`signalingSendCustomSignal:customInfo:onSuccess:onFailure:` 用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧的状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。
+调用自定义信令发送接口向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧的状态同步。它不是聊天消息接口，也不能替代音视频媒体引擎的数据通道。
 
-## 发送信令
+## 参数说明
 
-`customInfo` 是字符串。需要传递结构化数据时，先定义稳定的数据格式并序列化为 JSON。
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `roomID` | `NSString *` | 当前通话房间 ID，必须与发送方正在处理的通话一致。 |
+| `customInfo` | `NSString *` | 业务自定义字符串。使用 JSON 序列化时建议包含协议版本和业务幂等 ID。 |
 
 ```objc
 NSDictionary *signal = @{
@@ -32,18 +35,15 @@ NSString *customInfo = [[NSString alloc] initWithData:data encoding:NSUTF8String
 }];
 ```
 
-### 参数说明
+通话状态以 `roomID` 为合并标识，参与者状态同时结合用户 ID。
 
-| 参数 | 说明 |
-| --- | --- |
-| `roomID` | 当前通话房间 ID，必须与发送方正在处理的通话一致。 |
-| `customInfo` | 业务自定义字符串。使用 JSON 时应包含协议版本和业务幂等 ID。 |
+## 返回结果
 
-成功 callback 表示 OpenIMServer 已接受本次发送，不等于其他参与者已经处理该数据。自定义信令适合轻量、临时的通话协商，不提供大文件、聊天记录或长期状态的传输与保存能力。
+成功回调 `onSuccess` 表示服务端已接受本次信令请求并向房间广播，不等于其他参与者已经处理完毕。自定义信令适合轻量、临时的通话协商，不提供大文件、聊天记录或长期状态的传输与保存能力。
 
 ## 接收信令
 
-实现 `OIMSignalingListener` 的 `onReceiveCustomSignal:` 接收自定义信令。iOS enterprise SDK 的公开 delegate 只提供原始 `NSString *`，没有声明包含 `roomID` 和 `customInfo` 的对象；应用必须按照服务端和各端共同约定的格式解析字符串，再校验房间及业务协议。
+实现 `OIMSignalingListener` 的 `onReceiveCustomSignal:` 回调方法接收自定义信令。公开 delegate 提供原始字符串，应用需按照多端共同约定的数据格式解析 JSON，再校验房间与业务协议：
 
 ```objc
 @interface CallSignalStore () <OIMSignalingListener>
@@ -71,10 +71,10 @@ NSString *customInfo = [[NSString alloc] initWithData:data encoding:NSUTF8String
 @end
 ```
 
-本页是 `onReceiveCustomSignal:` 的完整监听归属页。必须使用同一个 listener 实例调用 `addSignalingListener:` 和 `removeSignalingListener:`；退出登录、切换账号、离开通话功能或销毁状态层时移除。
+必须使用同一个 listener 实例调用添加与移除监听方法；在退出登录、切换账号或离开通话界面时及时移除。
 
-由于接收 callback 没有独立的 SDK `roomID` 字段，若业务需要按房间过滤，发送端应把 `roomID` 放入自有协议，并在接收端验证它与当前房间一致。再以协议中的 `eventID` 或其他稳定幂等键去重，不要依赖事件到达顺序。
+由于接收回调未提供独立的外层 `roomID` 字段，若业务需要按房间过滤，发送端应把 `roomID` 写入自定义协议载荷，并在接收端验证其与当前房间一致。建议使用协议中的 `eventID` 进行幂等去重，避免依赖事件到达顺序。
 
 ## 信令与持久状态
 
-自定义信令只提供实时通知，不是可查询的持久业务状态。页面重新进入、设备离线或 listener 尚未注册时，都可能无法仅凭它恢复完整状态。需要稍后恢复的数据可通过业务数据或普通消息能力承载；需要确认通话房间和当前参与者时，使用[按群组查询房间](/sdk/ios/calling/retrieving-call-information/get-room-by-group-id)重新查询。
+自定义信令只提供实时通知，不是可查询的持久业务状态。页面重新进入、设备离线或 listener 尚未注册时，都可能无法仅凭它恢复完整状态。需要稍后恢复的数据可通过业务数据或普通消息能力承载；需要确认通话房间和当前参与者时，使用[查询群组通话房间](/sdk/ios/calling/retrieving-call-information/get-room-by-group-id)重新查询。

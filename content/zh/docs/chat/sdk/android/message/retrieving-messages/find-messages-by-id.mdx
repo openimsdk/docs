@@ -1,14 +1,43 @@
 ---
 title: '按 ID 查找消息'
-description: '使用 findMessageList 按 SearchParams 查询消息记录。'
+description: '根据客户端消息 ID 列表精确定位查找消息。'
 sourcePath: '/sdk/android/message/retrieving-messages/find-messages-by-id'
 ---
 
-构造 `SearchParams` 列表查询消息。
+根据会话 ID 与一组客户端消息 ID（`clientMsgID`）精确定位并拉取消息。适用于通知栏点击、自定义业务跳转或离线回执等具备明确消息 ID 的场景。
 
 ```java
-messageManager.findMessageList(new OnBase<SearchResult>() {
-    @Override public void onSuccess(SearchResult result) { /* result 是查询结果。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, searchParams);
+SearchParams params = new SearchParams();
+params.setConversationID("si_user_a_user_b");
+params.setClientMsgIDList(Arrays.asList("msg_001", "msg_002"));
+
+List<SearchParams> searchParamsList = Collections.singletonList(params);
+
+OpenIMClient.getInstance().messageManager.findMessageList(
+    new OnBase<SearchResult>() {
+        @Override
+        public void onSuccess(SearchResult result) {
+            // result 包含匹配到的消息结果
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理查找失败
+        }
+    },
+    searchParamsList
+);
 ```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<SearchResult>` | 是 | 异步请求回调。 |
+| `searchParams` | `List<SearchParams>` | 是 | 查询参数对象列表。每个 `SearchParams` 必须设置 `conversationID` 与待查询的客户端消息 ID 列表 `clientMsgIDList`。 |
+
+## 返回结果
+
+成功回调返回 `SearchResult` 对象，内部包含各会话匹配到的消息列表。客户端应以 `clientMsgID` 为标识更新本地消息状态或导航定位至对应气泡。
+
+若需要按关键词模糊搜索消息内容，请参阅[搜索消息](/sdk/android/message/searching-messages/search-messages)。

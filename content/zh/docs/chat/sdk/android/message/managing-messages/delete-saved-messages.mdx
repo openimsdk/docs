@@ -1,46 +1,47 @@
 ---
 title: '批量删除消息'
-description: '使用 Android SDK 批量删除当前账号在同一会话中的消息。'
+description: '批量删除当前账号在同一会话中的一条或多条消息。'
 sourcePath: '/sdk/android/message/managing-messages/delete-saved-messages'
 ---
+
+批量删除指定会话中的消息记录。支持通过参数配置是否将删除操作同步至当前账号的其他多端设备。该删除仅作用于当前登录账号，不会影响会话中其他成员各自持有的消息副本。
+
+```java
+String conversationID = "si_user_a_user_b";
+String[] selectedClientMsgIDs = new String[]{"msg_001", "msg_002"};
+boolean isSync = true; // true 同步删除到多端，false 仅删除本地与当前端服务端
+
+DeleteMessagesReq request = new DeleteMessagesReq(
+    isSync,
+    conversationID,
+    selectedClientMsgIDs
+);
+
+OpenIMClient.getInstance().messageManager.deleteMessages(
+    request,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 批量删除成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理删除失败
+        }
+    }
+);
+```
 
 ## 参数说明
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `conversationID` | `String` | 是 | 要删除消息所在的会话 ID。 |
-| `clientMsgIDs` | `String[]` | 是 | 要删除的消息 ID 列表；同一批 ID 必须属于同一会话。 |
-| `isSync` | `boolean` | 是 | 是否把删除动作同步到当前账号的其他客户端。 |
+| `request` | `DeleteMessagesReq` | 是 | 批量删除请求对象。包含 `conversationID`（会话 ID）、`clientMsgIDs`（待删除的客户端消息 ID 数组）以及 `isSync`（是否同步到其他多端设备）。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
 
-```java
-DeleteMessagesReq request = new DeleteMessagesReq(
-    true,
-    conversationID,
-    selectedClientMsgIDs.toArray(new String[0])
-);
+## 返回结果
 
-messageManager.deleteMessages(request, new OnBase<String>() {
-    @Override
-    public void onSuccess(String data) {
-        // 删除请求已完成
-    }
+成功回调中的 `data` 返回确认信息。
 
-    @Override
-    public void onError(int code, String error) {
-        // 处理失败
-    }
-});
-```
-
-`isSync` 为 `false` 时，删除当前设备及当前账号服务端保存的记录；为 `true` 时，还会请求把删除动作同步到当前账号的其他客户端。该操作不会删除其他会话成员持有的副本，也不会产生撤回提示。
-
-成功回调表示删除请求已经完成；开启同步时，不代表其他客户端已经收到事件或完成界面更新。
-
-开启同步后，其他客户端可通过 `OnAdvanceMsgListener.onMsgDeleted` 接收删除的消息：
-
-```java
-@Override
-public void onMsgDeleted(Message message) {
-    // message 是已删除的消息。
-}
-```
+若设置了 `isSync = true`，当前账号在其他设备上的客户端会通过 `OnAdvanceMsgListener.onMsgDeleted` 接收删除通知，客户端应以 `clientMsgID` 为主键从消息列表中移除对应项；完整监听见[接收消息](/sdk/android/message/receiving-messages/receive-messages)。

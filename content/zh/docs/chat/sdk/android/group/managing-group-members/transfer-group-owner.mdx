@@ -1,16 +1,42 @@
 ---
 title: '转让群主'
-description: '使用 Android SDK 将群主身份转让给指定群成员。'
+description: '群主将群管理权转让给群内的指定成员。'
 sourcePath: '/sdk/android/group/managing-group-members/transfer-group-owner'
 ---
 
-`transferGroupOwner()` 接收 `groupID` 和 `newOwnerUserID` 两个参数：`groupID` 为要转让群主的群组 ID，`newOwnerUserID` 为新群主的用户 ID，该用户必须是该群的成员。
+群主将当前群组的群主身份转让给群内的另一位成员。转让完成后，原群主将自动降为普通成员，新群主获得该群的最高管理与解散权限。
 
 ```java
-OpenIMClient.getInstance().groupManager.transferGroupOwner(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, newOwnerUserID);
+String groupID = "group_123";
+String newOwnerUserID = "user_b";
+
+OpenIMClient.getInstance().groupManager.transferGroupOwner(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 群主转让成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理转让失败
+        }
+    },
+    groupID,
+    newOwnerUserID
+);
 ```
 
-成功回调表示转让请求已完成。原群主与新群主可能分别触发 `onGroupMemberInfoChanged`，每次回调都返回更新后的 `GroupMembersInfo`；按 `groupID:userID` 更新成员角色。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)，展示管理成员时可重新[获取群主和管理员](/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 期望转让群主的目标群组全局唯一 ID。 |
+| `newOwnerUserID` | `String` | 是 | 接收群主身份的新群主用户 ID，该用户必须是该群的现有成员。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+转让成功代表服务端已完成群主变更。随后本地及群内成员将触发 `onGroupMemberInfoChanged` 事件（原群主与新群主分别收到角色更新），同时群资料可能触发 `onGroupInfoChanged` 更新 `ownerUserID`。客户端应以 `groupID:userID` 为标识更新成员角色，以 `groupID` 为标识更新群主信息。在展示核心管理成员时，亦可主动调用[获取群主和管理员](/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin)进行快照校准；完整监听见[群组概览](/sdk/android/group/overview-group)。

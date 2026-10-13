@@ -4,11 +4,14 @@ description: '使用 OpenIM Flutter SDK 分页获取当前用户的会话列表�
 sourcePath: '/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-会话列表属于当前登录用户。每条 `ConversationInfo` 都包含会话标识、未读数、最后一条消息、置顶和草稿等状态。使用分页接口读取会话，不要使用一次加载完整列表的接口。
+会话列表属于当前登录用户。每条 `ConversationInfo` 都包含会话标识、未读数、最后一条消息、置顶和草稿等状态。分页读取会话列表，第一页从 `offset: 0` 开始：
 
-## 分页获取会话
+## 参数说明
 
-使用 `getConversationListSplit()` 分页获取会话。第一页从 `offset: 0` 开始。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `int` | 是 | 从零开始的分页偏移量；刷新列表时重置为 `0`。 |
+| `count` | `int` | 是 | 本页期望拉取的会话数量。 |
 
 ```dart
 const pageSize = 50;
@@ -21,18 +24,13 @@ Future<List<ConversationInfo>> loadConversationPage(int offset) async {
 }
 ```
 
-### 参数说明
+## 返回结果
 
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `offset` | `int` | 必填 | 从零开始的分页偏移量；刷新时重置为 `0`。 |
-| `count` | `int` | 必填 | 本页期望返回的会话数量。 |
-
-Future 成功后返回当前页的 `List<ConversationInfo>`。继续加载时按已经请求的条目数量推进 `offset`；按 `conversationID` 去重。返回数量小于 `count` 表示到达末尾，主动刷新时应清空分页状态并从 `0` 重载。
+Future 成功返回当前页的 `List<ConversationInfo>` 会话列表。后续加载时按已请求的条目数量推进 `offset`；客户端以 `conversationID` 为合并标识进行去重与增量合并。若返回数量小于 `count`，说明已拉取至列表末尾；下拉刷新时应重置分页偏移量为 `0`。
 
 ## 保持列表同步
 
-`getConversationListSplit()` 只返回当前页会话，不触发会话回调。以下处理函数应纳入应用唯一的 `OnConversationListener`：
+分页查询操作仅获取调用时的快照数据，不会触发事件回调。实时状态变化应通过应用唯一的 `OnConversationListener` 进行监听维护：
 
 ```dart
 void handleNewConversations(List<ConversationInfo> conversations) {
@@ -44,6 +42,6 @@ void handleConversationsChanged(List<ConversationInfo> conversations) {
 }
 ```
 
-`onNewConversation` 和 `onConversationChanged` 都携带 `List<ConversationInfo>`，应按 `conversationID` 合并。组合 listener 与唯一设置入口见[事件概览](/sdk/flutter/events/overview-events)。
+`onNewConversation` 和 `onConversationChanged` 均携带变更的 `List<ConversationInfo>` 列表，客户端统一以 `conversationID` 作为合并标识更新本地列表。组合 listener 与唯一设置入口请参考[事件概览](/sdk/flutter/events/overview-events)。
 
-不要用已加入群组列表替代会话列表。用户可能已经加入群组但尚未产生对应会话，也可能退出群组后仍保留历史会话记录。
+请注意：不要用已加入群组列表替代会话列表。用户可能已加入群组但尚未产生对应会话条目，也可能在退出群组后仍保留本地历史会话记录。

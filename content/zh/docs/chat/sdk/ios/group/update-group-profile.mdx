@@ -4,7 +4,13 @@ description: '使用 iOS SDK 更新群组的基础展示资料。'
 sourcePath: '/sdk/ios/group/update-group-profile'
 ---
 
-`setGroupInfo:onSuccess:onFailure:` 接收完整 `OIMGroupInfo`。先查询并持有最新对象，再修改资料编辑器拥有的字段，避免标量默认值覆盖入群验证或成员权限设置。
+调用群资料设置接口更新群名称、简介、头像等基础展示信息。建议先获取最新的 `OIMGroupInfo` 实例，再修改需要变更的属性，避免使用未初始化的对象意外覆盖验证方式或权限设置：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfo` | `OIMGroupInfo *` | 包含目标 `groupID` 及待更新属性的群组信息对象。 |
 
 ```objc
 OIMGroupInfo *group = latestGroup;
@@ -13,10 +19,16 @@ group.introduction = introduction;
 group.faceURL = avatarURL;
 
 [[OIMManager manager] setGroupInfo:group
-    onSuccess:^(NSString * _Nullable data) { [self showSaved]; }
+    onSuccess:^(NSString * _Nullable data) {
+        [self showSaved];
+    }
     onFailure:^(NSInteger code, NSString *message) {
         [self showErrorCode:code message:message];
     }];
 ```
 
-成功 callback 表示设置请求完成，不代表所有端已收到变化。最终资料通过 `onGroupInfoChanged:` 更新，或重新查询确认；完整 delegate 见[群组概览](/sdk/ios/group/overview-group)。
+状态以 `groupID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已接受资料修改请求。群资料的最终生效与多端同步通过群资料变更事件通知各端，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

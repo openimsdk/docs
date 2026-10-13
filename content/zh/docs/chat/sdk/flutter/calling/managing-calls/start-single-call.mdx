@@ -1,10 +1,25 @@
 ---
 title: '发起单聊通话'
-description: '使用 Flutter SDK 发起单聊音视频通话。'
+description: '向指定用户发起单聊音视频通话邀请。'
 sourcePath: '/sdk/flutter/calling/managing-calls/start-single-call'
 ---
 
-`signalingInvite()` 发起单聊通话。SDK 负责信令状态，应用仍需使用返回凭据接入实时音视频媒体引擎。
+向单个目标用户发起通话邀请。SDK 负责信令通道与呼叫生命周期，应用在获取凭证后接入实时音视频媒体引擎进行音视频渲染：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `info` | `SignalingInfo` | 是 | 通话信令发起对象，包含操作者 `userID`、`invitation` 及可选的 `offlinePushInfo`。 |
+
+`invitation` 核心字段说明：
+- `inviterUserID`：发起人用户 ID。
+- `inviteeUserIDList`：被邀请人用户 ID 列表，单聊只包含对方一人。
+- `groupID`：单聊时传入空字符串 `''`。
+- `roomID`：通话房间 ID。建议每次通话生成全局唯一 ID。
+- `timeout`：呼叫超时时间，单位为秒。
+- `mediaType`：媒体类型，如 `'video'` 或 `'audio'`。
+- `sessionType`：会话类型，单聊传入 `ConversationType.single`。
 
 ```dart
 final info = SignalingInfo(
@@ -26,4 +41,15 @@ final credentials = await OpenIM.iMManager.signalingManager
     .signalingInvite(info: info);
 ```
 
-单聊 `groupID` 传空字符串，`inviteeUserIDList` 只包含对方一个用户。Future 成功返回 `SignalingCertificate`；取得有效 `token` 和 `roomID` 后再连接媒体房间，成功不表示对方已经接听。
+## 返回结果
+
+Future 成功返回 `SignalingCertificate` 对象，包含发起方进入房间所需的凭据信息。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `token` | `String?` | 接入媒体引擎所需的房间鉴权凭证。 |
+| `roomID` | `String?` | 目标通话房间 ID。 |
+| `liveURL` | `String?` | 媒体流服务器地址。 |
+| `busyLineUserIDList` | `List<String>?` | 当前正处于忙线状态的用户 ID 列表。 |
+
+调用成功表示呼叫信令已成功发出，并不代表对方已经接听。客户端应以 `roomID` 建立本地呼叫状态，并通过信令事件监听对方的接听、拒绝或超时状态，完整事件监听请参考[处理通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)。

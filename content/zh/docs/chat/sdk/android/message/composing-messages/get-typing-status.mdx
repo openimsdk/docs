@@ -1,23 +1,26 @@
 ---
 title: '查询输入状态'
-description: '使用 getInputState 查询指定用户在会话中的当前输入状态。'
+description: '查询指定用户在特定会话中当前是否处于正在输入状态。'
 sourcePath: '/sdk/android/message/composing-messages/get-typing-status'
 ---
 
-查询指定用户当前正在输入的平台 ID 列表。
+主动查询指定用户在特定会话中的当前输入状态。SDK 会返回该用户正在输入的平台 ID 列表，用于在进入聊天页面或网络恢复时主动校验输入状态。
 
 ```java
+String conversationID = "si_user_a_user_b";
+String userID = "user_b";
+
 OpenIMClient.getInstance().conversationManager.getInputState(
     new OnBase<List<Integer>>() {
         @Override
         public void onSuccess(List<Integer> platformIDs) {
-            boolean typing = platformIDs != null && !platformIDs.isEmpty();
-            // typing 表示该用户当前输入状态。
+            boolean isTyping = platformIDs != null && !platformIDs.isEmpty();
+            // isTyping 表示该用户当前是否正在输入
         }
 
         @Override
         public void onError(int code, String error) {
-            // code 和 error 说明失败原因。
+            // 处理查询失败
         }
     },
     conversationID,
@@ -25,4 +28,19 @@ OpenIMClient.getInstance().conversationManager.getInputState(
 );
 ```
 
-成功回调返回平台 ID 列表；空列表表示该用户当前没有平台处于输入状态。输入状态发生变化时，通过[上报输入状态](/sdk/android/message/composing-messages/update-typing-status)页面介绍的回调接收通知。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<Integer>>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 目标会话全局唯一 ID。 |
+| `userID` | `String` | 是 | 待查询的目标用户 ID。 |
+
+## 返回结果
+
+成功回调返回该用户当前处于正在输入状态的平台编号列表 `List<Integer>`。
+
+- 若列表非空，表示该用户至少在一个客户端设备上正在输入。
+- 若列表为空或为 `null`，表示该用户当前没有处于输入状态。
+
+关于输入状态的实时上报与变更监听，请参阅[上报输入状态](/sdk/android/message/composing-messages/update-typing-status)。

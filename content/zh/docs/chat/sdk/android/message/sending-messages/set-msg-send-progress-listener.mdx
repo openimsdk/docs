@@ -1,15 +1,43 @@
 ---
 title: '监听消息发送进度'
-description: '通过 OnMsgSendCallback 的进度回调更新媒体发送进度。'
+description: '在发送多媒体消息时监听文件上传进度。'
 sourcePath: '/sdk/android/message/sending-messages/set-msg-send-progress-listener'
 ---
 
-通过 `OnMsgSendCallback.onProgress()` 获取当前消息的发送进度。
+在发送图片、音频、视频或文件等媒体消息时，通过 `OnMsgSendCallback` 回调的 `onProgress` 阶段实时监听底层文件上传进度。适合在 UI 界面上绘制上传进度条或百分比提示。
 
 ```java
-messageManager.sendMessage(new OnMsgSendCallback() {
-    @Override public void onProgress(long progress) { /* progress 是发送进度。 */ }
-    @Override public void onSuccess(Message sentMessage) { /* sentMessage 是发送成功的消息。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, message, peerUserID, null, offlinePushInfo);
+OpenIMClient.getInstance().messageManager.sendMessage(
+    new OnMsgSendCallback() {
+        @Override
+        public void onProgress(long progress) {
+            // progress 为当前上传进度百分比（0 到 100）
+            // 可更新进度条或提示文案
+        }
+
+        @Override
+        public void onSuccess(Message sentMessage) {
+            // 发送成功，更新本地消息状态
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 发送失败处理
+        }
+    },
+    message,
+    peerUserID,
+    null,
+    offlinePushInfo
+);
 ```
+
+## 回调说明
+
+- `progress`（`long`）：当前文件上传进度百分比，取值范围为 `0` 至 `100`。
+
+## 返回结果
+
+`onProgress` 仅在需要通过 SDK 上传本地文件的媒体消息发送过程中触发；纯文本消息或通过 URL 发送的消息不会触发该回调。
+
+上传完成后，SDK 会继续向服务端投递消息，并最终触发 `onSuccess` 或 `onError` 回调完成整条消息的生命周期。

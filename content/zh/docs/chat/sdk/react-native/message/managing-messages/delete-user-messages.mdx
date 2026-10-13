@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-messages/delete-user-messages'
 ---
 
-使用 `deleteUserAllMessagesInConv()` 删除指定用户在群聊会话中的全部消息。
+删除指定用户在群聊会话中的全部历史消息。此操作通常由群主或管理员发起，用于清理违规用户在群内的发言。
 
 ```ts
 await OpenIMSDK.deleteUserAllMessagesInConv({
@@ -21,31 +21,40 @@ await OpenIMSDK.deleteUserAllMessagesInConv({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
 | `conversationID` | `string` | 是 | 目标群聊的会话 ID。 |
-| `userID` | `string` | 是 | 要删除其消息的用户 ID。 |
+| `userID` | `string` | 是 | 要删除其全部发言的用户 ID。 |
 
-这是群聊管理操作，调用完成后删除请求已完成，具体权限由服务端校验。
+## 返回结果
+
+调用成功代表删除请求已被服务端接受并处理完成。操作权限由群内角色及服务端策略校验，非群管理员调用将返回错误。
 
 ## 监听指定用户消息删除
 
-删除完成后会触发 `OnDeleteUserAllMsgsInConv`，回调携带 `conversationID` 和 `userID`，可据此移除目标会话中该用户的消息。
+删除完成后会触发 `OnDeleteUserAllMsgsInConv` 事件。回调携带包含目标 `conversationID` 和 `userID` 的数据对象，客户端应根据 `conversationID` 定位目标会话，并移除该会话中由该 `userID` 发送的所有消息。
 
 ```ts
-function handleUserMessagesDeleted(data) {
-  // ...
+interface DeleteUserAllMsgsData {
+  conversationID: string;
+  userID: string;
 }
 
+const handleUserMessagesDeleted = (data: DeleteUserAllMsgsData) => {
+  // 根据 data.conversationID 找到当前会话，并以 data.userID 为过滤条件移除该用户的历史消息
+};
+
+// 设置监听
 OpenIMSDK.on(
   OpenIMEvent.OnDeleteUserAllMsgsInConv,
   handleUserMessagesDeleted,
 );
 
+// 取消监听
 OpenIMSDK.off(
   OpenIMEvent.OnDeleteUserAllMsgsInConv,
   handleUserMessagesDeleted,
 );
 ```
 
-组件销毁、退出登录或切换账号时，取消监听。
+组件销毁、退出登录或切换账号时，取消该监听。

@@ -4,25 +4,25 @@ description: '使用 OpenIMClientSDK 初始化、登录、查询登录状态、�
 sourcePath: '/sdk/flutter/getting-started/authenticate-and-manage-session'
 ---
 
-OpenIM Flutter SDK 使用 `initSDK()` 初始化本机 SDK，再使用 `login()` 建立当前用户的登录会话。开始认证前，请先完成[开始之前](/sdk/flutter/getting-started/before-you-start)列出的服务、用户、Token 和移动端环境准备。
+OpenIM Flutter SDK 通过初始化方法配置本机运行环境，再通过登录接口建立当前用户的长连接会话。开始认证前，请先完成[开始之前](/sdk/flutter/getting-started/before-you-start)列出的服务、用户、Token 和移动端环境准备。
 
 完整流程如下：
 
-1. 调用 `initSDK()`，同时设置 `OnConnectListener`。
+1. 调用 SDK 初始化方法，同时注册 `OnConnectListener`。
 2. 从业务后端取得 `userID`、Token、`apiAddr` 和 `wsAddr`。
-3. 调用 `login()`，等待 Future 完成，并继续等待 `onConnectSuccess`。
-4. 连接可用后再查询用户、好友、会话、群组和消息数据。
-5. 主动退出或切换账号时调用 `logout()`，再清理当前账号的应用状态。
+3. 调用登录方法，等待 Future 完成，并继续等待 `onConnectSuccess` 连接就绪。
+4. 长连接可用后再查询用户、好友、会话、群组和消息数据。
+5. 主动退出或切换账号时调用退出登录方法，再清理当前账号的应用状态。
 
 ## 获取当前用户的登录信息
 
 应用从业务后端取得当前用户的 `userID`、Token，以及环境对应的 `apiAddr` 和 `wsAddr`。所需数据见[开始之前](/sdk/flutter/getting-started/before-you-start)。
 
-`userID` 是 OpenIMSDK 用户标识，必须与 Token 对应。移动端使用后端返回的登录信息，不负责创建 OpenIM 用户或签发 Token。
+`userID` 是 OpenIM 用户标识，必须与 Token 对应。移动端使用后端返回的登录信息，不负责创建 OpenIM 用户或签发 Token。
 
 ## 初始化并设置连接生命周期
 
-连接 listener 应在登录前通过 `initSDK()` 设置，以免遗漏登录阶段的状态变化。
+连接监听器应在登录前通过初始化方法设置，以免遗漏登录阶段的状态变化。
 
 ```dart
 final initialized = await OpenIM.iMManager.initSDK(
@@ -59,7 +59,7 @@ if (initialized != true) {
 }
 ```
 
-### 参数说明
+## 参数说明
 
 | 字段 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
@@ -69,9 +69,9 @@ if (initialized != true) {
 | `dataDir` | `String` | 是 | SDK 本地数据目录；应使用应用可读写且按账号生命周期管理的目录。 |
 | `listener` | `OnConnectListener` | 是 | 连接、Token 和账号下线生命周期回调。 |
 
-`initSDK()` 的 Future 成功并返回 `true` 表示本机 SDK 初始化完成，不表示用户已经登录或长连接已经可用。同一个应用进程应集中初始化一次，不要由多个 Widget 各自创建初始化流程。
+初始化的 Future 成功并返回 `true` 表示本机 SDK 初始化完成，不表示用户已经登录或长连接已经可用。同一个应用进程应集中初始化一次，不要由多个 Widget 各自创建初始化流程。
 
-`OnConnectListener` 由 `initSDK()` 持有，SDK 没有公开的连接 listener 移除方法。应用应集中持有一个 listener，避免在 Widget 重建时重复初始化。
+`OnConnectListener` 由初始化方法持有，SDK 没有公开的连接 listener 移除方法。应用应集中持有一个 listener，避免在 Widget 重建时重复初始化。
 
 ## 登录当前用户
 
@@ -84,7 +84,7 @@ final UserInfo currentUser = await OpenIM.iMManager.login(
 setCurrentUser(currentUser);
 ```
 
-### 参数说明
+## 参数说明
 
 | 字段 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
@@ -93,9 +93,9 @@ setCurrentUser(currentUser);
 | `checkLoginStatus` | `bool` | 否 | 是否先检查 SDK 登录状态，默认 `true`。 |
 | `defaultValue` | `Future<UserInfo> Function()?` | 否 | 读取登录用户资料失败时的回退函数；通常不设置，以便暴露真实错误。 |
 
-`login()` 的 Future 成功后返回当前账号 `UserInfo`，表示登录调用和 SDK 内部资料读取已完成；`onConnectSuccess` 表示长连接可用。这两个阶段不能合并判断。
+登录方法的 Future 完成表示身份认证与本地资料准备完毕，而 `onConnectSuccess` 则表明 WebSocket 长连接已成功建立。两者属于不同阶段，通常建议在长连接就绪后再展开实时消息收发。
 
-不要并发调用 `login()`。登录按钮应复用正在执行的 Future，或先使用登录状态禁用重复提交。
+不要并发发起登录请求。登录按钮应复用正在执行的 Future，或先使用登录状态禁用重复提交。
 
 ## 查询登录状态
 
@@ -114,17 +114,17 @@ if (status == LoginStatus.logged) {
 | `LoginStatus.logging` | 登录正在进行，不要再次发起并行登录。 |
 | `LoginStatus.logged` | SDK 已登录；仍应结合连接 listener 判断网络连接。 |
 
-`getLoginUserInfo()` 返回 Flutter 封装在本次登录时保存的 `UserInfo`。需要从 SDK 重新读取当前账号资料时，使用 `userManager.getSelfUserInfo()`。
+获取登录用户信息方法返回 Flutter 封装在本次登录时保存的 `UserInfo`。需要从 SDK 重新读取当前账号最新资料时，请参考[获取当前用户资料](/sdk/flutter/user/retrieving-and-updating-user-information/get-self-profile)。
 
-`getLoginStatus()` 和 `getLoginUserID()` 的 Future 成功后，可以直接使用返回的当前登录状态；查询本身不会触发连接回调。`getLoginUserID()` 适合校验应用账号与 SDK 账号是否一致，但不能替代业务侧身份认证。
+查询登录状态和查询当前登录用户 ID 的 Future 成功后，可以直接使用返回的当前登录状态；查询本身不会触发连接回调。查询当前用户 ID 适合校验应用账号与 SDK 账号是否一致，但不能替代业务侧身份认证。
 
-切换账号时不要直接用新参数覆盖当前登录。先等待旧账号 `logout()` 完成并清理旧账号状态，再使用新账号的 `userID` 和 Token 登录。
+切换账号时不要直接用新参数覆盖当前登录。先等待旧账号退出登录完成并清理旧账号状态，再使用新账号的 `userID` 和 Token 登录。
 
 ## 处理 Token 和强制下线
 
 Token 过期或无效时，可以向业务后端取得新凭据，再重新登录或进入应用的登录流程。`onKickedOffline` 表示当前账号被其他设备或服务端强制下线，与用户主动退出是不同状态。
 
-Flutter 登录流程只向 `login()` 传入 OpenIMSDK Token，不区分客户端侧的“访问 Token”和“会话 Token”。Token 的签发、有效期、刷新和撤销策略由业务后端与 OpenIMServer 配置决定。
+Flutter 登录流程只向登录接口传入 OpenIMSDK Token，不区分客户端侧的“访问 Token”和“会话 Token”。Token 的签发、有效期、刷新和撤销策略由业务后端与 OpenIMServer 配置决定。
 
 这些回调没有业务实体合并键，应按当前 SDK 实例和登录用户隔离状态。切换账号前先清理旧账号状态，避免旧异步任务写入新账号页面。
 
@@ -135,11 +135,11 @@ await OpenIM.iMManager.logout();
 clearCurrentSession();
 ```
 
-`logout()` 的 Future 成功表示当前 SDK 登录会话已退出。切换账号时，先等待旧账号退出，再清空旧账号状态并调用新账号的 `login()`。
+退出登录的 Future 成功表示当前 SDK 登录会话已退出。切换账号时，先等待旧账号退出，再清空旧账号状态并调用新账号的登录方法。
 
-主动退出时，Future 成功、连接回调和业务页面清理是不同阶段。应先等待 `logout()`，再清理当前账号的会话列表、消息视图、未读数和业务状态；不要只等待某个连接回调判断主动退出完成。
+主动退出时，Future 成功、连接回调和业务页面清理是不同阶段。应先等待退出登录完成，再清理当前账号的会话列表、消息视图、未读数和业务状态；不要只等待某个连接回调判断主动退出完成。
 
-需要彻底释放 SDK 时，可在退出流程完成后调用 `unInitSDK()`；它用于释放 SDK 运行环境，不是 `logout()` 的替代品，也不应作为普通页面销毁时的清理操作。
+需要彻底释放 SDK 时，可在退出流程完成后调用反初始化接口；它用于释放 SDK 运行环境，不是退出登录的替代品，也不应作为普通页面销毁时的清理操作。
 
 ## 下一步
 

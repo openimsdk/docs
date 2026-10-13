@@ -4,15 +4,32 @@ description: '申请加入或直接加入 iOS OpenIM 群组。'
 sourcePath: '/sdk/ios/group/join-group'
 ---
 
+申请加入指定的群组：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `reqMsg` | `NSString *` | 申请附言；若无附言可传空字符串。 |
+| `joinSource` | `OIMJoinType` | 入群来源方式，例如搜索加入 `OIMJoinTypeSearch`。 |
+| `ex` | `NSString *` | 业务扩展字符串；无需传扩展时传 `nil`。 |
+
 ```objc
 [[OIMManager manager] joinGroup:groupID
-    reqMsg:@"申请加入项目讨论组"
-    joinSource:OIMJoinTypeSearch
-    ex:nil
-    onSuccess:^(NSString * _Nullable data) { [self showApplicationSubmitted]; }
-    onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
-    }];
+                         reqMsg:@"申请加入项目讨论组"
+                     joinSource:OIMJoinTypeSearch
+                             ex:nil
+                      onSuccess:^(NSString * _Nullable data) {
+                          [self showApplicationSubmitted];
+                      }
+                      onFailure:^(NSInteger code, NSString *message) {
+                          [self showErrorCode:code message:message];
+                      }];
 ```
 
-`joinSource` 可用邀请、搜索或二维码来源，但不决定是否需要审核。需要审核时，成功 callback 只表示申请已提交；只有 `onJoinedGroupAdded:` 到达或重新查询确认后，才能将当前用户视为群成员。
+状态以 `groupID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示申请已提交至服务端。若该群开启了免验证入群，当前用户将直接入群并收到加入新群事件；若该群需要管理员审核，则回调成功仅表示申请单已生成，需等待管理员审批。群变动事件见[群组概览](/sdk/ios/group/overview-group)，发出的入群申请状态追踪见[入群申请概览](/sdk/ios/group/group-applications/overview-group-applications)。

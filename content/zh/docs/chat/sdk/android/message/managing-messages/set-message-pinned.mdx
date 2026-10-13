@@ -4,26 +4,54 @@ description: '设置会话消息的置顶状态，并处理置顶消息变化事
 sourcePath: '/sdk/android/message/managing-messages/set-message-pinned'
 ---
 
-最后一个参数为 `true` 时置顶消息，为 `false` 时取消置顶：
+在会话中置顶重要消息或取消已置顶的消息。置顶状态为会话级共享属性，群聊中通常由群主或管理员操作，置顶后各成员端均可在聊天窗口顶部常驻显示该消息。
 
 ```java
-messageManager.setConversationPinnedMsg(
-    callback,
+String conversationID = "g_group_123";
+String clientMsgID = "msg_001";
+boolean isPinned = true; // true 置顶，false 取消置顶
+
+OpenIMClient.getInstance().messageManager.setConversationPinnedMsg(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 置顶状态设置成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理设置失败
+        }
+    },
     conversationID,
     clientMsgID,
-    true
+    isPinned
 );
 ```
 
-成功回调表示设置请求完成，不代表置顶变化事件已经到达。
+## 参数说明
 
-置顶消息发生变化时，`OnAdvanceMsgListener.onChangedPinnedMsg` 返回对应的 `conversationID` 和当前置顶消息列表：
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 目标会话全局唯一 ID。 |
+| `clientMsgID` | `String` | 是 | 待置顶或取消置顶的目标消息客户端 ID。 |
+| `isPinned` | `boolean` | 是 | 是否置顶：`true` 为置顶消息，`false` 为取消置顶。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+## 监听置顶变更事件
+
+置顶状态发生变更后，会话成员端将通过 `OnAdvanceMsgListener.onChangedPinnedMsg` 接收更新事件：
 
 ```java
 @Override
 public void onChangedPinnedMsg(ChangedPinnedMsg event) {
-    // event.getMsgs() 是置顶状态发生变化的消息。
+    // event.getConversationID() 对应会话
+    // event.getMsgs() 为当前会话最新的置顶消息列表
 }
 ```
 
-`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。需要主动获取当前置顶消息时，使用[查询会话置顶消息](/sdk/android/message/managing-messages/get-pinned-messages)。
+如需主动获取当前会话的全部置顶消息，请参阅[查询会话置顶消息](/sdk/android/message/managing-messages/get-pinned-messages)。

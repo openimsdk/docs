@@ -1,38 +1,58 @@
 ---
 title: '查询群消息已读成员'
-description: '使用 Android SDK 分页查询群消息的已读或未读成员。'
+description: '分页查询群聊中某条消息的已读或未读成员列表。'
 sourcePath: '/sdk/android/message/managing-read-status/get-group-message-readers'
 ---
 
-## 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | 是 | 群聊会话 ID。 |
-| `clientMsgID` | `String` | 是 | 要查询阅读成员的消息 ID。 |
-| `filter` | `int` | 是 | `0` 查询已读成员，`1` 查询未读成员。 |
-| `offset` | `int` | 是 | 分页偏移量，首页传 `0`。 |
-| `count` | `int` | 是 | 本次请求的成员数量。 |
+分页获取指定群消息的已读或未读成员列表。支持通过筛选条件区分已读与未读成员，常用于群消息详情页展示已读人员清单。
 
 ```java
-messageManager.getGroupMessageReaderList(
+String conversationID = "g_group_123";
+String clientMsgID = "msg_001";
+int filter = 0; // 0 查询已读成员，1 查询未读成员
+int offset = 0;
+int count = 50;
+
+OpenIMClient.getInstance().messageManager.getGroupMessageReaderList(
     conversationID,
     clientMsgID,
-    0,
-    0,
-    50,
+    filter,
+    offset,
+    count,
     new OnBase<List<GroupMembersInfo>>() {
         @Override
         public void onSuccess(List<GroupMembersInfo> members) {
-            // members 是已读该消息的成员资料。
+            // members 为查询到的成员资料列表
         }
 
         @Override
         public void onError(int code, String error) {
-            // 处理失败
+            // 处理查询失败
         }
     }
 );
 ```
 
-成功回调返回当前页 `GroupMembersInfo` 列表，字段含义见[分页查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)。需要完整列表时继续分页。
+## 筛选类型说明
+
+`filter` 字段用于指定查询已读还是未读成员：
+
+| 筛选值 | 含义 |
+| --- | --- |
+| `0` | 查询已读该消息的群成员列表。 |
+| `1` | 查询尚未阅读该消息的群成员列表。 |
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标群聊会话 ID。 |
+| `clientMsgID` | `String` | 是 | 待查询的目标消息客户端 ID。 |
+| `filter` | `int` | 是 | 阅读状态筛选：`0` 查询已读成员，`1` 查询未读成员。 |
+| `offset` | `int` | 是 | 分页起始偏移量，首页传 `0`。 |
+| `count` | `int` | 是 | 本次获取的最大记录条数。 |
+| `base` | `OnBase<List<GroupMembersInfo>>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调返回群成员资料列表 `List<GroupMembersInfo>`。单条记录包含群内昵称 `nickname`、群内头像 `faceURL`、角色等级 `roleLevel` 等详细属性，字段说明请参阅[分页查询群成员](/sdk/android/group/retrieving-group-members/get-group-member-list)。

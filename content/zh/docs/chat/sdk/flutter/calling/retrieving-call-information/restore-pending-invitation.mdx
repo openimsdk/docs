@@ -4,7 +4,7 @@ description: '使用 Flutter SDK 恢复启动时尚未处理的通话邀请。'
 sourcePath: '/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation'
 ---
 
-该方法不接收业务参数，返回启动时需要恢复的 `SignalingInfo`：
+应用启动、重新登录或可能错过来电通知时，可调用此方法获取仍然有效的待处理邀请：
 
 ```dart
 final info = await OpenIM.iMManager.signalingManager
@@ -15,4 +15,14 @@ if (info.invitation?.roomID?.isNotEmpty == true) {
 }
 ```
 
-返回字段均可能为空。查询只返回启动时仍待处理的完整邀请数据；恢复后仍需处理取消、超时、接受和挂断 listener。
+## 返回结果
+
+Future 成功返回 `SignalingInfo` 对象，包含启动时待处理的通话邀请详情与离线推送信息。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `String?` | 操作者用户 ID。 |
+| `invitation` | `InvitationInfo?` | 待处理的邀请详情；若 `roomID` 为空表示当前无可恢复的来电。 |
+| `offlinePushInfo` | `OfflinePushInfo?` | 离线推送扩展信息。 |
+
+查询只返回应用启动时仍待处理的有效邀请数据；若无有效房间 ID，不应继续展示旧来电界面。恢复来电后，仍需在[处理通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)中继续监听超时、取消、接受与挂断通知。

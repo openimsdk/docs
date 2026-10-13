@@ -1,21 +1,42 @@
 ---
 title: '设置群成员扩展字段'
-description: '使用 SetGroupMemberInfo.ex 保存应用定义的群成员扩展数据。'
+description: '设置指定群成员的自定义业务扩展属性。'
 sourcePath: '/sdk/android/group/managing-group-members/set-group-member-extension'
 ---
 
-`SetGroupMemberInfo.ex` 字符串用于保存群成员扩展信息，可存储 JSON 字符串拓展群成员信息。
+设置群成员的自定义业务扩展数据。在 `SetGroupMemberInfo` 中指定 `ex` 字段（如 JSON 字符串），用于保存成员在群内的业务自定义属性（例如群内职务、积分或自定义标签）。服务端会对传入的字符串进行全量覆盖保存。
 
 ```java
 SetGroupMemberInfo update = new SetGroupMemberInfo();
-update.setGroupID(groupID);
-update.setUserID(userID);
-update.setEx("{\"duty\":\"reviewer\"}");
+update.setGroupID("group_123");
+update.setUserID("user_a");
+update.setEx("{\"duty\":\"reviewer\",\"tag\":\"expert\"}");
 
-OpenIMClient.getInstance().groupManager.setGroupMemberInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupMemberInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 群成员扩展字段更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理更新失败
+        }
+    }
+);
 ```
 
-成功回调表示扩展字段更新请求已完成，不表示其他客户端界面已经更新。`onGroupMemberInfoChanged` 返回更新后的 `GroupMembersInfo`；按 `groupID:userID` 替换成员资料中的 `ex`。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupMemberInfo` | `SetGroupMemberInfo` | 是 | 群成员资料修改对象，必须设置 `groupID`、成员 `userID` 以及新的扩展属性字符串 `ex`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+扩展字段更新成功后，群内成员端随后将收到 `onGroupMemberInfoChanged` 事件通知，返回更新后的 `GroupMembersInfo`。客户端应以 `groupID:userID` 为标识替换成员资料中的 `ex` 缓存；完整监听见[群组概览](/sdk/android/group/overview-group)。

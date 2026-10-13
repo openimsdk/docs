@@ -4,14 +4,39 @@ description: '使用 iOS SDK 设置或取消群管理员。'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-role-level'
 ---
 
-传入 `OIMGroupMemberRoleAdmin` 可设置管理员，传入 `OIMGroupMemberRoleMember` 可取消管理员身份。不能直接设置 Owner 来替代群主转让。成功 callback 与 `onGroupMemberInfoChanged:` 分别处理。
+群主可以设置或取消群内管理员身份：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `userID` | `NSString *` | 目标成员的用户 ID。 |
+| `roleLevel` | `OIMGroupMemberRole` | 目标角色级别。 |
+
+### 角色级别枚举
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMGroupMemberRoleMember` | `20` | 普通成员。传入此值可取消管理员身份。 |
+| `OIMGroupMemberRoleAdmin` | `60` | 管理员。传入此值可将成员提升为管理员。 |
 
 ```objc
-[[OIMManager manager] setGroupMemberRoleLevel:groupID
-  userID:targetUserID
-  roleLevel:OIMGroupMemberRoleAdmin
-  onSuccess:^(NSString * _Nullable data) { [self showSaved]; }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] setGroupMemberRoleLevel:@"group_1001"
+                                      userID:@"user_002"
+                                   roleLevel:OIMGroupMemberRoleAdmin
+                                   onSuccess:^(NSString * _Nullable data) {
+                                       NSLog(@"setGroupMemberRoleLevel success");
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"setGroupMemberRoleLevel failed: %ld %@", (long)code, message);
+                                   }];
 ```
+
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+设置成功后，群内成员角色变更会通过 `onGroupMemberInfoChanged:` 事件广播（监听参见[群组概览](/sdk/ios/group/overview-group)），客户端应以 `groupID:userID` 为合并标识更新对应成员的角色资料。群主身份变更必须通过[转让群主](/sdk/ios/group/managing-group-members/transfer-group-owner)进行，不能通过此接口直接设置。更多群成员查询请参见[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。

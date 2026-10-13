@@ -4,7 +4,15 @@ description: '分页获取 iOS 当前用户的好友列表。'
 sourcePath: '/sdk/ios/user/friends/get-friend-list-page'
 ---
 
-使用分页 selector 读取 `OIMFriendInfo`，不要一次加载完整好友列表。
+通过分页接口分批获取好友列表，避免一次性加载过多数据造成界面卡顿：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `offset` | `NSInteger` | 分页起始偏移量，首屏传 `0`。 |
+| `count` | `NSInteger` | 每页拉取的数据条数。 |
+| `filterBlack` | `BOOL` | 是否自动过滤已被拉入黑名单的好友。 |
 
 ```objc
 [[OIMManager manager] getFriendListPageWithOffset:0
@@ -13,16 +21,20 @@ sourcePath: '/sdk/ios/user/friends/get-friend-list-page'
                                          onSuccess:^(NSArray<OIMFriendInfo *> *friends) {
                                              [friendStore replaceFirstPage:friends];
                                          }
-                                         onFailure:nil];
+                                         onFailure:^(NSInteger code, NSString *message) {
+                                             NSLog(@"getFriendListPage failed: %ld %@", (long)code, message);
+                                         }];
 ```
 
-`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 决定是否过滤黑名单用户。成功 callback 返回当前页；加载更多时按已请求的条目数增加偏移量，并按 `userID` 去重。
+状态以 `userID` 为合并标识。加载更多页时递增偏移量，并对列表进行去重合并。
 
-查询只返回当前页好友，不触发好友 delegate。
+## 返回结果
 
-## 同步好友变化
+成功回调 `onSuccess` 返回当前分页的 `NSArray<OIMFriendInfo *> *` 数组。查询操作仅返回调用时刻的数据快照，不触发好友事件。
 
-本页是 `onFriendAdded:`、`onFriendInfoChanged:` 和 `onFriendDeleted:` 的完整处理归属页。应用应强引用同一个 `OIMFriendshipListener` 实例，并用同一实例添加和移除。
+## 监听好友关系与资料变更
+
+实现 `OIMFriendshipListener` 协议处理好友新增、资料更新与好友删除事件：
 
 ```objc
 @interface FriendshipStore () <OIMFriendshipListener>

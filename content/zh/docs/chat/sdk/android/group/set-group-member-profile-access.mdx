@@ -1,22 +1,50 @@
 ---
 title: '设置成员资料查看权限'
-description: '通过 GroupInfo.lookMemberInfo 设置是否允许通过群组查看成员资料。'
+description: '设置普通群成员是否允许通过群成员列表查看其他成员的个人资料。'
 sourcePath: '/sdk/android/group/set-group-member-profile-access'
 ---
 
-`lookMemberInfo` 使用整数开关：`0` 关闭，`1` 打开。更新时只提交该权限字段和 `groupID`。
+控制普通群成员是否允许通过群聊查看其他成员的个人资料。群主或管理员通过设置 `GroupInfo` 的 `lookMemberInfo` 字段进行权限管控。该权限用于保护群成员隐私，防止群内普通成员随意查看或导出其他成员的个人资料卡片。
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
-update.setLookMemberInfo(1);
+update.setGroupID("group_123");
+update.setLookMemberInfo(0); // 0 为禁止普通成员查看他人资料
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 权限更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理更新失败
+        }
+    }
+);
 ```
 
-此开关约束通过群组入口获取成员资料的权限，不改变成员已经拥有的用户资料。
+## 权限枚举说明
 
-成功回调表示权限更新请求已完成，不表示其他客户端界面已经更新。`onGroupInfoChanged` 返回更新后的 `GroupInfo`；按 `groupID` 更新该权限字段。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+`lookMemberInfo` 字段取值说明如下：
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| 禁止查看成员资料 | `0` | 禁止普通成员查看其他群成员的个人资料卡片（群主与管理员通常不受此限制）。 |
+| 允许查看成员资料 | `1` | 允许群内所有成员正常点击查看其他成员的个人资料。 |
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | 是 | 群资料对象，必须指定目标 `groupID` 以及新的资料查看权限 `lookMemberInfo`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+权限设置成功后，群内成员随后将收到 `onGroupInfoChanged` 事件通知，返回更新后的 `GroupInfo`。客户端应以 `groupID` 为标识合并群资料，并控制群成员头像或列表项的点击交互行为；完整监听见[群组概览](/sdk/android/group/overview-group)。

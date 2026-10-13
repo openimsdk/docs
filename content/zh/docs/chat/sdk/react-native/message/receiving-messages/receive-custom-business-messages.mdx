@@ -10,12 +10,19 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/receiving-messages/receive-custom-business-messages'
 ---
 
-服务端下发自定义业务通知时会触发 `OnRecvCustomBusinessMessage`。该事件的回调参数为业务数据，不是 `MessageItem`；普通聊天自定义消息仍通过[接收消息](/sdk/react-native/message/receiving-messages/receive-messages)中的新消息事件接收。
+当服务端通过管理端接口直接下发非聊天的自定义业务通知（如系统广播、订单状态推送、活动提醒等）时，SDK 会触发 `OnRecvCustomBusinessMessage` 事件。
+
+该事件的回调参数为纯业务数据（通常为 JSON 字符串），而非标准聊天消息对象 `MessageItem`。若需接收会话内部的聊天型自定义消息，请参考[接收消息](/sdk/react-native/message/receiving-messages/receive-messages)中监听新消息事件的说明。
 
 ```ts
-function handleCustomBusinessMessage(data) {
-  // ...
-}
+const handleCustomBusinessMessage = (businessData: string) => {
+  try {
+    const payload = JSON.parse(businessData);
+    // 处理特定业务通知，如更新系统通知栏或刷新全局业务状态
+  } catch (error) {
+    console.error('解析自定义业务数据失败:', error);
+  }
+};
 
 // 设置监听
 OpenIMSDK.on(
@@ -30,4 +37,4 @@ OpenIMSDK.off(
 );
 ```
 
-业务侧应先校验收到的数据格式，再按自身协议处理。组件销毁、退出登录或切换账号时，取消监听。
+业务侧应先校验接收到的数据格式与签名，再根据内部协议分发处理。在组件销毁、退出登录或切换账号时，请务必取消监听以避免内存泄漏。

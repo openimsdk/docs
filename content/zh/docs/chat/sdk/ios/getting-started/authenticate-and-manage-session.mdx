@@ -4,7 +4,7 @@ description: '初始化 OpenIM iOS SDK、登录、查询状态并安全退出当
 sourcePath: '/sdk/ios/getting-started/authenticate-and-manage-session'
 ---
 
-OpenIM iOS SDK 使用 `login:token:onSuccess:onFailure:` 建立当前用户的登录会话。开始认证前，请先完成[开始之前](/sdk/ios/getting-started/before-you-start)列出的服务、用户、Token 与 iOS 环境准备。
+OpenIM iOS SDK 通过登录方法建立当前用户的登录会话。开始认证前，请先完成[开始之前](/sdk/ios/getting-started/before-you-start)列出的服务、用户、Token 与 iOS 环境准备。
 
 完整流程如下：
 
@@ -16,7 +16,7 @@ OpenIM iOS SDK 使用 `login:token:onSuccess:onFailure:` 建立当前用户的�
 
 ## 获取当前用户的登录信息
 
-应用从业务后端取得当前用户的 `userID` 与 OpenIMSDK Token。`userID` 是 OpenIMSDK 用户标识，必须与 Token 对应。
+应用从业务后端取得当前用户的 `userID` 与 OpenIM Token。`userID` 是 OpenIM 用户标识，必须与 Token 对应。
 
 iOS 客户端使用后端返回的登录信息，不负责建立 OpenIM 用户或签发 Token。
 
@@ -44,7 +44,7 @@ BOOL accepted = [[OIMManager manager]
     }];
 ```
 
-`initSDKWithConfig:...` 返回 `YES` 表示 SDK 接受初始化，不表示用户已登录，也不表示长连接已可用。同一个 App 进程应集中初始化一次，不要由多个页面各自建立初始化流程。
+初始化方法返回 `YES` 表示 SDK 接受配置并启动服务，不表示用户已登录，也不表示长连接已可用。同一个 App 进程应集中初始化一次，不要由多个页面各自建立初始化流程。
 
 这些 callback 没有业务实体合并标识，应按当前 SDK 实例与登录账号隔离状态。callback 由初始化流程持有；切换账号或重建 SDK 前，先停止旧账号的异步任务，避免旧 callback 更新新账号页面。
 
@@ -65,13 +65,13 @@ BOOL accepted = [[OIMManager manager]
 
 `userID` 必须是当前 OpenIMSDK 用户 ID，`token` 必须属于同一用户。成功 callback 中的可空字符串不包含用户资料；登录后需要账号资料时，另行调用自身资料查询 API。
 
-登录成功 callback 表示登录调用已完成；初始化时的 `onConnectSuccess` 表示长连接已可供业务 API 使用。两者是不同阶段，不能只因登录 callback 成功就立即执行依赖连接的消息、会话、群组或用户操作。
+登录成功 Callback 仅表示账号身份认证请求已通过，而初始化时配置的 `onConnectSuccess` 则代表 WebSocket 长连接已经建立且就绪。两者属于不同阶段，通常建议在收到 `onConnectSuccess` 后再执行依赖长连接的消息拉取、会话同步或群组操作。
 
 不要并行调用登录方法。登录按钮应复用正在执行的请求，或在登录状态为 `OIMLoginStatusLogging` 时禁用重复提交。
 
 ## 查询当前登录状态
 
-`getLoginStatus` 和 `getLoginUserID` 都是同步查询，不接收业务参数：
+获取登录状态与获取当前登录用户 ID 都是同步查询接口，无需传入业务参数：
 
 ```objc
 OIMLoginStatus status = [[OIMManager manager] getLoginStatus];
@@ -81,13 +81,13 @@ if (status == OIMLoginStatusLogged) {
 }
 ```
 
-| 状态 | 说明 |
-| --- | --- |
-| `OIMLoginStatusLogout` | 当前 SDK 尚未登录。 |
-| `OIMLoginStatusLogging` | 登录流程正在进行，不要再次发起并行登录。 |
-| `OIMLoginStatusLogged` | SDK 已登录；网络是否可用仍需结合连接 callback 判断。 |
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMLoginStatusLogout` | `1` | 当前 SDK 尚未登录。 |
+| `OIMLoginStatusLogging` | `2` | 登录流程正在进行，不要再次发起并行登录。 |
+| `OIMLoginStatusLogged` | `3` | SDK 已登录；网络是否可用仍需结合连接 callback 判断。 |
 
-`getLoginUserID` 返回 SDK 当前登录的用户 ID，适合检查应用账号与 SDK 账号是否一致，但不能取代业务端身份认证。这两个查询只返回当前登录状态，不会触发连接 callback。
+获取当前登录用户 ID 同步返回 SDK 当前登录的 `userID`，适合检查应用账号与 SDK 账号是否一致，但不能取代业务端身份认证。这两个查询只返回当前登录状态，不会触发连接 callback。
 
 切换账号时，不要直接用新参数覆盖当前登录。应先等待旧账号退出完成，清理旧账号状态，再以新账号的 `userID` 与 Token 登录。
 
@@ -113,7 +113,7 @@ if (status == OIMLoginStatusLogged) {
 
 切换账号时，等待旧账号退出成功并移除旧账号的业务 delegate，再登录新账号。不要让两个账号的登录与退出流程并行执行。
 
-`unInitSDK` 用于 App 最终不再使用 SDK 时释放运行环境，不是普通页面关闭或账号退出的替代方法。只有在退出流程与所有 SDK 工作都已结束后，才应解除初始化。
+解除初始化方法用于应用彻底退出或最终不再使用 SDK 时释放底层运行环境，不是普通页面关闭或账号退出的替代方法。只有在退出流程与所有 SDK 工作都已结束后，才应解除初始化。
 
 ## 下一步
 

@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/file-uploads/upload-file'
 ---
 
-`uploadFile()` 用于独立上传本地文件，可用于头像、群头像、资料附件或其他业务文件。
+将设备本地文件上传至 OpenIM 服务端配置的存储服务（如 MinIO 或各大云厂商 OSS）。上传成功后可获取公网可访问的资源 URL，常用于设置用户头像、更新群组头像，或在提前上传媒体资源后构造媒体消息。
 
 ```ts
 const { url } = await OpenIMSDK.uploadFile({
@@ -24,28 +24,46 @@ const { url } = await OpenIMSDK.uploadFile({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
-| `name` | `string` | 是 | 上传使用的文件名。 |
-| `contentType` | `string` | 是 | 文件的 MIME 类型。 |
-| `uuid` | `string` | 是 | 本次上传的业务标识。 |
-| `cause` | `string` | 否 | 业务约定的上传原因。 |
-| `filepath` | `string` | 是 | 应用可读取的本地文件路径。 |
+| `name` | `string` | 是 | 上传的目标文件名。 |
+| `contentType` | `string` | 是 | 文件的 MIME 类型（例如 `image/png`、`video/mp4` 等）。 |
+| `uuid` | `string` | 是 | 本次上传任务的唯一业务标识。 |
+| `cause` | `string` | 否 | 上传原因标识（如 `user-avatar`、`group-avatar` 等）。 |
+| `filepath` | `string` | 是 | 应用沙盒中可读取的本地文件绝对路径。 |
 
-调用完成后返回远端资源地址 `url`。可将该地址用于更新头像、保存业务附件，或创建 URL 类型的媒体消息后再发送。
+## 返回结果
+
+调用成功后返回包含远端文件地址的对象 `{ url: string }`。
+
+- 获取到 `url` 后，可用于调用[更新当前用户资料](/sdk/react-native/user/profile/set-self-info)更新头像；
+- 或用于创建 URL 型媒体消息后调用[发送已上传的媒体消息](/sdk/react-native/message/sending-messages/send-message-not-oss)进行发送。
 
 ## 监听上传状态
 
-上传过程中触发 `UploadOnProgress` 事件，回调参数包含当前已上传量 `current` 和文件总量 `size`。上传完成时触发 `UploadComplete` 事件，回调参数的 `data` 包含 `fileSize`、`streamSize` 和 `storageSize`。
+上传大文件时，可监听上传进度与完成事件：
 
 ```ts
-function handleUploadProgress({ current, size }) {
-  // ...
+interface UploadProgressPayload {
+  current: number;
+  size: number;
 }
 
-function handleUploadComplete({ data }) {
-  // ...
+interface UploadCompletePayload {
+  data: {
+    fileSize: number;
+    streamSize: number;
+    storageSize: number;
+  };
 }
+
+const handleUploadProgress = ({ current, size }: UploadProgressPayload) => {
+  // 根据上传进度更新 UI 百分比
+};
+
+const handleUploadComplete = ({ data }: UploadCompletePayload) => {
+  // 上传完成后的业务处理
+};
 
 // 设置监听
 OpenIMSDK.on(OpenIMEvent.UploadOnProgress, handleUploadProgress);
@@ -56,4 +74,4 @@ OpenIMSDK.off(OpenIMEvent.UploadOnProgress, handleUploadProgress);
 OpenIMSDK.off(OpenIMEvent.UploadComplete, handleUploadComplete);
 ```
 
-组件销毁、退出登录或切换账号时，应取消监听。
+组件销毁、退出登录或切换账号时，取消该监听。

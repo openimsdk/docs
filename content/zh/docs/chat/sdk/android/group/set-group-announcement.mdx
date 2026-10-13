@@ -1,22 +1,41 @@
 ---
 title: '发布或更新群公告'
-description: '通过 GroupInfo.notification 发布或更新群公告。'
+description: '发布或更新指定群组的公告内容。'
 sourcePath: '/sdk/android/group/set-group-announcement'
 ---
 
-构造包含 `groupID` 与 `notification` 的 `GroupInfo`，再调用 `setGroupInfo()`。
+发布或更新指定群组的公告内容。通过在 `GroupInfo` 中指定 `groupID` 和新的 `notification` 字符串完成更新。更新成功后，服务端会自动记录公告的发布人以及更新时间。
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
+update.setGroupID("group_123");
 update.setNotification("今晚 20:00 进行版本发布确认。");
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 群公告发布成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理发布失败
+        }
+    }
+);
 ```
 
-公告的更新时间和更新人保存在 `GroupInfo` 的 `notificationUpdateTime`、`notificationUserID` 字段中；需要读取时查询群资料。
+## 参数说明
 
-成功回调表示公告更新请求已完成，不表示其他客户端界面已经更新。`onGroupInfoChanged` 返回更新后的 `GroupInfo`；按 `groupID` 更新公告和群资料。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | 是 | 群资料对象，必须设置目标 `groupID` 以及新的公告内容 `notification`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+公告更新成功后，群内成员随后会触发 `onGroupInfoChanged` 事件接收更新后的 `GroupInfo`（包含最新的 `notification`、更新时间戳 `notificationUpdateTime` 及更新人 `notificationUserID`）。客户端应以 `groupID` 为标识合并群资料并更新公告展示；完整监听见[群组概览](/sdk/android/group/overview-group)。

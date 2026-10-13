@@ -4,7 +4,7 @@ description: '使用 Android SDK 发起群聊音视频通话。'
 sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
 ---
 
-`signalingInviteInGroup()` 发起群聊通话，参数类型与[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)相同。群聊通话时，`invitation.groupID` 必须传入群组 ID，`invitation.sessionType` 固定为 `ConversationType.GROUP_CHAT`。
+发起群聊音视频通话，参数类型与[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)相同。群聊通话时，`invitation.groupID` 必须传入群组 ID，`invitation.sessionType` 固定为 `ConversationType.GROUP_CHAT`。
 
 只会邀请 `inviteeUserIDList` 中列出的成员，填写 `groupID` 不会自动邀请全群。`inviteeUserIDList` 列表应排除当前用户、空值和重复成员。示例以群组 ID 作为房间 ID；若自行生成 `roomID`，所有参与者必须使用相同的值。
 
@@ -40,6 +40,31 @@ OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
 );
 ```
 
-成功回调返回 `SignalingCertificate`，其中 `roomID` 是媒体房间 ID，`token` 是加入房间使用的短期凭据，`liveURL` 是媒体服务提供的连接地址，`busyLineUserIDList` 是忙线用户列表。忙线用户不影响其余成员的邀请；成功也不表示已有成员接听。
+## 参数说明
 
-只有取得有效的 `token` 和 `roomID` 后才能连接媒体房间。API 成功不表示对方已经接听；后续状态见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<SignalingCertificate>` | 是 | 异步请求回调，返回加入音视频房间所需的凭据。 |
+| `info` | `SignalingInfo` | 是 | 完整的呼叫信令对象，包含群组 ID、被邀请人列表、房间号和媒体类型等。 |
+
+### 邀请参数详情
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `inviterUserID` | `String` | 发起呼叫的用户 ID（当前登录用户）。 |
+| `inviteeUserIDList` | `List<String>` | 受邀成员的用户 ID 列表，需排除自身并去重。注意填写 `groupID` 并不会自动呼叫全群。 |
+| `groupID` | `String` | 发起群聊通话对应的群组 ID。 |
+| `roomID` | `String` | 音视频房间标识，可直接使用群组 ID 或全局唯一 UUID。 |
+| `timeout` | `int` | 呼叫超时时间，单位为秒。 |
+| `mediaType` | `String` | 通话类型，例如 `"audio"` 或 `"video"`。 |
+| `sessionType` | `int` | 会话类型，群聊通话固定为 `ConversationType.GROUP_CHAT`。 |
+
+## 返回结果
+
+成功回调返回 `SignalingCertificate` 房间凭据，包含：
+- `roomID`：音视频房间全局标识。
+- `token`：进入实时音视频房间的鉴权凭据。
+- `liveURL`：媒体引擎连接地址。
+- `busyLineUserIDList`：当前处于忙线状态未能接通的用户列表。
+
+发起方成功获取到凭据后即可连接实时媒体房间。接口成功调用仅代表群呼叫已发起，不代表受邀成员已接听。客户端需以 `roomID` 为通话全局标识、以 `roomID:userID` 跟踪各成员的进出房与接听状态，后续事件流转请参考[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)。

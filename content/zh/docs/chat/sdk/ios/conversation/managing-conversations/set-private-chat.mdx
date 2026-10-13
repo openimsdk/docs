@@ -4,11 +4,32 @@ description: '使用 iOS SDK 设置会话的阅后即焚模式。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-private-chat'
 ---
 
+开启或关闭单聊会话的私聊阅后即焚模式：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
+| `isPrivate` | `BOOL` | 是否启用阅后即焚。`YES` 为开启，`NO` 为关闭。 |
+
 ```objc
-[[OIMManager manager] setConversationPrivateChat:conversationID
-                                        isPrivate:YES
-                                        onSuccess:nil
-                                        onFailure:nil];
+[[OIMManager manager] setConversationPrivateChat:@"c2c_user1002"
+                                       isPrivate:YES
+                                       onSuccess:^(NSString * _Nullable data) {
+                                           NSLog(@"setConversationPrivateChat success");
+                                       }
+                                       onFailure:^(NSInteger code, NSString *message) {
+                                           NSLog(@"setConversationPrivateChat failed: %ld %@", (long)code, message);
+                                       }];
 ```
 
-`YES` 表示启用阅后即焚，`NO` 表示关闭。阅后即焚时长由独立方法设置，不要把两个请求的成功或事件阶段混为一体。该能力与定期删除服务端消息不同。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，会话属性变更会通过 `onConversationChanged:` 事件分发，客户端应以 `conversationID` 为合并标识更新对应会话的 `isPrivateChat` 属性。
+
+阅后即焚的倒计时时长由[设置阅后即焚时长](/sdk/ios/conversation/managing-conversations/set-burn-duration)单独配置，不要把开关与时长的异步请求结果混淆。该能力面向私聊场景，与企业级的[定期删除服务端消息](/sdk/ios/conversation/managing-conversations/set-message-destruct)功能相互独立。会话列表监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。

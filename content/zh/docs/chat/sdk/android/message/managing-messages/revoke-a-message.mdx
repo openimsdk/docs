@@ -4,21 +4,51 @@ description: '撤回已发送消息，并处理其他客户端收到的撤回通
 sourcePath: '/sdk/android/message/managing-messages/revoke-a-message'
 ---
 
-撤回会使其他客户端把原消息显示为撤回状态。调用失败时，通过错误回调获取错误码和错误信息。
+在可撤回时效内撤回自己已成功发送的消息。调用成功后，当前会话中的该条消息会被标记为已撤回状态，群聊或单聊对端会收到撤回事件并将消息内容替换为撤回提示。
 
 ```java
-messageManager.revokeMessageV2(callback, conversationID, clientMsgID);
+String conversationID = "si_user_a_user_b";
+String clientMsgID = "msg_001";
+
+OpenIMClient.getInstance().messageManager.revokeMessageV2(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 撤回请求已成功提交
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理撤回失败（如超过允许撤回的时限）
+        }
+    },
+    conversationID,
+    clientMsgID
+);
 ```
 
-成功回调表示撤回请求已经完成。其他客户端通过 `OnAdvanceMsgListener.onRecvMessageRevokedV2` 接收撤回通知。
+## 参数说明
 
-`RevokedInfo` 包含 `clientMsgID`、撤回者和撤回时间：
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 待撤回消息所属的目标会话 ID。 |
+| `clientMsgID` | `String` | 是 | 待撤回目标消息的客户端消息 ID。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+## 监听消息撤回事件
+
+会话中各端通过 `OnAdvanceMsgListener.onRecvMessageRevokedV2` 接收消息被撤回的通知：
 
 ```java
 @Override
 public void onRecvMessageRevokedV2(RevokedInfo info) {
-    // info 包含被撤回消息的信息。
+    // 根据 info.getClientMsgID() 找到原消息
+    // 将其状态更新为已撤回，并展示撤回人（info.getRevokerNickname()）提示
 }
 ```
 
-接收端应把对应消息更新为撤回状态，而不是直接从列表删除。`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。
+客户端在收到撤回事件后，应以 `clientMsgID` 为标识更新原消息的显示样式为撤回占位符，而不是直接从列表中删除该行。高级消息监听器的完整注册见[接收消息](/sdk/android/message/receiving-messages/receive-messages)。

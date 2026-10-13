@@ -4,6 +4,16 @@ description: '使用 Flutter SDK 插入一条本地单聊消息。'
 sourcePath: '/sdk/flutter/message/managing-messages/insert-local-single-message'
 ---
 
+仅在当前设备本地的单聊会话中插入一条虚拟或本地专属消息，不执行网络投递：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `receiverID` | `String` | 是 | 单聊接收方的用户 ID。 |
+| `senderID` | `String` | 是 | 消息发送者的用户 ID（可为当前用户或虚拟系统账号）。 |
+| `message` | `Message` | 是 | 待持久化到本地的完整消息对象。 |
+
 ```dart
 final stored = await OpenIM.iMManager.messageManager
     .insertSingleMessageToLocalStorage(
@@ -13,4 +23,10 @@ final stored = await OpenIM.iMManager.messageManager
 );
 ```
 
-三个参数在声明中可空，但业务调用必须提供完整值。Future 返回写入后的 `Message`；检查非空 `clientMsgID` 后合并。该方法只修改当前设备，不发送消息或触发远端 listener。
+各参数在 SDK 底层虽标记为可空，但实际业务调用必须提供非空有效值以保证会话归属解析正确。
+
+## 返回结果
+
+Future 成功返回已写入本地存储的消息对象（`Message`）。客户端应依据非空 `clientMsgID` 将其合并至当前单聊会话列表中。
+
+该操作仅影响当前设备本地数据库，不会同步至服务端，不会发送给对端用户，也不会触发任何跨端事件通知。若需要执行真实的单聊消息发送，请参考[发送消息](/sdk/flutter/message/sending-messages/send-message)；若需在群聊中插入本地消息，请参考[插入本地群聊消息](/sdk/flutter/message/managing-messages/insert-local-group-message)。

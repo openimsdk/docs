@@ -4,11 +4,14 @@ description: '使用 OpenIM Flutter SDK 在通话房间中发送和接收自定�
 sourcePath: '/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-`signalingSendCustomSignal()` 用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。
+自定义信令用于向指定通话房间发送轻量级业务协商数据，例如举手、切换布局提示或业务侧状态同步。它不是聊天消息接口，也不能替代媒体引擎的数据通道。
 
-## 发送信令
+## 参数说明
 
-`roomID` 与 `customInfo` 都是必填字符串。需要传递结构化数据时，先定义稳定格式并序列化为 JSON：
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `roomID` | `String` | 是 | 目标通话房间 ID。 |
+| `customInfo` | `String` | 是 | 自定义业务信令内容，通常为 JSON 序列化字符串。 |
 
 ```dart
 final signal = jsonEncode({
@@ -25,11 +28,13 @@ await OpenIM.iMManager.signalingManager.signalingSendCustomSignal(
 );
 ```
 
-Future 成功表示 OpenIMServer 已接受本次发送，不等于其他参与者已经处理。`customInfo` 可以包含协议版本和业务幂等 ID。自定义信令适合轻量、临时的通话协商，不提供大文件、聊天记录或长期状态的传输与保存能力。
+## 返回结果
 
-## 接收信令
+Future 成功表示服务端已接受本次发送请求，并不代表其他参与者已经处理完毕。自定义信令适合轻量、临时的通话协商，不提供大文件、聊天记录或长期状态的传输与保存能力。
 
-`OnSignalingListener.onReceiveCustomSignal` 携带 `CustomSignaling`；其 `roomID` 和 `customInfo` 都是 nullable。先验证房间与业务协议，再更新界面：
+## 接收自定义信令
+
+通过 `OnSignalingListener` 的 `onReceiveCustomSignal` 回调接收信令：
 
 ```dart
 void handleCustomSignal(CustomSignaling info) {
@@ -49,6 +54,4 @@ Future<void> registerCustomSignalListener() {
 }
 ```
 
-本页是 `onReceiveCustomSignal` 的完整处理归属页。`SignalingManager` 只保存一个 listener，后一次设置会替换 Dart 层先前实例。应把本回调与其他通话回调组合为一个应用级 `OnSignalingListener`，不要在每个 Widget 中分别设置。SDK 没有 remove 或 unset API，切换账号时停止向旧状态分发，并用新账号的完整 listener 覆盖。
-
-`parseAndValidateCallSignal()` 解析 JSON 结构、协议版本、`eventID`、`type` 和业务字段。按 `roomID:eventID` 幂等处理，不依赖事件顺序。自定义信令不是可重放的长期状态记录；连接恢复后，可通过房间查询或业务数据重新校准状态。
+建议客户端在业务数据中包含协议版本与业务幂等 `eventID`，按 `roomID:eventID` 幂等处理，避免重复执行或因乱序到达导致界面不一致。由于 SDK 未提供注销方法，退出登录或切换账号时应停止向旧状态写入，并在新账号登录后重新传入完整的 listener 进行覆盖。相关其他通话事件请参考[处理通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)。

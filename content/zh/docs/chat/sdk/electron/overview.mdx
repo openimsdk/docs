@@ -8,20 +8,20 @@ Electron SDK 同时提供 WASM 和 FFI 两种接入形态。共享的用户、�
 
 ## SDK 形态分工
 
-| 接入形态 | 适用场景 | 文档去向 |
+| 接入形态 | 适用场景 | 文档指南 |
 | --- | --- | --- |
-| WASM | 浏览器页面、Electron 渲染进程、WebView、希望与 Web 客户端复用的 UI | 直接使用 [WASM SDK](/sdk/wasm/overview) 的接入与业务指南 |
-| FFI | 桌面应用打包、原生运行时、需要本地文件全路径或独立 `initSDK` 生命周期的场景 | 本 Hub 的专属页 + WASM 共享业务页 |
-| WASM + FFI | 同一产品同时支持 Web 与 Electron 打包 | 在业务层封装统一入口，按运行环境选择实现，避免同一用户被两个 SDK 实例重复登录 |
+| WASM | 浏览器页面、Electron 渲染进程、WebView、希望与 Web 端共用一套代码的 UI | 直接参考 [WASM SDK 文档](/sdk/wasm/overview) 接入 |
+| FFI | 桌面客户端打包、主进程原生集成、需要读取本地磁盘文件全路径或独立 `initSDK` 生命周期的场景 | 参考本节的专属说明与 WASM 业务文档 |
+| WASM + FFI | 同一产品同时支持 Web 与 Electron 桌面端 | 在应用层进行抽象封装，根据运行环境动态选择实现，避免同一用户被多实例重复登录 |
 
 ## 接入差异（仅 FFI）
 
-WASM 浏览器包通过一次 `login(InitAndLoginConfig)` 同时传入服务地址、平台和用户凭据。Electron FFI 拆成两步：
+WASM 浏览器包通过一次 `login(InitAndLoginConfig)` 同时传入服务地址、平台和用户凭据。Electron FFI 则拆分为两步：
 
-1. `initSDK(InitConfig)`：写入 `apiAddr`、`wsAddr`、`platformID`、`dataDir`、`systemType` 和日志选项。
-2. `login({ userID, token })`：只提交当前用户凭据。
+1. `initSDK(InitConfig)`：配置 `apiAddr`、`wsAddr`、`platformID`、`dataDir`、`systemType` 和日志选项。
+2. `login({ userID, token })`：传入当前用户凭据。
 
-完整参数、示例和 `unInitSDK()` 见[认证与初始化](/sdk/electron/getting-started/authenticate-and-init)。共享的连接、Token 和踢下线事件监听仍参考 [WASM 认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)。
+完整参数、示例与资源释放说明见[认证与初始化](/sdk/electron/getting-started/authenticate-and-init)。共享的连接、Token 和踢下线事件监听仍参考 [WASM 认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)。
 
 ## Electron 专属 API（FFI）
 
@@ -33,7 +33,7 @@ WASM 浏览器包通过一次 `login(InitAndLoginConfig)` 同时传入服务地�
 
 这些 FFI 专用方法仅适用于 Electron FFI 形态。浏览器或 Electron WASM 形态的媒体消息使用 WASM 文档中的 `*ByFile` / `*ByURL` 路径。
 
-## 共享能力（链到 WASM）
+## 核心通用能力（参考 WASM 文档）
 
 | 领域 | WASM 入口 |
 | --- | --- |
@@ -48,7 +48,7 @@ WASM 浏览器包通过一次 `login(InitAndLoginConfig)` 同时传入服务地�
 
 ## 桌面端注意事项
 
-- 同时覆盖 Web 与 Electron 时，先定义应用内 IM 适配器，再按环境选择 WASM 或 FFI。
-- 使用 WASM 形态时，打包后仍需验证 `openIM.wasm`、`sql-wasm.wasm` 和 `wasm_exec.js` 可访问。
-- 使用 FFI 形态时，按桌面安装包、权限、`dataDir` 和升级策略接入，不要套用浏览器 WASM 资源路径。
-- 主进程与渲染进程都需要 IM 状态时，先明确 IPC 边界和会话所有权，避免多实例竞争。
+- 如果项目需要同时支持 Web 端和 Electron 桌面端，建议在业务层做好适配抽象，根据运行时环境动态加载 WASM 或 FFI 实例。
+- 使用 WASM 形态时，打包后仍需验证 `openIM.wasm`、`sql-wasm.wasm` 和 `wasm_exec.js` 可正常访问。
+- 使用 FFI 形态时，按桌面安装包、系统权限、`dataDir` 和热更新策略接入，不要套用浏览器 WASM 的资源加载路径。
+- 若主进程与渲染进程都需要访问 IM 状态，应先明确 IPC 通信边界和会话归属，避免多实例互相抢占或状态竞争。

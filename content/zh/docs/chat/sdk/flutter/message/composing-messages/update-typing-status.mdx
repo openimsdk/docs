@@ -4,6 +4,15 @@ description: '使用 Flutter SDK 上报当前用户的输入状态。'
 sourcePath: '/sdk/flutter/message/composing-messages/update-typing-status'
 ---
 
+在用户聚焦输入框或开始打字时上报“正在输入”状态，并在失焦或停止输入时清除该状态：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标会话 ID。 |
+| `focus` | `bool` | 是 | 输入状态：`true` 表示正在输入，`false` 表示已停止输入或失去焦点。 |
+
 ```dart
 await OpenIM.iMManager.conversationManager.changeInputStates(
   conversationID: conversationID,
@@ -11,6 +20,12 @@ await OpenIM.iMManager.conversationManager.changeInputStates(
 );
 ```
 
-开始输入传 `true`，发送消息、失焦、切换会话或停止输入时传 `false`。输入状态不会保存草稿或写入消息列表。对开始输入做节流和去重；Future 成功不表示远端界面已更新。已废弃并抛出 `UnimplementedError` 的 `typingStatusUpdate()` 不要使用。
+建议在客户端对连续按键进行节流防抖处理，避免频繁调用；在发送消息、切换聊天或输入框失焦时及时传入 `false`。
 
-`onInputStatusChanged` 是本页归属事件，应纳入唯一的 `OnConversationListener`，按 `conversationID:userID` 更新该用户当前的 `platformIDs`。设置入口见[事件概览](/sdk/flutter/events/overview-events)。
+## 返回结果
+
+Future 成功表示服务端已受理输入状态上报，但不代表对端已接收或界面已更新。输入状态属于瞬时信令，不会作为消息落库，也不会保存草稿。
+
+### 监听输入状态变更
+
+输入状态通知 `onInputStatusChanged` 属于会话监听器 `OnConversationListener`。当对端状态发生变化时，客户端应以 `conversationID:userID` 为标识更新该用户在各平台的输入状态 `platformIDs`。全局 listener 的注册与管理请参考[事件概览](/sdk/flutter/events/overview-events)。

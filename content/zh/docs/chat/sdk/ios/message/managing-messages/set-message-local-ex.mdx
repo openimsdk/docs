@@ -4,12 +4,29 @@ description: '更新 iOS 当前设备的消息本地扩展字段。'
 sourcePath: '/sdk/ios/message/managing-messages/set-message-local-ex'
 ---
 
+调用设置消息本地扩展接口可以为当前设备本地存储的某条消息写入或更新自定义扩展数据（`localEx`）。该字段仅在当前设备有效，常用于记录本地播放状态、下载进度、语音转写文本或富媒体缓存标记。
+
 ```objc
 [[OIMManager manager] setMessageLocalEx:conversationID
                             clientMsgID:message.clientMsgID
                                 localEx:@"{\"downloaded\":true}"
-                              onSuccess:nil
-                              onFailure:nil];
+                              onSuccess:^(NSString * _Nullable data) {
+    // 本地扩展更新成功
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理更新失败
+}];
 ```
 
-`localEx` 是完整字符串，只更新当前设备本地数据库，不会同步给其他设备或触发新消息 delegate。需要保留旧字段时先在业务层解析并合并。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `clientMsgID`：目标消息的客户端消息 ID。
+- `localEx`：自定义扩展字符串（通常为 JSON 格式）。
+- `onSuccess`：更新成功回调。
+- `onFailure`：更新失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调表示本地扩展已写入当前设备的本地数据库。该数据仅作用于当前设备，不会向服务端同步，亦不会派发事件通知。
+- 客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。该接口执行全量覆盖写入；若需保留已有属性，应在调用前先解析原 `localEx` 内容完成字段合并后再提交。语音转写存储示例见[保存本地转写结果](/sdk/ios/message/composing-messages/save-local-transcript)。

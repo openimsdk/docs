@@ -4,14 +4,31 @@ description: '获取 iOS 好友申请的未处理数量。'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-unhandled-count'
 ---
 
+获取指定时间点之后未处理的好友申请数量，常用于更新角标或未读红点提示：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `req` | `GetFriendApplicationUnhandledCountReq *` | 查询未处理申请数的请求对象。 |
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `time` | `NSInteger` | 毫秒级时间戳，通常传入上次进入或浏览好友申请页面的时间。 |
+
 ```objc
 GetFriendApplicationUnhandledCountReq *req = [GetFriendApplicationUnhandledCountReq new];
 req.time = lastViewedAt;
+
 [[OIMManager manager] getFriendApplicationUnhandledCount:req
                                                onSuccess:^(NSInteger count) {
                                                    [requestStore setUnhandledCount:count];
                                                }
-                                               onFailure:nil];
+                                               onFailure:^(NSInteger code, NSString *message) {
+                                                   NSLog(@"getFriendApplicationUnhandledCount failed: %ld %@", (long)code, message);
+                                               }];
 ```
 
-`time` 通常传上次查看申请列表的时间。成功 callback 返回该时间点之后符合条件的未处理数量；查询本身不触发申请 delegate。
+## 返回结果
+
+成功回调 `onSuccess` 返回指定时间之后未处理的好友申请总数 `count`。查询本身不会触发申请事件；当有新的好友申请到达时，应通过[获取收到的好友申请](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)中说明的事件回调更新角标计数。

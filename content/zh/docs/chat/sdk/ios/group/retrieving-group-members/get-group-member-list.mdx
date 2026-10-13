@@ -4,11 +4,47 @@ description: '分页查询 iOS 群成员。'
 sourcePath: '/sdk/ios/group/retrieving-group-members/get-group-member-list'
 ---
 
+按角色过滤条件分页查询群成员列表：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `filter` | `OIMGroupMemberFilter` | 成员角色筛选条件。 |
+| `offset` | `NSInteger` | 分页拉取的偏移量（从 0 开始）。 |
+| `count` | `NSInteger` | 每页拉取的数量上限。 |
+
+### 成员筛选枚举
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMGroupMemberFilterAll` | `0` | 获取所有成员。 |
+| `OIMGroupMemberFilterOwner` | `1` | 仅获取群主。 |
+| `OIMGroupMemberFilterAdmin` | `2` | 仅获取管理员。 |
+| `OIMGroupMemberFilterOrdinaryMember` | `3` | 仅获取普通成员。 |
+| `OIMGroupMemberFilterAdminAndOrdinaryMember` | `4` | 获取管理员和普通成员。 |
+| `OIMGroupMemberFilterOwnerAndAdmin` | `5` | 获取群主和管理员。 |
+
 ```objc
-[[OIMManager manager] getGroupMemberList:groupID filter:OIMGroupMemberFilterAll
-  offset:0 count:50
-  onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) { [self replaceFirstPage:members]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getGroupMemberList:@"group_1001"
+                                  filter:OIMGroupMemberFilterAll
+                                  offset:0
+                                   count:50
+                               onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
+                                   [self replaceFirstPage:members];
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"getGroupMemberList failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-继续加载时按请求数量增加 `offset`。iOS SDK 没有单独查询被禁言成员的方法；如需筛选这类成员，应分页查询群成员，并检查以秒为单位的 `muteEndTime`。
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回包含群成员信息对象的数组 `NSArray<OIMGroupMemberInfo *> *`。
+
+分页加载下一页时，按请求并成功收到的数据条数累加 `offset`。iOS SDK 未提供单独筛选被禁言成员的接口；若业务需要筛选此类成员，可分页查询群成员后检查 `muteEndTime`（大于当前时间戳即处于禁言状态）。
+
+该查询仅返回调用时刻的成员列表快照，不触发成员 delegate 回调。增量变动处理请参见[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。

@@ -4,18 +4,41 @@ description: '使用 iOS SDK 按 conversationID 与 clientMsgID 定位消息。'
 sourcePath: '/sdk/ios/message/retrieving-messages/find-messages-by-id'
 ---
 
+通过指定会话 ID 和客户端消息 ID 列表，可调用查找消息列表接口在本地精准定位一条或多条历史消息。
+
 ```objc
 OIMFindMessageListParam *query = [OIMFindMessageListParam new];
 query.conversationID = conversationID;
 query.clientMsgIDList = @[clientMsgID];
 
 [[OIMManager manager] findMessageList:@[query]
-    onSuccess:^(OIMSearchResultInfo *result) {
+    onSuccess:^(OIMSearchResultInfo * _Nullable result) {
         OIMSearchResultItemInfo *item = result.findResultItems.firstObject;
         OIMMessageInfo *message = item.messageList.firstObject;
-        if (message != nil) [self openMessage:message conversationID:item.conversationID];
+        if (message != nil) {
+            [self openMessage:message conversationID:item.conversationID];
+        }
     }
-    onFailure:nil];
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // 处理查询失败
+    }];
 ```
 
-成功结果允许为 `nil`；缓存尚未同步、消息已删除或 ID 不存在时也可能为空。一次调用可以传多个会话条件，不要依赖输入与响应数组位置，应按 `conversationID` 和 `clientMsgID` 对应。查询本身不触发消息 delegate。
+## 参数说明
+
+- `paramList`：查询参数数组（`NSArray<OIMFindMessageListParam *>`），支持同时传入多个会话的查询条件。
+- 每个 `OIMFindMessageListParam` 对象包含：
+  - `conversationID`：目标会话 ID。
+  - `clientMsgIDList`：待查找的客户端消息 ID 列表（`NSArray<NSString *>`）。
+
+## 返回结果
+
+- `onSuccess`：返回 `OIMSearchResultInfo` 搜索结果对象。
+  - `totalCount`：查找到的消息总数。
+  - `findResultItems`：按会话分组的查找结果列表（`NSArray<OIMSearchResultItemInfo *>`）。每个结果对象包含 `conversationID` 和对应的 `messageList`。
+- `onFailure`：查询失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 客户端状态合并
+
+- 查找消息接口仅读取本地数据快照，不会触发新消息接收事件。
+- 当本地数据库尚未同步、消息已被删除或指定的客户端消息 ID 不存在时，对应结果列表中将不包含该消息。业务层应依据 `conversationID` 与 `clientMsgID` 对应匹配，避免依赖数组下标顺序。

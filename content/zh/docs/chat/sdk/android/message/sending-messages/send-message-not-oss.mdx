@@ -1,24 +1,30 @@
 ---
 title: '发送不经 OSS 的消息'
-description: '使用 sendMessageNotOss 发送已经由业务上传资源的媒体消息。'
+description: '发送由业务服务端自行托管媒体资源的消息，无需经过 SDK 内置 OSS 上传。'
 sourcePath: '/sdk/android/message/sending-messages/send-message-not-oss'
 ---
 
-`sendMessageNotOss()` 用于发送已经包含有效远端媒体 URL 的消息，避免 SDK 再次上传文件。只应与 `create*MessageByURL()` 创建的媒体消息配合使用；本地路径或本地文件消息仍使用[发送消息](/sdk/android/message/sending-messages/send-message)。
-
-单聊只填写 `recvUid`，群聊只填写 `recvGid`。`offlinePushInfo` 控制接收方离线时的推送内容。
+发送已经包含有效远端媒体 URL 的消息，避免 SDK 重复执行文件上传。此方法通常与通过 URL 创建的媒体消息（如网络图片、音频、视频、文件等）配合使用。若消息基于本地文件路径创建，请使用普通的[发送消息](/sdk/android/message/sending-messages/send-message)。
 
 ```java
+String peerUserID = "user_b";
+OfflinePushInfo offlinePushInfo = new OfflinePushInfo();
+
 OpenIMClient.getInstance().messageManager.sendMessageNotOss(
     new OnMsgSendCallback() {
         @Override
+        public void onProgress(long progress) {
+            // 不经 OSS 发送通常不触发文件上传进度
+        }
+
+        @Override
         public void onSuccess(Message sentMessage) {
-            // 按 clientMsgID 替换本地待发送消息。
+            // 按 sentMessage.getClientMsgID() 更新本地消息状态
         }
 
         @Override
         public void onError(int code, String error) {
-            // 标记发送失败并允许重试。
+            // 处理发送失败
         }
     },
     message,
@@ -28,4 +34,18 @@ OpenIMClient.getInstance().messageManager.sendMessageNotOss(
 );
 ```
 
-成功回调返回发送后的 `Message`，表示当前发送请求已经完成，不代表接收方事件已经到达。接收方处理方式见[接收消息](/sdk/android/message/receiving-messages/receive-messages)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `callback` | `OnMsgSendCallback` | 是 | 消息发送回调。 |
+| `message` | `Message` | 是 | 待发送的消息对象（通常由各 `create*MessageByURL` 接口创建）。 |
+| `recvUid` | `String` | 条件必填 | 单聊接收方用户 ID。群聊时传 `null`。 |
+| `recvGid` | `String` | 条件必填 | 群聊目标群组 ID。单聊时传 `null`。 |
+| `offlinePushInfo` | `OfflinePushInfo` | 否 | 离线推送参数对象。若不需要自定义可传 `null`。 |
+
+## 返回结果
+
+成功回调返回发送确认后的 `Message` 对象。
+
+客户端应以 `clientMsgID` 为标识更新本地消息状态。接收端接收与解析逻辑请参阅[接收消息](/sdk/android/message/receiving-messages/receive-messages)。

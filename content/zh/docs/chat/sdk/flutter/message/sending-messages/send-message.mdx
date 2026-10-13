@@ -4,6 +4,18 @@ description: '使用 Flutter SDK 发送待发送消息对象。'
 sourcePath: '/sdk/flutter/message/sending-messages/send-message'
 ---
 
+将已构建的消息对象发送至目标单聊或群聊会话中。若消息包含本地媒体文件，SDK 会自动完成文件上传与消息投递：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `message` | `Message` | 是 | 经由对应创建工厂方法生成的待发送消息对象。 |
+| `userID` | `String?` | 单聊必填 | 单聊接收方的用户 ID。发送群聊时留空。 |
+| `groupID` | `String?` | 群聊必填 | 目标群聊的群组 ID。发送单聊时留空。 |
+| `offlinePushInfo` | `OfflinePushInfo?` | 否 | 离线推送自定义配置（标题、提示文本与透传扩展）。 |
+| `isOnlineOnly` | `bool` | 否 | 是否为仅在线消息，默认为 `false`。若为 `true`，消息不入本地数据库与漫游历史。 |
+
 ```dart
 final sent = await OpenIM.iMManager.messageManager.sendMessage(
   message: message,
@@ -12,4 +24,10 @@ final sent = await OpenIM.iMManager.messageManager.sendMessage(
 );
 ```
 
-单聊只传 `userID`，群聊只传 `groupID`；`isOnlineOnly` 消息不进入普通历史。Future 成功返回服务端确认后的 `Message`，先确认 `clientMsgID` 非空，再替换本地待发送项。
+单聊调用时只填 `userID`，群聊调用时只填 `groupID`，两者互斥，不可同时传递。
+
+## 返回结果
+
+Future 成功返回经服务端确认后的完整消息对象（`Message`）。客户端应根据非空 `clientMsgID` 更新本地列表中对应消息的发送状态与服务器时间戳。
+
+若发送的是包含本地文件路径的图片、音频或视频消息，SDK 在发送期间会自动触发上传逻辑，其上传进度回调请参考[监听消息发送进度](/sdk/flutter/message/sending-messages/set-msg-send-progress-listener)。若媒体文件已由业务方提前上传并取得 URL，请使用[发送不经 OSS 的消息](/sdk/flutter/message/sending-messages/send-message-not-oss)以跳过重复上传。

@@ -1,14 +1,31 @@
 ---
 title: '接受通话'
-description: '使用 Flutter SDK 接受通话邀请。'
+description: '使用 Flutter SDK 接受通话邀请并取得房间凭据。'
 sourcePath: '/sdk/flutter/calling/managing-calls/accept-call'
 ---
 
-从 `onReceiveNewInvitation` 取得原始 `SignalingInfo` 后接受邀请：
+被邀请方在[处理通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)中收到邀请通知并取得原始 `SignalingInfo` 后，调用此方法接受邀请：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `info` | `SignalingInfo` | 是 | 收到邀请通知时获取的完整信令对象。必须沿用原始对象，不能仅凭 `roomID` 重新构造。 |
 
 ```dart
 final credentials = await OpenIM.iMManager.signalingManager
     .signalingAccept(info: receivedInfo);
 ```
 
-必须沿用收到的对象，不能重建只有 `roomID` 的资料。Future 成功返回 `SignalingCertificate`；取得有效的 `token` 和 `roomID` 后再进入媒体房间。
+## 返回结果
+
+Future 成功返回 `SignalingCertificate` 对象，包含音视频通话房间凭证。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `token` | `String?` | 接入媒体引擎所需的房间鉴权凭证。 |
+| `roomID` | `String?` | 目标通话房间 ID。 |
+| `liveURL` | `String?` | 媒体流服务器地址。 |
+| `busyLineUserIDList` | `List<String>?` | 当前正处于忙线状态的用户 ID 列表。 |
+
+调用成功表示接受信令已送达服务端并取得进入房间的凭证，不代表音视频媒体流已经连通。客户端使用 `roomID` 维护通话状态，参与者状态结合用户 ID 进行合并，完整事件监听请参考[处理通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)。

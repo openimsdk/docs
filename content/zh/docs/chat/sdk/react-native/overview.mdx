@@ -1,5 +1,48 @@
 ---
 title: 'OpenIM React Native SDK 概览'
-description: 'OpenIM React Native SDK 入口，用于移动端应用。'
+description: '在 React Native 移动端应用中使用 OpenIM SDK 接入用户、会话、群组、消息、通话和事件能力。'
 sourcePath: '/sdk/react-native/overview'
 ---
+OpenIM React Native SDK 为跨平台移动端应用提供原生的即时通讯能力。npm 包由 `@openim/rn-client-sdk` 提供，支持 React Native CLI 和 Expo 自定义开发客户端环境。开发者可通过 `OpenIMSDK` 全局访问初始化、用户关系链、会话、群组、消息、音视频通话信令及事件监听等完整能力。
+
+## 接入流程
+
+1. 在 React Native 工程中安装 `@openim/rn-client-sdk` 并完成原生模块链接（或在 Expo 中使用 `expo prebuild` 生成原生工程）。
+2. 从业务后端取得当前用户的 `userID`、Token 以及 OpenIMServer 的 HTTP 与 WebSocket 服务地址。
+3. 参考[认证与管理登录会话](/sdk/react-native/getting-started/authenticate-and-manage-session)完成 SDK 初始化，并注册网络连接与长连接状态监听。
+4. 调用登录接口认证当前用户，等待长连接成功建立事件触发。
+5. 登录成功后，即可根据业务需要调用用户、会话、群组、消息及通话信令等接口。
+6. 监听业务事件推送，并按照稳定的唯一业务标识将变更合并至应用本地状态管理中。
+
+开发者可在项目中通过 `import OpenIMSDK from '@openim/rn-client-sdk'` 导入 SDK，全局访问所有业务能力。
+
+## 文档结构
+
+| 领域 | 内容 |
+| --- | --- |
+| [按 React Native 环境接入](/sdk/react-native/getting-started/environment-specific-implementation) | React Native CLI 与 Expo 开发客户端环境配置及依赖安装。 |
+| [开始之前](/sdk/react-native/getting-started/before-you-start) | 服务端地址、Token 签发与原生工程准备工作。 |
+| [认证与管理登录会话](/sdk/react-native/getting-started/authenticate-and-manage-session) | SDK 初始化、用户登录、连接监听、登录状态查询与退出登录。 |
+| [发送第一条消息](/sdk/react-native/getting-started/send-first-message) | 快速创建并发送第一条单聊文本消息，验证接入流程。 |
+| [用户概览](/sdk/react-native/user/overview-user) | 个人资料维护、好友关系链、黑名单管理与在线状态订阅。 |
+| [会话概览](/sdk/react-native/conversation/overview-conversation) | 会话列表管理、消息未读数、会话置顶、免打扰设置与会话分组。 |
+| [群组概览](/sdk/react-native/group/overview-group) | 群资料维护、群成员管理、入群申请审批与群禁言控制。 |
+| [消息概览](/sdk/react-native/message/overview-message) | 消息创建、发送、接收、历史消息拉取、撤回、修改与已读回执。 |
+| [音视频通话概览](/sdk/react-native/calling/overview-calling) | 通话邀请信令、通话凭据传递、自定义信令与通话状态监听。 |
+| [事件概览](/sdk/react-native/events/overview-events) | 全局事件模型、事件分类、监听器生命周期与状态合并规范。 |
+| [日志](/sdk/react-native/logger) | 初始化日志等级配置、业务诊断日志写入与客户端日志上报。 |
+| [上传文件](/sdk/react-native/file-uploads/upload-file) | 独立上传本地图片或文件并获取可访问的公网资源 URL。 |
+
+## 客户端状态合并规范
+
+当收到业务事件推送时，客户端应当使用以下唯一主键标识更新本地状态：
+
+- **会话**：`conversationID`
+- **会话分组**：`conversationGroupID`
+- **群组**：`groupID`
+- **群成员**：`groupID:userID`
+- **好友与黑名单**：`userID`
+- **消息**：`clientMsgID`，必要时同时限定 `conversationID`
+- **通话**：`roomID`，参与者状态同时使用用户 ID
+
+切勿使用数组索引或展示名称作为合并标识。API 调用成功（Promise 成功）、事件推送到达与重新查询校准是三个不同的阶段，需分别处理。

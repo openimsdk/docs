@@ -1,8 +1,10 @@
 ---
 title: '拉黑用户'
-description: '使用 addBlacklist() 将用户加入当前账号黑名单。'
+description: '将指定用户加入当前账号的黑名单。'
 sourcePath: '/sdk/android/user/blacklist/add-blacklist'
 ---
+
+将指定用户加入当前登录账号的黑名单。黑名单属于单向关系，拉黑后对方将无法向当前用户发送单聊消息。
 
 ```java
 OpenIMClient.getInstance().friendshipManager.addBlacklist(
@@ -22,15 +24,23 @@ OpenIMClient.getInstance().friendshipManager.addBlacklist(
 );
 ```
 
-第二个参数是目标 `userID`，第三个参数是可选扩展字符串。无需扩展信息时可使用不带 `ex` 的重载。成功 callback 表示拉黑请求完成，不表示事件已经到达。
+## 参数说明
 
-黑名单是单向关系：被拉黑用户不能向当前用户发送消息，但当前用户是否允许继续向对方发送消息由业务层决定。`ex` 是用于保存黑名单扩展信息的字符串，也可以存储 JSON 字符串。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `targetUserID` | `String` | 是 | 目标用户的用户 ID。 |
+| `ex` | `String` | 否 | 自定义业务扩展字符串，无需扩展时可传空字符串或使用无 `ex` 重载。 |
 
-拉黑状态变化时，可通过 `OnFriendshipListener` 接收 `onBlacklistAdded`：
+## 返回结果
+
+成功回调表示服务端已成功将目标用户加入当前账号的黑名单。
+
+操作生效后，SDK 会触发 `OnFriendshipListener.onBlacklistAdded` 事件；客户端应以 `userID` 为主键唯一定位该用户并同步本地黑名单列表，完整监听配置请参考[获取黑名单列表](/sdk/android/user/blacklist/get-blacklist)。若需移出黑名单，请参考[取消拉黑用户](/sdk/android/user/blacklist/remove-blacklist)。
 
 ```java
 @Override
 public void onBlacklistAdded(BlacklistInfo user) {
-    // 处理新增的黑名单记录
+    // 收到新增黑名单通知，按 user.getUserID() 更新本地黑名单
 }
 ```

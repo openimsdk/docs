@@ -11,9 +11,9 @@ await openimsdk.sendGroupMessageReadReceipt({
 });
 ```
 
-同一批消息必须属于目标群会话。Promise 成功只表示服务端接受上报，不等于其他客户端界面已更新。会话未读数仍由 `markConversationMessageAsRead()` 独立维护。
+传入的消息 ID 列表必须全部归属于指定的群聊会话。接口调用成功表示服务端已接收已读上报。需要注意：会话级别的本地未读角标清零由 [标记会话已读](/sdk/wasm/conversation/managing-conversations/mark-conversation-read) 负责，两者属于独立操作。
 
-其他客户端通过 `SdkEvent.OnRecvGroupReadReceipt` 接收群聊成员级已读变化。该事件的完整监听示例集中在本页；收到事件后，使用 `conversationID + clientMsgID` 找到对应消息，并更新其 `hasReadCount`、`unreadCount` 和成员信息。
+群内其他成员（尤其是消息发送者）可通过 `SdkEvent.OnRecvGroupReadReceipt` 事件获知群消息已读状态的更新。本页集中提供该事件的监听示例：收到事件后，使用 `conversationID` 和 `clientMsgID` 定位目标消息，并同步更新其已读人数 `hasReadCount` 与未读人数 `unreadCount`：
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
@@ -29,4 +29,4 @@ function removeGroupReadReceiptListener() {
 }
 ```
 
-组件卸载、退出登录或切换账号时调用 `removeGroupReadReceiptListener()`。上报 Promise、群回执事件，以及[查询群消息已读成员](/sdk/wasm/message/managing-read-status/get-group-message-readers)返回的查询时成员列表是三个独立阶段。
+在组件销毁、退出登录或切换账号时，请调用 `removeGroupReadReceiptListener()` 解绑监听。业务层若需获取具体的已读成员列表，请参考[查询群消息已读成员](/sdk/wasm/message/managing-read-status/get-group-message-readers)。

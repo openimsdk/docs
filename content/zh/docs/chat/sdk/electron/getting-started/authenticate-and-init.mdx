@@ -6,7 +6,7 @@ sourcePath: '/sdk/electron/getting-started/authenticate-and-init'
 
 Electron FFI 形态把 SDK 初始化与用户登录拆开：先用 `initSDK()` 配置 OpenIMServer 地址和本地运行目录，再用 `login()` 提交 `userID` 与 Token。这与 [WASM 认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session) 中一次性传入 `InitAndLoginConfig` 的写法不同。
 
-本页只覆盖 Electron FFI 的生命周期 API。连接成功、Token 失效和踢下线等事件的处理边界可参考 WASM 认证页；Electron FFI 使用自身提供的事件枚举。
+本页主要说明 Electron FFI 的生命周期 API。连接成功、Token 失效和踢下线等事件的处理机制与流程边界可参考[认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)；Electron FFI 使用自身提供的事件枚举。
 
 ## 与 WASM 的差异
 
@@ -47,7 +47,7 @@ await openimsdk.initSDK({
 });
 ```
 
-`initSDK()` 的 Promise 成功表示原生 SDK 已完成初始化并可以继续登录；它不会建立用户会话，也不等于连接事件已到达。
+`initSDK()` 返回成功表示原生 SDK 已完成环境配置并准备就绪，随后即可调用登录接口；此时尚未建立长连接或用户会话。
 
 ## 登录当前用户
 
@@ -67,7 +67,7 @@ await openimsdk.login({
 });
 ```
 
-`login()` 的 Promise 成功表示登录请求完成；是否已可调用业务 API，仍应结合 `OnConnectSuccess` 等连接事件判断。事件注册方式见 [WASM 认证页](/sdk/wasm/getting-started/authenticate-and-manage-session)。
+`login()` 返回成功表示登录请求已发出并通过凭据校验；通常在收到连接成功事件后，长连接便建立完毕，即可正常调用后续业务 API。事件注册与监听细节见[认证与管理登录会话](/sdk/wasm/getting-started/authenticate-and-manage-session)。
 
 ## 退出与卸载
 

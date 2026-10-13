@@ -4,7 +4,16 @@ description: '使用 Flutter SDK 从消息锚点向较新方向反向分页读�
 sourcePath: '/sdk/flutter/message/retrieving-messages/load-newer-messages'
 ---
 
-已经持有消息锚点，需要补齐它之后的消息时调用：
+从某个特定消息锚点（如搜索定位或引用跳转）向较新的时间方向反向拉取历史消息：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标会话 ID。 |
+| `startMsg` | `Message?` | 否 | 反向分页的起始锚点消息。拉取此消息之后较新的记录。 |
+| `count` | `int` | 是 | 本次拉取的消息数量。 |
+| `viewType` | `int?` | 否 | 历史记录视图类型，默认为普通历史（`GetHistoryViewType.history`）。 |
 
 ```dart
 final page = await OpenIM.iMManager.messageManager
@@ -16,4 +25,10 @@ final page = await OpenIM.iMManager.messageManager
 );
 ```
 
-不要在同一个滚动边界混用两个读取方向。Future 返回当前方向的消息列表，不触发新消息 listener；合并时限定 `conversationID` 并检查非空 `clientMsgID`。
+请勿在同一个滚动列表中同时混用正向与反向两种不同的游标方向，以免导致时间线混乱。
+
+## 返回结果
+
+Future 成功返回高级历史消息分页对象（`AdvancedMessage`），其 `messageList` 为向最新时间方向拉取到的消息列表。
+
+查询操作建立静态数据快照，不会触发新消息事件通知。合并至本地界面列表时应限定目标 `conversationID`，并严格根据非空 `clientMsgID` 进行去重。常规向上翻页拉取更早历史请参考[加载历史消息](/sdk/flutter/message/retrieving-messages/load-older-messages)。

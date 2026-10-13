@@ -1,36 +1,51 @@
 ---
 title: '创建群组'
-description: '使用 createGroup 创建群资料并指定初始成员、管理员和群主。'
+description: '创建群组并配置初始成员、管理员及群主。'
 sourcePath: '/sdk/android/group/create-group'
 ---
 
-使用 `createGroup()` 创建群组。`GroupInfo` 填写群资料；初始普通成员、管理员和群主分别通过独立参数传入。成功回调返回创建后的完整 `GroupInfo`，其中包含新群组的 `groupID`。
-
-## 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `memberUserIDs` | `List<String>` | 否 | 初始普通成员的用户 ID；没有普通成员时传空列表。 |
-| `adminUserIDs` | `List<String>` | 否 | 初始管理员的用户 ID；不能与普通成员或群主重复。 |
-| `info` | `GroupInfo` | 是 | 要创建的群资料，至少设置业务所需的群名称等字段。 |
-| `ownerUserID` | `String` | 是 | 群主用户 ID；不能同时出现在成员或管理员列表中。 |
+创建群组并配置初始群资料。通过 `GroupInfo` 设置群名称、简介等基础信息，并通过对应参数指定初始普通成员、管理员和群主。成功回调返回创建完成的完整 `GroupInfo`，其中包含服务端分配的群组唯一标识 `groupID`。
 
 ```java
 GroupInfo info = new GroupInfo();
 info.setGroupName("项目讨论");
 info.setIntroduction("仅限项目成员");
 
+List<String> memberUserIDs = Arrays.asList("user_a", "user_b");
+List<String> adminUserIDs = Arrays.asList("user_c");
+String ownerUserID = "user_owner";
+
 OpenIMClient.getInstance().groupManager.createGroup(
-    memberUserIDs, adminUserIDs, info, ownerUserID,
+    memberUserIDs,
+    adminUserIDs,
+    info,
+    ownerUserID,
     new OnBase<GroupInfo>() {
-        @Override public void onSuccess(GroupInfo group) { /* group 包含新群组信息。 */ }
-        @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
+        @Override
+        public void onSuccess(GroupInfo group) {
+            // group 包含新群组信息与 groupID
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理创建失败
+        }
     }
 );
 ```
 
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `memberUserIDs` | `List<String>` | 否 | 初始普通成员的用户 ID 列表；没有普通成员时可传空列表。 |
+| `adminUserIDs` | `List<String>` | 否 | 初始管理员的用户 ID 列表；不能与普通成员或群主重复。 |
+| `info` | `GroupInfo` | 是 | 要创建的群资料对象，至少设置群名称 `groupName` 等必要属性。 |
+| `ownerUserID` | `String` | 是 | 指定群主的用户 ID；不能同时出现在普通成员或管理员列表中。 |
+| `base` | `OnBase<GroupInfo>` | 是 | 异步请求回调。 |
+
 ## 返回结果
 
-成功回调返回创建后的 `GroupInfo`。使用其中的 `groupID` 进入群聊、查询群资料或继续管理成员；不要在请求发出前自行生成并保存群组标识。
+成功回调返回创建后的 `GroupInfo`。获取其中的 `groupID` 用于发起群聊、查询群资料或管理成员。
 
-创建成功表示本次请求已经完成，不代表所有客户端已经更新群组列表。当前用户及相关成员随后可能通过 `onJoinedGroupAdded` 收到新增群组信息，应按 `groupID` 合并；完整 listener 见[群组概览](/sdk/android/group/overview-group)。
+创建成功代表服务端建群操作已完成。当前用户及相关成员随后会通过 `onJoinedGroupAdded` 事件接收新增群组通知，客户端应按 `groupID` 进行状态合并；完整监听见[群组概览](/sdk/android/group/overview-group)。

@@ -4,15 +4,30 @@ description: '使用 iOS SDK 把转写结果保存到当前设备的消息扩展
 sourcePath: '/sdk/ios/message/composing-messages/save-local-transcript'
 ---
 
-`OIMSoundElem` 没有转写文字属性，应先解析并合并原 `localEx`，再写入业务命名空间：
+音频消息对象（`OIMSoundElem`）本身不包含直接存储转写文字的原生属性。若需在当前设备上持久化展示语音转写出的文字，可将转写文本合并写入消息的本地扩展字段（`localEx`）。
 
 ```objc
 NSString *localEx = [self mergeTranscript:transcript intoLocalEx:message.localEx];
 [[OIMManager manager] setMessageLocalEx:conversationID
-    clientMsgID:message.clientMsgID
-    localEx:localEx
-    onSuccess:nil
-    onFailure:nil];
+                            clientMsgID:message.clientMsgID
+                                localEx:localEx
+                              onSuccess:^(NSString * _Nullable data) {
+    // 本地扩展保存成功，更新本地 UI 气泡
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理保存失败
+}];
 ```
 
-已有值不是合法 JSON 对象时按产品约定中止或迁移，不能静默覆盖。成功只修改当前设备，不同步给其他用户或设备，也不触发消息事件。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `clientMsgID`：目标语音消息的客户端消息 ID。
+- `localEx`：待保存的本地扩展 JSON 字符串。
+- `onSuccess`：保存成功回调。
+- `onFailure`：保存失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 写入本地扩展仅修改当前设备上的本地数据库记录，不会同步至服务端或向其他端发送事件通知。客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。
+- 建议将转写结果以明确的键名（如 `transcript`）合并到已有 JSON 中，避免静默覆盖可能存在的其他本地自定义属性。通用本地扩展操作见[设置消息本地扩展](/sdk/ios/message/managing-messages/set-message-local-ex)；语音转写流程见[识别音频文字](/sdk/ios/message/composing-messages/transcribe-audio)。

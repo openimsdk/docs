@@ -4,23 +4,44 @@ description: '分页查询 iOS 当前用户收到的好友申请。'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient'
 ---
 
+分页查询当前登录用户收到的好友申请列表：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `req` | `GetFriendApplicationListAsRecipientReq *` | 查询收到的好友申请请求对象。 |
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `handleResults` | `NSArray<NSNumber *> *` | 申请处理状态筛选列表，传 `@[@(OIMApplicationStatusNormal)]` 查询待处理申请。 |
+| `offset` | `NSInteger` | 分页起始偏移量，首屏传 `0`。 |
+| `count` | `NSInteger` | 每页拉取的数据条数。 |
+
 ```objc
 GetFriendApplicationListAsRecipientReq *req = [GetFriendApplicationListAsRecipientReq new];
 req.handleResults = @[@(OIMApplicationStatusNormal)];
 req.offset = 0;
 req.count = 20;
+
 [[OIMManager manager] getFriendApplicationListAsRecipientWithReq:req
                                                        onSuccess:^(NSArray<OIMFriendApplication *> *items) {
                                                            [requestStore replaceReceived:items];
                                                        }
-                                                       onFailure:nil];
+                                                       onFailure:^(NSInteger code, NSString *message) {
+                                                           NSLog(@"getFriendApplicationListAsRecipient failed: %ld %@", (long)code, message);
+                                                       }];
 ```
 
-`handleResults` 筛选待处理、已同意或已拒绝状态，`offset` 和 `count` 控制分页。成功 callback 返回当前页数据；按 `fromUserID:toUserID` 合并，不触发申请 delegate。
+状态以 `fromUserID` 或 `fromUserID:toUserID` 为合并标识。
 
-## 同步好友申请变化
+## 返回结果
 
-本页是 `onFriendApplicationAdded:`、`onFriendApplicationAccepted:`、`onFriendApplicationRejected:` 和 `onFriendApplicationDeleted:` 的完整处理归属页：
+成功回调 `onSuccess` 返回当前分页的 `NSArray<OIMFriendApplication *> *` 数组。查询仅拉取当前快照，不触发申请事件。
+
+## 监听好友申请变化
+
+在实现 `OIMFriendshipListener` 协议的类中监听好友申请的增量事件：
 
 ```objc
 - (void)onFriendApplicationAdded:(OIMFriendApplication *)item {

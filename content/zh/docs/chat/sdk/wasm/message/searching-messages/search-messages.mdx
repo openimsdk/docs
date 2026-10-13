@@ -127,7 +127,7 @@ const toSearchRows = (result: SearchMessageResult) => {
 
 分页时继续传入相同的 `conversationID`、`keywordList` 和筛选条件，只递增 `pageIndex`。如果用户修改关键词、成员筛选或时间范围，应把 `pageIndex` 重置为 `1`，并清空旧结果，避免不同条件的结果混在一起。
 
-`searchLocalMessages()` 的 Promise 成功后，使用返回值显示本次搜索结果。查询不会触发消息事件；同一搜索页内按 `conversationID + clientMsgID` 去重，不要按结果位置保存选中项。
+接口调用成功后，使用返回的 `SearchMessageResult` 渲染搜索结果列表。该操作为本地只读查询，不会触发事件推送；在渲染和状态管理中，建议通过 `conversationID` 与 `clientMsgID` 唯一标识具体消息。
 
 ## 处理搜索结果变化
 
@@ -135,7 +135,7 @@ const toSearchRows = (result: SearchMessageResult) => {
 
 跳转到某条搜索结果时，使用结果中的 `conversationID` 和 `clientMsgID` 定位目标会话与消息。需要展示该消息前后的聊天记录时，把搜索命中的 `MessageItem` 作为起点读取上下文；参数、示例和返回结构见[读取消息上下文](/sdk/wasm/message/retrieving-messages/load-message-context)。不要用 `findMessageList()` 拼接附近的聊天记录。
 
-需要显示当前时刻的搜索结果时，可以用相同条件重新执行当前页搜索。搜索 Promise、消息事件带来的列表变化，以及重新执行搜索是三条独立路径。重新登录或重连后，应先用相同条件重新搜索当前结果，再根据后续消息事件更新页面。
+若需刷新当前搜索结果，可携带相同条件重新发起查询。在断网重连或重新登录后，建议先重新执行搜索以校准本地最新的匹配结果。
 
 ## 相关页面
 

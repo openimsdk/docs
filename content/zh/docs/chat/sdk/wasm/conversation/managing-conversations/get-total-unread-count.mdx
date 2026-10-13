@@ -4,14 +4,14 @@ description: '使用 WASM SDK 获取并持续维护账号总未读数。'
 sourcePath: '/sdk/wasm/conversation/managing-conversations/get-total-unread-count'
 ---
 
-`getTotalUnreadMsgCount()` 返回调用时当前账号所有会话的总未读数。不要把当前已加载分页中的 `unreadCount` 简单相加。
+通过 `getTotalUnreadMsgCount()` 可直接获取当前登录账号在所有会话中的未读消息总数。在分页加载场景下，请直接使用该接口获取全局角标，避免直接累加当前已渲染列表中的 `unreadCount`。
 
 ```ts
 const { data: totalUnread } = await openimsdk.getTotalUnreadMsgCount();
 updateApplicationBadge(totalUnread);
 ```
 
-查询本身不会触发事件。本页集中提供 `SdkEvent.OnTotalUnreadMessageCountChanged` 的完整监听示例，用于在应用前台运行期间持续更新总未读数：
+主动查询可用于页面初始化时获取未读数快照。在应用运行期间，建议通过监听 `SdkEvent.OnTotalUnreadMessageCountChanged` 事件保持角标数据的实时同步：
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
@@ -33,4 +33,4 @@ function removeTotalUnreadListener() {
 }
 ```
 
-组件卸载、退出登录或切换账号时调用 `removeTotalUnreadListener()`。
+在相关全局组件销毁、用户退出登录或切换账号时，请调用 `removeTotalUnreadListener()` 解绑监听，避免重复监听或内存泄漏。

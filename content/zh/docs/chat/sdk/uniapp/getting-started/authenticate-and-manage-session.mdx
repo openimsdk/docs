@@ -4,16 +4,16 @@ description: '初始化 UTS 插件、登录当前用户、处理连接事件、�
 sourcePath: '/sdk/uniapp/getting-started/authenticate-and-manage-session'
 ---
 
-uni-app / uni-app x SDK 先通过 `initSDK()` 初始化原生 Core，再通过 `login()` 建立当前用户的登录会话。开始前，请先完成[开始之前](/sdk/uniapp/getting-started/before-you-start)和[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)中的准备与插件安装。
+uni-app / uni-app x SDK 先通过初始化接口初始化原生 Core，再建立当前用户的登录会话。开始前，请先完成[开始之前](/sdk/uniapp/getting-started/before-you-start)和[工程与平台接入](/sdk/uniapp/getting-started/environment-specific-implementation)中的准备与插件安装。
 
 完整登录流程如下：
 
-1. 调用 `initSDK()` 完成目标平台的 SDK 初始化。
+1. 完成目标平台的 SDK 初始化。
 2. 在登录前注册连接、Token 和账号下线事件。
 3. 从业务后端获取当前用户的 `userID` 与 Token。
-4. 调用 `login()`，等待 Promise 成功，并继续等待连接成功事件确认长连接可用。
+4. 调用登录接口，等待 Promise 成功，并继续等待连接成功事件确认长连接可用。
 5. 连接可用后再查询用户、关系链、会话、群组和消息数据。
-6. 用户主动退出或切换账号时调用 `logout()`，然后清理应用状态和事件订阅。
+6. 用户主动退出或切换账号时执行退出登录，然后清理应用状态和事件订阅。
 
 ## 初始化 SDK
 
@@ -42,7 +42,7 @@ await initSDK({
 
 ## 在登录前注册事件
 
-连接、Token 和账号下线事件应在 `login()` 前注册。每个 `onXxx` 方法返回一个 `OpenIMSDKEventSubscription`，后续使用该订阅对象精确取消监听。
+连接、Token 和账号下线事件应在发起登录前注册。每个事件注册函数返回一个 `OpenIMSDKEventSubscription` 订阅对象，后续使用该订阅对象精确取消监听。
 
 ```uts
 import {
@@ -90,11 +90,11 @@ const tokenExpiredSubscription = onUserTokenExpired(handleUserTokenExpired)
 const tokenInvalidSubscription = onUserTokenInvalid(handleUserTokenInvalid)
 ```
 
-`onConnectFailed` 和 `onUserTokenInvalid` 的处理器都接收两个参数：数值类型的 `errCode` 和字符串类型的 `errMsg`。其余连接事件处理器不接收参数。
+连接失败与 Token 无效事件的回调都接收两个参数：数值类型的 `errCode` 和字符串类型的 `errMsg`。其余连接事件处理器不接收参数。
 
 ## 登录当前用户
 
-`login()` 只接收当前用户的 `userID` 和 Token。OpenIMServer 地址与平台信息已经在 `initSDK()` 时设置，不需要在登录时重复传入。
+登录接口只接收当前用户的 `userID` 和 Token。OpenIMServer 地址与平台信息已经在初始化时设置，不需要在登录时重复传入。
 
 ```uts
 import { login } from '@/uni_modules/unix-openim-sdk'
@@ -102,9 +102,9 @@ import { login } from '@/uni_modules/unix-openim-sdk'
 await login(userID, token)
 ```
 
-`userID` 必须与 Token 对应，并由业务后端返回。`login()` 的 Promise 成功表示登录调用完成；连接成功事件到达后，才表示 SDK 长连接已可用于依赖连接的业务 API。不要把这两个阶段合并判断。
+`userID` 必须与 Token 对应，并由业务后端安全签发。登录 Promise 成功表示登录请求已发出并通过鉴权校验；当收到连接成功事件后，长连接便建立完毕，即可正常调用后续业务 API。两者属于不同阶段，建议分别处理。
 
-重复点击登录时，应复用正在进行的登录任务，避免并发调用 `login()`。切换账号时先等待旧账号退出完成，再登录新账号。
+重复点击登录时，应复用正在进行的登录任务，避免并发发起登录。切换账号时先等待旧账号退出完成，再登录新账号。
 
 ## 处理 Promise 结果
 
@@ -129,7 +129,7 @@ try {
 
 ## 查询登录状态
 
-`getLoginStatus()` 和 `getLoginUserID()` 都不接收业务参数：
+查询登录状态与当前登录用户 ID 均不接收业务参数：
 
 ```uts
 import {
@@ -152,11 +152,11 @@ if (status == OpenIMLoginStatusLogged) {
 | `OpenIMLoginStatusLogging` | 登录流程正在进行，不要再发起并行登录。 |
 | `OpenIMLoginStatusLogged` | SDK 已登录；仍需结合连接事件判断当前长连接是否可用。 |
 
-`getLoginUserID()` 返回 SDK 当前登录的用户 ID，适合校验业务账号与 SDK 账号是否一致，但不能替代业务身份认证。这两个查询不会触发连接事件。
+查询结果返回 SDK 当前登录的用户 ID，适合校验业务账号与 SDK 账号是否一致，但不能替代业务身份认证。这两个查询不会触发连接事件。
 
 ## 更新 Token
 
-Token 即将过期或业务后端完成续期后，可以把新 Token 传给 `updateToken()`：
+Token 即将过期或业务后端完成续期后，可以把新 Token 提交更新：
 
 ```uts
 import { updateToken } from '@/uni_modules/unix-openim-sdk'
@@ -169,7 +169,7 @@ await updateToken({ token: nextToken })
 
 ## 退出当前账号
 
-用户主动退出或切换账号时调用 `logout()`。Promise 成功后，再清理当前账号的会话、消息、未读数和业务状态。
+用户主动退出或切换账号时执行退出登录。Promise 成功后，再清理当前账号的会话、消息、未读数和业务状态。
 
 ```uts
 import { logout } from '@/uni_modules/unix-openim-sdk'
@@ -178,7 +178,7 @@ await logout()
 clearCurrentSession()
 ```
 
-收到账号下线事件时，SDK 会结束当前登录状态。事件处理器应清理应用自身状态并提示用户，不要再把它当作主动退出流程重复调用 `logout()`。
+收到账号下线事件时，SDK 会结束当前登录状态。事件处理器应清理应用自身状态并提示用户，不要再把它当作主动退出流程重复调用退出接口。
 
 ## 清理事件订阅
 

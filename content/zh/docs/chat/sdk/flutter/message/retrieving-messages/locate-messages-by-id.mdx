@@ -4,9 +4,16 @@ description: '按 conversationID 与 clientMsgID 定位一条或多条消息。'
 sourcePath: '/sdk/flutter/message/retrieving-messages/locate-messages-by-id'
 ---
 
-搜索结果、引用消息或通知跳转应保存 `conversationID` 和 `clientMsgID`。使用 `findMessageList()` 按这些稳定标识取回本地已同步消息。
+从搜索结果、引用回复或系统通知跳转至聊天界面时，通常需要依据 `conversationID` 与 `clientMsgID` 取回本地已同步的消息实体：
 
 ## 按 clientMsgID 查询消息
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标消息所在的会话 ID。 |
+| `clientMsgIDList` | `List<String>` | 是 | 需定位的客户端消息 ID 列表；定位单条时传入单个元素。 |
 
 ```dart
 final result = await OpenIM.iMManager.messageManager.findMessageList(
@@ -25,20 +32,13 @@ final messages = items.isEmpty
 final target = messages.isEmpty ? null : messages.first;
 ```
 
-### 参数说明
+Future 成功后，匹配到的消息位于 `SearchResult.findResultItems` 的 `messageList` 中；若本地未缓存、消息已被物理删除或 ID 不存在，返回列表可能为空，使用前需做判空校验。
 
-| 字段 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `conversationID` | `String?` | SDK 可选，业务必填 | 目标消息所在的会话 ID。 |
-| `clientMsgIDList` | `List<String>?` | SDK 可选，业务必填 | 要定位的消息 ID；单条定位时只传一个。 |
-
-Future 成功后，匹配项位于 `SearchResult.findResultItems` 的 `messageList`；缓存尚未同步、消息已删除或 ID 不存在时可能为空，必须先检查列表。
-
-`clientMsgID` 是 OpenIMSDK 消息在客户端侧的稳定标识。发送、接收、搜索和历史记录都应把它随消息保存；不要用数组下标、显示时间或当前分页长度代替消息标识。
+`clientMsgID` 是客户端侧维护的稳定唯一主键。发送、接收、搜索和历史记录均应以其作为消息合并凭据，不得使用列表索引或界面展示时间替代。
 
 ## 读取前后消息
 
-Flutter SDK 不提供一次性读取消息前后文的方法。定位到 `target` 后，分别以它为 `startMsg` 调用 `getAdvancedHistoryMessageList()` 和 `getAdvancedHistoryMessageListReverse()` <span className="enterprise-field-badge">商业版</span>，再按 `conversationID:clientMsgID` 去重组合前后文。
+客户端在定位到目标消息后，若需还原该消息前后的完整聊天上下文，可分别以该消息作为游标，调用[加载历史消息](/sdk/flutter/message/retrieving-messages/load-older-messages)拉取更早消息，并调用[反向加载历史消息](/sdk/flutter/message/retrieving-messages/load-newer-messages) <span className="enterprise-field-badge">商业版</span>拉取更晚消息，最后按复合标识 `conversationID:clientMsgID` 拼装成完整上下文：
 
 ```dart
 final older = await OpenIM.iMManager.messageManager
@@ -57,7 +57,7 @@ final newer = await OpenIM.iMManager.messageManager
 
 合并较旧、目标及较新消息时，应先排除 nullable 或空的 `clientMsgID`，再按当前 `conversationID + clientMsgID` 去重；不要依赖两个返回数组中的固定位置标识目标消息。
 
-定位结果可能因本地缓存尚未同步、消息已经删除或撤回而为空。同步完成后可以重试未命中的定位；撤回和删除仍由对应事件归属页的统一处理器更新，本页不重复设置 listener。
+定位结果可能因本地缓存尚未同步、消息已经删除或撤回而为空。同步完成后可以重试未命中的定位；撤回与删除等变更由消息事件统一监听器集中处理，避免在各业务组件中分散注册监听。
 
 ## 获取群聊最新消息
 
@@ -79,14 +79,15 @@ renderConversationPreview(
 
 `ConversationInfo.latestMsg` 是 nullable 的 `Message`，不需要执行 JSON 解析。需要打开它所在的上下文时，先确认 `latestMsg` 和 `clientMsgID` 有效，再使用当前 `conversationID` 读取前后消息。
 
-## 查询结果
+## 返回结果
 
-`findMessageList()`、两个方向的历史查询和 `getOneConversation()` 的 Future 成功后，分别返回本次定位结果、历史消息页与当前会话信息。这些查询都不会触发消息或会话 callback，页面可以直接渲染返回值。
+定位消息查询、前后历史拉取与会话信息获取均属于只读操作，Future 成功后返回调用当时的数据快照，不会触发任何事件通知。
 
-需要显示当前状态时重新执行原查询；重新查询与新消息、撤回、删除等 listener 事件分别处理，并统一按会话标识与 `clientMsgID` 合并。
+界面展示可直接使用返回结果进行渲染。后续发生的新消息、撤回、删除等变动应通过全局监听器统一处理，并严格以复合标识 `conversationID:clientMsgID` 幂等合并状态。
 
 ## 相关页面
 
 - [加载历史消息](/sdk/flutter/message/retrieving-messages/load-older-messages)
+- [反向加载历史消息](/sdk/flutter/message/retrieving-messages/load-newer-messages)
 - [搜索消息](/sdk/flutter/message/searching-messages/search-messages)
 - [接收消息](/sdk/flutter/message/receiving-messages/receive-messages)

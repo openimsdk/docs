@@ -4,16 +4,33 @@ description: '使用 iOS OpenIMCore 查询语音识别能力。'
 sourcePath: '/sdk/ios/message/composing-messages/check-speech-to-text'
 ---
 
-通过 `CallbackProxy` 接收能力 JSON，再校验格式、采样率、时长和大小：
+调用检查语音识别能力接口，可以预先获取当前环境所支持的语音转写参数规范（如支持的音频格式、采样率、最大录音时长和文件大小限制等），以便在录音或发起识别前进行前端校验。
 
 ```objc
 CallbackProxy *callback = [[CallbackProxy alloc]
-    initWithOnSuccess:^(NSString *data) {
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        // 解析能力配置并更新业务控制逻辑
         [self applySpeechToTextCapabilitiesJSON:data];
     }
-    onFailure:^(NSInteger code, NSString *message) {
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // 无法获取转写能力时禁用转写入口
         [self disableTranscription];
     }];
+
+// 调用底层能力查询方法
+Open_im_sdkSpeechToTextCapabilities(callback, @"");
 ```
 
-将该 callback 交给 `Open_im_sdkSpeechToTextCapabilities`。结果包含 `format`、`sampleRateHz`、`maxRecordTimeMs`、`maxFileSize`、`provider`、`requestType` 和 `crossDomain`。失败时不要猜测限制。
+## 返回结果
+
+- `onSuccess`：返回包含能力参数的 JSON 字符串，解析后的常用字段包括：
+  - `format`：支持的音频封装与编码格式（如 `m4a`、`wav` 等）。
+  - `sampleRateHz`：支持的音频采样率（Hz）。
+  - `maxRecordTimeMs`：支持的最大录音时长（毫秒）。
+  - `maxFileSize`：单次音频文件的最大字节数。
+  - `provider`：底层接入的语音服务提供方标识。
+- `onFailure`：查询能力失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 后续使用
+
+- 在应用层启动录音或提交转写前，应严格根据返回的格式、采样率和时长限制进行录制与校验，避免因超出边界而报错。完整的识别与转写流程见[识别音频文字](/sdk/ios/message/composing-messages/transcribe-audio)。

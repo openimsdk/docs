@@ -1,10 +1,10 @@
 ---
 title: '定期删除服务端消息'
-description: '使用 setConversation() 启用、关闭并配置会话的服务端消息定期删除策略。'
+description: '启用、关闭并配置指定会话的服务端历史消息定期销毁策略。'
 sourcePath: '/sdk/android/conversation/managing-conversations/set-message-destruct'
 ---
 
-`isMsgDestruct` 与 `msgDestructTime` 共同构成服务端消息定期删除设置，可以在一次 `ConversationReq` 中提交。
+为指定会话配置服务端消息定期销毁策略。启用后，服务端将按照设定的周期自动清理过期历史消息。该能力属于服务端存储策略，不同于客户端维度的阅后即焚。
 
 ```java
 ConversationReq request = new ConversationReq();
@@ -28,6 +28,23 @@ OpenIMClient.getInstance().conversationManager.setConversation(
 );
 ```
 
-`msgDestructTime` 的单位为秒。关闭时只传 `request.setMsgDestruct(false)`；该能力用于定期删除服务端消息，不是阅后即焚。
+## 参数说明
 
-会话列表中的设置变化可通过 `onConversationChanged` 接收，监听器设置方式见[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 目标会话的唯一标识。 |
+| `request` | `ConversationReq` | 是 | 会话配置请求对象。 |
+
+### 请求体属性
+
+| 属性 | 类型 | 说明 |
+| --- | --- | --- |
+| `isMsgDestruct` | `boolean` | 是否开启服务端消息定期清理。关闭时传入 `false` 即可。 |
+| `msgDestructTime` | `int` | 服务端消息保留时长，单位为秒，例如 `3600`。 |
+
+## 返回结果
+
+成功回调表示服务端已记录定期销毁策略。该设置仅作用于服务端历史消息存留，若需设置阅读后销毁，请参考[开启或关闭阅后即焚](/sdk/android/conversation/managing-conversations/set-private-chat)。
+
+配置生效后，SDK 会触发 `OnConversationListener.onConversationChanged` 事件；客户端收到通知后应根据 `conversationID` 更新对应会话的 `isMsgDestruct` 与 `msgDestructTime` 字段，完整监听配置请参考[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)。

@@ -4,12 +4,38 @@ description: '更新 iOS 好友备注、置顶状态或扩展字段。'
 sourcePath: '/sdk/ios/user/friends/update-friends'
 ---
 
+更新指定好友的备注、置顶状态或扩展字段：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `req` | `OIMUpdateFriendsReq *` | 包含目标好友 ID 列表及待更新属性的请求对象。 |
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `friendUserIDs` | `NSArray<NSString *> *` | 目标好友用户 ID 列表，修改将同步应用至列表中的所有好友。 |
+| `remark` | `NSString *` | 好友备注名。 |
+| `isPinned` | `BOOL` | 是否置顶好友。 |
+| `ex` | `NSString *` | 业务扩展字段，整串覆盖。 |
+
 ```objc
 OIMUpdateFriendsReq *req = [OIMUpdateFriendsReq new];
 req.friendUserIDs = @[@"user_b"];
 req.remark = @"Alex";
 req.isPinned = YES;
-[[OIMManager manager] updateFriends:req onSuccess:nil onFailure:nil];
+
+[[OIMManager manager] updateFriends:req
+                          onSuccess:^(NSString *data) {
+    [friendStore updateRemark:req.remark forUserID:@"user_b"];
+}
+                          onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"updateFriends failed: %ld %@", (long)code, message);
+}];
 ```
 
-一次调用会把相同字段应用到全部 `friendUserIDs`。`ex` 按完整字符串覆盖。成功 callback 与 `onFriendInfoChanged:` 分别处理。
+状态以 `userID` 为合并标识。`ex` 字段按完整字符串覆盖，更新前建议保留已有业务命名空间。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已接收更新请求。多端同步及其他客户端的状态同步通过好友资料变更事件通知，完整事件处理见[分页获取好友列表](/sdk/ios/user/friends/get-friend-list-page)。

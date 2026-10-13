@@ -1,20 +1,22 @@
 ---
 title: '接收消息'
-description: '使用 OnAdvanceMsgListener 接收新消息、离线消息和在线消息。'
+description: '配置高级消息监听器，接收新消息、离线消息以及仅在线消息。'
 sourcePath: '/sdk/android/message/receiving-messages/receive-messages'
 ---
 
-`OnAdvanceMsgListener` 统一接收实时消息、离线批次、仅在线消息以及撤回、删除和已读回执等变化。Android SDK 同时只保留一个高级消息 listener；应在登录前由应用级消息状态层设置一次，不要在 Activity、Fragment 或聊天页面重复设置。
+配置高级消息监听器统一接收实时新消息、离线历史消息批次、仅在线临时消息以及消息状态变更。Android SDK 仅维护一个全局高级消息监听器，应在 SDK 初始化或登录阶段由应用全局消息层集中注册一次，避免在各个 Activity 或 Fragment 中重复注册引起覆盖。
 
 ```java
 private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
     @Override
     public void onRecvNewMessage(Message message) {
+        // 收到实时新消息，按 clientMsgID 合并
         mergeMessage(message);
     }
 
     @Override
     public void onRecvOfflineNewMessage(List<Message> messages) {
+        // 收到离线消息批次
         for (Message message : messages) {
             mergeMessage(message);
         }
@@ -22,13 +24,26 @@ private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() 
 
     @Override
     public void onRecvOnlineOnlyMessage(Message message) {
+        // 收到仅在线消息（不落盘）
         handleOnlineOnlyMessage(message);
     }
 };
 
-OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(messageListener);
+public void registerMessageListener() {
+    OpenIMClient.getInstance().messageManager.setAdvancedMsgListener(messageListener);
+}
 ```
 
-普通消息和离线消息应先根据 `sessionType`、`sendID`、`recvID` 与 `groupID` 确定目标会话，再按 `clientMsgID` 去重或替换。`onRecvOnlineOnlyMessage` 只适合不需要离线补偿的临时业务；不要直接写入需要持久化的普通消息列表。
+## 回调说明
 
-Android SDK 不提供移除该 listener 的方法。退出登录或切换账号时，停止把旧回调写入页面状态，并在下次登录前设置新账号使用的完整 listener。消息撤回、删除、修改和已读事件分别在对应操作页面说明。
+| 回调方法 | 参数类型 | 说明 |
+| --- | --- | --- |
+| `onRecvNewMessage` | `Message` | 接收单条实时新消息。 |
+| `onRecvOfflineNewMessage` | `List<Message>` | 登录上线后收到的批量离线消息。 |
+| `onRecvOnlineOnlyMessage` | `Message` | 接收仅在线消息（不计入未读数、离线不补偿）。 |
+
+## 状态合并规范
+
+- 收到普通消息和离线消息时，客户端应首先结合 `sessionType`、`sendID`、`recvID` 与 `groupID` 确认其所属会话，并在会话消息列表中以 `clientMsgID` 为唯一键进行去重与状态更新。
+- `onRecvOnlineOnlyMessage` 仅用于临时状态同步或即时轻量通知，通常不需要存入本地消息数据库。
+- 消息撤回、删除、修改与已读回执事件分别在对应功能页及[消息概览](/sdk/android/message/overview-message)中详细说明。

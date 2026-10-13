@@ -1,8 +1,10 @@
 ---
 title: '订阅用户在线状态'
-description: '使用 subscribeUsersOnlineStatus() 订阅指定用户的在线状态。'
+description: '订阅指定用户的在线状态及多端登录信息。'
 sourcePath: '/sdk/android/user/online-status/subscribe-users-online-status'
 ---
+
+订阅指定用户的在线状态。订阅成功后，SDK 会立即返回所订阅用户的当前在线状态快照，并在对端上线、下线或平台变更时通过事件推送增量变更。
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -23,23 +25,32 @@ OpenIMClient.getInstance().userInfoManager.subscribeUsersOnlineStatus(
 );
 ```
 
-调用前应去除空值和重复 ID，并只订阅当前业务需要展示的用户。成功 callback 返回初始 `List<UsersOnlineStatus>`，每项包含 `userID`、`status` 和 `platformIDs`。
+## 参数说明
 
-## 状态字段
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<UsersOnlineStatus>>` | 是 | 异步请求回调。 |
+| `userIDs` | `List<String>` | 是 | 期望订阅的目标用户 ID 列表，建议在进入对应聊天页面或列表时按需订阅。 |
 
-| 字段          | 说明                                       |
-| ------------- | ------------------------------------------ |
-| `userID`      | 目标用户 ID。                              |
-| `status`      | 在线状态值，具体枚举含义以服务端契约为准。 |
-| `platformIDs` | 当前在线的平台 ID 列表。                   |
+## 返回结果
 
-用户在线状态变化时，可通过 `OnUserListener` 接收 `onUserStatusChanged`：
+成功回调返回当前已订阅用户的初始在线状态快照 `List<UsersOnlineStatus>`。客户端应以 `userID` 为标识维护在线状态缓存：
+
+| 字段 | 说明 |
+| --- | --- |
+| `userID` | 目标用户的全局唯一 ID。 |
+| `status` | 在线状态值（`1` 为在线，`0` 为离线）。 |
+| `platformIDs` | 当前登录在线的平台列表（例如 Android、iOS、Web 等平台编号）。 |
+
+## 监听在线状态变更
+
+后续当已订阅用户的在线状态发生变化时，SDK 会通过 `OnUserListener` 实时推送更新：
 
 ```java
 @Override
 public void onUserStatusChanged(UsersOnlineStatus status) {
-    // 处理在线状态变化
+    // 收到状态变更通知，按 status.getUserID() 更新界面
 }
 ```
 
-订阅操作只建立或更新订阅集合。用户不再需要某个用户的在线状态时，通过[取消订阅用户状态](/sdk/android/user/online-status/unsubscribe-users-online-status)取消订阅。
+当离开聊天页面或不再需要关注该用户时，请及时调用[取消订阅用户状态](/sdk/android/user/online-status/unsubscribe-users-online-status)释放资源，以避免过多的状态广播。

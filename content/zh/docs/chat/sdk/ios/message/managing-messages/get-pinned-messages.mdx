@@ -4,12 +4,26 @@ description: '使用 iOS SDK 获取会话当前的置顶消息列表。'
 sourcePath: '/sdk/ios/message/managing-messages/get-pinned-messages'
 ---
 
+调用查询会话置顶消息接口可以获取指定会话中当前被固定的置顶消息列表。
+
 ```objc
 [[OIMManager manager] getConversationPinnedMsgWithConversationID:conversationID
-    onSuccess:^(NSArray<OIMMessageInfo *> *messages) {
-        [self replacePinnedMessages:messages ?: @[] conversationID:conversationID];
-    }
-    onFailure:nil];
+                                                       onSuccess:^(NSArray<OIMMessageInfo *> * _Nullable messages) {
+    // 渲染或刷新会话顶部的置顶消息栏
+    [self replacePinnedMessages:messages ?: @[] conversationID:conversationID];
+}
+                                                       onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理查询失败
+}];
 ```
 
-成功数组只包含消息，不包含置顶时间和操作者。查询本身不触发事件；按 `clientMsgID` 去重。详细变化由[置顶或取消置顶消息](/sdk/ios/message/managing-messages/set-message-pinned)归属的 delegate 同步。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `onSuccess`：查询成功回调，返回当前会话中被置顶的消息数组（`NSArray<OIMMessageInfo *>`）。
+- `onFailure`：查询失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调返回的是当前时刻的置顶消息快照列表。数组中仅包含消息对象，不包含置顶时间和操作者等元数据。
+- 查询操作仅拉取数据快照，不会触发置顶消息变更事件。客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。后续置顶列表的实时变化由[置顶或取消置顶消息](/sdk/ios/message/managing-messages/set-message-pinned)中所述的事件监听统一驱动更新。

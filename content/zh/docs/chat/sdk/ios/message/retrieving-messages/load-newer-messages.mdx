@@ -4,7 +4,7 @@ description: '使用 iOS SDK 从消息锚点向较新方向反向分页读取历
 sourcePath: '/sdk/ios/message/retrieving-messages/load-newer-messages'
 ---
 
-需要从消息锚点向较新方向补齐消息时，使用反向 selector，并沿用 `OIMGetAdvancedHistoryMessageListParam`：
+当通过搜索、通知跳转或查看引用消息定位到会话中间某条消息后，需要向较新方向（往下滚动）补齐后续消息时，可调用反向拉取历史消息接口。
 
 ```objc
 OIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];
@@ -14,10 +14,33 @@ param.count = 20;
 param.viewType = OIMGetHistoryViewTypeHistory;
 
 [[OIMManager manager] getAdvancedHistoryMessageListReverse:param
-                                                 onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {
+                                                 onSuccess:^(OIMGetAdvancedHistoryMessageListInfo * _Nullable result) {
+                                                     // 将拉取到的较新消息追加到列表底部
                                                      [self appendMessages:result.messageList ?: @[]];
                                                  }
-                                                 onFailure:nil];
+                                                 onFailure:^(NSInteger code, NSString * _Nullable msg) {
+                                                     // 处理拉取失败
+                                                 }];
 ```
 
-不要在同一个滚动边界任意混用两个方向。成功 callback 与新消息 delegate 是独立阶段；按 `conversationID:clientMsgID` 合并结果。
+## 参数说明
+
+`OIMGetAdvancedHistoryMessageListParam` 请求参数字段：
+
+- `conversationID`：目标会话 ID。
+- `startClientMsgID`：反向拉取的起始锚点消息 `clientMsgID`。SDK 将从该消息开始向较新方向分页拉取。
+- `count`：每页期望获取的消息数量。
+- `viewType`：视图查询类型，常用 `OIMGetHistoryViewTypeHistory`。
+
+## 返回结果
+
+- `onSuccess`：返回 `OIMGetAdvancedHistoryMessageListInfo` 对象。
+  - `messageList`：当前分页按时间升序返回的较新消息数组（`NSArray<OIMMessageInfo *>`）。
+  - `isEnd`：向较新方向是否已达到最新消息边界。
+  - `lastMinSeq`：当前拉取分片的最小序列号。
+- `onFailure`：拉取失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 客户端状态合并
+
+- 反向拉取只负责按需加载已有消息快照，成功回调不会触发新消息接收监听。
+- 界面滚动时请勿在同一端混用正向与反向拉取；客户端合并与去重标识统一为 `clientMsgID`（限定当前 `conversationID`）。常规向过去方向拉取历史消息见[加载历史消息](/sdk/ios/message/retrieving-messages/load-older-messages)。

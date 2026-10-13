@@ -1,16 +1,45 @@
 ---
 title: '搜索群组'
-description: '使用 searchGroups 按群 ID 或群名称搜索本地可查询的群组。'
+description: '按群组 ID 或群名称关键字搜索群组。'
 sourcePath: '/sdk/android/group/retrieving-groups/search-groups'
 ---
 
-`searchGroups()` 接收关键词列表，并分别指定是否搜索群 ID、群名称。两个开关都关闭时没有有效搜索范围。
+按关键字在本地搜索群组。支持按群组全局 ID 和群名称进行匹配，可配置是否启用对应维度的检索开关。
 
 ```java
-OpenIMClient.getInstance().groupManager.searchGroups(new OnBase<List<GroupInfo>>() {
-    @Override public void onSuccess(List<GroupInfo> groups) { /* groups 是查询结果。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, Collections.singletonList(keyword), true, true);
+List<String> keywordList = Collections.singletonList("开发");
+boolean isSearchGroupID = true;
+boolean isSearchGroupName = true;
+
+OpenIMClient.getInstance().groupManager.searchGroups(
+    new OnBase<List<GroupInfo>>() {
+        @Override
+        public void onSuccess(List<GroupInfo> groups) {
+            // groups 为匹配到的群组列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理搜索失败
+        }
+    },
+    keywordList,
+    isSearchGroupID,
+    isSearchGroupName
+);
 ```
 
-用户不一定是搜索结果中群组的成员，可通过[检查是否已加入群组](/sdk/android/group/retrieving-groups/is-join-group)确认成员关系。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupInfo>>` | 是 | 异步请求回调。 |
+| `keywordList` | `List<String>` | 是 | 搜索关键字列表。两项搜索开关均关闭或关键字为空时不应发起请求。 |
+| `isSearchGroupID` | `boolean` | 是 | 是否匹配群组 ID：`true` 为包含，`false` 为不包含。 |
+| `isSearchGroupName` | `boolean` | 是 | 是否匹配群名称：`true` 为包含，`false` 为不包含。 |
+
+## 返回结果
+
+成功回调返回匹配到的群组资料列表 `List<GroupInfo>`。
+
+搜索结果仅代表查询发起时的匹配快照。搜索结果中的群组不代表当前用户一定已加入该群；如需判断成员关系，可调用[检查是否已加入群组](/sdk/android/group/retrieving-groups/is-join-group)。

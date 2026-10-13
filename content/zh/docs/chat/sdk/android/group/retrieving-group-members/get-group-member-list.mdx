@@ -1,15 +1,69 @@
 ---
 title: '分页查询群成员'
-description: '使用 getGroupMemberList 按角色和分页条件读取群成员。'
+description: '按成员角色和分页条件读取指定群组的成员列表。'
 sourcePath: '/sdk/android/group/retrieving-group-members/get-group-member-list'
 ---
 
-`filter` 传 `0` 查询全部成员，`1` 普通成员，`2` 群主，`3` 管理员。`offset` 与 `count` 控制分页。
+分页获取指定群组的群成员列表。支持通过角色过滤器筛选全部成员、普通成员、群主或管理员，适用于群成员列表展示、选人提及等业务场景。
 
 ```java
+String groupID = "group_123";
+int filter = 0; // 0 表示查询全部成员
+int offset = 0;
+int count = 50;
+
 OpenIMClient.getInstance().groupManager.getGroupMemberList(
     new OnBase<List<GroupMembersInfo>>() {
-        @Override public void onSuccess(List<GroupMembersInfo> members) { /* members 是当前页成员。 */ }
-        @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-    }, groupID, 0, offset, 50);
+        @Override
+        public void onSuccess(List<GroupMembersInfo> members) {
+            // members 为当前页成员列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理查询失败
+        }
+    },
+    groupID,
+    filter,
+    offset,
+    count
+);
 ```
+
+## 角色过滤说明
+
+`filter` 字段用于筛选不同角色的群成员：
+
+| 筛选值 | 含义 |
+| --- | --- |
+| `0` | 查询全部群成员。 |
+| `1` | 仅查询普通成员。 |
+| `2` | 仅查询群主。 |
+| `3` | 仅查询管理员。 |
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupMembersInfo>>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `filter` | `int` | 是 | 成员角色筛选过滤条件。 |
+| `offset` | `int` | 是 | 分页起始偏移量，首页从 `0` 开始。 |
+| `count` | `int` | 是 | 本次获取的最大记录条数。 |
+
+## 返回结果
+
+成功回调返回群成员资料列表 `List<GroupMembersInfo>`。单条成员资料的核心字段包含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `groupID` | 群组 ID。 |
+| `userID` | 成员用户 ID。 |
+| `nickname` | 成员在群内的展示昵称。 |
+| `faceURL` | 成员在群内的头像地址。 |
+| `roleLevel` | 角色等级：`20` 为普通成员，`60` 为管理员，`100` 为群主。 |
+| `joinTime` | 入群毫秒级时间戳。 |
+| `muteEndTime` | 禁言截止毫秒级时间戳（`0` 表示未被禁言）。 |
+
+客户端应以 `groupID:userID` 为组合键进行本地成员缓存的去重与维护。成员变动事件的监听见[群组概览](/sdk/android/group/overview-group)。

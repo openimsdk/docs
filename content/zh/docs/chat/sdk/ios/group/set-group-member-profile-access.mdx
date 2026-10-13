@@ -4,6 +4,19 @@ description: '使用 iOS SDK 控制群成员能否查看其他成员资料。'
 sourcePath: '/sdk/ios/group/set-group-member-profile-access'
 ---
 
+控制普通群成员之间是否可以查看群内其他成员的个人资料：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | 包含 `groupID` 和查看成员资料权限配置的字典对象。 |
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMAllowTypeAllowed` | `0` | 允许群成员查看他人资料。 |
+| `OIMAllowTypeNotAllowed` | `1` | 禁止普通群成员查看他人资料。 |
+
 ```objc
 NSDictionary *changes = @{
     @"groupID": groupID,
@@ -11,10 +24,16 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        [self showProfileAccessUpdated];
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        [self showErrorCode:code message:message];
+    }];
 ```
 
-`OIMAllowTypeAllowed` 的值为 `0`，表示允许；`OIMAllowTypeNotAllowed` 的值为 `1`，表示不允许。该设置与群内添加好友权限相互独立。
+状态以 `groupID` 为合并标识。该设置与[设置群内添加好友权限](/sdk/ios/group/set-group-member-friend-permission)相互独立。
 
-成功 callback 后，通过 `onGroupInfoChanged:` 更新设置，或重新查询确认最终状态。
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已更新该配置。群内各端随后会通过群资料变更事件收到更新后的 `OIMGroupInfo`，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

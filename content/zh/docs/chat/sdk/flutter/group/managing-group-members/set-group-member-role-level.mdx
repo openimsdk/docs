@@ -4,6 +4,24 @@ description: '使用 Flutter SDK 设置或取消群管理员。'
 sourcePath: '/sdk/flutter/group/managing-group-members/set-group-member-role-level'
 ---
 
+群主可以设置或取消群内普通成员的管理员身份：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `String` | 是 | 目标群组 ID。 |
+| `userID` | `String` | 是 | 目标群成员的用户 ID。 |
+| `roleLevel` | `int` | 是 | 群成员角色等级，取值参见下表角色等级枚举。 |
+
+### 角色等级枚举
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `GroupRoleLevel.member` | `20` | 普通群成员（取消管理员时传入此值）。 |
+| `GroupRoleLevel.admin` | `60` | 群管理员（任命管理员时传入此值）。 |
+| `GroupRoleLevel.owner` | `100` | 群主（仅用于角色识别，不能通过此字段直接任命群主；群主变更请使用[转让群主](/sdk/flutter/group/managing-group-members/transfer-group-owner)）。 |
+
 ```dart
 await OpenIM.iMManager.groupManager.setGroupMemberInfo(
   groupMembersInfo: SetGroupMemberInfo(
@@ -14,6 +32,8 @@ await OpenIM.iMManager.groupManager.setGroupMemberInfo(
 );
 ```
 
-传入 `GroupRoleLevel.admin` 可设置管理员，传入 `GroupRoleLevel.member` 可取消管理员身份。它们与 `owner` 的值分别为 `60`、`20` 和 `100`。`owner` 只用于识别群主角色，不能通过该字段完成群主变更；请使用[转让群主](/sdk/flutter/group/managing-group-members/transfer-group-owner)。
+## 返回结果
 
-Future 成功后，通过 `onGroupMemberInfoChanged` 按 `groupID:userID` 合并，完整事件规则见[群成员查询](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)。
+Future 成功表示服务端已保存该群成员的角色等级设置。
+
+设置生效后，群内相关客户端会收到成员资料变更事件通知；客户端应使用复合标识 `groupID:userID` 更新本地成员的角色等级与权限。完整的事件监听与增量合并逻辑请参考[群成员查询概览](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)。

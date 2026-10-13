@@ -10,20 +10,24 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/receiving-messages/receive-messages'
 ---
 
-新消息到达时会触发 `OnRecvNewMessage`，回调参数为一条 `MessageItem`。离线消息和只在线投递的消息分别通过 `OnRecvOfflineNewMessage`、`OnRecvOnlineOnlyMessage` 接收，三个事件的回调参数均为 `MessageItem`。
+会话中有新消息到达时，SDK 会通过对应的新消息事件将 `MessageItem` 实时派发给客户端。主要包含以下三种接收场景：
+
+- `OnRecvNewMessage`：在线状态下收到的普通新消息（单聊、群聊等均触发此事件）。
+- `OnRecvOfflineNewMessage`：客户端重新连接后拉取到的离线历史消息。
+- `OnRecvOnlineOnlyMessage`：服务端或发送方指定为仅在线投递的即时消息（此类消息不计入离线历史记录）。
 
 ```ts
-function handleNewMessage(message) {
-  // ...
-}
+const handleNewMessage = (message: MessageItem) => {
+  // 根据 message.conversationID 定位会话，并以 message.clientMsgID 去重后合并追加到当前会话列表
+};
 
-function handleOfflineNewMessage(message) {
-  // ...
-}
+const handleOfflineNewMessage = (message: MessageItem) => {
+  // 离线消息批量处理，按 clientMsgID 去重并更新消息列表
+};
 
-function handleOnlineOnlyMessage(message) {
-  // ...
-}
+const handleOnlineOnlyMessage = (message: MessageItem) => {
+  // 仅在线透传消息处理（如输入状态、临时通知等）
+};
 
 // 设置监听
 OpenIMSDK.on(OpenIMEvent.OnRecvNewMessage, handleNewMessage);
@@ -36,4 +40,9 @@ OpenIMSDK.off(OpenIMEvent.OnRecvOfflineNewMessage, handleOfflineNewMessage);
 OpenIMSDK.off(OpenIMEvent.OnRecvOnlineOnlyMessage, handleOnlineOnlyMessage);
 ```
 
-使用 `clientMsgID` 识别消息。组件销毁、退出登录或切换账号时，取消监听。
+## 客户端状态合并
+
+收到新消息时，客户端应当：
+1. 以 `message.conversationID` 确定消息所属会话；若当前界面正在查看该会话，则将消息渲染至界面。
+2. 以 `message.clientMsgID` 为唯一合并标识，防止由于网络重试或多端同步导致的重复渲染。
+3. 组件销毁、退出登录或切换账号时，取消上述所有事件监听。

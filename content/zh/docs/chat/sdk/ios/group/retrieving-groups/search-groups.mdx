@@ -4,14 +4,35 @@ description: '搜索 iOS 本地已加入群组。'
 sourcePath: '/sdk/ios/group/retrieving-groups/search-groups'
 ---
 
+在本地已同步的已加入群组中，根据群组 ID 或群名称关键字进行搜索：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `keywordList` | `NSArray<NSString *> *` | 搜索关键字列表。 |
+| `isSearchGroupID` | `BOOL` | 是否匹配群组 ID。 |
+| `isSearchGroupName` | `BOOL` | 是否匹配群组名称。 |
+
 ```objc
 OIMSearchGroupParam *param = [OIMSearchGroupParam new];
-param.keywordList = @[keyword];
+param.keywordList = @[@"技术交流"];
 param.isSearchGroupID = YES;
 param.isSearchGroupName = YES;
+
 [[OIMManager manager] searchGroups:param
-    onSuccess:^(NSArray<OIMGroupInfo *> *groups) { [self showMatches:groups]; }
-    onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+                         onSuccess:^(NSArray<OIMGroupInfo *> *groups) {
+                             [self showMatches:groups];
+                         }
+                         onFailure:^(NSInteger code, NSString *message) {
+                             NSLog(@"searchGroups failed: %ld %@", (long)code, message);
+                         }];
 ```
 
-该方法只搜索已经同步到本地的已加入群组，不是公开群目录。
+状态以 `groupID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回满足匹配条件的群资料数组 `NSArray<OIMGroupInfo *> *`。若未找到匹配项则返回空数组。
+
+该方法仅搜索本地已同步的群组数据，不支持未加入群组的全局检索。搜索查询不触发群组 delegate 回调。

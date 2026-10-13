@@ -1,16 +1,37 @@
 ---
 title: '更新好友资料'
-description: '更新 Flutter 好友备注、置顶状态或扩展字段。'
+description: '使用 Flutter SDK 更新指定好友的备注名、置顶状态或扩展字段。'
 sourcePath: '/sdk/flutter/user/friends/update-friends'
 ---
+
+批量更新一个或多个好友的备注名、置顶状态或扩展信息：
+
+## 参数说明
+
+`UpdateFriendsReq` 对象包含以下字段：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `friendUserIDs` | `List<String>` | 是 | 待更新资料的目标好友用户 ID 列表。 |
+| `remark` | `String?` | 否 | 好友备注名。 |
+| `isPinned` | `bool?` | 否 | 是否置顶该好友。 |
+| `ex` | `String?` | 否 | 好友业务扩展字段字符串。传入新值时会整值覆盖原有数据，不会执行增量合并。 |
+
+除 `friendUserIDs` 外，应至少提供一个需要修改的属性字段。若针对不同好友需要配置不同的备注或扩展字段，应分别调用本接口。
 
 ```dart
 await OpenIM.iMManager.friendshipManager.updateFriends(
   UpdateFriendsReq(
-    friendUserIDs: [friendUserID],
-    remark: remark.trim(),
+    friendUserIDs: ['user_123'],
+    remark: 'Alice',
+    isPinned: true,
   ),
 );
 ```
 
-一次调用会把同一字段值应用到全部目标好友。`ex` 是完整字符串；不同好友需要不同值时分别调用。Future 成功与 `onFriendInfoChanged` 分别处理。
+## 返回结果
+
+Future 成功返回 `void`，表示更新好友资料请求已成功提交至服务端。
+
+该操作为状态变更接口。服务端更新成功后，当前端与其他端会触发 `onFriendInfoChanged` 事件通知。客户端应以 `userID` 为合并标识，更新本地缓存或联系人列表中对应好友的数据项。完整的好友事件监听与列表维护请参考[分页获取好友列表](/sdk/flutter/user/friends/get-friend-list-page)。
+

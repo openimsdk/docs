@@ -1,20 +1,41 @@
 ---
 title: '设置群组扩展字段'
-description: '通过 GroupInfo.ex 保存应用定义的群组扩展数据。'
+description: '设置并保存群组的自定义业务扩展字段。'
 sourcePath: '/sdk/android/group/set-group-extension'
 ---
 
-`GroupInfo.ex` 是完整字符串，SDK 不会合并 JSON；提交新值会替换原有内容。
+设置群组的自定义业务扩展属性。在 `GroupInfo` 中指定 `ex` 字段，可保存与群组绑定的自定义业务数据（例如 JSON 格式的业务元信息）。服务端会对传入的字符串进行全量覆盖保存，客户端更新时应传入完整的扩展数据。
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
+update.setGroupID("group_123");
 update.setEx("{\"projectCode\":\"mobile\",\"archived\":false}");
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 扩展字段更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理更新失败
+        }
+    }
+);
 ```
 
-成功回调表示扩展字段更新请求已完成，不表示其他客户端界面已经更新。`onGroupInfoChanged` 返回更新后的 `GroupInfo`；按 `groupID` 替换群资料中的 `ex`。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | 是 | 群资料对象，必须指定目标 `groupID` 以及新的扩展信息字符串 `ex`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+扩展字段更新成功后，群内成员随后将收到 `onGroupInfoChanged` 事件通知，返回更新后的 `GroupInfo`。客户端应以 `groupID` 为标识合并群资料中的 `ex` 字段；完整监听见[群组概览](/sdk/android/group/overview-group)。

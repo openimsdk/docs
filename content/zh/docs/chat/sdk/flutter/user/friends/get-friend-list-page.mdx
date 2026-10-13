@@ -1,8 +1,18 @@
 ---
 title: '分页获取好友列表'
-description: '分页获取 Flutter 当前用户的好友列表。'
+description: '使用 Flutter SDK 分页获取当前用户的好友列表。'
 sourcePath: '/sdk/flutter/user/friends/get-friend-list-page'
 ---
+
+分页拉取当前登录用户的好友数据：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `offset` | `int` | 是 | 分页偏移量，起始值为 `0`。 |
+| `count` | `int` | 是 | 每页拉取的好友最大数量。 |
+| `filterBlack` | `bool` | 否 | 是否过滤已加入黑名单的好友。传入 `true` 表示过滤黑名单用户；传入 `false` 表示包含黑名单用户。 |
 
 ```dart
 final friends = await OpenIM.iMManager.friendshipManager.getFriendListPage(
@@ -12,13 +22,17 @@ final friends = await OpenIM.iMManager.friendshipManager.getFriendListPage(
 );
 ```
 
-`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 决定是否过滤黑名单用户。Future 成功返回当前页 `List<FriendInfo>`；按 `userID` 追加去重，返回数量小于页大小时通常表示到达末页。
+## 返回结果
 
-只使用分页 API，不使用非分页的 `getFriendList()`。查询不会触发好友 listener。
+Future 成功返回当前页的好友信息列表（`List<FriendInfo>`）。
 
-## 同步好友变化
+客户端应以 `userID` 为合并标识去重并按序追加到本地好友列表。当返回的列表长度小于 `count` 时，通常表明已到达列表末尾。
 
-本页是 `onFriendAdded`、`onFriendInfoChanged` 和 `onFriendDeleted` 的状态处理归属页：
+推荐始终使用分页接口获取好友数据，避免全量拉取造成性能损耗。该查询为本地快照读取，不会触发好友相关的事件监听。
+
+## 监听好友变更事件
+
+好友的新增、资料变更及删除事件在此集中监听与处理。在联系人状态管理层，应以 `userID` 作为增删改合并的唯一主键：
 
 ```dart
 void handleFriendChanged(FriendInfo info) {
@@ -31,4 +45,5 @@ void handleFriendDeleted(FriendInfo info) {
 }
 ```
 
-Flutter SDK 只保存一个 `OnFriendshipListener`。把以上函数放入联系人状态层，并在[事件概览](/sdk/flutter/events/overview-events)的应用级组合入口中设置一次；不要让多个 Widget 分别覆盖 listener。分页结果和之后到达的事件都按 `userID` 合并。
+Flutter SDK 在 `FriendshipManager` 中仅维护单个 `OnFriendshipListener` 实例。请把以上处理函数统一放入联系人状态层，并在[事件概览](/sdk/flutter/events/overview-events)的应用级集中入口中一次性注册，避免在各个视图 Widget 中重复覆盖监听实例。
+

@@ -4,7 +4,7 @@ description: '使用 Android SDK 独立上传文件并获取远端资源地址�
 sourcePath: '/sdk/android/file-uploads/upload-file'
 ---
 
-`uploadFile()` 是独立文件上传能力，可用于头像、群头像、资料附件或其他业务文件。上传过程不从属于消息，也不会自动创建消息或更新用户资料。
+独立文件上传能力，可用于头像、群头像、资料附件或其他业务文件。上传过程不从属于具体消息生命周期，也不会自动创建消息或更新用户资料。
 
 ## 参数说明
 
@@ -59,19 +59,23 @@ OpenIMClient.getInstance().uploadFile(
 );
 ```
 
-## 回调说明
+## 返回结果
 
-`OnPutFileListener` 的回调和参数如下：
+成功回调返回上传接口的响应状态；同时，监听器的 `complete(long size, String url, long type)` 回调会交付文件最终的远端访问地址 `url`、文件大小及类型。
 
-| 回调                 | 参数                                    | 说明                                                 |
-| -------------------- | --------------------------------------- | ---------------------------------------------------- |
-| `open`               | `size`                                  | 打开指定大小的文件，可用于初始化任务。               |
-| `partSize`           | `partSize`, `num`                       | 单个分片大小和分片总数。                             |
-| `hashPartProgress`   | `index`, `size`, `partHash`             | 单个分片完成哈希计算时的分片索引、大小和哈希值。     |
-| `hashPartComplete`   | `partsHash`, `fileHash`                 | 所有分片完成哈希计算后的组合哈希和最终文件哈希。     |
-| `uploadID`           | `uploadID`                              | SDK 生成的上传标识。                                 |
-| `uploadPartComplete` | `index`, `partSize`, `partHash`         | 一个分片上传完成时的分片索引、大小和哈希值。         |
-| `uploadComplete`     | `fileSize`, `streamSize`, `storageSize` | 整个文件上传阶段的数据：文件大小、流大小和存储大小。 |
-| `complete`           | `size`, `url`, `type`                   | 文件上传完成后的最终大小、远端 URL 和资源类型。      |
+上传得到的 URL 可直接用于后续更新用户头像、群头像、设置附件或创建媒体消息。需要注意的是，文件上传仅负责将二进制数据写入对象存储，并不会自动更新用户资料或发送消息，后续业务动作仍需调用对应 API 完成。
 
-`complete()` 返回的 URL 可用于后续更新头像、保存附件地址或创建 URL 类型的媒体消息。上传成功只表示文件资源已经写入远端；资料更新、消息创建和消息发送仍需分别调用对应 API。
+## 进度与生命周期回调
+
+`OnPutFileListener` 提供了详细的分片与上传进度通知：
+
+| 回调 | 参数 | 说明 |
+| --- | --- | --- |
+| `open` | `size` | 打开待上传文件，通知文件总字节大小。 |
+| `partSize` | `partSize`, `num` | 分片上传策略：单分片大小与分片总数。 |
+| `hashPartProgress` | `index`, `size`, `partHash` | 单个分片哈希计算完成。 |
+| `hashPartComplete` | `partsHash`, `fileHash` | 全部文件分片哈希计算完成。 |
+| `uploadID` | `uploadID` | 服务端生成的上传任务 ID。 |
+| `uploadPartComplete` | `index`, `partSize`, `partHash` | 单个分片上传完成通知。 |
+| `uploadComplete` | `fileSize`, `streamSize`, `storageSize` | 文件传输完成，包含文件大小、流大小与存储大小。 |
+| `complete` | `size`, `url`, `type` | 上传全流程完成，交付远端资源 URL。 |

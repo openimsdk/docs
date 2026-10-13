@@ -4,15 +4,31 @@ description: '使用 iOS SDK 删除好友申请记录。'
 sourcePath: '/sdk/ios/user/friend-applications/delete-friend-requests'
 ---
 
-每个 `DeleteFriendRequest` 必须同时提供申请方和接收方用户 ID。
+批量删除好友申请记录（仅清除申请记录，不会影响已建立的好友关系）：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `friendRequests` | `NSArray<DeleteFriendRequest *> *` | 待删除的好友申请信息对象列表，每项必须同时提供申请方（`fromUserID`）和接收方（`toUserID`）用户 ID。 |
 
 ```objc
 DeleteFriendRequest *request =
     [[DeleteFriendRequest alloc] initWithFromUserID:application.fromUserID
                                           toUserID:application.toUserID];
+
 [[OIMManager manager] deleteFriendRequests:@[request]
-                                 onSuccess:nil
-                                 onFailure:nil];
+                                 onSuccess:^(NSString *data) {
+    [applicationStore removeApplicationForFromUserID:application.fromUserID
+                                            toUserID:application.toUserID];
+}
+                                 onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"deleteFriendRequests failed: %ld %@", (long)code, message);
+}];
 ```
 
-成功 callback 表示删除请求完成，不会新增或删除好友关系。其他客户端仍可能通过申请删除 delegate 收到变化，必要时重置分页并重新查询。
+状态以 `fromUserID:toUserID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已删除对应的申请记录，本操作不会影响已存在的好友关系。其他登录端或当前设备在收到好友申请删除事件后同步清理本地记录，完整事件处理见[获取收到的好友申请](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)。

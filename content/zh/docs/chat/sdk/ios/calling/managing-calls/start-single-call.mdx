@@ -4,7 +4,17 @@ description: '使用 iOS SDK 发起单聊音视频通话。'
 sourcePath: '/sdk/ios/calling/managing-calls/start-single-call'
 ---
 
-`signalingInvite:offlinePushInfo:onSuccess:onFailure:` 发起单聊通话。SDK 负责信令，应用仍需使用成功 callback 返回的凭据连接媒体引擎。
+调用单聊通话邀请方法发起音视频通话。SDK 负责信令流转与房间凭据生成，应用层需使用成功回调返回的房间凭据连接音视频媒体引擎。
+
+## 参数说明
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `inviteeUserIDList` | `NSArray<NSString *> *` | 被邀请用户 ID 列表，单聊只包含一个目标用户。 |
+| `roomID` | `NSString *` | 通话房间唯一标识，客户端生成 UUID 或由业务系统分配。 |
+| `timeout` | `NSInteger` | 邀请超时时间（秒）。 |
+| `mediaType` | `NSString *` | 媒体类型，例如 `video` 或 `audio`。 |
+| `groupID` | `NSString *` | 群组 ID，单聊传空字符串。 |
 
 ```objc
 OIMInvitationInfo *invitation = [OIMInvitationInfo new];
@@ -25,6 +35,8 @@ OIMSignalingInfo *signalingInfo =
 }];
 ```
 
-单聊 `groupID` 传空字符串。SDK 会补充邀请人和会话类型；方法同步返回的 `OIMSignalingInfo` 应保存，供后续取消、挂断和状态合并使用。
+方法同步返回的 `OIMSignalingInfo` 包含当前信令快照，应妥善保存供后续取消、挂断或与事件做状态合并使用。通话状态以 `roomID` 为合并标识，参与者状态同时结合用户 ID。
 
-成功 callback 返回 `OIMInvitationResultInfo`。取得有效 `token` 和 `roomID` 后再连接媒体房间；成功不表示对方已经接听。
+## 返回结果
+
+成功回调 `onSuccess` 返回 `OIMInvitationResultInfo` 对象，包含已分配的 `roomID`、接入 Token（`token`）、流媒体地址（`liveURL`）及忙线用户列表（`busyLineUserIDList`）。成功仅表示服务端已接受邀请信令，不代表对方已接听；对方是否接听应通过[处理通话事件](/sdk/ios/calling/managing-calls/handle-call-events)监听。

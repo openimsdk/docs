@@ -4,21 +4,15 @@ description: '撤回消息，并通过消息监听器同步撤回态。'
 sourcePath: '/sdk/ios/message/managing-messages/revoke-a-message'
 ---
 
-如果界面需要让其他会话成员看到“消息已撤回”，调用 `revokeMessage:clientMsgID:onSuccess:onFailure:`，不要用普通删除替代。删除只影响当前账号侧可见性，见[删除消息](/sdk/ios/message/managing-messages/delete-saved-message)；保留消息并更新其内容时，使用[修改消息](/sdk/ios/message/managing-messages/modify-a-message)。
+如果需要在会话中向所有成员展示“消息已撤回”状态，应调用撤回消息接口，而不能使用普通删除替代。删除操作仅影响当前账号侧可见性，见[删除消息](/sdk/ios/message/managing-messages/delete-saved-message)；若需要保留消息并更新其文字内容，见[修改消息](/sdk/ios/message/managing-messages/modify-a-message)。
 
 ## 撤回一条消息
-
-### 参数说明
-
-| 参数             | 类型         | 是否必填 | 说明                |
-| ---------------- | ------------ | -------- | ------------------- |
-| `conversationID` | `NSString *` | 必填     | 消息所属的会话 ID。 |
-| `clientMsgID`    | `NSString *` | 必填     | 要撤回的消息 ID。   |
 
 ```objc
 [[OIMManager manager] revokeMessage:conversationID
                         clientMsgID:clientMsgID
                           onSuccess:^(NSString * _Nullable data) {
+    // 成功撤回，本地更新为撤回态
     [self markMessageRevoked:clientMsgID conversationID:conversationID];
 }
                           onFailure:^(NSInteger code, NSString * _Nullable message) {
@@ -26,24 +20,35 @@ sourcePath: '/sdk/ios/message/managing-messages/revoke-a-message'
 }];
 ```
 
-成功后，当前客户端可以先把列表中同 `clientMsgID` 的消息更新为撤回态。允许撤回的发送者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留撤回展示。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | 必填 | 消息所属的会话 ID。 |
+| `clientMsgID` | `NSString *` | 必填 | 要撤回的目标消息客户端 ID。 |
+
+成功回调表示当前撤回请求已被服务端处理完成。允许撤回的发送者权限、时间窗口和消息类型由服务端统一校验；调用失败时切勿仅在本地擅自保留撤回状态。
 
 ## 返回结果
 
-成功 callback 表示当前撤回请求已完成，不代表所有客户端界面已经更新。其他客户端通过撤回事件更新对应消息；连接恢复或重新登录后，可结合消息同步与历史查询确认最终状态。
+- 成功回调仅代表本端向服务端发起的撤回请求处理成功，并不代表所有其他客户端已全部完成更新。
+- 客户端状态合并标识为 `clientMsgID`（必要时同时限定 `conversationID`）。
 
 ## 接收撤回事件
 
-本页是 `onRecvMessageRevoked:` 的正文归属页。应用通过同一个 `OIMAdvancedMsgListener` 实现：
+其他成员或本端其他已登录设备收到撤回通知时，由 `OIMAdvancedMsgListener` 协议的撤回消息方法推送：
 
 ```objc
 - (void)onRecvMessageRevoked:(OIMMessageRevokedInfo *)revokedInfo {
+    if (revokedInfo == nil) {
+        return;
+    }
     [self markMessageRevokedByClientMsgID:revokedInfo.clientMsgID
                               sessionType:revokedInfo.sessionType];
 }
 ```
 
-如果使用 `OIMCallbacker` 的 closure 形式，`OIMRevokedCallback` 参数声明为 nullable，处理器必须先判断：
+如果使用 `OIMCallbacker` 的闭包形式，回调参数可能为空，处理前应校验判空：
 
 ```objc
 OIMRevokedCallback handleMessageRevoked =
@@ -56,9 +61,9 @@ OIMRevokedCallback handleMessageRevoked =
 };
 ```
 
-`OIMMessageRevokedInfo` 不含 `conversationID`。先用 `clientMsgID` 定位已缓存的原消息，再结合原消息所属会话和事件的 `sessionType` 更新撤回态；不要直接按数组位置删除。listener 应由应用强引用，并通过 `addAdvancedMsgListener:` 注册、用同一实例调用 `removeAdvancedMsgListener:` 清理，完整代码见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+`OIMMessageRevokedInfo` 中不直接携带 `conversationID`，本地应先以 `clientMsgID` 检索已缓存的原始消息，再结合其会话与事件中提供的 `sessionType` 刷新对应气泡展示为撤回状态。完整的监听器生命周期管理见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
 
-调用成功、其他端事件到达和重新读取历史是三个独立阶段。
+撤回接口调用成功、其他端事件到达和重新拉取历史消息是三个独立的业务阶段。
 
 ## 相关页面
 

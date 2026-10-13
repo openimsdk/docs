@@ -4,11 +4,33 @@ description: '使用 iOS SDK 启用或关闭会话的服务端消息定期删除
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-message-destruct'
 ---
 
+启用或关闭指定会话的服务端历史消息定期删除机制：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
+| `isMsgDestruct` | `BOOL` | 是否开启定期删除服务端消息。`YES` 为开启，`NO` 为关闭。 |
+
 ```objc
-[[OIMManager manager] setConversationIsMsgDestruct:conversationID
+[[OIMManager manager] setConversationIsMsgDestruct:@"c2c_user1002"
                                      isMsgDestruct:YES
-                                         onSuccess:nil
-                                         onFailure:nil];
+                                         onSuccess:^(NSString * _Nullable data) {
+                                             NSLog(@"setConversationIsMsgDestruct success");
+                                         }
+                                         onFailure:^(NSInteger code, NSString *message) {
+                                             NSLog(@"setConversationIsMsgDestruct failed: %ld %@", (long)code, message);
+                                         }];
 ```
 
-该开关控制是否定期删除会话的服务端消息，不是私聊阅后即焚。删除周期由独立方法设置；应用需要分别保存开关和周期请求的结果。成功后通过 `onConversationChanged:` 合并状态。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，会话属性更新会通过 `onConversationChanged:` 事件广播，客户端按 `conversationID` 更新对应会话的 `isMsgDestruct` 属性。
+
+该开关控制服务端消息生命周期，不同于单聊客户端的私聊阅后即焚能力。消息定期删除的时长周期由[设置服务端消息删除周期](/sdk/ios/conversation/managing-conversations/set-message-destruct-time)独立设置。会话列表监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。
+

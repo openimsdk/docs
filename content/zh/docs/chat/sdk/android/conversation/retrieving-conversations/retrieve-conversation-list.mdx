@@ -1,12 +1,10 @@
 ---
 title: '获取会话列表'
-description: '使用 getConversationListSplit() 分页获取当前账号的会话列表。'
+description: '分页获取当前账号的会话列表，并同步后续会话变化。'
 sourcePath: '/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-会话列表属于当前登录用户。每条 `ConversationInfo` 包含会话标识、未读数、最后一条消息、置顶和草稿等状态。
-
-## 分页获取会话
+会话列表属于当前登录用户。建议采用分页方式拉取会话列表，以避免数据量过大造成内存和渲染压力。每条 `ConversationInfo` 包含会话标识、未读数、最后一条消息、置顶和草稿等状态。
 
 ```java
 OpenIMClient.getInstance().conversationManager.getConversationListSplit(
@@ -26,27 +24,32 @@ OpenIMClient.getInstance().conversationManager.getConversationListSplit(
 );
 ```
 
-| 参数     | 类型   | 说明                                        |
-| -------- | ------ | ------------------------------------------- |
-| `offset` | `long` | 从 `0` 开始的分页偏移量；刷新时重置为 `0`。 |
-| `count`  | `long` | 本页期望返回的会话数量。                    |
+## 参数说明
 
-成功回调返回当前页 `List<ConversationInfo>`。继续加载时按已经请求的条目数量推进 `offset`；返回数量小于 `count` 时通常表示到达末页。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<ConversationInfo>>` | 是 | 异步请求回调。 |
+| `offset` | `long` | 是 | 从 `0` 开始的分页偏移量；初始加载或下拉刷新时重置为 `0`。 |
+| `count` | `long` | 是 | 本页期望拉取的会话数量。 |
+
+## 返回结果
+
+成功回调返回当前页的 `List<ConversationInfo>`。客户端在合并数据时应以 `conversationID` 为唯一主键进行去重与更新；当返回数量小于 `count` 时，通常表示已到达列表末尾。加载下一页时，按已拉取的会话总数累加 `offset`。
 
 ## 保持列表同步
 
-会话列表发生新增或变化时，可以通过 `OnConversationListener` 接收以下 callback：
+会话列表发生新增或属性变更时，通过在应用层注册的 `OnConversationListener` 接收实时事件推送：
 
 ```java
 OnConversationListener conversationListener = new OnConversationListener() {
     @Override
     public void onNewConversation(List<ConversationInfo> conversations) {
-        // conversations 是新增会话。
+        // conversations 为新增的会话列表。
     }
 
     @Override
     public void onConversationChanged(List<ConversationInfo> conversations) {
-        // conversations 是发生变化的会话。
+        // conversations 为发生更新的会话列表。
     }
 };
 
@@ -55,4 +58,4 @@ OpenIMClient.getInstance().conversationManager.setOnConversationListener(
 );
 ```
 
-两个事件都携带 `List<ConversationInfo>`，可按 `conversationID` 更新列表中的对应会话。`setOnConversationListener()` 设置后即可接收会话变化。
+两个事件均携带 `List<ConversationInfo>` 列表。客户端收到后需遍历列表，根据 `conversationID` 找到对应的本地会话对象进行字段合并或插入新项，并刷新界面排序。退出登录或切换账号时，可传入 `null` 清理旧监听器。

@@ -62,7 +62,7 @@ iOS SDK 通过 `OIMAdvancedMsgListener` 推送普通新消息、在线消息、�
 @end
 ```
 
-应在 `initSDK` 成功后、`login` 前完成全局消息监听注册，退出登录、切换账号或销毁状态层时用同一实例移除。callback 的消息参数可以为空，因此示例同时校验 `clientMsgID`。每次 callback 传入单个 `OIMMessageInfo`，没有独立的离线新消息 selector。
+应在 SDK 初始化成功后、用户登录前完成全局消息监听注册，退出登录、切换账号或销毁状态层时用同一实例移除。callback 的消息参数可以为空，因此示例同时校验 `clientMsgID`。每次 callback 传入单个 `OIMMessageInfo`，没有独立的离线新消息 selector。
 
 只在线消息不会进入普通历史存储，适合临时提示或业务通知。发送参数见[发送消息](/sdk/ios/message/sending-messages/send-message)。
 
@@ -70,17 +70,17 @@ iOS SDK 通过 `OIMAdvancedMsgListener` 推送普通新消息、在线消息、�
 
 先根据消息路由字段确定会话，再按 `clientMsgID` 幂等合并。新消息事件可能和发送成功回调、历史查询结果重叠，不能直接追加数组。
 
-历史查询负责加载当前已有消息；`onRecvNewMessage:` 负责加入在线到达的新消息；重新登录后的离线变化由 SDK 同步。同步完成后，可重新查询当前会话历史，以查询结果确认列表状态。
+历史查询负责加载当前已有消息；新消息接收回调负责加入在线到达的新消息；重新登录后的离线变化由 SDK 自动同步。同步完成后，可重新查询当前会话历史以校准列表状态。
 
 ## 首次进入会话时读取历史
 
-事件只负责新到达的消息。首次进入会话、向上翻页或补齐同步后的列表时，使用 `getAdvancedHistoryMessageList:onSuccess:onFailure:` 读取历史。第一页把 `startClientMsgID` 设为 `nil`，后续使用边界消息的 `clientMsgID`；完整处理见[加载历史消息](/sdk/ios/message/retrieving-messages/load-older-messages)。
+事件只负责新到达的消息。首次进入会话、向上翻页或补齐同步后的列表时，可调用高级历史消息拉取接口读取历史消息。第一页把 `startClientMsgID` 设为 `nil`，后续翻页使用边界消息的 `clientMsgID`；完整处理见[加载历史消息](/sdk/ios/message/retrieving-messages/load-older-messages)。
 
 查询 callback 直接返回当前消息列表，不会触发新消息 listener。分页与事件可能包含同一条消息，因此两条路径必须使用相同的会话路由与 `clientMsgID` 去重规则。
 
 ## 标记会话已读
 
-用户实际打开会话并阅读完可见消息后，调用 `markConversationMessageAsRead:onSuccess:onFailure:` 清理未读数。单聊回执处理见[标记会话已读](/sdk/ios/conversation/managing-conversations/mark-conversation-read)；群消息成员级回执见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。
+用户实际打开会话并阅读完可见消息后，调用标记会话已读接口清理未读数。单聊回执处理见[标记会话已读](/sdk/ios/conversation/managing-conversations/mark-conversation-read)；群消息成员级回执见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。
 
 ## 其他消息事件
 
@@ -89,13 +89,13 @@ iOS SDK 通过 `OIMAdvancedMsgListener` 推送普通新消息、在线消息、�
 - 单聊已读回执见[标记会话已读](/sdk/ios/conversation/managing-conversations/mark-conversation-read)，群聊已读回执见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。
 - 自定义业务监听见[接收自定义业务消息](/sdk/ios/message/receiving-messages/custom-business-listener)。
 
-查询 API、本地插入和消息创建不会触发 `onRecvNewMessage:`。
+查询接口、本地插入和消息创建不会触发新消息接收事件。
 
 ## 验证接收流程
 
 - 从另一个账号向目标单聊或群组发送消息，确认按目标会话和 `clientMsgID` 只合并一次。
-- 发送只在线消息，确认走 `onRecvOnlineOnlyMessage:`，且历史查询不会回放该消息。
-- 撤回或删除消息，确认对应归属页的处理器按 `clientMsgID` 更新原气泡。
+- 发送只在线消息，确认进入在线消息回调处理逻辑，且历史消息查询不会返回该消息。
+- 撤回或删除消息，确认相应的消息变更逻辑按 `clientMsgID` 正确更新原气泡。
 - 退出登录或切换账号后确认 listener 已移除，重新登录时不会重复处理。
 
 ## 相关页面

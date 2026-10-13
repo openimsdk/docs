@@ -1,16 +1,42 @@
 ---
 title: '设置群组全员禁言'
-description: '使用 Android SDK 开启或关闭群组全员禁言。'
+description: '开启或关闭指定群组的全员禁言模式。'
 sourcePath: '/sdk/android/group/change-group-mute'
 ---
 
-使用 `changeGroupMute()` 切换全员禁言。`true` 开启，`false` 关闭；成员级禁言见[禁言或解除禁言群成员](/sdk/android/group/managing-group-members/change-group-member-mute)。
+开启或关闭群组全员禁言状态。该操作通常仅群主或管理员有权执行。开启全员禁言后，普通成员将无法在群内发送消息，群主和管理员不受限制。如需对单个成员进行禁言控制，请参阅[设置群成员禁言](/sdk/android/group/managing-group-members/change-group-member-mute)。
 
 ```java
-OpenIMClient.getInstance().groupManager.changeGroupMute(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, true);
+String groupID = "group_123";
+boolean isMute = true; // true 开启全员禁言，false 关闭全员禁言
+
+OpenIMClient.getInstance().groupManager.changeGroupMute(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 全员禁言状态更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理设置失败
+        }
+    },
+    groupID,
+    isMute
+);
 ```
 
-成功回调表示设置请求已完成，不表示所有客户端界面已经更新。`onGroupInfoChanged` 返回更新后的 `GroupInfo`；按 `groupID` 更新群资料。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组的全局唯一 ID。 |
+| `isMute` | `boolean` | 是 | 是否开启全员禁言：`true` 为开启禁言，`false` 为解除禁言。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+设置成功代表服务端已更新群组配置。群内成员随后会触发 `onGroupInfoChanged` 事件接收更新后的 `GroupInfo`（其中包含 `status` 禁言标志），客户端应以 `groupID` 为标识更新群资料并控制输入框的可编辑状态；完整监听见[群组概览](/sdk/android/group/overview-group)。

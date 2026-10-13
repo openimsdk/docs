@@ -4,17 +4,33 @@ description: '使用 iOS SDK 将指定会话的消息标记为已读。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/mark-conversation-read'
 ---
 
-用户打开会话并阅读完当前可见消息后调用：
+用户打开会话并浏览完当前未读消息后，调用该方法将指定会话标记为已读：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 待标记已读的目标会话 ID。 |
 
 ```objc
-[[OIMManager manager] markConversationMessageAsRead:conversationID
-                                           onSuccess:nil
-                                           onFailure:nil];
+[[OIMManager manager] markConversationMessageAsRead:@"c2c_user1002"
+                                          onSuccess:^(NSString * _Nullable data) {
+                                              NSLog(@"markConversationMessageAsRead success");
+                                          }
+                                          onFailure:^(NSInteger code, NSString *message) {
+                                              NSLog(@"markConversationMessageAsRead failed: %ld %@", (long)code, message);
+                                          }];
 ```
 
-不要在只预览通知或后台收到消息时提前标记。成功 callback 表示请求完成，不等于 `onConversationChanged:` 已到达；随后按 `conversationID` 合并最新会话，需要立即确认时重新查询。
+状态以 `conversationID` 为合并标识。
 
-对于单聊，当前用户标记会话已读后，对端可通过 `onRecvC2CReadReceipt:` 收到消息已读回执。本页是该 delegate 的正文归属页；先按对端用户定位单聊会话，再按每项 `msgIDList` 中的 `clientMsgID` 更新已读状态。
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+请勿在通知弹窗预览或后台收到静默消息时提前标记已读。标记成功后，当前会话未读数清零并通过 `onConversationChanged:` 事件广播通知，全局总未读数会联动通过 `onTotalUnreadMessageCountChanged:` 事件更新（详见[获取消息总未读数](/sdk/ios/conversation/managing-conversations/get-total-unread-count)）。
+
+对于单聊会话，标记已读后对端用户会收到 `onRecvC2CReadReceipt:` 已读回执事件。应用可根据回执中的对端用户定位单聊会话，再按 `msgIDList` 中的 `clientMsgID` 将消息更新为已读状态：
 
 ```objc
 - (void)onRecvC2CReadReceipt:(NSArray<OIMReceiptInfo *> *)items {
@@ -22,4 +38,5 @@ sourcePath: '/sdk/ios/conversation/managing-conversations/mark-conversation-read
 }
 ```
 
-承载该回调的稳定 listener 需要成对调用 `addAdvancedMsgListener:` 与 `removeAdvancedMsgListener:`，完整生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。群聊中调用本 API 只清理当前账号的会话未读数；成员级回执另见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。
+承载该回调的高级消息监听器需要成对添加与移除，完整生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。群聊中调用本方法仅清理当前用户的会话未读数；群成员级别的群消息已读回执另请参见[上报群消息已读](/sdk/ios/message/managing-read-status/send-group-read-receipts)。
+

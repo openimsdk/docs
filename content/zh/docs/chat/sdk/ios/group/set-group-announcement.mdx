@@ -4,6 +4,19 @@ description: '使用 iOS SDK 局部更新群组公告。'
 sourcePath: '/sdk/ios/group/set-group-announcement'
 ---
 
+发布或更新群组公告（通常仅群主和管理员有权限操作）：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | 包含 `groupID` 和待更新字典键值对的字典对象。 |
+
+| 键名 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `notification` | `NSString *` | 群公告内容，传空字符串可清空已有公告。注意此处为 `notification` 字段，而非群简介 `introduction`。 |
+
 ```objc
 NSDictionary *changes = @{
     @"groupID": groupID,
@@ -11,10 +24,16 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        [self showAnnouncementUpdated];
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        [self showErrorCode:code message:message];
+    }];
 ```
 
-`notification` 是群公告，与群简介 `introduction` 不同。传入空字符串可清空公告；修改权限最终由 OpenIMServer 校验。
+状态以 `groupID` 为合并标识。
 
-成功 callback、`onGroupInfoChanged:` 到达和重新查询是三个阶段，完整 delegate 见[群组概览](/sdk/ios/group/overview-group)。
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已接收公告更新。群内各端随后会通过群资料变更事件收到更新后的 `OIMGroupInfo`，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

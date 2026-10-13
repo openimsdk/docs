@@ -4,11 +4,33 @@ description: '使用 iOS SDK 设置会话服务端消息的定期删除周期。
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-message-destruct-time'
 ---
 
+设置指定会话服务端消息的定期删除周期时长：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
+| `msgDestructTime` | `NSInteger` | 消息在服务端的删除周期时长（单位：秒）。 |
+
 ```objc
-[[OIMManager manager] setConversationMsgDestructTime:conversationID
-                                     msgDestructTime:destructTime
-                                         onSuccess:nil
-                                         onFailure:nil];
+[[OIMManager manager] setConversationMsgDestructTime:@"c2c_user1002"
+                                     msgDestructTime:86400
+                                           onSuccess:^(NSString * _Nullable data) {
+                                               NSLog(@"setConversationMsgDestructTime success");
+                                           }
+                                           onFailure:^(NSInteger code, NSString *message) {
+                                               NSLog(@"setConversationMsgDestructTime failed: %ld %@", (long)code, message);
+                                           }];
 ```
 
-`msgDestructTime` 是服务端消息的定期删除周期，具体计时语义还应结合服务端策略确认。启用或关闭由独立开关方法完成。成功后重新查询会话，并从 `OIMConversationInfo.msgDestructTime` 读取当前值。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，会话属性更新会通过 `onConversationChanged:` 事件广播，客户端按 `conversationID` 更新对应会话的 `msgDestructTime` 属性。
+
+该设置配置服务端消息定期销毁的时间跨度，具体定期清理功能是否生效由[定期删除服务端消息](/sdk/ios/conversation/managing-conversations/set-message-destruct)开关控制。会话列表监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。
+

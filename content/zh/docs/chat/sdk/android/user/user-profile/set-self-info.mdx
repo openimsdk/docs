@@ -1,10 +1,10 @@
 ---
 title: '更新当前用户资料'
-description: '使用 setSelfInfo() 更新当前用户的昵称、头像或扩展资料。'
+description: '更新当前登录用户的昵称、头像或自定义扩展资料。'
 sourcePath: '/sdk/android/user/user-profile/set-self-info'
 ---
 
-使用 `UserInfoReq` 只设置实际需要修改的字段。
+更新当前登录用户的个人基本资料，包括昵称、头像 URL 和业务扩展字段。调用时仅需设置实际需要变更的字段。
 
 ```java
 UserInfoReq request = new UserInfoReq();
@@ -28,25 +28,32 @@ OpenIMClient.getInstance().userInfoManager.setSelfInfo(
 );
 ```
 
-本页只更新昵称、头像和用户扩展信息。添加好友权限是独立的账号设置，见[设置好友添加权限](/sdk/android/user/user-profile/set-friend-add-permission)。
+## 参数说明
 
-成功 callback 表示更新请求完成。当前账号资料变化时，可通过 `onSelfInfoUpdated(UserInfo info)` 接收通知。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `request` | `UserInfoReq` | 是 | 待更新的用户资料请求体。 |
 
-## 更新字段
+### 资料字段说明
 
-| 字段                  | 说明               |
-| --------------------- | ------------------ |
-| `nickname`            | 要更新的昵称。     |
-| `faceURL`             | 要更新的头像地址。 |
-| `ex`                  | 用户扩展字符串。   |
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `nickname` | `String` | 期望更新的新昵称。 |
+| `faceURL` | `String` | 期望更新的新头像 URL 地址。 |
+| `ex` | `String` | 自定义业务扩展字符串，格式由业务自行约定。 |
 
-一次请求只写入需要变更的字段。账号级消息接收方式也使用独立操作，见[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。
+好友添加权限与全局免打扰均为独立的账号设置项，分别请参考[设置好友添加权限](/sdk/android/user/user-profile/set-friend-add-permission)与[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。
 
-当前用户资料变化时，可通过 `OnUserListener` 接收 `onSelfInfoUpdated`：
+## 返回结果
+
+成功回调表示服务端已成功持久化资料更新。资料变更会同步至当前用户的其他登录设备。
+
+资料更新后，SDK 会通过 `OnUserListener` 派发事件；客户端应以 `userID` 为主键更新本地缓存并刷新界面展示：
 
 ```java
 @Override
 public void onSelfInfoUpdated(UserInfo info) {
-    // 处理当前用户资料变化
+    // 收到当前用户资料更新，合并本地缓存并刷新 UI
 }
 ```

@@ -4,12 +4,31 @@ description: '使用 iOS SDK 删除指定会话及其全部消息。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/delete-conversation-with-messages'
 ---
 
-产品语义为“删除此聊天”时调用：
+删除指定的会话入口并清空其所有关联消息记录：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 待删除的目标会话 ID。 |
 
 ```objc
-[[OIMManager manager] deleteConversationAndDeleteAllMsg:conversationID
-                                               onSuccess:nil
-                                               onFailure:nil];
+[[OIMManager manager] deleteConversationAndDeleteAllMsg:@"c2c_user1002"
+                                               onSuccess:^(NSString * _Nullable data) {
+                                                   NSLog(@"deleteConversationAndDeleteAllMsg success");
+                                               }
+                                               onFailure:^(NSInteger code, NSString *message) {
+                                                   NSLog(@"deleteConversationAndDeleteAllMsg failed: %ld %@", (long)code, message);
+                                               }];
 ```
 
-成功后清理当前消息列表和会话行。该操作不删除好友关系，也不退出或解散群组；聊天目标仍存在时，会话可能由新消息或同步重新生成。随后通过会话 delegate 更新状态，必要时重新查询当前列表。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，客户端应立即从本地会话列表中移除该会话行并清理对应的聊天记录。该操作仅删除当前账号的本地会话数据，不会解除好友关系，亦不会退出或解散群组；当收到该目标的新消息时，会话会自动重新生成并出现在列表中。
+
+会话监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。若仅需临时隐藏会话入口并保留历史消息，请参考[隐藏会话](/sdk/ios/conversation/managing-conversations/hide-a-conversation)。
+

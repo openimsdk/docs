@@ -1,24 +1,25 @@
 ---
 title: '插入本地群聊消息'
-description: '使用 insertGroupMessageToLocalStorage 插入仅当前设备可见的群聊消息。'
+description: '向当前设备的群聊会话中插入一条仅本地可见的消息。'
 sourcePath: '/sdk/android/message/managing-messages/insert-local-group-message'
 ---
 
-`insertGroupMessageToLocalStorage()` 把一条消息写入当前设备的指定群聊，可用于迁移记录或展示仅本地可见的业务提示。它不会发送消息，也不会同步到其他设备。
-
-`message` 是要插入的完整消息对象，`groupID` 是目标群组，`senderUserID` 是消息展示使用的发送者用户 ID。
+将一条构造好的消息直接写入当前设备的群聊本地数据库中。该操作不经过服务端，不向群内其他成员投递，适用于插入入群安全提醒、本地事件通知等场景。若需向群内真实广播消息，请调用[发送消息](/sdk/android/message/sending-messages/send-message)。
 
 ```java
+String groupID = "group_123";
+String senderUserID = "user_a";
+
 OpenIMClient.getInstance().messageManager.insertGroupMessageToLocalStorage(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 重新读取或更新当前设备上的群聊消息列表。
+            // 本地写入成功，刷新群聊消息界面
         }
 
         @Override
         public void onError(int code, String error) {
-            // 提示本地写入失败。
+            // 处理写入失败
         }
     },
     message,
@@ -27,4 +28,17 @@ OpenIMClient.getInstance().messageManager.insertGroupMessageToLocalStorage(
 );
 ```
 
-成功回调表示本地写入完成。该操作不触发新消息事件，不能用于代替[发送消息](/sdk/android/message/sending-messages/send-message)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `message` | `Message` | 是 | 待插入的完整消息对象（通常由各 `create*Message` 接口创建）。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `sender` | `String` | 是 | 消息所标记的发送者用户 ID。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+写入成功后，客户端应以 `clientMsgID` 为标识将该消息插入群聊消息列表展示。该操作不会在服务端持久化，也不触发其他客户端的事件通知。

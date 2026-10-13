@@ -4,7 +4,20 @@ description: '使用 Objective-C API 创建群组并配置初始成员。'
 sourcePath: '/sdk/ios/group/create-group'
 ---
 
-`createGroup:onSuccess:onFailure:` 接收 `OIMGroupCreateInfo`。普通成员、管理员和群主不能重复。
+调用创建群组接口创建新群，并配置群基础信息与初始成员：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupCreateInfo` | `OIMGroupCreateInfo *` | 包含群基础资料、初始成员、管理员及群主的创建参数对象。 |
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfo` | `OIMGroupBaseInfo *` | 群基础资料，包含群名、群类型（如工作群 `OIMGroupTypeWorking`）等。 |
+| `memberUserIDs` | `NSArray<NSString *> *` | 初始普通成员 ID 列表。 |
+| `adminUserIDs` | `NSArray<NSString *> *` | 初始管理员 ID 列表。 |
+| `ownerUserID` | `NSString *` | 初始群主 ID，通常为当前登录用户。普通成员、管理员与群主 ID 不能重复。 |
 
 ```objc
 OIMGroupBaseInfo *base = [OIMGroupBaseInfo new];
@@ -18,10 +31,16 @@ request.adminUserIDs = @[@"user-002"];
 request.ownerUserID = currentUserID;
 
 [[OIMManager manager] createGroup:request
-    onSuccess:^(OIMGroupInfo *group) { [self openGroupWithID:group.groupID]; }
+    onSuccess:^(OIMGroupInfo *group) {
+        [self openGroupWithID:group.groupID];
+    }
     onFailure:^(NSInteger code, NSString *message) {
         [self showErrorCode:code message:message];
     }];
 ```
 
-成功 callback 返回新建的 `OIMGroupInfo`。`onJoinedGroupAdded:` 随后可能到达，完整 delegate 见[群组概览](/sdk/ios/group/overview-group)。
+状态以 `groupID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回新建成功的完整 `OIMGroupInfo` 对象，包含分配的 `groupID`。群组创建成功后，群新增事件会通过群组监听下发至各端，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

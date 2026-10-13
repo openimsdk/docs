@@ -4,7 +4,7 @@ description: '撤回已发送的消息，并向会话成员同步撤回状态。
 sourcePath: '/sdk/wasm/message/managing-messages/revoke-a-message'
 ---
 
-如果界面需要让其他会话成员看到“消息已撤回”，使用 `revokeMessage()`，不要用普通删除替代。删除只影响当前账号侧可见性，见[批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)。修改已发送消息内容见[修改消息](/sdk/wasm/message/managing-messages/modify-a-message)。
+若需让会话中的所有成员均能看到“某人撤回了一条消息”的系统提示，请调用 `revokeMessage()`，而不要使用单向的本地删除。普通删除仅对当前操作账号生效（详见[批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)）；若仅需修改已发送的消息文本，请参考[修改消息](/sdk/wasm/message/managing-messages/modify-a-message)。
 
 ## 撤回一条消息
 
@@ -19,11 +19,9 @@ const { data } = await openimsdk.revokeMessage({
 markMessageRevoked(data?.clientMsgID ?? clientMsgID);
 ```
 
-Promise 成功后，当前应用可先把列表中具有相同 `clientMsgID` 的消息更新为撤回状态。在线客户端随后通过 `SdkEvent.OnNewRecvMessageRevoked` 收到撤回信息，接收端应根据事件里的 `clientMsgID` 更新对应气泡，而不是直接从列表中删除。
+接口调用成功后，当前客户端可先将对应 `clientMsgID` 的本地消息更新为撤回态展示。会话各端随后会通过 `SdkEvent.OnNewRecvMessageRevoked` 收到撤回事件通知，界面应据此将对应消息气泡替换为撤回提示文案，而非直接从列表中移除该项。
 
-允许撤回的发送者、时间窗口和消息类型由 OpenIMServer 校验；调用失败时不要只在本地保留撤回展示。
-
-SDK 同时保留 `SdkEvent.OnRecvMessageRevoked`。它是旧的单条撤回事件名；新代码优先监听 `OnNewRecvMessageRevoked`。维护既有项目时，应先确认当前部署实际触发的事件；如果只能收到旧事件，则用旧事件名替换下方注册项并复用同一个处理器，不要同时监听两个名称后重复合并同一次撤回。
+撤回操作的权限校验、允许撤回的时间窗口限制（例如 2 分钟内）由 OpenIMServer 服务端进行控制。调用失败时请勿在本地盲目保留撤回展示。SDK 亦兼容旧版事件名 `SdkEvent.OnRecvMessageRevoked`，新项目建议统一监听 `OnNewRecvMessageRevoked`。
 
 ## 返回结果
 
@@ -47,7 +45,7 @@ function removeRevokeListener() {
 }
 ```
 
-`OnNewRecvMessageRevoked` 的 `data` 是 `RevokedInfo`。消息使用 `clientMsgID` 合并；`isAdminRevoke` 表示本次撤回是否由管理员执行，可用于选择合适的系统提示文案。组件卸载、退出登录或切换账号时调用 `removeRevokeListener()`。重新登录或重连后，先重新加载当前已有消息，再根据后续撤回事件更新对应消息。
+事件载荷 `data` 为 `RevokedInfo` 对象。业务层可使用 `clientMsgID` 匹配具体消息；`isAdminRevoke` 字段标识本次是否由管理员代为执行撤回，可用于展示“管理员撤回了一条成员消息”等定制化系统提示。在组件销毁、退出登录或切换账号时，请调用 `removeRevokeListener()` 解绑监听。
 
 ## 相关页面
 

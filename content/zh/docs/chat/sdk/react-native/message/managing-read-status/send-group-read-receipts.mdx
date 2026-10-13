@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-read-status/send-group-read-receipts'
 ---
 
-使用 `sendGroupMessageReadReceipt()` 上报群聊中已读的消息。
+向群聊中已读的消息批量发送已读回执。当群成员在聊天界面中浏览了他人发送的群消息时调用，群内其他成员将收到该消息的已读状态更新。
 
 ```ts
 await OpenIMSDK.sendGroupMessageReadReceipt({
@@ -21,21 +21,34 @@ await OpenIMSDK.sendGroupMessageReadReceipt({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
 | `conversationID` | `string` | 是 | 群聊会话 ID。 |
-| `clientMsgIDs` | `string[]` | 是 | 已读消息 ID 列表；列表中的消息应属于该群聊会话。 |
+| `clientMsgIDs` | `string[]` | 是 | 已阅读的消息客户端 ID 列表；列表中的消息应均属于该群聊会话。 |
 
-调用完成后，已读回执已上报。会话未读数的更新见[标记会话已读](/sdk/react-native/conversation/managing-conversations/mark-conversation-read)。
+## 返回结果
+
+调用成功代表已读回执请求已提交至服务端。如果需要清除当前账号在该群聊会话中的未读消息计数，请调用[标记会话已读](/sdk/react-native/conversation/managing-conversations/mark-conversation-read)。
 
 ## 监听群消息已读变化
 
-群消息的已读状态变化时会触发 `OnRecvGroupReadReceipt`，回调携带 `GroupMessageReceiptInfo`，其中包含 `conversationID` 和各消息的已读人数、未读人数及已读成员。
+当群内其他成员上报消息已读后，会触发 `OnRecvGroupReadReceipt` 事件。回调携带 `GroupMessageReceiptInfo[]`，其中包含目标 `conversationID` 以及各消息的已读人数、未读人数等统计。客户端应以 `clientMsgID` 为合并标识更新本地消息气泡的已读人数。
 
 ```ts
-function handleGroupReadReceipt(payload) {
-  // ...
+interface GroupMessageReceiptItem {
+  clientMsgID: string;
+  readCount: number;
+  unreadCount: number;
 }
+
+interface GroupMessageReceiptInfo {
+  conversationID: string;
+  receiptList: GroupMessageReceiptItem[];
+}
+
+const handleGroupReadReceipt = (payload: GroupMessageReceiptInfo) => {
+  // 根据 payload.conversationID 匹配会话，并以 clientMsgID 为合并标识更新消息已读人数
+};
 
 // 设置监听
 OpenIMSDK.on(OpenIMEvent.OnRecvGroupReadReceipt, handleGroupReadReceipt);
@@ -44,4 +57,4 @@ OpenIMSDK.on(OpenIMEvent.OnRecvGroupReadReceipt, handleGroupReadReceipt);
 OpenIMSDK.off(OpenIMEvent.OnRecvGroupReadReceipt, handleGroupReadReceipt);
 ```
 
-组件销毁、退出登录或切换账号时，取消监听。
+组件销毁、退出登录或切换账号时，取消该监听。

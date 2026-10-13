@@ -4,11 +4,38 @@ description: '使用 iOS SDK 设置会话的消息接收选项。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-message-receive-option'
 ---
 
+设置指定会话的消息接收选项（如开启免打扰或屏蔽消息）：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
+| `status` | `OIMReceiveMessageOpt` | 消息接收选项。 |
+
+### 消息接收选项枚举
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMReceiveMessageOptReceive` | `0` | 正常接收在线消息并触发离线推送通知。 |
+| `OIMReceiveMessageOptNotReceive` | `1` | 不接收消息，亦不产生离线推送（屏蔽消息）。 |
+| `OIMReceiveMessageOptNotNotify` | `2` | 正常接收在线消息，但离线时不产生推送通知（免打扰）。 |
+
 ```objc
-[[OIMManager manager] setConversationRecvMessageOpt:conversationID
+[[OIMManager manager] setConversationRecvMessageOpt:@"c2c_user1002"
                                              status:OIMReceiveMessageOptNotNotify
-                                          onSuccess:nil
-                                          onFailure:nil];
+                                          onSuccess:^(NSString * _Nullable data) {
+                                              NSLog(@"setConversationRecvMessageOpt success");
+                                          }
+                                          onFailure:^(NSInteger code, NSString *message) {
+                                              NSLog(@"setConversationRecvMessageOpt failed: %ld %@", (long)code, message);
+                                          }];
 ```
 
-`OIMReceiveMessageOptReceive` 表示在线接收且离线推送，`OIMReceiveMessageOptNotReceive` 表示不接收也不推送，`OIMReceiveMessageOptNotNotify` 表示在线接收但离线不推送。成功后通过 `onConversationChanged:` 合并最新状态。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作生效后，会话属性变更会通过 `onConversationChanged:` 事件广播，客户端应以 `conversationID` 为合并标识更新对应会话的 `recvMsgOpt` 状态。会话列表监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。

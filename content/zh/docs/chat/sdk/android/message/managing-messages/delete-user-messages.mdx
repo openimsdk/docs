@@ -1,34 +1,54 @@
 ---
 title: '删除群聊中指定用户的全部消息'
-description: '使用 Android SDK 删除指定用户在群聊中的全部消息。'
+description: '群主或管理员删除指定成员在群聊中的全部历史发言。'
 sourcePath: '/sdk/android/message/managing-messages/delete-user-messages'
 ---
 
+群主或管理员一键清除指定成员在当前群聊中的所有历史发言。常用于违规广告账号封禁及群内不当言论集中清理等管理场景。
+
 ```java
-messageManager.deleteUserAllMessagesInConv(
+String conversationID = "g_group_123";
+String targetUserID = "user_spammer";
+
+OpenIMClient.getInstance().messageManager.deleteUserAllMessagesInConv(
     conversationID,
     targetUserID,
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 删除请求已完成
+            // 清理请求已成功提交
         }
 
         @Override
         public void onError(int code, String error) {
-            // 处理失败
+            // 处理失败（如权限不足）
         }
     }
 );
 ```
 
-该 API 只用于群聊，可删除指定用户在目标群会话中的全部消息。调用者没有操作权限时，通过 `onError` 返回错误。
+## 参数说明
 
-其他客户端通过 `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv` 接收删除通知。回调参数包含对应的 `conversationID` 和 `userID`：
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标群聊会话 ID。仅支持群聊会话。 |
+| `targetUserID` | `String` | 是 | 待清理消息的目标成员用户 ID。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+## 监听清理事件
+
+清理操作成功后，群内所有在线成员端将通过 `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv` 收到批量删除事件通知：
 
 ```java
 @Override
 public void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {
-    // event 包含受影响的会话和用户。
+    // 根据 event.getConversationID() 与 event.getUserID()
+    // 从当前会话列表中批量移除该用户发送的所有历史消息
 }
 ```
+
+客户端在收到该事件后，应结合会话 ID 与用户 ID 进行过滤，批量清理 UI 列表中的对应气泡；完整监听注册见[接收消息](/sdk/android/message/receiving-messages/receive-messages)。

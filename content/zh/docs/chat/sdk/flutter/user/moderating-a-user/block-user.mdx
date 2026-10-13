@@ -1,16 +1,40 @@
 ---
 title: '拉黑用户'
-description: '使用 Flutter SDK 将用户加入当前账号黑名单。'
+description: '使用 Flutter SDK 将指定用户加入当前账号的黑名单。'
 sourcePath: '/sdk/flutter/user/moderating-a-user/block-user'
 ---
 
+将指定用户加入当前登录用户的黑名单列表：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `userID` | `String` | 是 | 待拉黑的目标用户 ID。 |
+| `ex` | `String?` | 否 | 业务扩展字段字符串。传入新值时为整值覆盖，不会自动与已有 JSON 字段进行合并。 |
+
 ```dart
 await OpenIM.iMManager.friendshipManager.addBlacklist(
-  userID: targetUserID,
+  userID: 'user_123',
   ex: '{"source":"profile-menu"}',
 );
 ```
 
-黑名单是单向关系：对方不能向当前用户发送消息，但当前用户仍可能向对方发送。`ex` 是完整字符串。Future 成功不等于事件已到达。
+## 返回结果
 
-`onBlackAdded` 是本页归属事件，应纳入唯一 `OnFriendshipListener`，按 `userID` 写入或覆盖记录。
+Future 成功返回 `void`，表示拉黑请求已成功提交至服务端并在本地同步写入黑名单记录。
+
+该操作为状态变更接口。拉黑关系生效后，对方将无法向当前用户发送单聊消息，但当前用户仍可主动向对方发信；若需实现双向限制，需在业务层增加逻辑拦截。
+
+## 监听拉黑事件
+
+拉黑事件在此集中监听与处理。服务端拉黑生效后，当前端与其他在线端会触发 `onBlackAdded` 事件通知。客户端应以 `userID` 为合并标识，将记录合并至黑名单状态或更新关系缓存：
+
+```dart
+void handleBlackAdded(BlacklistInfo info) {
+  mergeBlockedUser(info);
+}
+```
+
+Flutter SDK 在 `FriendshipManager` 中维护单个 `OnFriendshipListener` 实例。请将上述处理函数统一交由[事件概览](/sdk/flutter/events/overview-events)的应用级集中入口进行注册。若需拉取当前账号的全部黑名单记录，请参考[获取黑名单列表](/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users)。
+

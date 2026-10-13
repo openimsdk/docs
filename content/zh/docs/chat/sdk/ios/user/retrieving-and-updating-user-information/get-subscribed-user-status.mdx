@@ -4,10 +4,18 @@ description: '使用 iOS SDK 查询已订阅用户当前的在线状态。'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/get-subscribed-user-status'
 ---
 
+查询当前已订阅用户的最新在线状态快照：
+
 ```objc
 [[OIMManager manager] getSubscribeUsersStatusWithOnSuccess:^(NSArray<OIMUserStatusInfo *> *states) {
     [presenceStore mergeStates:states];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"getSubscribeUsersStatus failed: %ld %@", (long)code, message);
+}];
 ```
 
-该方法不接收用户数组，也不改变订阅集合。可在重连或重新进入页面时调用，并按 `userID` 合并结果；查询不触发在线状态 delegate。
+该方法不接收参数，不会修改当前的订阅用户集合。常用于网络重连或界面重新激活时主动对齐状态，状态以 `userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回当前所有已订阅用户的状态列表 `NSArray<OIMUserStatusInfo *> *`。查询仅拉取当前快照，不触发在线状态 Delegate；增量状态变更由[订阅用户在线状态](/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status)中说明的回调监听处理。

@@ -1,16 +1,49 @@
 ---
 title: '获取收到的入群申请'
-description: '使用 getRecvGroupApplicationList 分页读取当前用户可处理的入群申请。'
+description: '分页获取当前用户作为群主或管理员收到的入群申请列表。'
 sourcePath: '/sdk/android/group/group-applications/get-group-application-list-as-recipient'
 ---
 
-传入 `GetGroupApplicationListAsRecipientReq` 设置分页和筛选条件。可设置 `offset`、`count`、`groupIDs` 和 `handleResults`。
+分页获取当前用户作为群主或管理员有权审批的入群申请记录。可以通过请求对象设置分页偏移量与拉取条数，并支持指定群组过滤或按处理结果筛选。
 
 ```java
 GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq(0, 20);
+
 OpenIMClient.getInstance().groupManager.getRecvGroupApplicationList(
     new OnBase<List<GroupApplicationInfo>>() {
-        @Override public void onSuccess(List<GroupApplicationInfo> items) { /* items 是当前页申请记录。 */ }
-        @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-    }, request);
+        @Override
+        public void onSuccess(List<GroupApplicationInfo> items) {
+            // items 为当前页申请记录
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理获取失败
+        }
+    },
+    request
+);
 ```
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupApplicationInfo>>` | 是 | 异步请求回调。 |
+| `request` | `GetGroupApplicationListAsRecipientReq` | 是 | 分页与筛选请求对象。包含 `offset`（起始偏移量，从 0 开始）和 `count`（每页拉取数量），可按需设置 `groupIDs` 列表与 `handleResults` 状态数组。 |
+
+## 返回结果
+
+成功回调返回申请信息列表 `List<GroupApplicationInfo>`。单条申请的核心字段包含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `groupID` | 申请加入的目标群组 ID。 |
+| `userID` | 发起申请的用户 ID。 |
+| `nickname` | 申请人的用户昵称。 |
+| `faceURL` | 申请人的头像地址。 |
+| `reqMsg` | 申请人填写的附言说明。 |
+| `handleResult` | 审批处理结果：`0` 未处理，`1` 已同意，`-1` 已拒绝。 |
+| `reqTime` | 发起申请的毫秒级时间戳。 |
+
+客户端应以 `groupID:userID` 为组合键进行申请记录的去重与状态更新。审批相关操作请参阅[接受入群申请](/sdk/android/group/group-applications/accept-group-application)与[拒绝入群申请](/sdk/android/group/group-applications/refuse-group-application)。

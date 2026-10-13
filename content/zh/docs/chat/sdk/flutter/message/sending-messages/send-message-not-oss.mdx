@@ -4,6 +4,18 @@ description: '使用 Flutter SDK 发送已包含远端资源 URL 的消息。'
 sourcePath: '/sdk/flutter/message/sending-messages/send-message-not-oss'
 ---
 
+发送已包含远端资源 URL 的媒体消息（如图片、语音、视频、文件等），直接跳过 SDK 内部的 OSS 上传流程：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `message` | `Message` | 是 | 经由 URL 创建方法生成的待发送消息对象。 |
+| `userID` | `String?` | 单聊必填 | 单聊接收方的用户 ID。发送群聊时留空。 |
+| `groupID` | `String?` | 群聊必填 | 目标群聊的群组 ID。发送单聊时留空。 |
+| `offlinePushInfo` | `OfflinePushInfo?` | 否 | 离线推送配置（标题、内容与透传参数）。 |
+| `isOnlineOnly` | `bool` | 否 | 是否为仅在线消息，默认为 `false`。 |
+
 ```dart
 final sent = await OpenIM.iMManager.messageManager.sendMessageNotOss(
   message: urlMessage,
@@ -12,4 +24,10 @@ final sent = await OpenIM.iMManager.messageManager.sendMessageNotOss(
 );
 ```
 
-该方法只用于 URL 型媒体消息，避免再次进入 SDK 上传流程。单聊与群聊目标互斥；Future 成功与远端 listener 到达是两个阶段。
+单聊与群聊目标参数互斥，单聊只传 `userID`，群聊只传 `groupID`。
+
+## 返回结果
+
+Future 成功返回经服务端确认后的完整消息对象（`Message`）。客户端应依据非空 `clientMsgID` 将其更新至本地消息列表。
+
+该方法适用于由业务自有上传服务处理完毕后的消息投递，SDK 不会再次对媒体资源执行二次上传。若媒体文件仅保存在本地设备且需要 SDK 执行上传，请使用[发送消息](/sdk/flutter/message/sending-messages/send-message)。相关 URL 消息创建请参考[使用 URL 创建图片消息](/sdk/flutter/message/creating-messages/create-image-message-by-url)、[使用 URL 创建音频消息](/sdk/flutter/message/creating-messages/create-sound-message-by-url)、[使用 URL 创建视频消息](/sdk/flutter/message/creating-messages/create-video-message-by-url)及[使用 URL 创建文件消息](/sdk/flutter/message/creating-messages/create-file-message-by-url)。

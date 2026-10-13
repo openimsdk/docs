@@ -10,10 +10,10 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-messages/modify-a-message'
 ---
 
-使用 `modifyMessage()` 修改会话中已有消息的内容。
+修改会话中已有消息的内容。此操作常用于纠正打字错误或补充说明，具体允许修改的消息类型、发送者身份与时间窗口由服务端策略控制。
 
 ```ts
-const updatedMessage = {
+const updatedMessage: MessageItem = {
   ...message,
   textElem: {
     ...message.textElem,
@@ -29,23 +29,23 @@ const modifiedMessage = await OpenIMSDK.modifyMessage({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
 | `conversationID` | `string` | 是 | 消息所属的会话 ID。 |
-| `message` | `MessageItem` | 是 | 修改后的完整消息对象，需保留原消息的 `clientMsgID` 及其他必要字段。 |
+| `message` | `MessageItem` | 是 | 修改后的完整消息对象，必须保留原消息的 `clientMsgID` 及其他必要标识字段。 |
 
 ## 返回结果
 
-调用后返回服务端确认的 `MessageItem`，可使用返回消息替换列表中相同 `clientMsgID` 的消息。允许修改的消息类型、发送者和时间范围由服务端校验。
+调用成功后返回经服务端确认修改后的 `MessageItem`。客户端可使用返回的消息对象直接替换本地消息列表中具有相同 `clientMsgID` 的条目。若当前用户无权修改或已超出服务端允许的时间窗口，将返回对应错误。
 
 ## 监听消息修改
 
-消息修改时会触发 `OnMessageModified`，回调直接携带修改后的 `MessageItem`。
+当会话中的消息被修改时，各端会收到 `OnMessageModified` 事件通知。回调直接携带修改后的完整 `MessageItem`，客户端应以 `clientMsgID` 为合并标识更新对应消息的展示内容。
 
 ```ts
-function handleMessageModified(message) {
-  // ...
-}
+const handleMessageModified = (message: MessageItem) => {
+  // 根据 message.clientMsgID 找到本地消息列表中对应条目并更新展示
+};
 
 // 设置监听
 OpenIMSDK.on(OpenIMEvent.OnMessageModified, handleMessageModified);
@@ -54,4 +54,4 @@ OpenIMSDK.on(OpenIMEvent.OnMessageModified, handleMessageModified);
 OpenIMSDK.off(OpenIMEvent.OnMessageModified, handleMessageModified);
 ```
 
-组件销毁、退出登录或切换账号时，取消监听。
+组件销毁、退出登录或切换账号时，取消该监听。

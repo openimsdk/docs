@@ -4,15 +4,25 @@ description: '使用 iOS SDK 获取并持续维护账号总未读数。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/get-total-unread-count'
 ---
 
-该查询返回当前账号所有会话在调用时的总未读数，不要把当前分页中的 `unreadCount` 简单相加。
+获取当前登录账号所有会话的未读消息总数。该查询避免了在客户端遍历会话分页列表手动累加未读数：
 
 ```objc
 [[OIMManager manager] getTotalUnreadMsgCountWithOnSuccess:^(NSInteger count) {
     [badgeStore setTotalUnread:count];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"getTotalUnreadMsgCount failed: %ld %@", (long)code, message);
+}];
 ```
 
-查询本身不触发 delegate。后续总数变化由本页唯一处理：
+## 返回结果
+
+成功回调 `onSuccess` 返回当前账号的所有未读消息总数 `NSInteger`。
+
+该查询接口仅获取当前时刻的未读数快照，不触发任何 delegate 回调。
+
+## 监听未读数变更
+
+当收到新消息或执行会话已读标记导致未读总数变化时，SDK 会通过 `onTotalUnreadMessageCountChanged:` 回调通知最新未读总数：
 
 ```objc
 @interface TotalUnreadSync : NSObject <OIMConversationListener>
@@ -20,13 +30,16 @@ sourcePath: '/sdk/ios/conversation/managing-conversations/get-total-unread-count
 
 @implementation TotalUnreadSync
 - (void)onTotalUnreadMessageCountChanged:(NSInteger)count {
+    // 实时更新全局未读数与应用角标
     [badgeStore setTotalUnread:count];
 }
 @end
 
-[[OIMManager callbacker] addConversationListener:totalUnreadSync];
-// 账号作用域结束时：
-[[OIMManager callbacker] removeConversationListener:totalUnreadSync];
+TotalUnreadSync *sync = [TotalUnreadSync new];
+[[OIMManager callbacker] addConversationListener:sync];
+
+// 账号注销或控制器销毁时：
+[[OIMManager callbacker] removeConversationListener:sync];
 ```
 
-需要把该数值同步给 SDK 的推送角标状态时，参见[设置应用角标数量](/sdk/ios/message/set-app-badge)。
+需要把该未读数同步到系统的应用桌面角标时，请参见[设置应用角标数量](/sdk/ios/message/set-app-badge)。

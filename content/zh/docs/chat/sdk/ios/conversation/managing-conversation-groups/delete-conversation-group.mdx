@@ -1,19 +1,37 @@
 ---
 title: '删除会话分组'
-description: '使用 Open_im_sdkDeleteConversationGroup 删除会话分组。'
+description: '使用 iOS SDK 删除会话分组。'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/delete-conversation-group'
 ---
 
-使用 `Open_im_sdkDeleteConversationGroup` 删除指定会话分组及其会话关联。该操作不会删除分组中的会话或消息。
+删除指定的会话分组及其分组成员关联。该操作仅移除分组维度，不会删除分组内的任何会话或历史消息：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationGroupID` | `NSString *` | 待删除的目标会话分组 ID。 |
 
 ```objc
-NSString *groupIDToDelete = conversationGroupID;
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        [self removeConversationGroupByID:@"group_work_101"];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"DeleteConversationGroup failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkDeleteConversationGroup(callback, @"group_work_101");
 ```
 
-将业务 callback 与 `groupIDToDelete` 交给 `Open_im_sdkDeleteConversationGroup`。这里的参数表示 `conversationGroupID`，不是 OpenIM 聊天群组 ID。
+状态以 `conversationGroupID` 为合并标识。
 
 ## 返回结果
 
-成功 callback 表示删除请求已完成，不应依赖通用占位数据。可以先按 `conversationGroupID` 移除本地分组，再通过 `onConversationGroupDeleted:` 更新状态，或重新查询确认当前结果。
+成功回调 `onSuccess` 表示会话分组已被成功删除。
 
-完整 listener 见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+客户端应以 `conversationGroupID` 为合并标识在本地移除对应会话分组。其他登录端会通过 `onConversationGroupDeleted:` 事件同步删除通知，事件监听与生命周期请参见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+

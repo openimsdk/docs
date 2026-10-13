@@ -4,11 +4,28 @@ description: '使用 iOS SDK 同意好友申请。'
 sourcePath: '/sdk/ios/user/friend-applications/accept-friend-application'
 ---
 
+接受指定用户发起的好友申请，双方建立双向好友关系：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `NSString *` | 发起好友申请的用户 ID。 |
+| `handleMsg` | `NSString *` | 处理结果附言，如“已通过”；无需附言时传空字符串。 |
+
 ```objc
 [[OIMManager manager] acceptFriendApplication:applicantUserID
                                      handleMsg:@"已通过"
-                                     onSuccess:nil
-                                     onFailure:nil];
+                                     onSuccess:^(NSString *data) {
+    [applicationStore markAcceptedForUserID:applicantUserID];
+}
+                                     onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"acceptFriendApplication failed: %ld %@", (long)code, message);
+}];
 ```
 
-第一个参数是申请方用户 ID，`handleMsg` 是处理附言。成功 callback 表示同意请求已完成；申请状态和新好友关系可能随后通过不同 delegate 到达，分别按申请键和 `userID` 合并。
+状态以 `userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已完成同意好友申请的处理。此后，申请记录的更新将通过好友申请监听（参见[获取收到的好友申请](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)）下发，新增的好友关系则通过好友监听（参见[分页获取好友列表](/sdk/ios/user/friends/get-friend-list-page)）通知各端。

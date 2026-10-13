@@ -4,13 +4,41 @@ description: '使用 iOS SDK 删除指定用户在群聊中的全部消息。'
 sourcePath: '/sdk/ios/message/managing-messages/delete-user-messages'
 ---
 
+在群聊管理或违规内容治理场景中，群主或管理员可调用该接口批量清理指定成员在群会话内发送的所有历史消息。
+
 ```objc
 [[OIMManager manager] deleteUserAllMessagesInConversation:conversationID
-    userID:targetUserID
-    onSuccess:nil
-    onFailure:nil];
+                                                   userID:targetUserID
+                                                onSuccess:^(NSString * _Nullable data) {
+    // 成功发起群内用户消息清理
+}
+                                                onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理清理失败（如权限不足）
+}];
 ```
 
-该 selector 只用于群聊，可删除指定用户在目标群会话中的全部消息。这是群组管理或内容治理操作，操作者权限由服务端校验。不要根据成功 callback 猜测具体消息 ID。
+## 参数说明
 
-`onDeleteUserAllMsgsInConv:` 是本页归属事件，回调只提供 `conversationID` 和 `userID`；按两者清除缓存并重新查询历史。listener 生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+- `conversationID`：目标群聊会话 ID。
+- `userID`：待删除消息的目标群成员用户 ID。
+- `onSuccess`：删除成功回调。
+- `onFailure`：删除失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 监听删除指定用户全部消息事件
+
+群内某个用户的所有消息被清理后，SDK 通过 `OIMAdvancedMsgListener` 协议的对应方法通知会话成员：
+
+```objc
+- (void)onDeleteUserAllMsgsInConv:(NSString *)conversationID userID:(NSString *)userID {
+    if (conversationID.length == 0 || userID.length == 0) {
+        return;
+    }
+    // 移除指定会话中该用户发送的所有已缓存消息，必要时重新拉取历史校准
+    [self removeMessagesByConversationID:conversationID senderUserID:userID];
+}
+```
+
+## 客户端状态合并与注意事项
+
+- 客户端状态合并标识为 `conversationID` 与发送者 `userID`。由于回调中不包含单条消息的 `clientMsgID`，本地应按发送者身份过滤并移除对应会话中的全部消息气泡，或在当前列表清空后重新查询历史记录校准列表状态。
+- 本操作属于群管理权限接口，操作者是否具备执行权限由服务端统一校验。完整的消息监听注册见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。

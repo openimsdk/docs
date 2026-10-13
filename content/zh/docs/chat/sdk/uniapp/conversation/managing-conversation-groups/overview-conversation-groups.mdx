@@ -10,11 +10,11 @@ sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conv
 
 创建分组与查询分组使用不同的类型和常量：
 
-| 创建常量 | 查询常量 | 数值 | 用途 |
-| --- | --- | --- | --- |
-| `OpenIMConversationGroupTypeNormal` | `OpenIMConversationGroupQueryTypeNormal` | `0` | 普通自定义分组，可由用户创建和维护。 |
-| `OpenIMConversationGroupTypeFilter` | `OpenIMConversationGroupQueryTypeFilter` | `1` | 按 SDK 或服务端规则维护的筛选分组。 |
-| — | `OpenIMConversationGroupQueryTypeAll` | `2` | 仅用于查询全部类型，不能作为创建分组的类型。 |
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OpenIMConversationGroupTypeNormal` | `0` | 普通自定义分组，可由用户创建和维护（查询时对应 `OpenIMConversationGroupQueryTypeNormal`）。 |
+| `OpenIMConversationGroupTypeFilter` | `1` | 按 SDK 或服务端规则维护的筛选分组（查询时对应 `OpenIMConversationGroupQueryTypeFilter`）。 |
+| `OpenIMConversationGroupQueryTypeAll` | `2` | 仅用于查询全部类型，不能作为创建分组的类型。 |
 
 创建分组时 `conversationGroupType` 的类型为 `0 | 1`；查询分组时可以传 `0 | 1 | 2`。筛选分组的生成规则由当前 OpenIMServer 部署决定，不要只根据名称在客户端伪造系统分组。
 
@@ -48,7 +48,7 @@ sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conv
 
 ## 监听分组变化
 
-UTS 插件的五个会话分组事件都把载荷声明为 `string`，没有定义字符串内部结构。收到事件后，将其作为“分组数据可能变化”的刷新信号并重新查询分组。
+五个会话分组事件的回调参数均为 `string` 刷新信号。收到事件后，客户端应将其作为分组数据变更提示，通过查询接口重新拉取最新数据，并以 `conversationGroupID` 为合并标识更新分组状态。
 
 ```uts
 import {
@@ -89,4 +89,4 @@ function removeConversationGroupListeners() {
 }
 ```
 
-`reloadConversationGroups()` 应做防抖或合并并发请求，避免短时间内多个事件触发重复查询。退出登录、切换账号或销毁会话分组状态层时调用 `removeConversationGroupListeners()`。
+重新拉取分组数据时应做防抖或合并并发请求，避免短时间内多个事件触发重复查询。退出登录、切换账号或销毁会话分组状态层时应调用清理函数取消事件监听。

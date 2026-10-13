@@ -1,24 +1,52 @@
 ---
 title: '修改消息'
-description: '修改支持编辑的消息内容，并处理其他客户端收到的消息修改事件。'
+description: '修改已发送消息的内容，并在各端同步更新后的消息对象。'
 sourcePath: '/sdk/android/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessage` 用于修改会话中已经存在的消息。通常应以原消息为基础修改支持编辑的内容，并保留其他字段。
+在线编辑并更新已发送消息的正文内容。通常以原消息对象为基础修改支持编辑的字段（如文本内容），并保留原始的标识字段后重新提交。
 
 ```java
-messageManager.modifyMessage(callback, modifyRequest);
+// 复制原消息并修改正文字段
+Message modifiedMessage = originalMessage;
+modifiedMessage.getTextElem().setContent("这是修改后的最新内容");
+
+OpenIMClient.getInstance().messageManager.modifyMessage(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 消息修改成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理修改失败
+        }
+    },
+    modifiedMessage
+);
 ```
 
-成功回调表示修改请求已经完成。
+## 参数说明
 
-消息修改后，其他客户端通过 `OnAdvanceMsgListener.onMessageModified` 接收修改后的完整 `Message`：
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `message` | `Message` | 是 | 包含修改后正文的消息对象，必须保留原始的 `clientMsgID`、`serverMsgID` 及会话关联字段。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+## 监听消息修改事件
+
+消息修改成功后，会话中的其他在线端将通过 `OnAdvanceMsgListener.onMessageModified` 接收包含最新正文的完整 `Message` 对象：
 
 ```java
 @Override
 public void onMessageModified(Message message) {
-    // message 是修改后的消息。
+    // message 为修改后的最新消息，按 message.getClientMsgID() 刷新列表内容
 }
 ```
 
-`MessageManager` 只能设置一个 `OnAdvanceMsgListener`；如果应用还需要处理其他消息事件，请在同一个 listener 中实现相应回调。设置方法见[事件概览](/sdk/android/events/overview-events)。
+客户端在收到修改事件后，应以 `clientMsgID` 为标识更新当前消息列表中对应项的内容，并显示“已编辑”状态标识。

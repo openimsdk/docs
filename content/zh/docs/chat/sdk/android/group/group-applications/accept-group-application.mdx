@@ -1,16 +1,49 @@
 ---
 title: '接受入群申请'
-description: '使用 Android SDK 同意指定用户的入群申请。'
+description: '同意指定用户的入群申请，将其正式加入群组。'
 sourcePath: '/sdk/android/group/group-applications/accept-group-application'
 ---
 
-调用时同时传入申请的 `groupID`、申请人 `userID` 和处理说明。当前用户需要具有审批权限。
+群主或管理员同意指定用户的入群申请。调用时需提供申请的目标群组 ID、申请人用户 ID 以及处理附言。
 
 ```java
-OpenIMClient.getInstance().groupManager.acceptGroupApplication(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, applicantUserID, "欢迎加入");
+String groupID = "group_123";
+String applicantUserID = "user_applicant";
+String handleMsg = "欢迎加入技术交流群";
+
+OpenIMClient.getInstance().groupManager.acceptGroupApplication(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 同意入群申请成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理审批失败
+        }
+    },
+    groupID,
+    applicantUserID,
+    handleMsg
+);
 ```
 
-成功回调表示审批请求已完成，不表示申请和成员事件都已到达。`onGroupApplicationAccepted` 返回更新后的 `GroupApplicationInfo`，`onGroupMemberAdded` 返回新增的 `GroupMembersInfo`；分别按 `groupID:userID` 更新申请与成员状态。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 申请加入的目标群组全局唯一 ID。 |
+| `applicantUserID` | `String` | 是 | 发起入群申请的目标用户 ID。 |
+| `handleMsg` | `String` | 否 | 审批处理附言说明，可传空字符串。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+审批成功代表服务端已处理该加群操作。本地及相关客户端随后将触发以下事件进行数据同步：
+- `onGroupApplicationAccepted`：返回更新后的 `GroupApplicationInfo`，客户端应以 `groupID:userID` 为标识更新申请记录的处理状态。
+- `onGroupMemberAdded`：返回新增的 `GroupMembersInfo`，客户端应以 `groupID:userID` 为标识增量添加群成员。
+
+事件监听的完整注册与处理请参阅[群组概览](/sdk/android/group/overview-group)。

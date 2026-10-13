@@ -1,10 +1,25 @@
 ---
 title: '发起群聊通话'
-description: '使用 Flutter SDK 发起群聊音视频通话。'
+description: '邀请指定群成员加入群聊音视频通话。'
 sourcePath: '/sdk/flutter/calling/managing-calls/start-group-call'
 ---
 
-群聊只邀请 `inviteeUserIDList` 明确列出的成员，不会因为填写 `groupID` 自动邀请全群：
+群聊通话只面向 `inviteeUserIDList` 中明确指定的群成员发起邀请，不会因为指定了 `groupID` 而自动邀请全群成员：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `info` | `SignalingInfo` | 是 | 群通话信令发起对象，包含操作者 `userID` 与完整的 `invitation` 信息。 |
+
+`invitation` 核心字段说明：
+- `inviterUserID`：发起人用户 ID。
+- `inviteeUserIDList`：被邀请的群成员用户 ID 列表，需排除发起人自己。
+- `groupID`：目标群组 ID，不能为空。
+- `roomID`：通话房间 ID。若业务层自行生成，参与各端必须保持一致。
+- `timeout`：邀请超时时间，单位为秒。
+- `mediaType`：媒体类型，如 `'video'` 或 `'audio'`。
+- `sessionType`：会话类型，群聊传入 `ConversationType.group`。
 
 ```dart
 final info = SignalingInfo(
@@ -25,4 +40,15 @@ final credentials = await OpenIM.iMManager.signalingManager
     .signalingInviteInGroup(info: info);
 ```
 
-`groupID` 不能为空。若业务自行生成 `roomID`，所有参与端必须使用同一个值。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请流程。
+## 返回结果
+
+Future 成功返回 `SignalingCertificate` 对象，包含发起方进入房间所需的凭据信息。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `token` | `String?` | 接入媒体引擎所需的房间鉴权凭证。 |
+| `roomID` | `String?` | 目标通话房间 ID。 |
+| `liveURL` | `String?` | 媒体流服务器地址。 |
+| `busyLineUserIDList` | `List<String>?` | 当前正处于忙线状态的成员 ID 列表；部分成员忙线不影响其他成员的邀请流程。 |
+
+调用成功表示群呼叫邀请已由服务端发送，不代表受邀成员已接听。客户端按 `roomID` 建立本地通话状态，各群成员的接听、拒绝和超时状态通过事件异步更新，完整事件监听请参考[处理通话事件](/sdk/flutter/calling/managing-calls/handle-call-events)。

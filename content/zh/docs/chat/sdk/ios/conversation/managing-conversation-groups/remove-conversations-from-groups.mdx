@@ -1,25 +1,48 @@
 ---
 title: '从分组移除会话'
-description: '使用 Open_im_sdkRemoveConversationsFromGroups 移除会话分组关联。'
+description: '使用 iOS SDK 移除会话分组关联。'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/remove-conversations-from-groups'
 ---
 
-使用 `Open_im_sdkRemoveConversationsFromGroups` 从一个或多个会话分组移除会话。该操作只删除关联，不会删除会话或清空消息。
+从一个或多个会话分组中移除指定的会话。该操作仅解除分组关联，不会删除会话或清空消息记录：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationIDs` | `NSArray<NSString *> *` | 待移除的会话 ID 列表。 |
+| `conversationGroupIDs` | `NSArray<NSString *> *` | 目标会话分组 ID 列表。 |
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSData *conversationData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"c2c_user1002"] options:0 error:nil];
 NSString *conversationIDsJSON =
     [[NSString alloc] initWithData:conversationData encoding:NSUTF8StringEncoding];
 
 NSData *groupData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationGroupID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"group_work_101"] options:0 error:nil];
 NSString *groupIDsJSON =
     [[NSString alloc] initWithData:groupData encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        NSLog(@"RemoveConversationsFromGroups success");
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"RemoveConversationsFromGroups failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkRemoveConversationsFromGroups(callback, conversationIDsJSON, groupIDsJSON);
 ```
 
-将业务 callback、`conversationIDsJSON` 和 `groupIDsJSON` 交给 `Open_im_sdkRemoveConversationsFromGroups`。两个数组都必填。
+状态以 `conversationGroupID` 与 `conversationID` 为合并标识。
 
 ## 返回结果
 
-成功 callback 表示关联移除请求已完成，不返回更新后的分组对象。之后的关联移除变化由 `onConversationGroupMemberDeleted:` 提供，完整处理见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+成功回调 `onSuccess` 表示关联移除请求已完成。
+
+操作生效后，各端会通过 `onConversationGroupMemberDeleted:` 事件接收移除通知，客户端应结合 `conversationGroupID` 与 `conversationID` 从对应分组中移除会话记录。事件监听参见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+

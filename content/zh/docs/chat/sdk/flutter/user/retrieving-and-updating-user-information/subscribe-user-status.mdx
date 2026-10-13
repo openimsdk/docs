@@ -1,15 +1,45 @@
 ---
 title: '订阅用户在线状态'
-description: '使用 Flutter SDK 订阅可见用户的在线状态。'
+description: '使用 Flutter SDK 订阅指定用户的在线状态。'
 sourcePath: '/sdk/flutter/user/retrieving-and-updating-user-information/subscribe-user-status'
 ---
 
+批量订阅指定目标用户的实时在线状态，并拉取当前状态快照：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `userIDs` | `List<String>` | 是 | 待订阅在线状态的目标用户 ID 列表。建议过滤空值与重复项，只订阅当前界面可见范围内的用户。 |
+
 ```dart
-final states =
-    await OpenIM.iMManager.userManager.subscribeUsersStatus(targetUserIDs);
-mergePresence(states);
+final states = await OpenIM.iMManager.userManager.subscribeUsersStatus(
+  ['user_a', 'user_b'],
+);
 ```
 
-去除空值和重复 ID，只订阅当前可见用户。Future 返回这些用户当时的 `List<UserStatusInfo>`，按 `userID` 合并。
+## 返回结果
 
-本页唯一归属 `onUserStatusChanged`，应组合进唯一 `OnUserListener`；退出或切换账号时由应用分发器隔离旧账号回调。
+Future 成功返回目标用户当前时刻的在线状态快照列表（`List<UserStatusInfo>`）。
+
+每个 `UserStatusInfo` 包含以下核心字段：
+- `userID`：用户唯一标识，状态合并与更新的主键。
+- `status`：在线状态数值。
+- `detailPlatformStatus`：各端（iOS、Android、Web、Desktop 等）平台在线详情列表。
+
+客户端应以 `userID` 为合并标识，将快照合并到本地在线状态缓存中。
+
+## 监听在线状态变更
+
+用户在线状态变更事件在此集中监听与处理。当已订阅用户的在线状态发生变化（上线、下线或平台状态改变）时，SDK 会通过 `onUserStatusChanged` 事件推送最新状态：
+
+```dart
+void handleUserStatusChanged(UserStatusInfo info) {
+  mergePresence(info);
+}
+```
+
+Flutter SDK 在 `UserManager` 中维护单个 `OnUserListener` 实例。请把上述处理函数统一配置在[事件概览](/sdk/flutter/events/overview-events)的应用级集中入口中。
+
+当视图销毁或相关用户移出可见范围时，应及时调用[取消用户状态订阅](/sdk/flutter/user/retrieving-and-updating-user-information/unsubscribe-user-status)释放订阅配额。
+

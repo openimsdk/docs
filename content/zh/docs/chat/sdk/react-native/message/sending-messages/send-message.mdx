@@ -10,9 +10,9 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/sending-messages/send-message'
 ---
 
-调用 `sendMessage()` 发送由消息创建 API 返回的 `MessageItem`。单聊填写 `recvID`，群聊填写 `groupID`。
+将由消息创建接口生成的 `MessageItem` 发送至目标单聊会话或群聊会话中。单聊需传入接收方用户 ID `recvID`，群聊需传入目标群组 ID `groupID`。
 
-使用本地路径创建的图片、音频、视频和文件消息时，SDK 会在发送过程中自动上传资源。对于已通过 URL 创建、已有远端资源的媒体消息，请使用[发送已上传的媒体消息](/sdk/react-native/message/sending-messages/send-message-not-oss)。
+如果发送的是通过本地文件路径创建的图片、音频、视频或文件等媒体消息，SDK 会在发送过程中自动执行资源上传；若媒体资源已提前上传至自己的服务器或对象存储，并已通过 URL 创建消息，请使用[发送已上传的媒体消息](/sdk/react-native/message/sending-messages/send-message-not-oss)。
 
 ```ts
 const sentMessage = await OpenIMSDK.sendMessage({
@@ -24,22 +24,39 @@ const sentMessage = await OpenIMSDK.sendMessage({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
-| `recvID` | `string` | 条件必填 | 单聊时传入接收方用户 ID；群聊时传空字符串。 |
-| `groupID` | `string` | 条件必填 | 群聊时传入目标群组 ID；单聊时传空字符串。 |
-| `message` | `MessageItem` | 是 | 待发送消息。 |
-| `offlinePushInfo` | `OfflinePush` | 否 | 离线推送配置。 |
-| `isOnlineOnly` | `boolean` | 否 | 是否只向在线客户端投递。 |
+| `recvID` | `string` | 条件必填 | 单聊接收方的用户 ID；群聊时传入空字符串 `""`。 |
+| `groupID` | `string` | 条件必填 | 目标群组 ID；单聊时传入空字符串 `""`。 |
+| `message` | `MessageItem` | 是 | 待发送的消息对象，由消息创建接口生成。 |
+| `offlinePushInfo` | `OfflinePush` | 否 | 自定义离线推送标题、内容与透传参数配置。 |
+| `isOnlineOnly` | `boolean` | 否 | 是否仅向当前在线的客户端投递；为 `true` 时不计入服务端离线历史存储。 |
 
-调用后返回发送完成的 `MessageItem`。
+## 返回结果
 
-发送过程有进度时会触发 `SendMessageProgress`，回调参数包含 `progress` 和 `message`：
+调用成功后返回发送成功的 `MessageItem`。返回对象中会包含由服务端确定的 `serverMsgID`、`sendTime` 以及更新后的消息状态 `status`。
+
+### 状态变更与三阶段划分
+
+1. **Promise 成功**：仅代表消息已经过 SDK 本地数据库入库，并成功投递至 OpenIM 服务端接收队列，不代表对端用户已经阅读或已接收。
+2. **事件到达**：在发送富媒体资源过程中，SDK 会持续触发 `SendMessageProgress` 上报上传进度；消息送达或被对端阅读时，会分别触发新消息与已读回执事件。
+3. **重新查询校准**：如果遇到弱网断连或超时未知状态，可在网络恢复后通过[加载历史消息](/sdk/react-native/message/retrieving-messages/load-older-messages)重新校准该会话的消息发送状态。
+
+客户端在本地列表维护消息状态时，必须使用 `clientMsgID` 作为唯一合并标识，将本地处于“发送中”的消息节点状态无缝更新为“发送成功”。
+
+## 监听媒体消息发送进度
+
+发送大文件、高清视频或图片等需要上传的文件时，可监听 `SendMessageProgress` 事件获取实时上传进度：
 
 ```ts
-function handleSendMessageProgress(info) {
-  // ...
+interface SendMessageProgressPayload {
+  clientMsgID: string;
+  progress: number;
 }
+
+const handleSendMessageProgress = ({ clientMsgID, progress }: SendMessageProgressPayload) => {
+  // 根据 clientMsgID 匹配本地待发送消息，并更新界面上的上传百分比 progress
+};
 
 // 设置监听
 OpenIMSDK.on(OpenIMEvent.SendMessageProgress, handleSendMessageProgress);
@@ -48,4 +65,4 @@ OpenIMSDK.on(OpenIMEvent.SendMessageProgress, handleSendMessageProgress);
 OpenIMSDK.off(OpenIMEvent.SendMessageProgress, handleSendMessageProgress);
 ```
 
-组件销毁、退出登录或切换账号时，取消监听。
+组件销毁、退出登录或切换账号时，取消该监听。

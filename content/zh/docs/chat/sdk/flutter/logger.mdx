@@ -4,11 +4,21 @@ description: '配置 OpenIM Flutter SDK 日志，写入应用诊断信息并上�
 sourcePath: '/sdk/flutter/logger'
 ---
 
-OpenIM Flutter SDK 日志用于定位初始化、连接和业务 API 调用问题。初始化参数可以控制日志级别、标准输出和日志文件路径。
+OpenIM Flutter SDK 日志系统用于排查 SDK 初始化、长连接建立和业务调用过程中的异常问题。可以在初始化时配置日志级别、控制台输出和日志文件路径，支持在业务代码中写入诊断日志，并在需要时上传日志文件至服务端。
 
 ## 初始化日志配置
 
-Flutter SDK 在 `initSDK()` 时配置日志，而不是在 `login()` 时配置。
+Flutter SDK 的日志策略在 SDK 初始化阶段配置，而非在登录阶段配置。
+
+### 参数说明
+
+在初始化方法中配置以下日志参数：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `logLevel` | `int` | 否 | SDK 日志输出级别数字，数值越小日志越详细。默认值为 `6`。 |
+| `isLogStandardOutput` | `bool` | 否 | 是否将日志同步输出至系统控制台或调试终端。 |
+| `logFilePath` | `String?` | 否 | 自定义本地日志存储文件路径，必须位于当前平台的应用可写沙盒目录。 |
 
 ```dart
 import 'dart:io';
@@ -29,17 +39,22 @@ await OpenIM.iMManager.initSDK(
 );
 ```
 
-示例面向 Flutter 的 Android 与 iOS 运行环境：Android 使用 `IMPlatform.android`，iOS 使用 `IMPlatform.ios`。不要把 Android 平台值硬编码到 iOS 构建中。
+示例面向 Flutter 的 Android 与 iOS 运行环境：Android 平台需传入 `IMPlatform.android`，iOS 平台需传入 `IMPlatform.ios`。
 
-| 参数 | 说明 |
-| --- | --- |
-| `logLevel` | SDK 日志级别数字，默认值为 `6`。 |
-| `isLogStandardOutput` | 是否输出到平台标准日志。 |
-| `logFilePath` | 可选日志文件路径，需要位于应用可写目录。 |
+## 写入自定义诊断日志
 
-日志级别越详细，产生的日志内容越多。日志目录受平台文件权限与生命周期约束。
+可以在业务层将关键链路的异常或调试信息写入 SDK 的本地日志系统中，以便与底层事件联动排查：
 
-## 写入与上传日志
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `logLevel` | `int` | 否 | 当前日志的级别数字。 |
+| `file` | `String` | 是 | 产生该日志的文件名或模块名。 |
+| `line` | `int` | 是 | 触发日志输出的代码行号。 |
+| `msgs` | `String` | 是 | 日志主体描述文本。 |
+| `err` | `String?` | 否 | 捕获到的错误对象或异常堆栈文本。 |
+| `keyAndValues` | `List<dynamic>?` | 否 | 结构化参数列表，按键值对交替排列（如 `['key1', 'val1']`）。 |
 
 ```dart
 await OpenIM.iMManager.logs(
@@ -52,7 +67,19 @@ await OpenIM.iMManager.logs(
 );
 ```
 
-可以监听上传进度并调用 `uploadLogs()`：
+### 返回结果
+
+Future 成功返回 `void`，表示该条日志已成功写入本地日志缓冲区。
+
+## 监听与上传日志
+
+当用户在客户端触发“问题反馈”或需要远程排查故障时，可以调用上传日志接口将本地日志文件上传至服务器：
+
+### 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `ex` | `String?` | 否 | 上传原因或业务诊断备注信息。 |
 
 ```dart
 OpenIM.iMManager.setUploadLogsListener(
@@ -66,6 +93,9 @@ OpenIM.iMManager.setUploadLogsListener(
 await OpenIM.iMManager.uploadLogs(ex: 'user initiated diagnostics');
 ```
 
-`setUploadLogsListener()` 保存的是 manager 级 singleton listener，后一次设置会覆盖前一次。SDK 没有 remove 或 unset API，因此应在应用统一的 SDK 绑定层设置一次，并由该层把进度分发给当前界面；切换账号时可清空应用层订阅和上一账号的上传状态。
+### 返回结果
 
-`uploadLogs()` 的 Future 成功表示本次日志上传请求已完成。
+Future 成功返回 `void`，表示本次日志上传流程已顺利启动并完成传输。
+
+SDK 内部仅维护单个 `OnUploadLogsListener` 实例，后设置的监听器会覆盖先前的实例。请在应用统一的诊断服务层注册一次，并由该层向 UI 视图分发上传进度；切换账号时应及时清空上传任务状态。
+

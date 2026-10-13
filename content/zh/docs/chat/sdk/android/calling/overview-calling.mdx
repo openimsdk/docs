@@ -10,11 +10,11 @@ Android SDK 的 `SignalingManager` 提供发起邀请、接受、拒绝、取消
 
 ## 通话流程
 
-1. 调用 `signalingInvite()` 发起单聊通话，或调用 `signalingInviteInGroup()` 发起群聊通话。
-2. 被邀请方从 `onReceiveNewInvitation` 获取 `SignalingInfo`，选择接受或拒绝。
-3. 接受方调用 `signalingAccept()`，双方使用返回的房间凭据接入媒体引擎。
-4. 通话过程中根据参与者、媒体流和自定义信令回调更新本地状态。
-5. 发起方可以取消尚未接通的邀请；任一通话参与者都可以挂断已经建立的通话。
+1. 主叫方调用[发起单聊通话](/sdk/android/calling/managing-calls/start-single-call)或[发起群聊通话](/sdk/android/calling/managing-calls/start-group-call)建立呼叫。
+2. 被叫方在通话事件监听中收到新邀请通知，选择接受或拒绝通话。
+3. 接听方调用[接受通话](/sdk/android/calling/managing-calls/accept-call)，双方使用服务端返回的房间凭据接入 LiveKit 或 WebRTC 等实时音视频媒体引擎。
+4. 通话过程中根据参与者状态、媒体流发布与自定义信令更新界面显示。
+5. 通话未接通前主叫可[取消通话邀请](/sdk/android/calling/managing-calls/cancel-call)；通话建立后任意参与者均可[挂断通话](/sdk/android/calling/managing-calls/hang-up-call)。
 
 ## 核心数据
 
@@ -29,11 +29,11 @@ Android SDK 的 `SignalingManager` 提供发起邀请、接受、拒绝、取消
 
 ## 状态更新与事件归属
 
-发起、接受、拒绝、取消和挂断等写操作需要分别处理 API 回调与通话 listener。API 成功回调表示当前信令请求已经完成；listener 反映邀请方、被邀请方、其他设备或房间参与者随后收到的状态变化，两者不是同一个完成信号。
+发起、接受、拒绝、取消和挂断等操作需要明确区分异步 API 回调与实时事件通知。API 成功回调表示当前信令请求已被服务端受理；而各参与端的状态变更则通过事件监听器异步推送。
 
-邀请生命周期、参与者进出房间、挂断和媒体流变化的完整 listener 统一见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)；自定义信令见[发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal)。房间、凭据和待处理邀请查询只返回调用当时的数据。
+邀请生命周期、参与者进出房间、挂断和媒体流变化的完整 listener 统一见[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)；自定义信令见[发送自定义信令](/sdk/android/calling/sending-custom-signals/send-a-custom-signal)。
 
-概览页不设置 listener。通话状态以 `roomID` 为主键；参与者状态还需要结合用户 ID。需要恢复或确认当前房间状态时，再调用对应查询 API。
+通话状态以 `roomID` 为全局合并标识；参与者状态则以 `roomID` 配合用户 ID 唯一定位。当需要恢复或确认当前房间状态时，可调用对应查询接口进行校准。
 
 ## 按任务查找页面
 

@@ -4,16 +4,13 @@ description: '使用 iOS SDK 设置申请和邀请入群的验证策略。'
 sourcePath: '/sdk/ios/group/set-group-join-verification'
 ---
 
-```objc
-NSDictionary *changes = @{
-    @"groupID": groupID,
-    @"needVerification": @(OIMGroupVerificationTypeAllNeedVerification)
-};
+设置群组的入群验证策略（通常仅群主和管理员有权限操作）：
 
-[[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
-```
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | 包含 `groupID` 和入群验证类型的字典对象。 |
 
 | 枚举值 | 数值 | 含义 |
 | --- | --- | --- |
@@ -21,4 +18,23 @@ NSDictionary *changes = @{
 | `OIMGroupVerificationTypeAllNeedVerification` | `1` | 申请和普通成员邀请都需要审核；群主或管理员邀请除外。 |
 | `OIMGroupVerificationTypeDirectly` | `2` | 申请或邀请均可直接入群。 |
 
-成功 callback 后，通过 `onGroupInfoChanged:` 更新设置，或重新查询确认最终状态。
+```objc
+NSDictionary *changes = @{
+    @"groupID": groupID,
+    @"needVerification": @(OIMGroupVerificationTypeAllNeedVerification)
+};
+
+[[OIMManager manager] setGroupInfoDictionary:changes
+    onSuccess:^(NSString * _Nullable data) {
+        [self showVerificationTypeUpdated];
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        [self showErrorCode:code message:message];
+    }];
+```
+
+状态以 `groupID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已更新该群的入群验证策略。群内各端随后会通过群资料变更事件收到更新后的 `OIMGroupInfo`，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

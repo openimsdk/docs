@@ -1,10 +1,12 @@
 ---
 title: '设置全局消息接收方式'
-description: '通过 setSelfInfo() 设置当前账号的全局消息接收与通知策略。'
+description: '设置当前账号级别的全局消息接收与免打扰策略。'
 sourcePath: '/sdk/android/user/user-profile/set-global-message-reception'
 ---
 
-使用 `UserInfoReq` 设置 `globalRecvMsgOpt`。
+为当前登录账号配置全局消息接收与免打扰策略，对所有单聊和群聊统一生效。
+
+在用户资料配置对象中设置全局接收选项数值后，调用[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)生效：
 
 ```java
 UserInfoReq request = new UserInfoReq();
@@ -26,12 +28,21 @@ OpenIMClient.getInstance().userInfoManager.setSelfInfo(
 );
 ```
 
-| 数值 | 含义                     |
-| ---- | ------------------------ |
-| `0`  | 正常接收消息并允许通知。 |
-| `1`  | 屏蔽消息。               |
-| `2`  | 接收消息但不提示。       |
+## 参数说明
 
-如果产品只提供“全局免打扰”开关，可以在 `0` 和 `2` 之间切换；`1` 会停止接收消息，应单独展示。单个会话的接收方式由会话 API 管理。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `request` | `UserInfoReq` | 是 | 用户资料配置对象，传入包含全局接收模式数值的请求体。 |
 
-成功 callback 表示设置请求完成。
+### 消息接收模式
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ReceiveMessageOpt.Normal` | `0` | 正常接收消息并触发通知与推送。 |
+| `ReceiveMessageOpt.NotReceive` | `1` | 完全屏蔽消息，不接收新消息。 |
+| `ReceiveMessageOpt.NotNotify` | `2` | 正常接收消息但不触发通知（全局免打扰）。 |
+
+## 返回结果
+
+成功回调表示服务端已记录全局消息接收策略。如果产品仅提供“全局免打扰”开关，建议在 `0` 与 `2` 之间切换；数值 `1` 为彻底拒绝接收消息，应作为独立功能提示用户。单会话的独立接收设置请参考[设置会话消息接收方式](/sdk/android/conversation/managing-conversations/set-message-receive-option)。

@@ -1,22 +1,51 @@
 ---
 title: '设置入群验证方式'
-description: '通过 GroupInfo.needVerification 配置申请和邀请的入群验证规则。'
+description: '配置群组的加群与受邀验证规则。'
 sourcePath: '/sdk/android/group/set-group-join-verification'
 ---
 
-入群验证写入 `GroupInfo.needVerification`，再调用 `setGroupInfo()`。可使用 `GroupVerification` 常量：`APPLY_NEED_VERIFICATION_INVITE_DIRECTLY`、`ALL_NEED_VERIFICATION` 和 `DIRECTLY`。
+配置群组的入群验证规则。群主或管理员可以通过在 `GroupInfo` 中指定 `needVerification` 字段，控制普通用户自主申请入群或成员邀请他人入群时的审批策略。
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
+update.setGroupID("group_123");
 update.setNeedVerification(GroupVerification.ALL_NEED_VERIFICATION);
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 入群验证方式更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理更新失败
+        }
+    }
+);
 ```
 
-该设置影响后续入群请求，不替代对已存在申请的同意或拒绝处理。
+## 验证规则说明
 
-成功回调表示设置请求已完成，不表示其他客户端界面已经更新。`onGroupInfoChanged` 返回更新后的 `GroupInfo`；按 `groupID` 更新入群验证方式。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+`needVerification` 取值可使用 `GroupVerification` 中定义的枚举常量：
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `DIRECTLY` | `0` | 免验证，任何人申请或被邀请均可直接加入群聊。 |
+| `APPLY_NEED_VERIFICATION_INVITE_DIRECTLY` | `1` | 自主申请入群需要管理员审批，被群成员邀请可直接加入。 |
+| `ALL_NEED_VERIFICATION` | `2` | 全体验证，自主申请与被邀请入群均需管理员审批同意。 |
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | 是 | 群资料对象，必须设置目标 `groupID` 以及新的验证规则 `needVerification`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+设置成功代表服务端已更新群组入群策略。此策略仅对后续发起的新加入请求生效，不会自动同意或撤销已存在的历史申请。群内成员随后将收到 `onGroupInfoChanged` 事件通知，客户端应以 `groupID` 为标识合并群资料；完整监听见[群组概览](/sdk/android/group/overview-group)。

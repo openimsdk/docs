@@ -4,13 +4,28 @@ description: '使用 iOS SDK 查询指定成员的当前输入状态。'
 sourcePath: '/sdk/ios/message/composing-messages/get-typing-status'
 ---
 
+调用查询输入状态接口可以主动拉取指定用户在当前会话中是否正处于输入状态，以及其当前活跃的输入终端平台列表。
+
 ```objc
 [[OIMManager manager] getInputstates:conversationID
                               userID:memberUserID
-                           onSuccess:^(NSArray<NSNumber *> *platformIDs) {
-                               [self setTyping:platformIDs.count > 0 userID:memberUserID];
-                           }
-                           onFailure:nil];
+                           onSuccess:^(NSArray<NSNumber *> * _Nullable platformIDs) {
+    // 根据返回的平台数组判断是否正在输入
+    [self setTyping:platformIDs.count > 0 userID:memberUserID];
+}
+                           onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理查询失败
+}];
 ```
 
-成功 callback 返回该用户当前仍在输入的平台 ID 数组，查询本身不触发 delegate。群聊中不要频繁轮询全部成员；只在进入页面、连接恢复或需要补充状态时查询重点成员，之后的输入状态变化由[上报输入状态](/sdk/ios/message/composing-messages/update-typing-status)说明的 delegate 维护。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `userID`：待查询的目标用户 ID。
+- `onSuccess`：查询成功回调，返回当前用户正在输入的平台 ID 列表（`NSArray<NSNumber *>`）。
+- `onFailure`：查询失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调返回的 `platformIDs` 包含该用户当前正在输入的所有终端平台枚举值；数组非空表示该用户处于输入中，数组为空表示未在输入。
+- 查询操作仅建立即时快照，不会触发输入状态变更事件。在群聊场景下，请勿对全体成员频繁轮询；通常仅在进入会话或网络重连时主动拉取重点对端的状态，后续实时变化由[上报输入状态](/sdk/ios/message/composing-messages/update-typing-status)中说明的事件监听持续维护。

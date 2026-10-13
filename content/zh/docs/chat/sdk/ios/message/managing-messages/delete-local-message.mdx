@@ -4,11 +4,28 @@ description: '使用 iOS SDK 仅删除当前设备上的一条消息。'
 sourcePath: '/sdk/ios/message/managing-messages/delete-local-message'
 ---
 
+调用删除本地消息接口仅会从当前设备的本地数据库中移除指定的单条消息，不会向服务端发起删除请求，也不会影响其他设备或对端用户的消息记录。
+
 ```objc
 [[OIMManager manager] deleteMessageFromLocalStorage:conversationID
-    clientMsgID:clientMsgID
-    onSuccess:nil
-    onFailure:nil];
+                                        clientMsgID:clientMsgID
+                                          onSuccess:^(NSString * _Nullable data) {
+    // 当前设备本地删除成功，更新界面
+    [self removeMessageFromUI:clientMsgID];
+}
+                                          onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理删除失败
+}];
 ```
 
-成功只表示当前设备本地消息已删除。服务端仍保留记录，重建数据库后可能再次同步；该操作不通知其他设备或成员，也不是撤回。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `clientMsgID`：待删除消息的客户端消息 ID。
+- `onSuccess`：本地删除成功回调。
+- `onFailure`：删除失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调仅表示当前设备本地已清除该消息。该操作不改变服务端的漫游记录；若后续清除应用缓存或重新同步，该消息仍可能被重新拉取。
+- 客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。该操作属于纯本地操作，不会向其他设备或成员派发事件通知。若需要同步删除服务端存储，见[删除消息](/sdk/ios/message/managing-messages/delete-saved-message)。

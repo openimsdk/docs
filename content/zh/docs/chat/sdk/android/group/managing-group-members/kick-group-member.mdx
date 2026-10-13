@@ -1,16 +1,45 @@
 ---
 title: '移除群成员'
-description: '使用 Android SDK 将指定成员移出群组。'
+description: '将一个或多个成员移出指定群组。'
 sourcePath: '/sdk/android/group/managing-group-members/kick-group-member'
 ---
 
-`kickGroupMember()` 接收成员 ID 列表和移除说明。
+群主或管理员将指定的成员移出群组。被移出的成员将无法继续在群聊中收发消息。
 
 ```java
-OpenIMClient.getInstance().groupManager.kickGroupMember(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, memberUserIDs, "已不再参与该项目");
+String groupID = "group_123";
+List<String> memberUserIDs = Arrays.asList("user_a", "user_b");
+String reason = "违反群组交流规范";
+
+OpenIMClient.getInstance().groupManager.kickGroupMember(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 移出成员成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理移除失败
+        }
+    },
+    groupID,
+    memberUserIDs,
+    reason
+);
 ```
 
-成功回调表示移除请求已完成，不表示所有客户端界面已经更新。`onGroupMemberDeleted` 返回被移除成员的 `GroupMembersInfo`；按 `groupID:userID` 删除成员状态。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `memberUserIDs` | `List<String>` | 是 | 需要移出的群成员用户 ID 列表。 |
+| `reason` | `String` | 否 | 移出原因说明，可传空字符串。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+移除成功代表服务端已更新群成员状态。本地及群内成员端随后将触发 `onGroupMemberDeleted` 事件通知，返回被移除成员的 `GroupMembersInfo`。客户端应以 `groupID:userID` 为标识从群成员列表中删除对应记录；完整监听见[群组概览](/sdk/android/group/overview-group)。

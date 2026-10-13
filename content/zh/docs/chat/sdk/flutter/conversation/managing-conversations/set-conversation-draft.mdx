@@ -1,10 +1,17 @@
 ---
 title: '设置会话草稿'
-description: '使用 OpenIM Flutter SDK 的 setConversationDraft 保存会话草稿。'
+description: '保存或清空当前会话未发送的文字草稿。'
 sourcePath: '/sdk/flutter/conversation/managing-conversations/set-conversation-draft'
 ---
 
-用户离开聊天页、切换会话或输入框内容变化时，可以使用 `setConversationDraft()` 保存当前会话的草稿。输入过程中建议先维护编辑器状态并对保存调用做防抖；离开页面前再立即提交一次最新文本。
+用户离开聊天页、切换会话或输入框内容变化时，可保存当前会话未发送的草稿文本。输入过程中建议先维护本地编辑器状态并对保存操作进行防抖；离开页面前再立即提交最新文本。
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标会话 ID。 |
+| `draftText` | `String` | 是 | 草稿文本内容；清空草稿时传入空字符串 `''`。 |
 
 ```dart
 await OpenIM.iMManager.conversationManager.setConversationDraft(
@@ -22,6 +29,8 @@ await OpenIM.iMManager.conversationManager.setConversationDraft(
 );
 ```
 
-## 调用后的状态变化
+## 返回结果
 
-Future 成功只表示本次保存请求已经完成，不等同于会话变化回调已经到达。SDK 之后可通过 `onConversationChanged` 提供变化后的 `List<ConversationInfo>`，应按 `conversationID` 合并 `draftText` 和 `draftTextTime`；需要确认最终值时再调用会话查询 API 获取当前会话资料。请求完成、事件到达和重新查询是三个独立阶段。完整事件处理见[获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)。退出登录或切换账号时还应清理编辑器内存状态。
+Future 成功表示草稿已保存至本地会话数据。
+
+多端同步或事件到达时通过会话变更事件通知。客户端以 `conversationID` 为合并标识更新对应会话的 `draftText` 和 `draftTextTime`，完整事件监听请参考[获取会话列表](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)。退出登录或切换账号时应同时清理界面编辑器的内存状态。

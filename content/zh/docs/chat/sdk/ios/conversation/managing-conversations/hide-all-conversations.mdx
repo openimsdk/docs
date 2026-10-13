@@ -4,13 +4,23 @@ description: '使用 iOS SDK 隐藏当前账号的全部会话入口。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/hide-all-conversations'
 ---
 
-该方法作用于当前账号的全部会话：
+一次性隐藏当前登录账号在聊天列表中的全部会话入口：
 
 ```objc
-[[OIMManager manager] hideAllConversationsWithOnSuccess:^(NSString *data) {
+[[OIMManager manager] hideAllConversationsWithOnSuccess:^(NSString * _Nullable data) {
     [self clearConversationList];
-}
-                                              onFailure:nil];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"hideAllConversations failed: %ld %@", (long)code, message);
+}];
 ```
 
-成功表示隐藏请求完成，可以据此清理当前账号的会话列表页面状态和分页引用。该操作不删除消息或聊天关系。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，客户端应清空本地当前展示的会话列表内存缓存与分页游标。该操作仅影响当前账号的会话列表入口，不删除任何历史聊天记录，亦不解除单聊或群聊关系；后续任一会话收到新消息时，该会话仍会自动重新出现。
+
+会话监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。若仅需隐藏单条会话，请使用[隐藏会话](/sdk/ios/conversation/managing-conversations/hide-a-conversation)。
+

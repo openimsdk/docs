@@ -24,6 +24,9 @@ const nextConfig = {
   distDir: process.env.NODE_ENV === 'development' ? '.next-local' : '.next',
   poweredByHeader: false,
   reactStrictMode: true,
+  devIndicators: {
+    position: 'bottom-right',
+  },
   allowedDevOrigins: ['127.0.0.1'],
   // `pnpm check` performs strict TypeScript validation. Skipping the duplicate
   // Next.js build-time pass avoids reparsing the dynamic MDX manifest.

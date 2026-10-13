@@ -4,14 +4,32 @@ description: '使用 iOS SDK 插入一条本地单聊消息。'
 sourcePath: '/sdk/ios/message/managing-messages/insert-local-single-message'
 ---
 
+调用插入本地单聊消息接口可直接向本地单聊会话中写入一条自定义的本地消息记录（例如本地提示、安全指引或离线占位消息）。该消息仅存入当前设备本地数据库，不会发送至服务端，亦不会向对端投递。
+
 ```objc
 [[OIMManager manager] insertSingleMessageToLocalStorage:message
-    recvID:targetUserID
-    sendID:currentUserID
-    onSuccess:^(OIMMessageInfo *stored) {
-        if (stored != nil) [self upsertMessage:stored];
+                                                 recvID:targetUserID
+                                                 sendID:currentUserID
+                                              onSuccess:^(OIMMessageInfo * _Nullable stored) {
+    // 成功插入本地，更新当前会话列表
+    if (stored != nil) {
+        [self upsertMessage:stored];
     }
-    onFailure:nil];
+}
+                                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理插入失败
+}];
 ```
 
-成功结果允许为 `nil`，仅在非空时按 `clientMsgID` 合并。该方法只修改当前设备，不触发新消息 delegate，也不通知其他用户或设备。
+## 参数说明
+
+- `message`：待插入本地的消息对象（`OIMMessageInfo`）。
+- `recvID`：单聊接收方用户 ID。
+- `sendID`：单聊发送方用户 ID。
+- `onSuccess`：插入成功回调，返回本地持久化后的完整消息对象 `stored`。
+- `onFailure`：插入失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调返回的 `stored` 对象若非空，客户端应按 `clientMsgID`（必要时同时限定 `conversationID`）合并至本地会话消息源中。
+- 插入本地消息为纯本地数据库操作，不会向远端发送任何网络请求，亦不会触发新消息接收事件。插入群聊本地消息见[插入本地群聊消息](/sdk/ios/message/managing-messages/insert-local-group-message)。

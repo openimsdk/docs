@@ -1,21 +1,42 @@
 ---
 title: '修改群内昵称'
-description: '使用 SetGroupMemberInfo.nickname 更新成员在指定群中的显示昵称。'
+description: '修改指定成员在群聊中展示的群昵称。'
 sourcePath: '/sdk/android/group/managing-group-members/set-group-member-nickname'
 ---
 
-成员资料修改统一使用 `setGroupMemberInfo()`。请求中填写 `groupID`、`userID` 和 `nickname`。
+修改成员在指定群聊中的专属显示昵称（群名片）。该昵称仅在当前群聊中生效，不会改变用户的全局个人资料昵称。
 
 ```java
 SetGroupMemberInfo update = new SetGroupMemberInfo();
-update.setGroupID(groupID);
-update.setUserID(userID);
+update.setGroupID("group_123");
+update.setUserID("user_a");
 update.setNickname("小林");
 
-OpenIMClient.getInstance().groupManager.setGroupMemberInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupMemberInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 群内昵称修改成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理修改失败
+        }
+    }
+);
 ```
 
-修改成功后，通过[群组概览](/sdk/android/group/overview-group)中的 `onGroupMemberInfoChanged` 接收成员资料变化通知。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupMemberInfo` | `SetGroupMemberInfo` | 是 | 群成员资料修改对象，必须设置 `groupID`、成员 `userID` 以及新的群内昵称 `nickname`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+群昵称修改成功后，群内成员端随后将收到 `onGroupMemberInfoChanged` 事件通知，返回更新后的 `GroupMembersInfo`。客户端应以 `groupID:userID` 为标识合并群成员信息并刷新界面显示；完整监听见[群组概览](/sdk/android/group/overview-group)。

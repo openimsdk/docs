@@ -1,30 +1,47 @@
 ---
 title: '调整会话分组顺序'
-description: '使用 Open_im_sdkSetConversationGroupOrder 批量设置会话分组顺序。'
+description: '使用 iOS SDK 批量设置会话分组顺序。'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/set-conversation-group-order'
 ---
 
-使用 `Open_im_sdkSetConversationGroupOrder` 批量调整会话分组顺序。参数是分组顺序对象的 JSON 数组。
+批量调整会话分组在列表中的排序顺序值：
 
 ## 参数说明
 
-| 字段 | 是否必填 | 说明 |
+| 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| `conversationGroupID` | 必填 | 会话分组 ID。 |
-| `order` | 必填 | 新的顺序值；排序方向由产品统一约定。 |
+| `conversationGroupID` | `NSString *` | 必填，目标会话分组 ID。 |
+| `order` | `NSNumber *` | 必填，新的排序顺序值。 |
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSArray *orders = @[
-    @{ @"conversationGroupID": firstGroupID, @"order": @100 },
-    @{ @"conversationGroupID": secondGroupID, @"order": @200 },
+    @{ @"conversationGroupID": @"group_work_101", @"order": @100 },
+    @{ @"conversationGroupID": @"group_life_102", @"order": @200 },
 ];
+
 NSData *requestData = [NSJSONSerialization dataWithJSONObject:orders options:0 error:nil];
 NSString *requestJSON = [[NSString alloc] initWithData:requestData
                                               encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        NSLog(@"SetConversationGroupOrder success");
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"SetConversationGroupOrder failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkSetConversationGroupOrder(callback, requestJSON);
 ```
 
-将业务 callback 与 `requestJSON` 交给 `Open_im_sdkSetConversationGroupOrder`。
+状态以 `conversationGroupID` 为合并标识。
 
 ## 返回结果
 
-成功 callback 表示排序请求已完成，不应依赖通用占位数据。之后可通过 `onConversationGroupChanged:` 更新顺序，或重新查询确认当前结果；完整 listener 见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+成功回调 `onSuccess` 表示排序更新请求已完成。
+
+排序生效后，会话分组属性变更会通过 `onConversationGroupChanged:` 事件广播，客户端应以 `conversationGroupID` 为合并标识更新对应分组的 `order` 顺序并重新排序分组列表。完整事件监听参见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+

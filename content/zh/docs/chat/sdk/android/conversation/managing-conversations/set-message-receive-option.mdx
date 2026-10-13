@@ -1,8 +1,10 @@
 ---
 title: '设置会话消息接收方式'
-description: '使用 setConversationRecvMessageOpt() 设置单个会话的消息接收与通知方式。'
+description: '设置指定会话的消息接收与离线推送通知策略。'
 sourcePath: '/sdk/android/conversation/managing-conversations/set-message-receive-option'
 ---
+
+设置指定会话的消息接收和免打扰模式，例如正常提醒、仅接收消息不弹通知或屏蔽消息。
 
 ```java
 OpenIMClient.getInstance().conversationManager.setConversationRecvMessageOpt(
@@ -22,10 +24,24 @@ OpenIMClient.getInstance().conversationManager.setConversationRecvMessageOpt(
 );
 ```
 
-| 数值 | 含义                         |
-| ---- | ---------------------------- |
-| `0`  | 正常接收消息并允许通知。     |
-| `1`  | 不接收该会话消息，也不通知。 |
-| `2`  | 接收该会话消息，但不通知。   |
+## 参数说明
 
-账号级默认策略见[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。会话列表中的接收方式变化可通过 `onConversationChanged` 接收，监听器设置方式见[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 目标会话的唯一标识。 |
+| `opt` | `int` | 是 | 消息接收模式枚举值。 |
+
+### 消息接收模式
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ReceiveMessageOpt.Normal` | `0` | 正常接收消息并触发本地通知与离线推送。 |
+| `ReceiveMessageOpt.NotReceive` | `1` | 完全不接收该会话的消息，也不发送通知。 |
+| `ReceiveMessageOpt.NotNotify` | `2` | 正常接收消息并在会话列表显示，但不触发通知与离线推送（免打扰）。 |
+
+## 返回结果
+
+成功回调表示服务端已记录当前会话的接收策略。该设置会在该用户的各端保持同步。
+
+配置生效后，SDK 会触发 `OnConversationListener.onConversationChanged` 事件；客户端收到通知后应根据 `conversationID` 更新对应会话的 `recvMsgOpt` 属性并刷新免打扰图标，完整监听配置请参考[获取会话列表](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list)。若需配置账号级别的全局免打扰，请参考[设置全局消息接收方式](/sdk/android/user/user-profile/set-global-message-reception)。

@@ -4,7 +4,7 @@ description: '使用 iOS SDK 发送已包含远端资源 URL 的消息。'
 sourcePath: '/sdk/ios/message/sending-messages/send-message-not-oss'
 ---
 
-`sendMessageNotOss:...` 用于业务已经上传资源并创建 URL 型媒体消息的场景，避免再次进入 SDK 对象存储上传。
+发送不经 OSS 的消息接口用于业务层已经自行将图片、语音、视频或文件等媒体资源上传至自有服务器或第三方对象存储，并已通过 URL 型创建接口生成消息对象的场景。使用该方法发送消息时，SDK 不会再次上传文件，而是直接将包含 URL 的消息投递至目标会话。
 
 ```objc
 [[OIMManager manager] sendMessageNotOss:urlMessage
@@ -12,11 +12,30 @@ sourcePath: '/sdk/ios/message/sending-messages/send-message-not-oss'
                                 groupID:nil
                            isOnlineOnly:NO
                         offlinePushInfo:nil
-                              onSuccess:^(OIMMessageInfo *sent) {
-    if (sent != nil) [messageStore upsert:sent];
-}
                              onProgress:nil
-                              onFailure:nil];
+                              onSuccess:^(OIMMessageInfo *sent) {
+    // 发送成功，按 clientMsgID 更新本地状态
+    if (sent != nil) {
+        [messageStore upsert:sent];
+    }
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理发送失败状态
+}];
 ```
 
-单聊和群聊目标互斥。资源 URL、大小、类型、尺寸和时长必须来自实际上传结果。成功 callback 与远端接收 delegate 分别处理。
+## 参数说明
+
+- `urlMessage`：已包含远端 URL 的待发送消息对象（`OIMMessageInfo`），由 URL 型媒体消息创建接口生成。
+- `recvID`：单聊接收方用户 ID。发送单聊消息时必填；发送群聊消息时传 `nil`。
+- `groupID`：群聊目标群组 ID。发送群聊消息时必填；发送单聊消息时传 `nil`。`recvID` 与 `groupID` 互斥，两者不能同时赋值。
+- `isOnlineOnly`：是否仅在线投递。传 `YES` 时，消息不落入离线存储且不触发离线推送，仅当前在线用户可见；通常传 `NO`。
+- `offlinePushInfo`：离线推送自定义配置（`OIMOfflinePushInfo`），包含标题、描述与透传数据；使用默认配置时传 `nil`。
+- `onProgress`：上传进度回调。由于资源已由业务自行上传，通常传入 `nil`。
+- `onSuccess`：发送成功回调，返回发送完成的消息对象 `sent`。
+- `onFailure`：发送失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调返回服务端确认后的 `OIMMessageInfo` 对象，客户端状态合并标识为 `clientMsgID`（必要时同时限定 `conversationID`）。
+- 传入的消息对象中，媒体 URL、文件大小、文件类型、尺寸及播放时长等元数据必须来自真实的上传结果。接收端的消息监听与处理见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。

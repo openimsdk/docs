@@ -4,7 +4,15 @@ description: '使用 Flutter SDK 邀请用户加入群组。'
 sourcePath: '/sdk/flutter/group/managing-group-members/invite-user-to-group'
 ---
 
-`inviteUserToGroup()` 向一个群组邀请一组用户。客户端可以根据当前成员角色控制操作入口，但最终权限由 OpenIMServer 校验。
+群成员或管理员可以邀请指定用户列表加入群组。客户端可在界面层按群权限控制入口，最终由服务端完成权限校验与入群逻辑处理：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupID` | `String` | 是 | 目标群组 ID。 |
+| `reason` | `String` | 是 | 邀请说明或申请备注。 |
+| `userIDList` | `List<String>` | 是 | 被邀请加入群组的用户 ID 列表。 |
 
 ```dart
 await OpenIM.iMManager.groupManager.inviteUserToGroup(
@@ -14,6 +22,8 @@ await OpenIM.iMManager.groupManager.inviteUserToGroup(
 );
 ```
 
-`groupID`、邀请原因 `reason` 和 `userIDList` 分别表示目标群组、邀请说明和目标用户列表。Future 成功表示服务端已处理邀请请求，不等同于所有目标用户都已在各端完成状态更新。
+## 返回结果
 
-相关客户端可能随后收到成员新增或入群申请变化。不要把事件到达当作当前 Future 的完成回调；成员合并规则见[群成员查询](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)。
+Future 成功表示服务端已受理邀请请求。根据群组的验证模式配置，用户可能直接入群或生成待确认记录。
+
+当用户直接加入成功时，群内客户端将收到成员新增事件通知；客户端应使用复合标识 `groupID:userID` 合并新成员到本地状态。完整的事件监听与增量合并逻辑请参考[群成员查询概览](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members)。

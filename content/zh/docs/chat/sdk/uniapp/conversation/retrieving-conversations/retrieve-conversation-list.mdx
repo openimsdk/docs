@@ -4,7 +4,7 @@ description: '分页获取当前用户的会话列表，并同步后续会话变
 sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-会话列表属于当前登录用户。应使用 `getConversationListSplit()` 分页读取，避免一次加载完整列表。第一页从 `offset: 0` 开始，继续加载时按已请求的条目数增加偏移量。
+会话列表属于当前登录用户。应采用分页方式读取会话列表，避免一次性加载过多数据导致内存与渲染压力。第一页从 `offset: 0` 开始，后续加载按已拉取的条目数递增偏移量。
 
 ## 参数说明
 
@@ -63,7 +63,7 @@ Promise 成功后返回 `OpenIMConversationListResult | null`，当前页会话�
 
 ## 同步会话变化
 
-本页负责 `onNewConversation()` 和 `onConversationChanged()` 的完整监听。两个处理器都收到 `OpenIMConversationListResult | null`，一次事件可能携带多条会话；应遍历 `conversations` 并按 `conversationID` 合并。
+新增会话与会话变更事件在此集中监听。两个监听回调均接收 `OpenIMConversationListResult | null`，单次事件可能携带多条会话；客户端必须遍历 `conversations` 并按 `conversationID` 进行去重与状态合并。
 
 ```uts
 import {
@@ -93,4 +93,4 @@ function removeConversationListListeners() {
 }
 ```
 
-组件卸载、退出登录或切换账号时调用 `removeConversationListListeners()`。不要用已加入群组列表替代会话列表：用户可能已加入群组但尚未产生会话，也可能退出群组后仍保留历史会话记录。
+组件卸载、退出登录或切换账号时应调用清理函数取消事件监听。不要用已加入群组列表替代会话列表：用户可能已加入群组但尚未产生会话，也可能退出群组后仍保留历史会话记录。

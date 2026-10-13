@@ -8,7 +8,12 @@ sourcePath: '/sdk/flutter/message/managing-messages/revoke-a-message'
 
 如果只需要从当前账号侧移除消息，使用[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)，不要用撤回替代。需要修改已发送消息内容时，使用[修改消息](/sdk/flutter/message/managing-messages/modify-a-message)。
 
-## 撤回一条消息
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 消息所属的会话 ID。Flutter 的 `Message` 本身没有该字段。 |
+| `clientMsgID` | `String` | 是 | 待撤回消息的客户端消息 ID。 |
 
 ```dart
 final clientMsgID = message.clientMsgID;
@@ -22,7 +27,17 @@ await OpenIM.iMManager.messageManager.revokeMessage(
 );
 ```
 
-Flutter `Message` 没有 `conversationID` 字段，因此调用处应使用当前消息页面或路由保存的 `conversationID`。如果只持有事件或查询返回的消息，可按[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)中的路由 helper 解析，并通过 `getConversationIDBySessionType()` 取得对应会话 ID。
+Flutter 的 `Message` 模型没有 `conversationID` 字段，调用处应使用当前会话页面上下文维护的 `conversationID`。若仅持有事件返回的消息对象，可参考[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)中的路由规则解析来源，并通过会话类型接口取得对应会话 ID。
+
+## 返回结果
+
+Future 成功表示服务端已完成撤回处理。当前客户端应依据复合标识 `conversationID:clientMsgID` 将该消息气泡就地更新为“已撤回”状态。
+
+Future 成功不等于所有端事件均已到达。若服务端校验发现消息不存在或已超出可撤回时限，调用将抛出异常，此时应提示用户并保留原消息内容，不得直接在本地单方面置为撤回态。
+
+## 监听消息撤回
+
+消息撤回事件在此集中监听与处理。`onNewRecvMessageRevoked` 回调接收到 `RevokedInfo` 载荷，客户端应按复合标识 `conversationID:clientMsgID` 更新本地消息气泡，将其渲染为撤回提示：
 
 ```dart
 void handleMessageRevoked(RevokedInfo info) {
@@ -35,15 +50,7 @@ void handleMessageRevoked(RevokedInfo info) {
 }
 ```
 
-`onNewRecvMessageRevoked` 携带 `RevokedInfo`，包含 `clientMsgID`、撤回者和时间等信息。先在当前账号的消息索引中解析所属 `conversationID`，再按 `conversationID:clientMsgID` 更新；不要按列表位置替换。该函数应纳入唯一的 `OnAdvancedMsgListener`，设置入口见[事件概览](/sdk/flutter/events/overview-events)。
-
-接收端应把对应气泡更新为撤回态，而不是直接从列表删除。这样可以保留消息时间线与撤回提示，也能避免后续读取历史消息时原消息再次出现而造成状态跳动。
-
-## 返回结果
-
-Future 成功表示服务端完成撤回请求，不等于所有端事件已经到达。当前客户端可以更新本地同一 `conversationID:clientMsgID` 的气泡；其他客户端再通过撤回 callback 更新对应消息。
-
-消息不存在或不允许撤回时，应保留原状态并展示错误，不要只在本地留下撤回提示。需要确认最终状态时重新读取历史消息；Future 成功、撤回 callback 到达和重新查询是三个不同阶段。
+建议将撤回消息就地转变为撤回通知（如“你撤回了一条消息”或“对方撤回了一条消息”），而不是直接从 UI 列表中硬删除。这样既能维持聊天时间线稳定，也能避免再次拉取历史消息时造成界面跳动。该 listener 应纳入应用唯一的 `OnAdvancedMsgListener`，全局设置入口请参考[事件概览](/sdk/flutter/events/overview-events)。
 
 ## 相关页面
 

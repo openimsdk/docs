@@ -4,15 +4,27 @@ description: '使用 iOS SDK 上报当前用户的输入状态。'
 sourcePath: '/sdk/ios/message/composing-messages/update-typing-status'
 ---
 
-输入开始时传 `YES`，发送消息、失焦、切换会话或停止输入时传 `NO`：
+当用户在输入框中键入文本或停止输入时，可调用上报输入状态接口向会话内对端成员同步“正在输入”状态。
 
 ```objc
 [[OIMManager manager] changeInputStates:conversationID
                                   focus:YES
-                              onSuccess:nil
-                              onFailure:nil];
+                              onSuccess:^(NSString * _Nullable data) {
+    // 成功上报输入状态
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理上报失败
+}];
 ```
 
-输入状态绑定 `conversationID`，不会保存草稿或写入消息列表。对开始输入做节流和状态去重。成功 callback 只表示服务端接受请求，不表示远端界面已更新。
+## 参数说明
 
-输入变化由 `OIMConversationListener.onConversationUserInputStatusChanged:` 合并，按 `conversationID:userID` 更新该用户当前的 `platformIDs`。listener 的完整注册和清理见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。
+- `conversationID`：目标会话 ID。
+- `focus`：输入聚焦状态。输入开始时传 `YES`；发送消息、输入框失焦、切换会话或停止输入时传 `NO`。
+- `onSuccess`：上报成功回调，表示服务端已接收输入状态请求。
+- `onFailure`：上报失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 输入状态仅作为会话内的瞬态提示，不落盘、不保存草稿，也不会插入到消息历史记录中。为避免高频网络请求，业务层应对开始输入事件做防抖或节流处理。
+- 对端接收到的输入状态变化由会话监听器中的输入状态变更事件驱动，以 `conversationID:userID` 对应更新该用户当前活跃的输入终端平台列表（`platformIDs`）。完整的会话监听注册与清理见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。主动拉取输入状态见[查询输入状态](/sdk/ios/message/composing-messages/get-typing-status)。

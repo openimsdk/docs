@@ -4,18 +4,14 @@ description: '使用 OpenIM Flutter SDK 修改已发送消息的内容。'
 sourcePath: '/sdk/flutter/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessage()` 用于在会话中修改一条已存在消息的内容。它和[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)、[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)不同：删除影响消息是否仍对当前账号可见，撤回让会话成员看到撤回态；修改则替换消息内容并同步给其他客户端。
+修改会话中一条已发送消息的正文内容。它与[删除消息](/sdk/flutter/message/managing-messages/delete-saved-message)、[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)不同：删除仅影响消息是否对当前账号可见，撤回则向所有成员展示撤回状态；修改操作会替换消息内容并通过事件同步给所有会话成员。
 
-## 修改消息内容
+## 参数说明
 
-`modifyMessage()` 接收消息所在的 `conversationID` 和修改后的完整 `Message`：
-
-### 参数说明
-
-| 参数             | 类型      | 是否必填 | 说明                                                     |
-| ---------------- | --------- | -------- | -------------------------------------------------------- |
-| `conversationID` | `String`  | 必填     | 消息所属的会话 ID。Flutter 的 `Message` 本身没有该字段。 |
-| `message`        | `Message` | 必填     | 修改后的完整消息对象；必须保留原 `clientMsgID`。         |
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 消息所属的会话 ID。Flutter 的 `Message` 本身没有该字段。 |
+| `message` | `Message` | 是 | 修改后的完整消息对象；必须保留原 `clientMsgID` 与路由字段。 |
 
 ```dart
 final clientMsgID = message.clientMsgID;
@@ -43,13 +39,13 @@ try {
 
 ## 返回结果
 
-`modifyMessage()` 返回未具体化的 `Future`，完成值不是修改后的 `Message`。Future 成功表示当前修改请求已经完成；当前客户端可以先按 `conversationID:clientMsgID` 展示提交的完整消息，再根据 `onMessageModified` 更新，必要时重新查询确认最终内容。
+该方法返回 `Future<void>`，成功表示服务端已接受并持久化消息修改请求。当前客户端可先按复合标识 `conversationID:clientMsgID` 预览提交的最新内容，并等待后续事件通知完成最终确认。
 
 Future 成功不代表所有客户端界面已经更新。事件也可能来自其他设备或其他有权限的操作，不能假设每次 callback 都对应当前页面刚完成的调用。
 
 ## 监听消息修改
 
-本页是 `onMessageModified` 的完整事件归属页。回调携带单个修改后的 `Message`；由于 Flutter 的消息对象没有 `conversationID`，应先解析路由，再按 `conversationID:clientMsgID` 替换原消息：
+消息修改事件在此集中监听与处理。`onMessageModified` 回调携带单个修改后的 `Message`；由于 Flutter 的消息对象没有 `conversationID`，应先解析路由，再按 `conversationID:clientMsgID` 替换原消息：
 
 ```dart
 Future<void> handleMessageModified(Message message) async {
@@ -66,7 +62,7 @@ Future<void> handleMessageModified(Message message) async {
 }
 ```
 
-`resolveMessageConversationID()` 根据 `sessionType`、`groupID`、`sendID`、`recvID` 和当前登录用户确定消息来源，再调用 `getConversationIDBySessionType()` 取得对应会话 ID。完整 helper 见[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。不要按数组位置、显示文本或当前分页长度匹配消息。
+会话 ID 解析辅助逻辑根据 `sessionType`、`groupID`、`sendID`、`recvID` 和当前登录用户确定消息来源，再通过会话 ID 计算接口取得对应会话 ID。完整辅助函数实现请参考[接收消息](/sdk/flutter/message/receiving-messages/receive-messages)。客户端必须以 `conversationID:clientMsgID` 为合并标识，严禁按数组位置、显示文本或当前分页长度匹配消息。
 
 该 handler 应纳入应用唯一的 `OnAdvancedMsgListener`，集中设置入口见[事件概览](/sdk/flutter/events/overview-events)。SDK 没有 remove 或 unset API；退出登录或切换账号时，应停止向旧账号状态分发事件，并用新账号的完整 listener 覆盖。
 

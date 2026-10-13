@@ -4,14 +4,53 @@ description: '使用 iOS SDK 订阅可见用户的在线状态。'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status'
 ---
 
+向服务端订阅目标用户的在线状态，以便接收其后续的在线、离线及登录端状态变更：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | 目标用户 ID 列表，建议去除空值和重复项，且仅订阅当前界面可见的用户。 |
+
 ```objc
 [[OIMManager manager] subscribeUsersStatus:userIDs
-    onSuccess:^(NSArray<OIMUserStatusInfo *> *states) {
-        [presenceStore mergeStates:states];
-    }
-    onFailure:nil];
+                                 onSuccess:^(NSArray<OIMUserStatusInfo *> *states) {
+    [presenceStore mergeStates:states];
+}
+                                 onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"subscribeUsersStatus failed: %ld %@", (long)code, message);
+}];
 ```
 
-去除空值和重复 ID，只订阅当前可见用户。成功数组提供这些用户当时的在线状态，按 `userID` 合并。
+状态以 `userID` 为合并标识。离开列表或页面销毁时，建议调用[取消用户状态订阅](/sdk/ios/user/retrieving-and-updating-user-information/unsubscribe-user-status)释放订阅额度。
 
-本页唯一归属 `onUserStatusChanged:`。使用稳定 `OIMUserListener` 实例成对注册和移除；事件只提供已订阅用户之后的状态变化。
+## 返回结果
+
+成功回调 `onSuccess` 返回所订阅用户的即时状态列表 `NSArray<OIMUserStatusInfo *> *`，包含当前在线状态与在线平台等。
+
+## 监听在线状态变更
+
+实现 `OIMUserListener` 协议的 `onUserStatusChanged:` 方法监听已订阅用户的增量状态变更：
+
+```objc
+@interface PresenceStore () <OIMUserListener>
+@end
+
+@implementation PresenceStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addUserListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeUserListener:self];
+}
+
+- (void)onUserStatusChanged:(OIMUserStatusInfo *)status {
+    [self updateUserStatus:status];
+}
+
+@end
+```
+
+在退出登录或切换账号时，使用注册时的同一个 listener 实例调用移除监听方法。需要主动校准当前已订阅用户的状态时，可调用[查询已订阅用户状态](/sdk/ios/user/retrieving-and-updating-user-information/get-subscribed-user-status)。

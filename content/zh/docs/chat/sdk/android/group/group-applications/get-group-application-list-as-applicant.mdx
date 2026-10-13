@@ -1,18 +1,48 @@
 ---
 title: '获取发出的入群申请'
-description: '使用 getSendGroupApplicationList 分页读取当前用户发出的入群申请。'
+description: '分页获取当前登录用户主动向各群组发出的入群申请记录。'
 sourcePath: '/sdk/android/group/group-applications/get-group-application-list-as-applicant'
 ---
 
-使用 `GetGroupApplicationListAsApplicantReq` 设置分页和筛选条件，再调用 `getSendGroupApplicationList()`。
+分页获取当前登录用户主动向各个群组发出的入群申请历史。通过请求对象指定分页偏移量和条数，可在界面上呈现申请的审批状态（如待审核、已同意或已拒绝）。
 
 ```java
 GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq(0, 20);
+
 OpenIMClient.getInstance().groupManager.getSendGroupApplicationList(
     new OnBase<List<GroupApplicationInfo>>() {
-        @Override public void onSuccess(List<GroupApplicationInfo> items) { /* items 是当前页申请记录。 */ }
-        @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-    }, request);
+        @Override
+        public void onSuccess(List<GroupApplicationInfo> items) {
+            // items 为当前页申请记录
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理获取失败
+        }
+    },
+    request
+);
 ```
 
-申请被同意后，通过 `onJoinedGroupAdded` 接收加入群组通知。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupApplicationInfo>>` | 是 | 异步请求回调。 |
+| `request` | `GetGroupApplicationListAsApplicantReq` | 是 | 分页请求参数对象。常用字段包括 `offset`（分页偏移量，从 0 开始）与 `count`（每页拉取数量）。 |
+
+## 返回结果
+
+成功回调返回申请信息列表 `List<GroupApplicationInfo>`。单条申请的核心字段包含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `groupID` | 申请加入的目标群组 ID。 |
+| `groupName` | 申请加入的目标群组名称。 |
+| `reqMsg` | 申请时提交的附言说明。 |
+| `handleResult` | 审批处理结果：`0` 未处理，`1` 已同意，`-1` 已拒绝。 |
+| `handledMsg` | 管理员填写的审批反馈附言。 |
+| `reqTime` | 发起申请的毫秒级时间戳。 |
+
+客户端应以 `groupID` 为主要维度进行状态呈现与缓存合并。当申请被管理员审核通过后，当前用户端将触发 `onJoinedGroupAdded` 事件接收群资料并更新群列表；完整监听见[群组概览](/sdk/android/group/overview-group)。

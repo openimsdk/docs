@@ -1,23 +1,41 @@
 ---
 title: '创建 @ 消息'
-description: '使用 createTextAtMessage 创建带成员提醒的文本消息。'
+description: '在群聊中创建包含指定成员 @ 提醒与可选引用的文本消息。'
 sourcePath: '/sdk/android/message/creating-messages/create-text-at-message'
 ---
 
-传入文本、被 @ 用户 ID、`AtUserInfo` 列表和可选引用消息。
+构建带有 @ 群成员提醒的文本消息对象，并支持同时引用某条已有消息。当消息送达被 @ 的成员时，接收端会触发会话的 @ 强提醒状态。
+
+```java
+String text = "@张三 请查看最新产品方案";
+List<String> userIDs = Collections.singletonList("user_zhangsan");
+
+AtUserInfo atUserInfo = new AtUserInfo();
+atUserInfo.setAtUserID("user_zhangsan");
+atUserInfo.setGroupNickname("张三");
+List<AtUserInfo> atUserInfos = Collections.singletonList(atUserInfo);
+
+Message quoteMessage = null; // 如需同时引用历史消息则传入对应 Message 对象
+
+Message message = OpenIMClient.getInstance().messageManager.createTextAtMessage(
+    text,
+    userIDs,
+    atUserInfos,
+    quoteMessage
+);
+```
 
 ## 参数说明
 
 | 参数 | 类型 | 是否必填 | 说明 |
 | --- | --- | --- | --- |
-| `text` | `String` | 是 | 完整消息正文，应与界面最终显示内容一致。 |
-| `userIDs` | `List<String>` | 是 | 被提醒的群成员用户 ID；去重后传入。 |
-| `atUserInfos` | `List<AtUserInfo>` | 是 | 被提醒成员的用户 ID 和展示名称，应与 `userIDs` 对应。 |
-| `quoteMessage` | `Message` | 否 | 同时回复某条消息时传被引用的完整消息，否则传 `null`。 |
+| `text` | `String` | 是 | 包含 @ 展示文本的完整消息正文。 |
+| `userIDs` | `List<String>` | 是 | 被提醒群成员的用户 ID 列表（去重后传入）。 |
+| `atUserInfos` | `List<AtUserInfo>` | 是 | 被提醒成员的用户信息列表，应与 `userIDs` 对应。 |
+| `quoteMessage` | `Message` | 否 | 同时作为对某条消息的引用回复时传入被引用的消息；无引用时传 `null`。 |
 
-```java
-Message message = OpenIMClient.getInstance().messageManager.createTextAtMessage(
-    text, userIDs, atUserInfos, quoteMessage);
-```
+## 返回结果
 
-返回的 `Message` 只是在本地创建的待发送对象。@ 提醒通常用于群聊；发送前应确认目标用户仍是群成员，并使用[发送消息](/sdk/android/message/sending-messages/send-message)投递到对应群组。
+返回创建完成的待发送 `Message` 对象。
+
+@ 提醒主要用于群聊场景。创建完成后，调用[发送消息](/sdk/android/message/sending-messages/send-message)将该消息发送至对应群组。

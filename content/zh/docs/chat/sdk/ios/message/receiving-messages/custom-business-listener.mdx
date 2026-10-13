@@ -4,12 +4,35 @@ description: '注册和移除 iOS SDK 的自定义业务通知 listener。'
 sourcePath: '/sdk/ios/message/receiving-messages/custom-business-listener'
 ---
 
-应用应强引用同一个 `OIMCustomBusinessListener` 实例：
+自定义业务消息监听器用于接收服务端主动下发的自定义业务通知或信令数据。该类消息不同于普通聊天会话中的自定义消息，通常用于音视频房间信令、实时控制指令或特定的跨端协同状态同步。
+
+## 注册与移除监听
+
+应用层应在状态管理对象中以强引用持有 `OIMCustomBusinessListener` 实例，并在生命周期结束或退出登录时注销：
 
 ```objc
+// 注册自定义业务监听器
 [[OIMManager callbacker] addCustomBusinessListener:businessListener];
-// 账号作用域结束时：
+
+// 账号注销或组件销毁时移除监听器
 [[OIMManager callbacker] removeCustomBusinessListener:businessListener];
 ```
 
-`onRecvCustomBusinessMessage:` 的字典可能为空；非空时仍需校验自有协议的 ID、类型、版本和字段，并按业务幂等键合并。普通聊天自定义消息仍由新消息 delegate 接收。
+## 事件回调处理
+
+在遵循 `OIMCustomBusinessListener` 协议的实现类中，实现自定义业务消息接收回调：
+
+```objc
+- (void)onRecvCustomBusinessMessage:(NSString * _Nullable)businessMessage {
+    if (businessMessage.length == 0) {
+        return;
+    }
+    // 解析业务 JSON 字符串并分发处理
+}
+```
+
+## 注意事项
+
+- 回调中的消息数据可能为空字符串或格式异常，消费前应严格校验协议版本、类型与必要字段。
+- 业务处理必须依赖自身的幂等标识（如自定义业务 ID 或序列号）去重，避免重复消费。
+- 普通会话内的自定义消息（如红包、戳一戳、名片等）仍走常规新消息监听通道，详见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。

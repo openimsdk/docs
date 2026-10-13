@@ -4,15 +4,35 @@ description: '分页查询 iOS 当前用户发出的好友申请。'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-list-as-applicant'
 ---
 
+分页查询当前登录用户主动发出的好友申请记录：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `req` | `GetFriendApplicationListAsApplicantReq *` | 查询发出的好友申请请求对象。 |
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `offset` | `NSInteger` | 分页起始偏移量，首屏传 `0`。 |
+| `count` | `NSInteger` | 每页拉取的数据条数。 |
+
 ```objc
 GetFriendApplicationListAsApplicantReq *req = [GetFriendApplicationListAsApplicantReq new];
 req.offset = 0;
 req.count = 20;
+
 [[OIMManager manager] getFriendApplicationListAsApplicantWithReq:req
                                                        onSuccess:^(NSArray<OIMFriendApplication *> *items) {
                                                            [requestStore replaceSent:items];
                                                        }
-                                                       onFailure:nil];
+                                                       onFailure:^(NSInteger code, NSString *message) {
+                                                           NSLog(@"getFriendApplicationListAsApplicant failed: %ld %@", (long)code, message);
+                                                       }];
 ```
 
-`offset` 从 `0` 开始，`count` 是页大小。成功 callback 返回当前页数据；记录按 `fromUserID:toUserID` 合并。查询不会触发申请 delegate。
+状态以 `fromUserID:toUserID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回当前分页的 `NSArray<OIMFriendApplication *> *` 数组。查询操作仅返回当前时刻的数据快照，不触发申请事件；对方接受或拒绝后触发的事件处理见[获取收到的好友申请](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)。

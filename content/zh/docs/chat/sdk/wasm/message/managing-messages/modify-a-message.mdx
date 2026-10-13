@@ -4,7 +4,7 @@ description: '修改已发送消息的内容，并向其他客户端同步修改
 sourcePath: '/sdk/wasm/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessage()` 用于在会话中修改一条已存在消息的内容。它和[批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)、[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)不同：删除影响消息是否仍对当前账号可见，撤回让会话成员看到撤回态；修改则替换消息内容并同步给其他客户端。
+调用 `modifyMessage()` 可修改会话中已发送的一条消息内容。它与[批量删除消息](/sdk/wasm/message/managing-messages/delete-saved-messages)和[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)具有明确的职责划分：删除仅影响当前账号侧视图，撤回展示撤回占位符，而修改则是直接将消息正文替换为新内容并同步给会话各端。
 
 ## 修改消息内容
 
@@ -32,13 +32,13 @@ const { data: modifiedMessage } = await openimsdk.modifyMessage({
 replaceMessage(modifiedMessage);
 ```
 
-该方法不是局部更新。应从当前消息复制并只修改目标内容，保留 `clientMsgID` 和其他消息字段。允许修改的发送者、时间窗口和消息类型由 OpenIMServer 校验；失败时不要只在本地保留编辑结果。
+调用修改接口时，需传入完整的消息对象结构，请从现有消息对象展开并仅修改目标正文字段，务必保留原有的 `clientMsgID` 等基础标识。消息可修改的时间窗口和权限由服务端规则校验。
 
 ## 返回结果
 
-Promise 成功后，`data` 是服务端确认的修改后 `MessageItem`。当前应用可先用返回值替换列表中具有相同 `clientMsgID` 的消息；其他客户端收到修改事件后，也应使用 `clientMsgID` 找到并替换对应消息。
+接口调用成功后，返回的 `data` 为经服务端确认的最新 `MessageItem` 对象。当前发送端可据此直接替换本地消息视图。
 
-Promise 成功代表当前修改请求已完成，不代表所有端界面已经更新。其他客户端通过 `SdkEvent.OnMessageModified` 收到修改后的 `MessageItem`，应按 `clientMsgID` 替换现有消息。
+同时，会话内的其他客户端会收到 `SdkEvent.OnMessageModified` 事件，各端据此同步刷新消息展示。
 
 ## 监听消息修改
 
@@ -58,7 +58,7 @@ function removeMessageModifiedListener() {
 }
 ```
 
-`OnMessageModified` 的 `data` 是单个 `MessageItem`。消息使用 `clientMsgID` 合并，并结合消息路由字段确定所属会话。组件卸载、退出登录或切换账号时调用 `removeMessageModifiedListener()`。
+事件 `data` 为单条最新的 `MessageItem`。前端应通过 `clientMsgID` 找到目标消息并替换其渲染数据。在组件销毁、退出登录或切换账号时，请调用 `removeMessageModifiedListener()` 解绑监听。
 
 ## 相关页面
 

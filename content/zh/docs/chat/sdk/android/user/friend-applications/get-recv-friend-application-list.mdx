@@ -1,8 +1,10 @@
 ---
 title: '获取收到的好友申请'
-description: '使用 getRecvFriendApplicationList() 分页查询当前用户收到的好友申请。'
+description: '分页查询当前账号收到的好友申请列表。'
 sourcePath: '/sdk/android/user/friend-applications/get-recv-friend-application-list'
 ---
+
+分页查询当前登录账号收到的好友添加申请列表及其审批状态。常用于联系人模块的“新的朋友”页面。
 
 ```java
 GetFriendApplicationListAsRecipientReq request =
@@ -24,19 +26,35 @@ OpenIMClient.getInstance().friendshipManager.getRecvFriendApplicationList(
 );
 ```
 
-`offset` 从 `0` 开始，`count` 是页大小。需要筛选处理状态时可通过 `setHandleResults(int[])` 设置服务端约定的状态值。成功 callback 返回当前页 `List<FriendApplicationInfo>`。
+## 参数说明
 
-| 字段                                          | 说明                                           |
-| --------------------------------------------- | ---------------------------------------------- |
-| `fromUserID` / `fromNickname` / `fromFaceURL` | 申请发起人的 ID、昵称和头像。                  |
-| `toUserID` / `toNickname` / `toFaceURL`       | 申请接收人的 ID、昵称和头像。                  |
-| `reqMsg`                                      | 申请附言。                                     |
-| `handleResult`                                | 处理结果：`0` 待处理，`1` 已同意，`2` 已拒绝。 |
-| `handlerUserID`                               | 执行处理的用户 ID，待处理时可能为空。          |
-| `handleMsg`                                   | 处理附言。                                     |
-| `handleTime`                                  | 处理时间，待处理时不应作为有效时间使用。       |
-| `createTime`                                  | 申请记录创建时间。                             |
-| `ex`                                          | 申请记录扩展字符串。                           |
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<FriendApplicationInfo>>` | 是 | 异步请求回调。 |
+| `request` | `GetFriendApplicationListAsRecipientReq` | 是 | 收到的好友申请分页查询对象，构造方法传入 `offset` 和 `count`。 |
+
+### 分页请求对象属性
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `offset` | `int` | 分页起始偏移量，首批传 `0`。 |
+| `count` | `int` | 本页期望返回的申请数量。 |
+
+## 返回结果
+
+成功回调返回当前分页的 `List<FriendApplicationInfo>` 申请记录列表。客户端应以申请人 `userID`（`fromUserID`）为主键对申请列表进行去重合并。每项包含以下属性：
+
+| 字段 | 说明 |
+| --- | --- |
+| `fromUserID` / `fromNickname` / `fromFaceURL` | 申请发起人的用户 ID、公开昵称及头像地址。 |
+| `toUserID` / `toNickname` / `toFaceURL` | 申请接收人（当前登录用户）的 ID、昵称及头像。 |
+| `reqMsg` | 申请人填写的附言说明。 |
+| `handleResult` | 审批结果：`0` 待处理，`1` 已同意，`-1` 或 `2` 已拒绝。 |
+| `handlerUserID` | 处理该申请的操作人 ID。 |
+| `handleMsg` | 处理人填写的处理附言。 |
+| `handleTime` | 处理该申请的时间戳。 |
+| `createTime` | 申请发起的时间戳。 |
+| `ex` | 申请记录的扩展字符串。 |
 
 好友申请新增、接受、拒绝和删除时，可通过 `OnFriendshipListener` 接收以下回调：
 

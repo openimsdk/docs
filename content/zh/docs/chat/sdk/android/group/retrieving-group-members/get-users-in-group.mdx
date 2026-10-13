@@ -1,16 +1,42 @@
 ---
 title: '查询用户入群状态'
-description: '使用 getUsersInGroup 从候选用户中筛出当前在群内的用户 ID。'
+description: '从候选用户列表中筛选已加入指定群组的用户 ID。'
 sourcePath: '/sdk/android/group/retrieving-group-members/get-users-in-group'
 ---
 
-`getUsersInGroup()` 返回传入用户中已在指定群内的 ID 列表，不返回成员资料。
+从一组候选用户中快速筛选出当前已加入指定群组的用户 ID 列表。常用于发起群邀请前的前置校验，以剔除已在群内的成员。
 
 ```java
-OpenIMClient.getInstance().groupManager.getUsersInGroup(new OnBase<List<String>>() {
-    @Override public void onSuccess(List<String> joinedUserIDs) { /* joinedUserIDs 是在群成员 ID。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, candidateUserIDs);
+String groupID = "group_123";
+List<String> candidateUserIDs = Arrays.asList("user_a", "user_b", "user_c");
+
+OpenIMClient.getInstance().groupManager.getUsersInGroup(
+    new OnBase<List<String>>() {
+        @Override
+        public void onSuccess(List<String> joinedUserIDs) {
+            // joinedUserIDs 为候选名单中已在群内的用户 ID 列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理查询失败
+        }
+    },
+    groupID,
+    candidateUserIDs
+);
 ```
 
-需要昵称、角色或禁言状态时，再调用[查询指定群成员资料](/sdk/android/group/retrieving-group-members/get-specified-group-members-info)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<String>>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `candidateUserIDs` | `List<String>` | 是 | 待校验的候选用户 ID 列表。建议传入前剔除空字符串及重复项。 |
+
+## 返回结果
+
+成功回调返回已在群内的用户 ID 列表 `List<String>`。
+
+本接口仅返回在群用户的 ID 集合，不包含成员群内昵称或角色等级等详细资料。若需进一步读取对应成员在群内的详细信息，请参阅[查询指定群成员资料](/sdk/android/group/retrieving-group-members/get-specified-group-members-info)。

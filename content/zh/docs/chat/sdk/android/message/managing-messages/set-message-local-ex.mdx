@@ -1,24 +1,26 @@
 ---
 title: '设置消息本地扩展'
-description: '使用 setMessageLocalEx 保存仅当前设备使用的消息扩展数据。'
+description: '为指定消息保存仅当前设备本地可见的自定义扩展字段。'
 sourcePath: '/sdk/android/message/managing-messages/set-message-local-ex'
 ---
 
-`setMessageLocalEx()` 为当前设备中的指定消息保存扩展字符串。`localEx` 适合记录下载路径、播放状态等本地信息，不会同步到服务器、其他设备或其他用户。
-
-`conversationID` 和 `clientMsgID` 共同定位消息，`localExJson` 是由应用定义格式的字符串；如使用 JSON，应在写入前完成序列化并在读取时校验结构。
+为当前设备上的指定消息保存专属本地扩展数据（`localEx`）。适用于记录本地下载进度、音视频播放断点、语音转文字展示缓存等设备独有状态，不会漫游同步到服务端或其他端。
 
 ```java
+String conversationID = "si_user_a_user_b";
+String clientMsgID = "msg_001";
+String localExJson = "{\"downloadStatus\":2,\"localPath\":\"/storage/emulated/0/...\"}";
+
 OpenIMClient.getInstance().messageManager.setMessageLocalEx(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 更新当前设备中该消息的 localEx 展示。
+            // 本地扩展保存成功
         }
 
         @Override
         public void onError(int code, String error) {
-            // 保留原值并提示保存失败。
+            // 处理保存失败
         }
     },
     conversationID,
@@ -27,4 +29,17 @@ OpenIMClient.getInstance().messageManager.setMessageLocalEx(
 );
 ```
 
-成功回调表示本地扩展已保存。该操作不修改消息正文，也不会触发共享消息事件。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 目标消息所属的会话 ID。 |
+| `clientMsgID` | `String` | 是 | 目标消息的客户端消息 ID。 |
+| `localEx` | `String` | 是 | 待保存的本地扩展数据字符串（如 JSON 格式）。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+该操作为纯本地属性保存，不修改消息正文，也不会向其他端广播事件。客户端应以 `clientMsgID` 为标识更新本地内存中对应消息的 `localEx` 属性并刷新 UI。

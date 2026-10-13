@@ -4,7 +4,17 @@ description: '使用 iOS SDK 发起群聊音视频通话。'
 sourcePath: '/sdk/ios/calling/managing-calls/start-group-call'
 ---
 
-群聊只邀请 `inviteeUserIDList` 明确列出的成员，不会因为填写 `groupID` 自动邀请全群：
+发起群聊通话邀请时，只会向 `inviteeUserIDList` 中明确列出的成员发送邀请，不会因为指定 `groupID` 而自动邀请全群成员。
+
+## 参数说明
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `inviteeUserIDList` | `NSArray<NSString *> *` | 计划邀请的群成员用户 ID 列表。 |
+| `groupID` | `NSString *` | 目标群组 ID，不能为空。 |
+| `roomID` | `NSString *` | 通话房间 ID；可使用群组 ID 或由业务统一分配的唯一标识。 |
+| `timeout` | `NSInteger` | 邀请超时时间（秒）。 |
+| `mediaType` | `NSString *` | 媒体类型，例如 `video` 或 `audio`。 |
 
 ```objc
 OIMInvitationInfo *invitation = [OIMInvitationInfo new];
@@ -24,4 +34,8 @@ invitation.mediaType = @"video";
 }];
 ```
 
-`groupID` 不能为空。示例使用群组 ID 作为 `roomID`；若业务自行生成房间 ID，所有参与端必须使用同一个值。`busyLineUserIDList` 只表示部分成员忙线，不应中止其他成员的邀请。
+通话状态以 `roomID` 为合并标识，参与者状态同时结合用户 ID。如果业务自行生成 `roomID`，所有参与端必须保持一致。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回 `OIMInvitationResultInfo` 对象，包含已分配的 `roomID`、接入 Token（`token`）、流媒体地址（`liveURL`）及忙线用户列表（`busyLineUserIDList`）。`busyLineUserIDList` 仅表示部分成员忙线，不应中止对其他空闲成员的邀请流程。其他成员的接听状态通过[处理通话事件](/sdk/ios/calling/managing-calls/handle-call-events)进行监听。

@@ -1,17 +1,54 @@
 ---
 title: '搜索群成员'
-description: '使用 searchGroupMembers 按用户 ID 或群昵称搜索群成员。'
+description: '在指定群组中按关键字搜索群成员。'
 sourcePath: '/sdk/android/group/retrieving-group-members/search-group-members'
 ---
 
-指定关键词列表、用户 ID 与群昵称两个搜索开关，以及分页条件。
+在指定群组内搜索群成员。支持按群内昵称与用户 ID 进行关键字检索，适用于快速定位成员或群内提及选人等交互场景。
 
 ```java
+String groupID = "group_123";
+List<String> keywordList = Collections.singletonList("技术");
+boolean isSearchUserID = true;
+boolean isSearchMemberNickname = true;
+int offset = 0;
+int count = 20;
+
 OpenIMClient.getInstance().groupManager.searchGroupMembers(
     new OnBase<List<GroupMembersInfo>>() {
-        @Override public void onSuccess(List<GroupMembersInfo> members) { /* members 是查询结果。 */ }
-        @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-    }, groupID, Collections.singletonList(keyword), true, true, 0, 20);
+        @Override
+        public void onSuccess(List<GroupMembersInfo> members) {
+            // members 为匹配到的群成员列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理搜索失败
+        }
+    },
+    groupID,
+    keywordList,
+    isSearchUserID,
+    isSearchMemberNickname,
+    offset,
+    count
+);
 ```
 
-搜索仅限目标群组；空关键词或两个搜索开关均关闭时不应发起请求。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupMembersInfo>>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `keywordList` | `List<String>` | 是 | 搜索关键字列表。空列表或无有效关键字时不应发起搜索。 |
+| `isSearchUserID` | `boolean` | 是 | 是否匹配用户 ID：`true` 为匹配，`false` 为不匹配。 |
+| `isSearchMemberNickname` | `boolean` | 是 | 是否匹配群内昵称：`true` 为匹配，`false` 为不匹配。 |
+| `offset` | `int` | 是 | 分页起始偏移量，首页从 `0` 开始。 |
+| `count` | `int` | 是 | 本次获取的最大记录条数。 |
+
+## 返回结果
+
+成功回调返回匹配到的群成员列表 `List<GroupMembersInfo>`。
+
+搜索结果仅反映查询发起时的匹配快照。客户端应以 `groupID:userID` 为标识在搜索结果列表中展示匹配项。

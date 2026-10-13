@@ -1,8 +1,10 @@
 ---
 title: '更新好友资料'
-description: '使用 updateFriendsReq() 更新好友备注、置顶状态或扩展字段。'
+description: '更新指定好友的备注名、置顶状态或扩展字段。'
 sourcePath: '/sdk/android/user/friends/update-friends'
 ---
+
+修改指定好友的关系属性，包括设置好友备注名、置顶好友以及更新业务扩展字段。
 
 ```java
 UpdateFriendsReq request = new UpdateFriendsReq();
@@ -25,13 +27,27 @@ OpenIMClient.getInstance().friendshipManager.updateFriendsReq(
 );
 ```
 
-`UpdateFriendsReq` 可设置 `friendUserIDs`、`remark`、`isPinned` 和 `ex`。一次调用会把同一字段值应用到全部目标好友；不同好友需要不同值时应分别调用。`ex` 是完整字符串。
+## 参数说明
 
-| 字段            | 说明                               |
-| --------------- | ---------------------------------- |
-| `friendUserIDs` | 待更新的好友 ID 数组。             |
-| `remark`        | 当前账号设置的好友备注。           |
-| `isPinned`      | 是否置顶好友。                     |
-| `ex`            | 好友关系扩展字符串。               |
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `request` | `UpdateFriendsReq` | 是 | 好友资料更新请求体。 |
 
-成功 callback 表示更新好友资料请求完成。好友资料发生变化时，可通过 `onFriendInfoChanged` 接收通知，详见[分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)。
+### 请求体属性
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `friendUserIDs` | `String[]` | 待更新的目标好友用户 ID 数组。注意批量更新时会将相同字段值覆盖应用到数组中所有好友。 |
+| `remark` | `String` | 当前登录用户为目标好友设置的备注名。 |
+| `isPinned` | `boolean` | 是否在通讯录中置顶该好友。 |
+| `ex` | `String` | 好友关系扩展字段。 |
+
+## 返回结果
+
+成功回调表示服务端已成功持久化好友资料变更。
+
+修改生效后，SDK 会通过 `OnFriendshipListener` 派发事件：
+- `onFriendInfoChanged(FriendInfo friend)`：通知好友资料发生变更，客户端应以 `userID` 为主键更新本地好友数据中的对应属性。
+
+完整监听配置请参考[分页获取好友列表](/sdk/android/user/friends/get-friend-list-page)。

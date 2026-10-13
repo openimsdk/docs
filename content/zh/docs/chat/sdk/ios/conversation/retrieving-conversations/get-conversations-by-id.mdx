@@ -4,14 +4,30 @@ description: '使用 iOS SDK 按 conversationID 批量获取会话。'
 sourcePath: '/sdk/ios/conversation/retrieving-conversations/get-conversations-by-id'
 ---
 
-已经持有一组 `conversationID` 时，批量读取这些会话的当前资料：
+已知一组会话 ID 时，批量拉取对应会话的最新资料快照：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationIDs` | `NSArray<NSString *> *` | 待查询的会话 ID 列表。 |
 
 ```objc
-[[OIMManager manager] getMultipleConversation:conversationIDs
+[[OIMManager manager] getMultipleConversation:@[@"c2c_user1001", @"group_group2001"]
                                     onSuccess:^(NSArray<OIMConversationInfo *> *items) {
                                         [conversationStore mergeByConversationID:items ?: @[]];
                                     }
-                                    onFailure:nil];
+                                    onFailure:^(NSInteger code, NSString *message) {
+                                        NSLog(@"getMultipleConversation failed: %ld %@", (long)code, message);
+                                    }];
 ```
 
-成功 callback 的数组允许为空。某个 ID 没有结果时按缺失记录处理，不要依赖响应与请求数组的位置完全一一对应。查询本身不触发 delegate。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回匹配的会话资料数组 `NSArray<OIMConversationInfo *> *`。若传入的 ID 均未生成会话，则返回空数组。
+
+当列表中部分会话尚未创建时，返回数组中将缺少对应条目，其元素顺序也不保证与传入参数严格一致。客户端应以 `conversationID` 为合并标识对本地数据进行更新。
+
+该接口仅返回调用时的会话快照，不触发会话 delegate 回调。会话的后续增量更新请参考[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。

@@ -4,6 +4,16 @@ description: '使用 Flutter SDK 创建结构化业务自定义消息。'
 sourcePath: '/sdk/flutter/message/creating-messages/create-custom-message'
 ---
 
+封装业务自定义数据格式（如投票、红包、订单卡片等），构建待发送的自定义消息对象：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `data` | `String` | 是 | 自定义业务核心数据，建议使用 JSON 字符串格式。 |
+| `extension` | `String` | 是 | 自定义扩展信息，通常用于标识协议版本或业务命名空间。 |
+| `description` | `String` | 是 | 自定义消息的文本描述，常用于离线通知提示或在降级渲染时展示。 |
+
 ```dart
 final message = await OpenIM.iMManager.messageManager.createCustomMessage(
   data: jsonEncode({'version': 1, 'orderID': orderID}),
@@ -12,4 +22,10 @@ final message = await OpenIM.iMManager.messageManager.createCustomMessage(
 );
 ```
 
-接收端应校验协议版本和字段。权威业务状态必须由业务服务维护；Future 只返回待发送对象。
+接收端在解析数据时应校验数据结构与协议版本；关键业务状态应以后端业务服务数据为准，消息本身仅作为通知载体。
+
+## 返回结果
+
+Future 成功返回待发送的自定义消息对象（`Message`），其业务数据保存在 `customElem` 中。
+
+创建操作仅在本地组装消息数据，不会自动执行网络发送，也不会触发新消息事件通知。构建完成后，需将返回的 `Message` 实例传给[发送消息](/sdk/flutter/message/sending-messages/send-message)投递至单聊或群聊会话。

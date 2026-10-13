@@ -1,14 +1,10 @@
 ---
 title: '获取黑名单列表'
-description: '使用 getBlacklist() 获取当前用户的黑名单。'
+description: '获取当前登录账号的完整黑名单列表。'
 sourcePath: '/sdk/android/user/blacklist/get-blacklist'
 ---
 
-黑名单记录当前用户主动拉黑的用户，可用于黑名单设置页、资料卡中的关系状态和聊天入口限制。
-
-## 获取黑名单
-
-完成 SDK 初始化并登录后，调用 `getBlacklist()` 获取当前账号的完整黑名单。返回空列表表示当前没有黑名单用户。
+获取当前登录账号主动拉黑的完整用户列表，常用于隐私设置中的黑名单管理页或在个人主页展示“已拉黑”状态。
 
 ```java
 OpenIMClient.getInstance().friendshipManager.getBlacklist(
@@ -26,23 +22,27 @@ OpenIMClient.getInstance().friendshipManager.getBlacklist(
 );
 ```
 
-成功 callback 返回 `List<UserInfo>`；通过 `UserInfo.getBlackInfo()` 读取黑名单关系对象。
+## 参数说明
 
-## 黑名单记录字段
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<UserInfo>>` | 是 | 异步请求回调。 |
 
-`BlacklistInfo` 的常用字段如下：
+## 返回结果
 
-| 字段             | 说明                                              |
-| ---------------- | ------------------------------------------------- |
-| `userID`         | 被当前用户拉黑的目标用户 ID。                     |
-| `nickname`       | 目标用户昵称。                                    |
-| `faceURL`        | 目标用户头像地址。                                |
-| `gender`         | 目标用户性别值。                                  |
-| `operatorUserID` | 执行拉黑操作的用户 ID。                           |
-| `createTime`     | 黑名单关系创建时间。                              |
-| `addSource`      | 黑名单关系的添加来源。                            |
-| `ex`             | 黑名单关系扩展字符串。                            |
+成功回调返回 `List<UserInfo>` 黑名单用户列表。若当前账号未拉黑任何人，返回空列表。客户端应以 `userID` 为主键进行去重与本地缓存更新。
 
-如果页面还要展示好友备注或最新公开资料，可额外查询好友资料或公开资料。
+通过 `UserInfo` 中的 `blackInfo` 属性可获取该条关系的 `BlacklistInfo` 详情：
 
-黑名单新增或删除时，可通过[拉黑用户](/sdk/android/user/blacklist/add-blacklist)和[取消拉黑用户](/sdk/android/user/blacklist/remove-blacklist)页面中的 listener 接收通知。
+| 字段 | 说明 |
+| --- | --- |
+| `userID` | 被当前用户拉黑的目标用户 ID。 |
+| `nickname` | 目标用户的昵称。 |
+| `faceURL` | 目标用户的头像 URL 地址。 |
+| `gender` | 目标用户的性别。 |
+| `operatorUserID` | 执行拉黑操作的用户 ID。 |
+| `createTime` | 加入黑名单的时间戳。 |
+| `addSource` | 黑名单关系来源途径。 |
+| `ex` | 黑名单关系扩展字段。 |
+
+黑名单新增或移出时，SDK 会通过 `OnFriendshipListener` 派发事件，详细监听配置与处理请参考[拉黑用户](/sdk/android/user/blacklist/add-blacklist)和[取消拉黑用户](/sdk/android/user/blacklist/remove-blacklist)。

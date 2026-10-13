@@ -4,11 +4,30 @@ description: '使用 iOS SDK 设置会话置顶状态。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/pin-conversation'
 ---
 
+设置指定会话在聊天列表中的置顶状态：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 待置顶或取消置顶的会话 ID。 |
+| `isPinned` | `BOOL` | 是否置顶。`YES` 为置顶，`NO` 为取消置顶。 |
+
 ```objc
-[[OIMManager manager] pinConversation:conversationID
+[[OIMManager manager] pinConversation:@"c2c_user1002"
                              isPinned:YES
-                            onSuccess:nil
-                            onFailure:nil];
+                            onSuccess:^(NSString * _Nullable data) {
+                                NSLog(@"pinConversation success");
+                            }
+                            onFailure:^(NSInteger code, NSString *message) {
+                                NSLog(@"pinConversation failed: %ld %@", (long)code, message);
+                            }];
 ```
 
-`YES` 表示置顶，`NO` 表示取消置顶。成功 callback 表示请求完成，不等于 `onConversationChanged:` 已到达；后续按 `conversationID` 合并会话变化。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，会话属性变更会通过 `onConversationChanged:` 事件广播（监听参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)），客户端应以 `conversationID` 为合并标识更新对应会话的 `isPinned` 属性并重排列表顺序。

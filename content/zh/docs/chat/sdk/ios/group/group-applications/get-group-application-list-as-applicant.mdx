@@ -4,19 +4,45 @@ description: '分页查询 iOS 当前用户发出的入群申请。'
 sourcePath: '/sdk/ios/group/group-applications/get-group-application-list-as-applicant'
 ---
 
-构造 `GetGroupApplicationListAsApplicantReq`，设置 `groupIDs`、`handleResults`、`offset` 和 `count`，再传给该 selector。成功 callback 返回当前用户发出的 `OIMGroupApplicationInfo` 数组。
+分页查询当前登录用户主动提交的入群申请记录：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupIDs` | `NSArray<NSString *> *` | 目标群组 ID 列表。 |
+| `handleResults` | `NSArray<NSNumber *> *` | 处理状态过滤列表，包装 `OIMApplicationStatus` 枚举。 |
+| `offset` | `NSInteger` | 分页拉取的偏移量（从 0 开始）。 |
+| `count` | `NSInteger` | 每页返回的最大条数。 |
+
+### 处理状态枚举
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMApplicationStatusNormal` | `0` | 待审核（未处理）。 |
+| `OIMApplicationStatusAgree` | `1` | 已同意。 |
+| `OIMApplicationStatusReject` | `-1` | 已拒绝。 |
 
 ```objc
 GetGroupApplicationListAsApplicantReq *req =
-  [[GetGroupApplicationListAsApplicantReq alloc] initWithGroupIDs:@[groupID]
-    handleResults:@[@(OIMApplicationStatusNormal)] offset:0 count:20];
+    [[GetGroupApplicationListAsApplicantReq alloc] initWithGroupIDs:@[@"group_1001"]
+                                                      handleResults:@[@(OIMApplicationStatusNormal)]
+                                                             offset:0
+                                                              count:20];
+
 [[OIMManager manager] getGroupApplicationListAsApplicantWithRep:req
-  onSuccess:^(NSArray<OIMGroupApplicationInfo *> *items) {
-    [self replaceSentApplications:items];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+                                                      onSuccess:^(NSArray<OIMGroupApplicationInfo *> *items) {
+                                                          [self replaceSentApplications:items];
+                                                      }
+                                                      onFailure:^(NSInteger code, NSString *message) {
+                                                          NSLog(@"getGroupApplicationListAsApplicant failed: %ld %@", (long)code, message);
+                                                      }];
 ```
 
-查询只返回当前页数据，不触发申请 delegate；之后的状态变化见[入群申请概览](/sdk/ios/group/group-applications/overview-group-applications)。
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回当前登录用户主动发出的申请记录数组 `NSArray<OIMGroupApplicationInfo *> *`。
+
+该查询仅返回当前页的数据快照，不触发申请 delegate 回调。后续申请被同意、被拒绝或被删除的状态变化请参见[入群申请概览](/sdk/ios/group/group-applications/overview-group-applications)。

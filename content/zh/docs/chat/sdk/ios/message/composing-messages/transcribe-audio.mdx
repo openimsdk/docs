@@ -4,16 +4,34 @@ description: '使用 iOS OpenIMCore 将音频识别为文字。'
 sourcePath: '/sdk/ios/message/composing-messages/transcribe-audio'
 ---
 
-原生 iOS 优先把沙盒内可读音频路径放入 `filename`；无法提供路径时，将 Base64 放入 `data`：
+通过音频转文字接口，可将语音消息的音频文件或 Base64 语音数据提交给识别引擎进行文本转写。在 iOS 原生环境中，优先将沙盒内可读的音频路径传入 `filename`；若无法提供路径，可将音频 Base64 编码放入 `data`。
 
 ```objc
 NSDictionary *request = @{@"filename": audioFileURL.path};
 NSString *requestJSON = [self JSONString:request];
 CallbackProxy *callback = [[CallbackProxy alloc]
-    initWithOnSuccess:^(NSString *data) {
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        // 解析返回结果并展示转写文字
         [self showTranscription:[self textFromResultJSON:data]];
     }
-    onFailure:nil];
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // 处理转写失败
+    }];
+
+// 提交底层转写方法
+Open_im_sdkSpeechToText(callback, @"", requestJSON);
 ```
 
-将 `requestJSON` 与 callback 交给 `Open_im_sdkSpeechToText`。成功 JSON 为 `{ "text": string }`，不会修改原消息或触发消息事件。调用前先[查询语音识别能力](/sdk/ios/message/composing-messages/check-speech-to-text)。
+## 参数说明
+
+构造包含音频信息的 JSON 请求体（转换为 `requestJSON` 传入）：
+
+- `filename`：沙盒中音频文件的完整本地路径（推荐优先使用）。
+- `data`：音频文件的 Base64 编码内容（无法提供本地路径时使用）。
+
+## 返回结果
+
+- 成功回调返回包含识别文本的 JSON 字符串，格式形如 `{"text": "转写的文本内容"}`。
+- 转写操作仅完成音频解析，不会自动修改原消息对象，亦不会触发远端或本地消息变更事件。
+- 若需将转写结果随当前消息持久化保存在当前设备，可存入消息本地扩展字段，详见[保存本地转写结果](/sdk/ios/message/composing-messages/save-local-transcript)。
+- 调用识别前，建议先核验当前环境所支持的音频格式与时长限制，详见[检查语音识别能力](/sdk/ios/message/composing-messages/check-speech-to-text)。

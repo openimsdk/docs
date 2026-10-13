@@ -1,36 +1,32 @@
 ---
 title: '发送消息'
-description: '使用 sendMessage 将 Message 发送到单聊或群聊。'
+description: '将创建好的 Message 对象发送到指定单聊或群聊会话。'
 sourcePath: '/sdk/android/message/sending-messages/send-message'
 ---
 
-`sendMessage()` 发送已经创建的 `Message`。单聊只填写 `recvUid`，群聊只填写 `recvGid`；两个目标不能同时填写。通过 `OnMsgSendCallback` 分别处理发送成功、失败和媒体上传进度。
-
-## 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `message` | `Message` | 是 | 通过对应创建方法得到的待发送消息。 |
-| `recvUid` | `String` | 条件必填 | 单聊接收方用户 ID；发送群消息时传空值。 |
-| `recvGid` | `String` | 条件必填 | 群聊的群组 ID；发送单聊消息时传空值。 |
-| `offlinePushInfo` | `OfflinePushInfo` | 是 | 接收方离线时使用的推送配置；没有自定义内容时传空对象。 |
+将构建好的 `Message` 对象发送到单聊或群聊中。单聊仅填写接收方用户 ID（`recvUid`），群聊仅填写目标群组 ID（`recvGid`），两者互斥，不可同时指定。通过 `OnMsgSendCallback` 可分别监听发送成功、失败以及大文件上传的进度反馈。
 
 ```java
+String peerUserID = "user_b";
+OfflinePushInfo offlinePushInfo = new OfflinePushInfo();
+offlinePushInfo.setTitle("新消息通知");
+offlinePushInfo.setDesc("您有一条新消息，请点击查看");
+
 OpenIMClient.getInstance().messageManager.sendMessage(
     new OnMsgSendCallback() {
         @Override
         public void onProgress(long progress) {
-            // 更新媒体消息的上传进度。
+            // progress 为媒体文件上传进度（0-100）
         }
 
         @Override
         public void onSuccess(Message sentMessage) {
-            // 按 clientMsgID 替换本地待发送消息。
+            // 发送成功，按 sentMessage.getClientMsgID() 刷新本地消息状态
         }
 
         @Override
         public void onError(int code, String error) {
-            // 标记发送失败并允许重试。
+            // 标记消息发送失败并支持重试
         }
     },
     message,
@@ -40,6 +36,18 @@ OpenIMClient.getInstance().messageManager.sendMessage(
 );
 ```
 
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `callback` | `OnMsgSendCallback` | 是 | 消息发送生命周期回调，包含进度、成功与失败处理方法。 |
+| `message` | `Message` | 是 | 待发送的消息对象，通过对应消息类型的创建方法预先生成。 |
+| `recvUid` | `String` | 条件必填 | 单聊接收方用户 ID。发送群聊消息时必须传 `null`。 |
+| `recvGid` | `String` | 条件必填 | 群聊目标群组 ID。发送单聊消息时必须传 `null`。 |
+| `offlinePushInfo` | `OfflinePushInfo` | 否 | 接收方处于离线状态时的推送展示信息。不需要自定义时可传 `null`。 |
+
 ## 返回结果
 
-成功回调提供发送后的 `Message`，其中包含服务端补充的 ID、时间和发送状态。发送回调成功只表示当前请求完成；接收方是否已经收到消息，以其[接收消息](/sdk/android/message/receiving-messages/receive-messages)事件为准。
+成功回调返回发送成功后的 `Message` 对象。其中包含服务端分配的 `serverMsgID`、消息发送时间戳 `sendTime` 以及更新后的发送状态 `status`。
+
+客户端应以 `clientMsgID` 为标识更新本地 UI 列表中该条消息的状态（如由“发送中”变更为“已发送”）。发送成功表示当前客户端已将消息成功投递至服务端，接收端是否已接收以其[接收消息](/sdk/android/message/receiving-messages/receive-messages)事件为准。

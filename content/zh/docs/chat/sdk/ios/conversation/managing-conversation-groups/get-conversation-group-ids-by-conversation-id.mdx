@@ -1,27 +1,37 @@
 ---
 title: '查询会话所属分组'
-description: '使用 Open_im_sdkGetConversationGroupByConversationID 查询会话所属的完整分组。'
+description: '使用 iOS SDK 查询会话所属的完整分组。'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id'
 ---
 
-同一个会话可以属于多个会话分组。使用 `Open_im_sdkGetConversationGroupByConversationID` 查询指定会话当前所属的分组。
+同一个会话可以同时归属于多个会话分组。查询指定会话当前归属的全部会话分组列表：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
 
 ```objc
-NSString *targetConversationID = conversationID;
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
 
 CallbackProxy *callback = [[CallbackProxy alloc]
     initWithOnSuccess:^(NSString * _Nullable data) {
         [self mergeConversationGroupsJSON:data];
     }
     onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showConversationGroupError:code message:message ?: @"查询会话所属分组失败"];
+        NSLog(@"GetConversationGroupByConversationID failed: %ld %@", (long)code, message);
     }];
+
+Open_im_sdkGetConversationGroupByConversationID(callback, @"c2c_user1002");
 ```
 
-将 `callback` 与 `targetConversationID` 交给 `Open_im_sdkGetConversationGroupByConversationID`。
+状态以 `conversationGroupID` 为合并标识。
 
 ## 返回结果
 
-成功 callback 的 `data` 是完整分组对象的 JSON 数组，不是分组 ID 字符串数组。这一点与 WASM 的 `getConversationGroupIDsByConversationID()` 不同。
+成功回调 `onSuccess` 的 `data` 参数返回包含所属各分组完整信息的 JSON 数组字符串。注意此处返回的是完整分组对象数组，并非纯分组 ID 字符串列表。
 
-该查询不会触发分组 listener。之后的关联变化处理见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+该查询仅返回调用时刻的分组从属快照，不触发分组 listener 回调。分组成员关系的后续事件同步请参见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+

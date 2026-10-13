@@ -4,10 +4,53 @@ description: '使用 iOS SDK 将用户移出当前账号黑名单。'
 sourcePath: '/sdk/ios/user/moderating-a-user/unblock-user'
 ---
 
+将指定用户移出当前账号的黑名单，恢复与其正常的消息交互与关系流转：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `NSString *` | 待移出黑名单的目标用户 ID。 |
+
 ```objc
 [[OIMManager manager] removeFromBlackList:targetUserID
-    onSuccess:nil
-    onFailure:nil];
+                                onSuccess:^(NSString *data) {
+    [blacklistStore removeUserID:targetUserID];
+}
+                                onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"removeFromBlackList failed: %ld %@", (long)code, message);
+}];
 ```
 
-成功 callback 不等于事件已到达。`onBlackDeleted:` 是本页归属事件，按事件数据中的 `userID` 从黑名单移除；需要确认完整结果时重新查询黑名单列表。
+状态以 `userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已处理移出黑名单操作。其他端或当前设备通过黑名单监听回调同步增量变更。完整黑名单列表可通过[获取黑名单列表](/sdk/ios/user/moderating-a-user/retrieve-a-list-of-blocked-users)重新查询校准。
+
+## 监听黑名单移除
+
+实现 `OIMFriendshipListener` 协议的 `onBlackDeleted:` 方法处理黑名单移除事件：
+
+```objc
+@interface BlacklistStore () <OIMFriendshipListener>
+@end
+
+@implementation BlacklistStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addFriendListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeFriendListener:self];
+}
+
+- (void)onBlackDeleted:(OIMBlackInfo *)info {
+    [self removeBlackInfoForUserID:info.userID];
+}
+
+@end
+```
+
+在退出登录或切换账号时，使用注册时的同一个 listener 实例调用移除监听方法。如需将用户加入黑名单，见[拉黑用户](/sdk/ios/user/moderating-a-user/block-user)。

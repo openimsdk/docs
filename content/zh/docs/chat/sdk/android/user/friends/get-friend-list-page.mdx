@@ -1,8 +1,10 @@
 ---
 title: '分页获取好友列表'
-description: '使用 getFriendListPage() 分页获取当前用户的好友列表。'
+description: '分页获取当前账号的好友列表，并同步好友变更事件。'
 sourcePath: '/sdk/android/user/friends/get-friend-list-page'
 ---
+
+分页拉取当前登录用户的好友关系列表，避免全量一次性加载导致的数据臃肿。返回的每条记录包含好友的用户基础资料及备注等好友属性。
 
 ```java
 OpenIMClient.getInstance().friendshipManager.getFriendListPage(
@@ -23,40 +25,49 @@ OpenIMClient.getInstance().friendshipManager.getFriendListPage(
 );
 ```
 
-参数依次为 `offset`、`count` 和 `filterBlack`。`offset` 从 `0` 开始，`count` 是页大小，`filterBlack` 为 `true` 时过滤黑名单用户。成功 callback 返回当前页 `List<UserInfo>`，好友关系详情可通过 `getFriendInfo()` 读取。继续加载下一页时按实际请求数量增加 `offset`；返回数量小于 `count` 时通常表示到达末页。
+## 参数说明
 
-## 好友资料字段
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<UserInfo>>` | 是 | 异步请求回调。 |
+| `offset` | `int` | 是 | 分页起始偏移量，首批拉取传 `0`。 |
+| `count` | `int` | 是 | 本页期望返回的好友数量。 |
+| `filterBlack` | `boolean` | 是 | 传入 `true` 表示自动过滤黑名单中的用户；传入 `false` 则一并返回。 |
 
-好友列表中的 `UserInfo.getFriendInfo()` 返回 `FriendInfo`，常用字段如下：
+## 返回结果
 
-| 字段             | 说明                                  |
-| ---------------- | ------------------------------------- |
-| `userID`         | 好友用户 ID。                        |
-| `nickname`       | 好友账号昵称。                        |
-| `faceURL`        | 好友账号头像地址。                    |
-| `remark`         | 当前账号设置的好友备注。              |
-| `ex`             | 好友关系扩展字符串。                  |
-| `addSource`      | 好友关系添加来源。                    |
-| `operatorUserID` | 建立或更新关系的操作用户 ID。         |
-| `createTime`     | 好友关系创建时间。                    |
+成功回调返回当前分页的 `List<UserInfo>`。客户端应以 `userID` 为主键对本地好友数据进行去重与增量合并；当返回列表条目数小于 `count` 时，通常表示已到达末页。
 
-`nickname` 和 `faceURL` 是账号资料，`remark` 和 `ex` 属于好友关系。`UpdateFriendsReq` 支持提交 `isPinned`，但当前 Android `FriendInfo` 模型不提供对应读取字段。
+好友资料可通过对应的数据对象读取，常用属性包括：
 
-好友新增、资料变化和删除时，可通过 `OnFriendshipListener` 接收以下回调：
+| 字段 | 说明 |
+| --- | --- |
+| `userID` | 好友的全局唯一用户 ID。 |
+| `nickname` | 好友账号公开昵称。 |
+| `faceURL` | 好友账号头像 URL 地址。 |
+| `remark` | 当前用户为该好友设置的备注名。 |
+| `ex` | 好友关系扩展字段。 |
+| `addSource` | 添加好友的来源途径。 |
+| `operatorUserID` | 建立或更新该关系的操作者用户 ID。 |
+| `createTime` | 成为好友的时间戳。 |
+
+## 监听好友关系变动
+
+好友新增、资料修改或被删除时，可通过在应用全局注册的 `OnFriendshipListener` 接收实时通知，客户端应以 `userID` 为主键进行数据合并或移除：
 
 ```java
 @Override
 public void onFriendAdded(FriendInfo friend) {
-    // 处理新增好友
+    // 成功添加好友，插入列表或刷新界面
 }
 
 @Override
 public void onFriendInfoChanged(FriendInfo friend) {
-    // 处理好友资料变化
+    // 好友昵称、备注或头像更新，按 userID 刷新对应项
 }
 
 @Override
 public void onFriendDeleted(FriendInfo friend) {
-    // 处理好友删除
+    // 好友关系解除，按 userID 从本地好友列表中移除
 }
 ```

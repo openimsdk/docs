@@ -80,6 +80,7 @@ export const sdkPlatformSections: SdkPlatformSection[] = [
       { label: 'Electron', platform: 'electron', href: '/sdk/electron/overview' },
       {
         label: 'Mini Program',
+        labelZh: '小程序 / JS SDK',
         platform: 'miniprogram',
         href: '/sdk/miniprogram/overview',
       },

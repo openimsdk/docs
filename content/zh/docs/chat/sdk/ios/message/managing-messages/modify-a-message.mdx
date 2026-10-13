@@ -4,18 +4,9 @@ description: '使用 OpenIM iOS SDK 修改已发送消息的内容。'
 sourcePath: '/sdk/ios/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessageWithConversationID:message:onSuccess:onFailure:` 用于在会话中修改一条已存在消息的内容。它和[删除消息](/sdk/ios/message/managing-messages/delete-saved-message)、[撤回消息](/sdk/ios/message/managing-messages/revoke-a-message)不同：删除影响消息是否仍对当前账号可见，撤回让会话成员看到撤回态；修改则替换消息内容并同步给其他客户端。
+调用修改消息接口可以在会话中编辑一条已发送的历史消息内容。它和[删除消息](/sdk/ios/message/managing-messages/delete-saved-message)与[撤回消息](/sdk/ios/message/managing-messages/revoke-a-message)不同：删除操作仅影响当前账号侧的消息可见性，撤回会将消息展示为撤回占位符；修改则直接替换消息的正文内容并多端同步。
 
 ## 修改消息内容
-
-该 selector 接收消息所在的 `conversationID` 和修改后的完整 `OIMMessageInfo`：
-
-### 参数说明
-
-| 参数             | 类型               | 是否必填 | 说明                                             |
-| ---------------- | ------------------ | -------- | ------------------------------------------------ |
-| `conversationID` | `NSString *`       | 必填     | 消息所属的会话 ID。                              |
-| `message`        | `OIMMessageInfo *` | 必填     | 修改后的完整消息对象；必须保留原 `clientMsgID`。 |
 
 ```objc
 if (message.textElem == nil || editedText.length == 0) {
@@ -27,29 +18,37 @@ message.textElem.content = editedText;
 
 [[OIMManager manager]
     modifyMessageWithConversationID:conversationID
-    message:message
-    onSuccess:^(NSString * _Nullable data) {
+                            message:message
+                          onSuccess:^(NSString * _Nullable data) {
+        // 修改成功，刷新本地界面展示
         [self replaceMessage:message
               conversationID:conversationID
-                  clientMsgID:message.clientMsgID];
+                 clientMsgID:message.clientMsgID];
     }
-    onFailure:^(NSInteger code, NSString * _Nullable errorMessage) {
+                          onFailure:^(NSInteger code, NSString * _Nullable errorMessage) {
+        // 失败时回滚本地编辑内容
         message.textElem.content = previousText;
         [self showModifyError:code message:errorMessage ?: @"修改消息失败"];
     }];
 ```
 
-该方法不是局部更新。应以当前完整消息为基础只修改目标内容，保留 `clientMsgID`、路由、发送者、时间和其余 element。允许修改的发送者、时间窗口和消息类型由 OpenIMServer 校验；失败时应恢复或重新查询，不能只在本地保留编辑结果。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | 必填 | 消息所属的会话 ID。 |
+| `message` | `OIMMessageInfo *` | 必填 | 包含修改后内容的完整消息对象；必须保留原有的 `clientMsgID` 与路由属性。 |
+
+修改消息并非增量字段更新。应以本地当前完整的消息对象为基础修改目标属性，并严格保留原有的 `clientMsgID`、会话类型、发送者、发送时间和其余元素。允许修改的消息类型、可编辑时间窗口及权限由服务端校验；调用失败时应恢复原状，不可擅自在本地保留编辑结果。
 
 ## 返回结果
 
-成功 callback 的 `NSString *` 不是修改后的消息对象。成功表示当前修改请求已完成；当前客户端可以先按 `clientMsgID` 展示提交的完整消息，再根据消息修改事件更新，必要时重新查询确认最终内容。
+- 成功回调仅表示当前修改请求已被服务端接受。客户端状态合并标识为 `clientMsgID`（必要时同时限定 `conversationID`）。
+- 调用成功不代表所有其他在线客户端的 UI 已瞬时刷新。其他客户端通过消息修改事件接收最新的消息对象并合并状态。
 
-调用成功不代表所有客户端界面已经更新。其他客户端通过 `onMessageModified:` 收到修改后的 `OIMMessageInfo`。
+## 监听消息修改事件
 
-## 监听消息修改
-
-本页是 `onMessageModified:` 的完整事件归属页。它属于应用已经注册的 `OIMAdvancedMsgListener`：
+其他成员或本端其他设备收到消息修改通知时，由 `OIMAdvancedMsgListener` 协议的方法派发：
 
 ```objc
 - (void)onMessageModified:(OIMMessageInfo *)message {
@@ -58,13 +57,14 @@ message.textElem.content = editedText;
     }
 
     NSString *conversationID = [self conversationIDForMessage:message];
+    // 依据 clientMsgID 替换已有消息
     [self replaceMessage:message
           conversationID:conversationID
-              clientMsgID:message.clientMsgID];
+             clientMsgID:message.clientMsgID];
 }
 ```
 
-事件回调提供单个修改后的 `OIMMessageInfo`。按 `clientMsgID` 替换原消息，并结合 `sessionType`、`sendID`、`recvID` 和 `groupID` 确定所属会话；不要按数组位置或显示文本匹配。listener 的强引用、注册和移除方式见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+事件回调中返回修改后的完整 `OIMMessageInfo` 对象。本地数据层应根据 `clientMsgID` 查找到对应的缓存项并整体替换，避免通过数组索引直接覆盖。监听器的注册与生命周期管理见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
 
 ## 相关页面
 

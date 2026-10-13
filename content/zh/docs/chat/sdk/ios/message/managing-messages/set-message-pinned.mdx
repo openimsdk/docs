@@ -4,12 +4,44 @@ description: '使用 iOS SDK 置顶或取消置顶一条消息。'
 sourcePath: '/sdk/ios/message/managing-messages/set-message-pinned'
 ---
 
+调用设置会话置顶消息接口可以将指定会话中的某条历史消息固定在顶部，或取消其置顶状态。
+
 ```objc
 [[OIMManager manager] setConversationPinnedMsgWithConversationID:conversationID
-    clientMsgID:message.clientMsgID
-    pinned:YES
-    onSuccess:nil
-    onFailure:nil];
+                                                     clientMsgID:message.clientMsgID
+                                                          pinned:YES
+                                                       onSuccess:^(NSString * _Nullable data) {
+    // 提交置顶请求成功
+}
+                                                       onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理置顶失败
+}];
 ```
 
-传 `NO` 取消置顶。成功 callback 不返回新列表，也不表示事件已到达。`onChangedPinnedMsg:` 是本页归属事件；按 `OIMChangedPinnedMsg.conversationID` 替换集合，再按每个 `msg.clientMsgID` 去重。listener 生命周期见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `clientMsgID`：目标消息的客户端消息 ID。
+- `pinned`：是否置顶。传入 `YES` 表示置顶消息；传入 `NO` 表示取消置顶。
+- `onSuccess`：操作成功回调。
+- `onFailure`：操作失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 监听置顶消息变更事件
+
+当会话中的置顶消息列表发生变动时，SDK 通过 `OIMAdvancedMsgListener` 协议的方法下发变更通知：
+
+```objc
+- (void)onChangedPinnedMsg:(OIMChangedPinnedMsg *)changedPinnedMsg {
+    if (changedPinnedMsg == nil) {
+        return;
+    }
+    // 依据 conversationID 刷新对应会话的置顶消息集合
+    [self replacePinnedMessages:changedPinnedMsg.messageList
+                 conversationID:changedPinnedMsg.conversationID];
+}
+```
+
+## 客户端状态合并与注意事项
+
+- 客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。收到变更事件后，应根据 `conversationID` 替换置顶栏集合，并按 `clientMsgID` 校验与去重。
+- 调用成功仅表示服务端已接受置顶变更请求。其他端界面的置顶栏状态通过置顶事件到达后统一刷新。主动拉取当前置顶列表见[查询会话置顶消息](/sdk/ios/message/managing-messages/get-pinned-messages)。监听器生命周期管理见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。

@@ -57,35 +57,35 @@ const landingCopy = {
   zh: {
     apiAction: '查看 API 概览',
     apiDescription:
-      '通过 Platform API，在可信服务端创建用户、签发登录 Token、管理群组和成员，并发送或迁移消息。',
+      '通过服务端 Platform API，在业务后台管理用户与群组、安全签发登录 Token、发送业务消息并平滑导入历史数据。',
     apiEyebrow: '服务端',
     apiHeroCta: '从 API 概览开始',
     apiHeroDescription:
-      'Platform API 按用户、群组和消息等资源组织。先完成地址、鉴权和请求约定配置，再接入具体服务端能力。',
+      'Platform API 按用户、群组和消息等核心资源组织。先完成服务地址配置与统一鉴权，再快速接入各项后台能力。',
     apiHeroKicker: 'REST API',
     apiHeroTitle: '从业务后端管理 OpenIMServer',
     apiTitle: 'Platform API',
     featureDescription:
-      '按用户、会话、群组和消息等领域查找能力，并进入对应的 SDK 或 Platform API 文档。',
-    featureEyebrow: '能力导航',
+      '按用户、会话、群组和消息等核心功能分类浏览，快速查阅对应的客户端 SDK 或服务端 API 开发指南。',
+    featureEyebrow: '功能导航',
     featureTitle: '功能特性',
     featuredDescription:
-      '按接入准备、客户端登录、发送第一条消息和创建群组的顺序，进入对应操作指南。',
+      '跟随快速上手指引，依次完成环境准备、用户登录、首条消息收发与群组创建。',
     featuredEyebrow: '接入指南',
     featuredTitle: '核心接入流程',
     heroDescription:
-      '从 OpenIMClientSDK、OpenIMServer Platform API、示例应用和核心接入流程开始，接入用户、会话、群组、消息与音视频通话。',
+      '提供多端客户端 SDK、服务端 API、完整示例应用与核心集成指南，助你快速构建支持单聊、群聊、会话管理与音视频通话的现代化即时通讯产品。',
     heroEyebrow: 'OPENIMSDK',
     heroPrimary: '查看 SDK',
     heroSecondary: '查看 Platform API',
     heroTitle: '使用 OpenIMSDK 构建即时通讯应用',
     sampleDescription:
-      '查看 OpenIMSDK GitHub 组织维护的 Demo 与集成示例，对照各平台接入 OpenIMClientSDK 的实际方式。',
+      '查看官方开源的 Demo 与工程示例，快速参考各平台真实的集成与调用方式。',
     sampleEyebrow: '开源 Demo',
     sampleTitle: '示例应用',
     sdkAction: '查看 WASM SDK',
     sdkDescription:
-      '按应用运行平台选择客户端 SDK。各平台文档覆盖同一套用户、会话、群组和消息能力，并说明各自的运行环境与集成差异。',
+      '选择适配你业务场景的客户端 SDK。各平台均提供一致的用户、会话、群组和消息核心能力，并针对各端运行环境进行了深度优化。',
     sdkEyebrow: '客户端',
     sdkTitle: 'SDK',
   },
@@ -222,13 +222,6 @@ const sampleApps: HomeCard[] = [
     description:
       'UTS plugin repository with an integration example for uni-app and uni-app x projects.',
     meta: 'GitHub / UTS',
-  },
-  {
-    title: 'HarmonyOS example',
-    href: 'https://github.com/openimsdk/openim-sdk-harmony',
-    description:
-      'HarmonyOS SDK repository with an ArkTS entry application for integration testing.',
-    meta: 'GitHub / HarmonyOS',
   },
 ];
 
@@ -494,7 +487,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   Flutter: {
     title: 'Flutter',
-    description: '用同一套 OpenIMClientSDK 接入路径覆盖移动端和支持的桌面平台。',
+    description: '一套代码覆盖 iOS、Android 及多端桌面应用，开箱即用。',
     meta: 'Dart',
   },
   iOS: {
@@ -504,26 +497,26 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Issue a session token': {
     title: '签发会话 Token',
-    description: '由可信业务服务端为 OpenIMServer 用户签发登录 Token。',
+    description: '在业务后台验证用户身份后，为该用户签发用于登录 OpenIM 的 Token。',
     meta: '认证',
   },
   'Block a user': {
     title: '屏蔽用户',
-    description: '从可信服务端建立用户黑名单关系，阻止对方向当前用户发送消息。',
+    description: '将指定用户加入黑名单，阻止其发起单聊消息与好友申请。',
     meta: '管控',
   },
   Electron: {
     title: 'Electron',
-    description: '面向 Electron 桌面应用，渲染层可复用 WASM，原生运行层可通过 FFI 接入。',
+    description: '专为 Electron 桌面端打造，支持在渲染进程通过 WASM 轻量接入，或在主进程直接集成原生能力。',
     meta: 'Desktop',
   },
   Messages: {
     title: '消息',
-    description: '从可信服务端发送消息，或导入其他系统的历史消息。',
+    description: '从业务后台直接发送消息，或平滑导入历史会话记录。',
   },
   'Read receipts': {
     title: '已读回执',
-    description: '从当前客户端上报指定群消息已读。',
+    description: '上报单聊或群聊消息已读状态，实时同步已读回执。',
     meta: '已读',
   },
   'Search message history': {
@@ -538,29 +531,29 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Prepare SDK integration': {
     title: '完成接入准备',
-    description: '准备 OpenIMServer、应用凭证、用户账号和登录 Token。',
+    description: '部署或连接 OpenIM 服务端，获取应用凭证与测试 Token。',
     meta: 'SDK',
   },
   'Authenticate a client': {
     title: '初始化并登录客户端',
-    description: '初始化 SDK、完成登录，并处理 Token 过期和被踢下线等事件。',
+    description: '初始化 SDK 并完成登录，监听连接状态、Token 过期和多端互踢事件。',
     meta: 'SDK',
   },
   'Typing indicators': {
     title: '输入状态',
-    description: '在当前活跃会话中显示实时输入状态。',
+    description: '在会话中实时呈现对方正在输入的状态与提示。',
     meta: '输入中',
   },
   'JavaScript SDK': {
     title: 'JavaScript SDK',
     description:
-      '纯 JavaScript 实现，适用于小程序、客服入口、活动页和无需本地消息存储的轻量 Web 场景。',
+      '采用纯 JavaScript 编写，体积小巧、无需本地数据库依赖，特别适合微信/各类小程序及轻量 Web 场景。',
     meta: '纯 JavaScript',
   },
   'JavaScript SDK (WASM)': {
     title: 'JavaScript SDK (WASM)',
     description:
-      '基于 WebAssembly，提供本地消息存储、会话缓存和本地搜索，适用于完整 Web IM 和 Electron 渲染层。',
+      '基于 WebAssembly 与本地 SQLite 存储，具备离线消息缓存与毫秒级本地搜索，打造桌面级的 Web 完整 IM 体验。',
     meta: 'WebAssembly',
   },
   'React Native': {
@@ -570,26 +563,26 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   HarmonyOS: {
     title: 'HarmonyOS',
-    description: '通过类型化 ArkTS API，为手机、平板和 2in1 设备构建原生 HarmonyOS 应用。',
+    description: '基于原生 ArkTS 深度封装，全面适配鸿蒙手机、平板及 2in1 设备。',
     meta: 'ArkTS / 商业版',
   },
   'Unread counts': {
     title: '未读数',
-    description: '读取账号总未读数，更新导航和应用角标。',
+    description: '获取当前用户的总未读消息数，用于更新桌面图标角标或底部导航红点。',
     meta: '未读',
   },
   'User profiles': {
     title: '用户资料',
-    description: '从服务端更新用户昵称、头像和扩展字段。',
+    description: '在业务服务端更新用户昵称、头像和扩展字段。',
     meta: '资料',
   },
   Users: {
     title: '用户',
-    description: '创建和查询用户、更新资料，并为客户端登录签发 Token。',
+    description: '创建和查询用户、更新资料，并在业务后台安全签发 Token。',
   },
   'uni-app / uni-app x': {
     title: 'uni-app / uni-app x',
-    description: '通过同一套 UTS 插件接入 Android、iOS 与 HarmonyOS 原生 App。',
+    description: '基于官方 UTS 原生插件，一套代码无缝打包 Android、iOS 和 HarmonyOS 原生应用。',
     meta: 'UTS / HBuilderX',
   },
   'Android demo': {
@@ -634,17 +627,17 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Join a group': {
     title: '加入群组',
-    description: '从可信服务端提交用户入群请求。',
+    description: '从业务后台直接将用户加入群组，或代为发起加群请求。',
     meta: '成员',
   },
   'List blocked users': {
     title: '查询屏蔽关系',
-    description: '查询指定用户的黑名单关系，用于后台管理和问题排查。',
+    description: '查询指定用户的黑名单列表，用于后台管控与客服排查。',
     meta: '审计',
   },
   'List group members': {
     title: '查询群组成员',
-    description: '从服务端读取群成员列表，用于后台管理和数据同步。',
+    description: '从服务端查询群成员列表，用于后台管理和数据同步。',
     meta: '成员',
   },
   'Message history': {
@@ -667,11 +660,6 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
     description: '查看 React Native Demo 在 Android 与 iOS 上的运行环境和 SDK 接入方式。',
     meta: 'GitHub / RN',
   },
-  'HarmonyOS example': {
-    title: 'HarmonyOS 示例',
-    description: '查看 HarmonyOS SDK 仓库中的 ArkTS entry 应用，验证工程接入与 SDK 调用。',
-    meta: 'GitHub / HarmonyOS',
-  },
   'Send messages': {
     title: '发送消息',
     description: '从可信服务端向单聊用户或群组发送消息。',
@@ -689,7 +677,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'User provisioning': {
     title: '创建用户',
-    description: '在客户端登录前，由可信业务服务端创建 OpenIMServer 用户。',
+    description: '在业务用户注册或同步时，将其快速导入或创建为 OpenIM 用户。',
     meta: '用户',
   },
   Groups: {
@@ -723,12 +711,12 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Conversation groups': {
     title: '会话分组',
-    description: '创建和管理当前用户的会话分组，并同步分组及成员会话的变化。',
+    description: '支持将会话整理归类到自定义分组，并实时同步分组状态与列表变化。',
     meta: '分组',
   },
   'Pinned messages': {
     title: '置顶消息',
-    description: '置顶会话中的重要消息，并通过事件同步变更。',
+    description: '将群组或单聊中的关键消息置顶，方便所有会话成员快速查阅。',
     meta: '置顶',
   },
   'Mute a group': {
@@ -748,7 +736,7 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
   },
   'Flutter SDK': {
     title: 'Flutter SDK',
-    description: '用同一套 OpenIMClientSDK 接入路径覆盖移动端和支持的桌面平台。',
+    description: '一套代码覆盖 iOS、Android 及多端桌面应用，开箱即用。',
     meta: 'Flutter',
   },
 };
@@ -756,31 +744,31 @@ const zhCardText: Record<string, Pick<HomeCard, 'title' | 'description'> & { met
 const zhFeatureGroupText: Record<string, Pick<FeatureGroup, 'title' | 'description'>> = {
   'User identity and access': {
     title: '用户与登录',
-    description: '创建 OpenIMServer 用户、维护用户资料，并完成 OpenIMClientSDK 登录。',
+    description: '管理用户注册与资料更新，安全签发凭证并完成客户端登录。',
   },
   'Conversations and groups': {
     title: '会话与群组',
-    description: '管理客户端会话状态，并创建群组、查询成员和处理成员进退群。',
+    description: '维护会话列表与未读数，支持群组创建、成员管理及权限控制。',
   },
   'Messaging and history': {
     title: '消息与历史',
-    description: '发送和接收消息、读取历史消息，并按关键词搜索会话记录。',
+    description: '支持多种消息类型的收发、云端与本地历史消息同步及全文字符串搜索。',
   },
   'Message state and UX': {
-    title: '消息状态与体验',
-    description: '同步未读数、已读回执和输入状态，并承载自定义消息载荷。',
+    title: '消息状态与交互体验',
+    description: '支持未读数同步、消息已读回执、正在输入状态提示以及灵活的自定义扩展消息。',
   },
   'Advanced messaging': {
     title: '高级功能',
-    description: '查询群消息已读成员、撤回消息、管理会话分组，并置顶重要消息。',
+    description: '提供消息撤回、群消息已读成员列表、重要消息置顶及会话分组管理。',
   },
   'Moderation and governance': {
     title: '关系与群组管控',
-    description: '管理用户黑名单，并对群组或群成员设置禁言。',
+    description: '提供黑名单管理、全群禁言及指定成员禁言等安全治理能力。',
   },
   'Cross-platform SDKs and operations': {
     title: '跨平台 SDK 与服务端接入',
-    description: '选择适合应用技术栈的客户端 SDK，并完成 Platform API 接入准备。',
+    description: '选择适合应用技术栈的客户端 SDK，并完成服务端 Platform API 接入。',
   },
 };
 

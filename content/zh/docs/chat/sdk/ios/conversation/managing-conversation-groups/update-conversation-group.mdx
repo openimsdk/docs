@@ -1,33 +1,53 @@
 ---
 title: '更新会话分组'
-description: '使用 Open_im_sdkUpdateConversationGroup 更新会话分组。'
+description: '使用 iOS SDK 更新会话分组。'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/update-conversation-group'
 ---
 
-使用 `Open_im_sdkUpdateConversationGroup` 修改已有会话分组。`conversationGroupID` 必填，只传本次需要更新的字段。
+修改已有会话分组的名称、扩展字段或隐藏状态：
 
 ## 参数说明
 
-| 字段 | 是否必填 | 说明 |
+| 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| `conversationGroupID` | 必填 | 目标会话分组 ID。 |
-| `name` | 可选 | 新的分组名称。 |
-| `ex` | 可选 | 新的业务扩展字符串。 |
-| `hidden` | 可选 | 是否隐藏该分组。 |
+| `conversationGroupID` | `NSString *` | 必填，目标会话分组 ID。 |
+| `name` | `NSString *` | 可选，新的分组名称。 |
+| `ex` | `NSString *` | 可选，新的业务扩展字符串。 |
+| `hidden` | `NSNumber *` | 可选，是否隐藏该分组（包装 `BOOL`）。 |
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSDictionary *request = @{
-    @"conversationGroupID": conversationGroupID,
+    @"conversationGroupID": @"group_work_101",
     @"name": @"重点工作",
     @"hidden": @NO,
 };
+
 NSData *requestData = [NSJSONSerialization dataWithJSONObject:request options:0 error:nil];
 NSString *requestJSON = [[NSString alloc] initWithData:requestData
                                               encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        if (data == nil) {
+            return;
+        }
+        [self upsertConversationGroupJSON:data];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"UpdateConversationGroup failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkUpdateConversationGroup(callback, requestJSON);
 ```
 
-将业务 callback 与 `requestJSON` 交给 `Open_im_sdkUpdateConversationGroup`。
+状态以 `conversationGroupID` 为合并标识。
 
 ## 返回结果
 
-成功 callback 的 `data` 是更新后的分组 JSON 对象，可以按 `conversationGroupID` 合并。其他登录端或后续同步可能收到 `onConversationGroupChanged:`；完整 listener 见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+成功回调 `onSuccess` 的 `data` 参数返回更新后的分组 JSON 字符串，客户端应以 `conversationGroupID` 为合并标识更新本地分组存储。
+
+其他端同步或后续变更会通过 `onConversationGroupChanged:` 事件广播，完整事件处理请参见[会话分组概览](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups)。
+

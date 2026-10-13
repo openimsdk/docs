@@ -1,20 +1,50 @@
 ---
 title: '设置群内添加好友权限'
-description: '通过 GroupInfo.applyMemberFriend 设置是否允许从群成员发起好友申请。'
+description: '设置群内成员之间是否允许直接发起添加好友申请。'
 sourcePath: '/sdk/android/group/set-group-member-friend-permission'
 ---
 
-`applyMemberFriend` 使用整数开关：`0` 关闭，`1` 打开。该规则只影响从该群成员关系入口发起的好友申请。
+控制群内成员之间是否允许直接发起好友申请。群主或管理员通过设置 `GroupInfo` 的 `applyMemberFriend` 属性进行开关控制。该限制仅作用于从当前群聊成员列表中发起的好友申请入口。
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
-update.setApplyMemberFriend(0);
+update.setGroupID("group_123");
+update.setApplyMemberFriend(0); // 0 为禁止群内互加好友
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 权限更新成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理更新失败
+        }
+    }
+);
 ```
 
-成功回调表示权限更新请求已完成，不表示其他客户端界面已经更新。`onGroupInfoChanged` 返回更新后的 `GroupInfo`；按 `groupID` 更新该权限字段。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 权限枚举说明
+
+`applyMemberFriend` 字段取值说明如下：
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| 禁止互加好友 | `0` | 关闭群内互加好友，普通成员无法从该群成员资料页发起加好友申请。 |
+| 允许互加好友 | `1` | 允许群内成员之间正常发起添加好友申请。 |
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | 是 | 群资料对象，必须指定目标 `groupID` 以及新的好友权限开关 `applyMemberFriend`。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+权限设置成功后，群内成员随后将收到 `onGroupInfoChanged` 事件通知，返回更新后的 `GroupInfo`。客户端应以 `groupID` 为标识合并群资料，并据此隐藏或禁用群内成员卡片上的“添加好友”按钮；完整监听见[群组概览](/sdk/android/group/overview-group)。

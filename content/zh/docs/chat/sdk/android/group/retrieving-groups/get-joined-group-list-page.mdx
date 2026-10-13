@@ -1,16 +1,51 @@
 ---
 title: '分页获取已加入群组'
-description: '使用 getJoinedGroupListPage 分页读取当前账号已加入的群组。'
+description: '分页读取当前登录用户已加入的群组列表。'
 sourcePath: '/sdk/android/group/retrieving-groups/get-joined-group-list-page'
 ---
 
-`offset` 从 `0` 开始，后续页按上一页返回的条目数推进；返回为空时停止加载。
+分页获取当前登录用户已加入的所有群组列表。通过指定起始偏移量与拉取条数分批读取，用于通讯录群聊列表或选群组件展示。
 
 ```java
-OpenIMClient.getInstance().groupManager.getJoinedGroupListPage(new OnBase<List<GroupInfo>>() {
-    @Override public void onSuccess(List<GroupInfo> groups) { /* groups 是当前页群组。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, offset, 20);
+int offset = 0;
+int count = 20;
+
+OpenIMClient.getInstance().groupManager.getJoinedGroupListPage(
+    new OnBase<List<GroupInfo>>() {
+        @Override
+        public void onSuccess(List<GroupInfo> groups) {
+            // groups 为当前页群组列表
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理获取失败
+        }
+    },
+    offset,
+    count
+);
 ```
 
-加入或退出群组时，通过 `onJoinedGroupAdded` 和 `onJoinedGroupDeleted` 接收通知。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupInfo>>` | 是 | 异步请求回调。 |
+| `offset` | `int` | 是 | 分页起始偏移量，首页从 `0` 开始。 |
+| `count` | `int` | 是 | 本次获取的最大记录条数。 |
+
+## 返回结果
+
+成功回调返回已加入群组资料列表 `List<GroupInfo>`。单条群资料的核心字段包含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `groupID` | 群组全局唯一 ID。 |
+| `groupName` | 群组名称。 |
+| `faceURL` | 群组头像地址。 |
+| `memberCount` | 群成员总人数。 |
+| `ownerUserID` | 群主用户 ID。 |
+| `status` | 群状态（`0` 正常，`1` 被封禁，`2` 已解散）。 |
+
+客户端应以 `groupID` 为标识进行本地群组列表的合并与去重。后续加群或退群时，SDK 会通过 `onJoinedGroupAdded` 与 `onJoinedGroupDeleted` 推送增量事件；完整监听见[群组概览](/sdk/android/group/overview-group)。

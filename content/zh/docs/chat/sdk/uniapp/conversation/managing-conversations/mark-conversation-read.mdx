@@ -4,7 +4,7 @@ description: '将指定会话中当前已接收的消息标记为已读。'
 sourcePath: '/sdk/uniapp/conversation/managing-conversations/mark-conversation-read'
 ---
 
-用户进入会话并阅读完当前可见消息后，调用 `markConversationMessageAsRead()`。不要在只预览通知或应用仍处于后台时提前标记已读。
+用户进入聊天页面并阅读当前可见消息后，将该会话中已接收的消息标记为已读。避免在仅预览系统通知或应用处于后台时提前触发标记已读。
 
 ```uts
 import { markConversationMessageAsRead } from '@/uni_modules/unix-openim-sdk'
@@ -12,11 +12,11 @@ import { markConversationMessageAsRead } from '@/uni_modules/unix-openim-sdk'
 await markConversationMessageAsRead(conversationID)
 ```
 
-Promise 成功表示已读请求已经完成，不表示会话变化事件已经到达。随后通过 `onConversationChanged()` 获取变化后的会话，并按 `conversationID` 更新未读数；完整监听见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。需要立即确认结果时，可重新查询该会话。
+Promise 成功表示已读请求已完成。客户端可先将本地会话未读数清零，随后通过会话变更事件按 `conversationID` 确认最新未读状态；完整会话事件监听见[获取会话列表](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list)。
 
 ## 接收单聊消息已读回执
 
-当前用户标记单聊会话已读后，对端可以通过 `onRecvC2CReadReceipt()` 收到消息已读回执。本页负责该事件的完整监听。事件处理器收到 `OpenIMMessageReceiptListResult | null`，回执数组位于 `receipts`。
+当前用户标记单聊会话已读后，对方设备将触发单聊已读回执事件。本操作集中监听该事件，回调参数接收 `OpenIMMessageReceiptListResult | null`，回执数组位于 `receipts`。
 
 ```uts
 import {
@@ -48,6 +48,6 @@ function removeC2CReadReceiptListener() {
 }
 ```
 
-`userID` 标识单聊对端，`msgIDList` 是已读消息的 `clientMsgID` 列表，`readTime` 是 Unix 毫秒时间戳。退出登录、切换账号或销毁消息状态层时调用 `removeC2CReadReceiptListener()`。
+`userID` 标识单聊对端，`msgIDList` 是已读消息的 `clientMsgID` 列表，`readTime` 是 Unix 毫秒时间戳。退出登录、切换账号或销毁消息状态层时应调用清理函数取消事件监听。
 
-群聊中调用本方法只清理当前账号的会话未读数；群成员级消息已读状态需要使用群聊消息已读能力单独上报和查询。
+群聊中调用本方法只清理当前账号的会话未读数；群成员级别的消息已读状态参见[上报群消息已读](/sdk/uniapp/message/managing-read-status/send-group-read-receipts)与[查询群消息已读成员](/sdk/uniapp/message/managing-read-status/get-group-message-readers)。

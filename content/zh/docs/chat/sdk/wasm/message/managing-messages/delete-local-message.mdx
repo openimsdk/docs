@@ -4,7 +4,7 @@ description: '使用 WASM SDK 仅删除当前设备上的一条消息。'
 sourcePath: '/sdk/wasm/message/managing-messages/delete-local-message'
 ---
 
-仅希望从当前设备隐藏或清理一条消息时，传入消息所属的 `conversationID` 和消息自身的 `clientMsgID`。这两个标识应直接取自当前 `MessageItem`，不要使用列表位置或消息文本代替。
+若仅希望在当前设备本地清除指定的一条消息（例如清除发送失败的草稿或不需要保留的单条本地记录），可调用 `deleteMessageFromLocalStorage()`。入参需传入该消息所属的 `conversationID` 和消息自身的 `clientMsgID`：
 
 ```ts
 await openimsdk.deleteMessageFromLocalStorage({
@@ -14,4 +14,4 @@ await openimsdk.deleteMessageFromLocalStorage({
 removeMessage(conversationID, clientMsgID);
 ```
 
-Promise 成功只表示当前设备的本地消息已删除；应用随后应按 `conversationID:clientMsgID` 从界面和本地状态中移除它。服务端仍保留记录，重建本地数据库后可能再次同步；该操作不通知其他设备或会话成员，也不是撤回。需要让其他参与者看到撤回状态时使用[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)。发送失败或尚未取得服务端序号的消息只能执行本地删除。
+接口调用成功表示当前设备的本地存储中已删除该消息。应用层随后可按 `conversationID:clientMsgID` 从界面状态中将其移除。需要说明的是：服务端仍会保留该消息记录，若后续在其他设备登录或重新拉取漫游历史，该消息仍可能出现；该操作仅作用于当前设备本地，不会向对端或多端广播删除通知，亦非撤回消息（若需双方可见的撤回，请使用[撤回消息](/sdk/wasm/message/managing-messages/revoke-a-message)）。发送失败或尚未取得服务端序号的消息只能执行本地删除。

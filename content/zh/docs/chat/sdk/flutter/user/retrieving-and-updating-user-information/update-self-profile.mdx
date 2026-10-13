@@ -4,18 +4,45 @@ description: '使用 Flutter SDK 更新当前登录用户的昵称、头像和�
 sourcePath: '/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile'
 ---
 
-只传实际变化的 `nickname`、`faceURL` 或 `ex`：
+修改当前登录用户的昵称、头像地址或业务扩展字段：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `nickname` | `String?` | 否 | 用户新昵称。建议传入非空字符串并去除首尾空格。 |
+| `faceURL` | `String?` | 否 | 用户新头像完整 URL 地址。 |
+| `ex` | `String?` | 否 | 业务扩展字段字符串。传入新值时为整值覆盖，不会自动与已有 JSON 字段进行合并。 |
+
+仅传入实际发生变更的字段，未传字段将保持服务端原有配置不变。
 
 ```dart
 await OpenIM.iMManager.userManager.setSelfInfo(
-  nickname: nickname?.trim(),
-  faceURL: faceURL,
-  ex: mergedExtra,
+  nickname: 'New Nickname',
+  faceURL: 'https://example.com/avatar.png',
+  ex: '{"customTheme":"dark"}',
 );
 ```
 
-`ex` 是完整字符串，应先读取、解析并合并命名空间。Future 成功、重新查询和 `onSelfInfoUpdated` 是三个阶段。
+## 返回结果
 
-`globalRecvMsgOpt` 虽然也通过 `setSelfInfo()` 写入，但它属于账号级消息策略。枚举值和使用边界见[设置全局消息接收方式](/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception)。
+Future 成功返回 `void`，表示更新个人资料请求已成功提交至服务端。
 
-本页唯一归属 `onSelfInfoUpdated`，应组合进应用唯一的 `OnUserListener`；设置入口见[事件概览](/sdk/flutter/events/overview-events)。
+该操作为状态变更接口。Future 成功仅代表更新请求提交完成，并不等同于事件已到达或数据已全局同步。
+
+`globalRecvMsgOpt` 虽然同属用户信息模型，但其为全局消息免打扰策略，建议通过专门的配置路径进行修改，详见[设置全局消息接收方式](/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception)。
+
+## 监听个人资料变更
+
+当前用户资料变更事件在此集中监听与处理。服务端资料更新生效后，当前端与其他在线端会触发 `onSelfInfoUpdated` 事件通知。客户端应以 `userID` 为合并标识，更新本地存储的当前用户信息：
+
+```dart
+void handleSelfInfoUpdated(UserInfo info) {
+  mergeSelfInfo(info);
+}
+```
+
+Flutter SDK 在 `UserManager` 中维护单个 `OnUserListener` 实例。请把上述处理函数统一配置在[事件概览](/sdk/flutter/events/overview-events)的应用级集中入口中。
+
+拉取当前账号完整快照请参考[获取当前用户资料](/sdk/flutter/user/retrieving-and-updating-user-information/get-self-profile)。
+

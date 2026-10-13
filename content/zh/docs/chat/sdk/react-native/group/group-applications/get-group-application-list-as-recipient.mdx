@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/group/group-applications/get-group-application-list-as-recipient'
 ---
 
-群主或管理员可以调用 `getGroupApplicationListAsRecipient()` 查询收到的入群申请。
+群主或管理员可以分页查询收到的入群申请列表，并可按群组 ID 和处理状态进行筛选。
 
 ```ts
 const applications = await OpenIMSDK.getGroupApplicationListAsRecipient({
@@ -23,7 +23,7 @@ const applications = await OpenIMSDK.getGroupApplicationListAsRecipient({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
 | `groupIDs` | `string[]` | 是 | 要查询的群组 ID 数组；传空数组表示不按群组筛选。 |
 | `handleResults` | `number[]` | 是 | 要查询的申请处理结果；传空数组表示不按处理结果筛选。 |
@@ -40,7 +40,7 @@ const applications = await OpenIMSDK.getGroupApplicationListAsRecipient({
 
 ## 返回结果
 
-调用完成后返回当前账号有权处理的 `GroupApplicationItem[]`。
+调用完成后返回当前账号有权处理的 `GroupApplicationItem[]`。返回数量少于 `count` 时表示已拉取到最后一页；客户端在合并申请列表时，应以 `groupID:userID` 复合标识定位并合并申请项。
 
 ### 入群申请字段
 
@@ -73,15 +73,15 @@ const applications = await OpenIMSDK.getGroupApplicationListAsRecipient({
 
 ## 监听入群申请变化
 
-新增、处理或删除入群申请时，分别触发 `OnGroupApplicationAdded`、`OnGroupApplicationAccepted`、`OnGroupApplicationRejected` 或 `OnGroupApplicationDeleted`。事件回调直接接收 `GroupApplicationItem`：
+新增、处理或删除入群申请时，分别触发 `OnGroupApplicationAdded`、`OnGroupApplicationAccepted`、`OnGroupApplicationRejected` 或 `OnGroupApplicationDeleted` 事件。客户端在处理增量更新时，必须使用复合标识 `groupID:userID` 定位与更新具体申请项：
 
 ```ts
 const handleApplicationChanged = (application: GroupApplicationItem) => {
-  // 按 groupID 和 userID 更新申请记录
+  // 按 application.groupID 和 application.userID 更新申请记录
 };
 
 const handleApplicationDeleted = (application: GroupApplicationItem) => {
-  // 按 groupID 和 userID 删除申请记录
+  // 按 application.groupID 和 application.userID 删除申请记录
 };
 
 // 设置监听
@@ -97,4 +97,4 @@ OpenIMSDK.off(OpenIMEvent.OnGroupApplicationRejected, handleApplicationChanged);
 OpenIMSDK.off(OpenIMEvent.OnGroupApplicationDeleted, handleApplicationDeleted);
 ```
 
-退出登录、切换账号或销毁申请列表状态时，取消这些监听。
+退出登录、切换账号或销毁申请列表页面时，应使用同一函数引用取消监听。

@@ -4,6 +4,15 @@ description: '使用 Flutter SDK 删除当前账号在指定会话中的一条�
 sourcePath: '/sdk/flutter/message/managing-messages/delete-saved-message'
 ---
 
+从本地数据库和服务端同时删除当前账号指定的一条历史消息：
+
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 消息所属会话 ID。 |
+| `clientMsgID` | `String` | 是 | 待删除消息的客户端消息 ID。 |
+
 ```dart
 await OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(
   conversationID: conversationID,
@@ -11,6 +20,12 @@ await OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(
 );
 ```
 
-Future 成功不等于其他设备或成员的副本已删除，也不是撤回。Flutter SDK 不提供批量同步删除 API。
+## 返回结果
 
-`onMsgDeleted` 是本页归属事件，应纳入唯一的 `OnAdvancedMsgListener`。Flutter `Message` 没有 `conversationID`，应根据消息路由解析会话，再按 `conversationID:clientMsgID` 幂等移除；设置入口见[事件概览](/sdk/flutter/events/overview-events)。
+Future 成功表示服务端与本地数据库均已完成该条消息的删除操作。本地应立即根据复合标识 `conversationID:clientMsgID` 从消息列表中移除该项。
+
+该操作仅删除当前用户在各端的同步历史，不会删除其他会话成员设备上已拉取的消息副本，也不是消息撤回。
+
+### 监听消息删除事件
+
+消息删除通知 `onMsgDeleted` 属于高级消息监听器 `OnAdvancedMsgListener`。当当前账号在其他登录端删除了消息时，本端会收到该通知。由于 Flutter 的 `Message` 模型未直接提供 `conversationID` 字段，客户端应先根据路由字段解析出所属会话，再基于复合标识 `conversationID:clientMsgID` 幂等移除本地消息。全局 listener 的注册与管理请参考[事件概览](/sdk/flutter/events/overview-events)。若需向所有人撤回已发出的消息，请参考[撤回消息](/sdk/flutter/message/managing-messages/revoke-a-message)。

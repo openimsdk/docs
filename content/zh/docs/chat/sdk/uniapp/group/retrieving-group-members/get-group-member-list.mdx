@@ -4,7 +4,7 @@ description: '按角色和偏移量分页查询指定群组的成员。'
 sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
 ---
 
-`getGroupMemberList()` 用于构建群成员列表，也可以通过 `filter` 只查询指定角色。
+分页构建群成员列表，支持通过 `filter` 筛选指定角色（如仅群主、管理员或普通成员）。
 
 ## 参数说明
 
@@ -15,7 +15,7 @@ sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
 | `offset` | `number` | 是 | 起始偏移量，第一页传 `0`。 |
 | `count` | `number` | 是 | 本次读取数量。 |
 
-| 常量 | 数值 | 含义 |
+| 枚举值 | 数值 | 含义 |
 | --- | --- | --- |
 | `OpenIMGroupMemberFilterAll` | `0` | 全部成员。 |
 | `OpenIMGroupMemberFilterOwner` | `1` | 仅群主。 |
@@ -39,7 +39,7 @@ const result = await getGroupMemberList({
 const members = result != null ? result.members : []
 ```
 
-Promise 成功后返回 `OpenIMGroupMemberListResult | null`；非空结果的 `members` 是当前页 `OpenIMGroupMemberItem[]`。继续加载时，应按已经请求的条目数增加 `offset`，不要使用收到成员事件后可能已经变化的界面列表长度。
+Promise 成功后返回 `OpenIMGroupMemberListResult | null`；非空结果的 `members` 是当前页 `OpenIMGroupMemberItem[]`。客户端应按 `groupID:userID` 进行去重和状态合并。继续加载时，应按已经请求的条目数增加 `offset`，不要使用收到成员事件后可能已经变化的界面列表长度。
 
 ### 群成员字段
 
@@ -62,7 +62,7 @@ Promise 成功后返回 `OpenIMGroupMemberListResult | null`；非空结果的 `
 
 ## 监听成员变化
 
-本页集中说明并监听群成员事件。事件直接返回 `OpenIMGroupMemberItem | null`，使用 `groupID:userID` 合并或移除记录。
+群成员变更事件在此集中监听。事件直接返回 `OpenIMGroupMemberItem | null`，使用 `groupID:userID` 合并或移除记录。
 
 ```uts
 import {
@@ -94,4 +94,4 @@ function removeGroupMemberListeners() {
 }
 ```
 
-分页期间发生成员新增或删除时，应重置分页并从第一页重新加载。组件卸载、退出登录或切换账号时调用 `removeGroupMemberListeners()`。
+分页期间发生成员新增或删除时，应重置分页并从第一页重新加载。组件卸载、退出登录或切换账号时应调用清理函数取消事件监听。

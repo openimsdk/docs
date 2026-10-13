@@ -1,16 +1,39 @@
 ---
 title: '解散群组'
-description: '使用 Android SDK 解散当前用户拥有的群组。'
+description: '群主解散指定群组并终止群聊。'
 sourcePath: '/sdk/android/group/dismiss-group'
 ---
 
-`dismissGroup()` 解散指定群组，仅群主可执行。
+群主解散指定的群组。群组解散后所有成员将被移出群聊，该群不可再发送消息，且无法恢复。
 
 ```java
-OpenIMClient.getInstance().groupManager.dismissGroup(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID);
+String groupID = "group_123";
+
+OpenIMClient.getInstance().groupManager.dismissGroup(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 群组解散成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理解散失败
+        }
+    },
+    groupID
+);
 ```
 
-成功回调表示解散请求已完成，不表示所有客户端界面已经更新。`onGroupDismissed` 返回被解散群组的 `GroupInfo`；按 `groupID` 关闭群聊并移除群组状态。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 期望解散的目标群组全局唯一 ID。只有群主具备此操作权限。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+解散成功代表服务端已处理该操作。群内成员随后将收到 `onGroupDismissed` 事件通知，客户端应以 `groupID` 为标识标记群组已解散、关闭群聊交互界面并更新群组列表；完整监听见[群组概览](/sdk/android/group/overview-group)。

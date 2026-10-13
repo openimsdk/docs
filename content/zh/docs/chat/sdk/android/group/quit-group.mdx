@@ -1,16 +1,41 @@
 ---
 title: '退出群组'
-description: '使用 Android SDK 让当前登录用户退出指定群组。'
+description: '当前登录用户主动退出指定群组。'
 sourcePath: '/sdk/android/group/quit-group'
 ---
 
-`quitGroup()` 仅作用于当前登录用户，不会解散群组或移除其他成员。
+当前登录用户主动退出已加入的指定群组。该操作仅影响当前用户，群组本身及其他成员不受影响。群主若需退出群组，需先转让群主身份或直接解散群组。
 
 ```java
-OpenIMClient.getInstance().groupManager.quitGroup(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID);
+String groupID = "group_123";
+
+OpenIMClient.getInstance().groupManager.quitGroup(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 退出群组成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理退出群组失败
+        }
+    },
+    groupID
+);
 ```
 
-成功回调表示退出请求已完成，不表示群组列表事件已经到达。`onJoinedGroupDeleted` 返回已退出群组的 `GroupInfo`；按 `groupID` 从当前用户的群组列表移除。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 期望退出的目标群组全局唯一 ID。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+成功回调表示服务端已记录退群操作。随后本地会触发 `onJoinedGroupDeleted` 事件，客户端应以 `groupID` 为标识从已加入群组列表中移除该群，并清理或更新对应群会话；事件监听的注册与处理见[群组概览](/sdk/android/group/overview-group)。
+
+如群主需要移交管理权后再退出，请先调用[转让群主](/sdk/android/group/managing-group-members/transfer-group-owner)；若需要彻底终止群组，请调用[解散群组](/sdk/android/group/dismiss-group)。

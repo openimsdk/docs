@@ -4,14 +4,55 @@ description: '使用 iOS SDK 更新当前登录用户资料。'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/update-self-profile'
 ---
 
-先获取当前 `OIMUserInfo`，再只修改昵称、头像或 `ex` 等资料编辑器拥有的字段；不要用只赋少数字段的新对象覆盖标量默认值。
+建议先通过[获取当前用户资料](/sdk/ios/user/retrieving-and-updating-user-information/get-self-profile)获取当前 `OIMUserInfo`，再仅修改昵称、头像或 `ex` 等目标字段；不要直接使用未初始化的空对象，以免意外覆盖其他属性。
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `userInfo` | `OIMUserInfo *` | 包含待更新字段的用户信息对象。 |
 
 ```objc
 current.nickname = nickname;
 current.faceURL = avatarURL;
-[[OIMManager manager] setSelfInfo:current onSuccess:nil onFailure:nil];
+[[OIMManager manager] setSelfInfo:current
+                        onSuccess:^(NSString *data) {
+    [profileStore refreshCurrentUserInfo:current];
+}
+                        onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"setSelfInfo failed: %ld %@", (long)code, message);
+}];
 ```
 
-`ex` 是完整字符串，更新前解析并合并业务命名空间。成功 callback、`onSelfInfoUpdated:` 与重新查询是三个阶段。
+`ex` 属于完整的扩展字符串，需要按业务 JSON 结构合并后再提交。状态变更以当前用户 `userID` 为合并标识。
 
-本页唯一归属 `onSelfInfoUpdated:`。使用稳定 `OIMUserListener` 实例成对调用 `addUserListener:`、`removeUserListener:`，并按当前账号覆盖已有资料。
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已接受资料修改请求。当前端通常可立即更新界面展示，其他端或多端同步则通过用户监听回调处理。
+
+## 监听资料更新
+
+实现 `OIMUserListener` 协议的 `onSelfInfoUpdated:` 方法监听当前登录用户资料的变更事件：
+
+```objc
+@interface ProfileStore () <OIMUserListener>
+@end
+
+@implementation ProfileStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addUserListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeUserListener:self];
+}
+
+- (void)onSelfInfoUpdated:(OIMUserInfo *)info {
+    [self updateLocalCurrentUser:info];
+}
+
+@end
+```
+
+在退出登录或切换账号时，使用注册时的同一个 listener 实例调用移除监听方法。

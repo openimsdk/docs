@@ -1,8 +1,10 @@
 ---
 title: '获取当前用户资料'
-description: '使用 getSelfLocalUserInfo() 获取当前登录用户的本地资料。'
+description: '从本地缓存中获取当前登录用户的个人资料。'
 sourcePath: '/sdk/android/user/user-profile/get-self-local-user-info'
 ---
+
+从本地缓存中直接读取当前登录账号的完整资料快照，包含昵称、头像、扩展字段以及账号全局设置。该方法直接读取本地存储，不发起网络请求。
 
 ```java
 OpenIMClient.getInstance().userInfoManager.getSelfLocalUserInfo(
@@ -20,16 +22,24 @@ OpenIMClient.getInstance().userInfoManager.getSelfLocalUserInfo(
 );
 ```
 
-完成初始化并登录后调用该方法获取当前账号的本地资料。成功 callback 返回 `LocalUser`，包含 `userID`、`nickname`、`faceURL`、`ex`、`attachedInfo`、`globalRecvMsgOpt` 和 `addFriendPermission` 等字段。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<LocalUser>` | 是 | 异步请求回调。 |
 
 ## 返回结果
 
-| 字段                  | 说明                                                           |
-| --------------------- | -------------------------------------------------------------- |
-| `userID`              | 当前登录用户 ID。                                              |
-| `nickname`            | 当前账号昵称。                                                 |
-| `faceURL`             | 当前账号头像地址。                                             |
-| `ex`                  | 当前账号扩展字符串。                                           |
-| `attachedInfo` <span className="enterprise-field-badge">商业版</span> | 附加信息，格式由业务约定。                                     |
-| `globalRecvMsgOpt`    | 全局消息接收方式：`0` 正常接收，`1` 不接收，`2` 接收但不提示。 |
-| `addFriendPermission` <span className="enterprise-field-badge">商业版</span> | 添加好友权限值，具体含义见[设置好友添加权限](/sdk/android/user/user-profile/set-friend-add-permission)。 |
+成功回调返回当前登录账号的 `LocalUser` 对象：
+
+| 字段 | 说明 |
+| --- | --- |
+| `userID` | 当前登录用户的全局唯一 ID。 |
+| `nickname` | 当前账号的昵称。 |
+| `faceURL` | 当前账号的头像 URL 地址。 |
+| `ex` | 自定义业务扩展字段。 |
+| `attachedInfo` <span className="enterprise-field-badge">商业版</span> | 附加信息，格式由业务自行约定。 |
+| `globalRecvMsgOpt` | 全局消息免打扰模式：`0` 正常接收，`1` 完全不接收，`2` 接收但不提醒。 |
+| `addFriendPermission` <span className="enterprise-field-badge">商业版</span> | 好友添加权限设置，具体取值含义请参考[设置好友添加权限](/sdk/android/user/user-profile/set-friend-add-permission)。 |
+
+若当前用户在其他设备或通过服务端更新了资料，SDK 会通过 `OnUserListener.onSelfInfoUpdated` 事件推送最新数据，客户端应以 `userID` 为主键更新本地缓存。资料修改与完整监听配置请参考[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)。

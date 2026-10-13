@@ -6,7 +6,7 @@ sourcePath: '/sdk/android/calling/managing-calls/handle-call-events'
 
 在应用的通话状态管理处注册一次 `OnSignalingListener`。SDK 通过这些回调通知来电、接听、拒绝、取消、超时、挂断以及成员进出房间；应用据此更新通话界面和本地通话状态。
 
-`SignalingManager` 同时只保留一个 listener，重复调用 `setSignalingListener()` 会替换之前的 listener。退出登录或切换账号时，先停止更新旧账号的通话状态，再为新账号设置 listener。
+`SignalingManager` 同时只保留一个监听器，重复设置监听器会替换之前的监听器实例。退出登录或切换账号时，先停止更新旧账号的通话状态，再为新账号设置监听器。
 
 ```java
 OpenIMClient.getInstance().signalingManager.setSignalingListener(
@@ -69,11 +69,17 @@ OpenIMClient.getInstance().signalingManager.setSignalingListener(
 );
 ```
 
-| 回调 | 何时触发 | 应用应做什么 |
+| 回调 | 何时触发 | 应用处理建议 |
 | --- | --- | --- |
-| `onReceiveNewInvitation` | 收到新的通话邀请。 | 保存 `SignalingInfo`，显示来电界面，并让用户选择接听或拒绝。 |
-| `onInviteeAccepted`、`onInviteeRejected` | 某位被邀请者接听或拒绝。 | 更新该成员的通话状态；群聊中不应影响其他成员。 |
-| `onInvitationCancelled`、`onInvitationTimeout`、`onHangup` | 邀请被取消、超时或任一方挂断。 | 关闭对应通话界面，断开媒体房间并释放本地资源。 |
-| `onInviteeAcceptedByOtherDevice`、`onInviteeRejectedByOtherDevice` | 同一账号的另一台设备已接听或拒绝。 | 结束当前设备上的来电界面，避免两台设备同时处理同一邀请。 |
-| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 成员进入或离开媒体房间。 | 更新群聊中的成员状态。 |
-| `onStreamChange` | 服务端发送媒体流变化信息。 | 按接入服务端实际约定解析字符串，再更新媒体流。 |
+| `onReceiveNewInvitation` | 收到新的通话邀请。 | 保存 `SignalingInfo`，拉起或显示来电接听界面，并等待用户操作。 |
+| `onInviteeAccepted`、`onInviteeRejected` | 某位被邀请者接听或拒绝。 | 更新对应成员的通话状态；在群聊通话中仅更新该成员节点，不影响其他参与者。 |
+| `onInvitationCancelled`、`onInvitationTimeout`、`onHangup` | 邀请被取消、超时或任一方挂断。 | 关闭对应通话界面，断开音视频媒体连接并释放本地音视频设备。 |
+| `onInviteeAcceptedByOtherDevice`、`onInviteeRejectedByOtherDevice` | 同一账号的另一台设备已接听或拒绝。 | 结束当前设备上的来电振铃与响应界面，避免多端同时处理冲突。 |
+| `onRoomParticipantConnected`、`onRoomParticipantDisconnected` | 成员进入或离开媒体房间。 | 更新群聊通话中的在会成员列表与连线视图。 |
+| `onStreamChange` | 服务端发送媒体流变化信息。 | 按服务端实际约定解析媒体流描述并动态刷新音视频轨道。 |
+
+## 状态合并与生命周期
+
+- **通话全局标识**：使用 `roomID`（位于 `SignalingInfo.invitation.roomID` 或 `RoomCallingInfo.roomID`）唯一定位一次呼叫或通话房间，用于界面路由与生命周期管理。
+- **参与者标识**：使用 `roomID:userID` 组合标识合并各成员的接听、拒接、在会及流状态，避免群聊中多成员状态互相干扰。
+- **注销与清理**：`SignalingManager` 仅保留单个监听器实例。在切换账号或退出登录时，可传入 `null` 清理监听器并清空业务事件订阅，防止内存泄漏或向废弃界面分发回调。

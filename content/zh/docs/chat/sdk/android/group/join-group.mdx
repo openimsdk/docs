@@ -1,16 +1,51 @@
 ---
 title: '申请加入群组'
-description: '使用 Android SDK 提交入群申请或加入请求。'
+description: '提交加入指定群组的申请或直接加入群聊。'
 sourcePath: '/sdk/android/group/join-group'
 ---
 
-使用 `joinGroup()` 提交入群请求。`joinSource` 表示入群来源：`2` 表示邀请，`3` 表示搜索，`4` 表示二维码；带扩展数据时使用五参数重载。
+向指定群组发起加入请求。根据群组的验证模式，该操作将直接加入群聊或向群管理员提交入群申请。
 
 ```java
-OpenIMClient.getInstance().groupManager.joinGroup(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已提交。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, "希望加入项目讨论", 3, "{\"from\":\"search\"}");
+String groupID = "group_123";
+String reqMsg = "申请加入技术交流群";
+int joinSource = 3; // 3 表示通过搜索加入
+String ex = "{\"source\":\"search_page\"}";
+
+OpenIMClient.getInstance().groupManager.joinGroup(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 加入请求已成功处理或申请已提交
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理申请失败
+        }
+    },
+    groupID,
+    reqMsg,
+    joinSource,
+    ex
+);
 ```
 
-[入群验证方式](/sdk/android/group/set-group-join-verification)决定用户是直接加入还是先提交申请。需要审核时，成功回调只表示申请已提交；实际加入后，`onJoinedGroupAdded` 返回加入的 `GroupInfo`，按 `groupID` 加入当前用户的群组列表。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组的全局唯一 ID。 |
+| `reqMsg` | `String` | 否 | 入群申请附言，可向管理员说明入群原因。 |
+| `joinSource` | `int` | 是 | 入群来源方式。`2` 表示通过邀请，`3` 表示通过搜索，`4` 表示扫描二维码。 |
+| `ex` | `String` | 否 | 扩展字段，用于传递业务自定义参数（如 JSON 字符串）。不需要时可传空字符串。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。群组在[设置入群验证方式](/sdk/android/group/set-group-join-verification)中的配置决定了后续流转：
+
+- **免验证加入**：直接成功加入群组。本地随后会通过 `onJoinedGroupAdded` 事件接收群资料，客户端以 `groupID` 为标识合并至已加入群组列表。
+- **需要验证**：表示入群申请已成功提交至服务端，需等待群主或管理员审核。审批通过后，当前用户将通过 `onJoinedGroupAdded` 接收加群事件。
+
+事件监听的完整注册与处理请参阅[群组概览](/sdk/android/group/overview-group)。

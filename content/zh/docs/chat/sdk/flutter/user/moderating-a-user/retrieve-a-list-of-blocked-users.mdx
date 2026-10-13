@@ -4,29 +4,19 @@ description: '使用 OpenIM Flutter SDK 获取当前用户的黑名单。'
 sourcePath: '/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users'
 ---
 
-OpenIMSDK 黑名单记录当前用户主动拉黑的用户。调用 `getBlacklist()` 可获取完整列表，每条记录都是 `BlacklistInfo`。这些数据可用于构建黑名单设置页、展示资料卡中的关系状态，以及限制聊天入口。
+获取当前登录用户的完整黑名单列表，用于构建黑名单管理界面或在资料卡与会话中进行关系状态核验：
 
-黑名单与群组管理是两类独立能力。禁言、移除群成员或调整群角色时，应使用群成员相关 API；`getBlacklist()` 只读取当前用户维护的黑名单。
+黑名单与群组管理属于两类独立能力。群内禁言、移除群成员或调整群角色应参考群成员管理相关能力；本接口仅读取当前登录用户单向维护的用户黑名单关系。
 
-## 获取黑名单
+## 参数说明
 
-完成 SDK 初始化并调用 `login()` 后，使用 `getBlacklist()` 读取当前用户的黑名单。返回空列表表示黑名单中没有用户。
+该方法无需传入任何参数。
 
 ```dart
-Future<List<BlacklistInfo>> loadBlockedUsers() async {
-  try {
-    return await OpenIM.iMManager.friendshipManager.getBlacklist();
-  } catch (error) {
-    debugPrint('getBlacklist failed: $error');
-    rethrow;
-  }
-}
-
-final blockedUsers = await loadBlockedUsers();
-replaceBlockedUsers(blockedUsers);
+final blockedUsers = await OpenIM.iMManager.friendshipManager.getBlacklist();
 ```
 
-资料卡、会话操作菜单和联系人列表通常只需判断某个 `userID` 是否在黑名单中。建议用 `userID` 建立集合，昵称和头像等字段仅用于展示。
+资料卡、会话操作菜单和联系人列表通常只需判断某个 `userID` 是否存在于黑名单中。建议使用 `userID` 构建快速判重的集合：
 
 ```dart
 final blockedUserIDs = blockedUsers
@@ -37,25 +27,26 @@ final blockedUserIDs = blockedUsers
 bool isBlocked(String userID) => blockedUserIDs.contains(userID);
 ```
 
-## 黑名单记录字段
+## 返回结果
 
-`getBlacklist()` 返回 `List<BlacklistInfo>`。渲染列表时，应使用 `userID` 作为稳定的列表 key，其他字段仅用于展示。
+Future 成功返回黑名单信息列表（`List<BlacklistInfo>`）。列表为空时表示当前未拉黑任何用户。
 
-| 字段 | 说明 |
-| --- | --- |
-| `userID` | 被当前用户拉黑的目标用户 ID。 |
-| `nickname` | 目标用户昵称，用于列表展示。 |
-| `faceURL` | 目标用户头像地址。 |
-| `ownerUserID` | 这条黑名单关系的所有者，即当前用户 ID。 |
-| `blockUserID` | 黑名单关系中的被拉黑用户 ID；列表合并仍统一使用 `userID`。 |
-| `operatorUserID` | 执行拉黑操作的用户 ID。 |
-| `createTime` | 黑名单关系创建时间。 |
-| `addSource` | 黑名单关系的添加来源。 |
-| `gender` | 目标用户性别值。 |
-| `ex` | 扩展字段，只解析业务已经约定的内容。 |
+每个 `BlacklistInfo` 包含以下字段：
 
-如果黑名单页还要展示公开资料或好友备注，应按 `userID` 合并数据，并明确区分 `BlacklistInfo`、`FriendInfo` 和 `PublicUserInfo` 的来源。
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `userID` | `String` | 被当前用户拉黑的目标用户 ID，客户端合并与状态判断唯一主键。 |
+| `nickname` | `String?` | 目标用户昵称，用于列表展示。 |
+| `faceURL` | `String?` | 目标用户头像地址。 |
+| `ownerUserID` | `String` | 黑名单关系所属用户 ID，即当前登录用户。 |
+| `blockUserID` | `String` | 黑名单关系中的被拉黑用户 ID；客户端合并仍统一使用 `userID`。 |
+| `operatorUserID` | `String` | 执行拉黑操作的用户 ID。 |
+| `createTime` | `int` | 黑名单关系创建时间，Unix 毫秒时间戳。 |
+| `addSource` | `int` | 黑名单关系的添加来源。 |
+| `gender` | `int` | 目标用户的性别枚举值。 |
+| `ex` | `String?` | 业务扩展字段字符串。 |
 
-## 调用结果与后续变化
+如果黑名单界面还需要展示好友备注或全量用户资料，应以 `userID` 作为关联主键合并数据，并区分不同数据模型的来源字段。
 
-`getBlacklist()` 成功后，以返回的 `List<BlacklistInfo>` 完整替换当前黑名单列表。该查询不会触发黑名单新增或删除回调。首次进入页面或用户主动刷新时，应重新调用该方法获取完整列表。写操作分别见[拉黑用户](/sdk/flutter/user/moderating-a-user/block-user)和[取消拉黑用户](/sdk/flutter/user/moderating-a-user/unblock-user)。
+该查询为本地只读快照操作，不会触发黑名单的新增或删除事件监听。首次进入页面或用户下拉刷新时，可重新调用此接口拉取完整快照。黑名单写操作请参考[拉黑用户](/sdk/flutter/user/moderating-a-user/block-user)与[取消拉黑用户](/sdk/flutter/user/moderating-a-user/unblock-user)。
+

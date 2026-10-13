@@ -1,8 +1,10 @@
 ---
 title: '查询指定好友资料'
-description: '使用 getFriendsInfo() 查询指定用户的好友关系资料。'
+description: '按用户 ID 列表批量查询指定好友的关系资料与备注。'
 sourcePath: '/sdk/android/user/friends/get-friends-info'
 ---
+
+按用户 ID 列表批量查询好友关系详情，包括好友备注、自定义扩展字段及基础资料。
 
 ```java
 OpenIMClient.getInstance().friendshipManager.getFriendsInfo(
@@ -24,8 +26,16 @@ OpenIMClient.getInstance().friendshipManager.getFriendsInfo(
 );
 ```
 
-第二个参数是目标用户 ID 列表，`filterBlack` 决定是否过滤黑名单用户。成功 callback 返回 `List<UserInfo>`；通过 `getFriendInfo()` 读取好友备注和关系字段。调用前应去除空值和重复 ID。
+## 参数说明
 
-当目标用户不是好友，或目标用户因 `filterBlack == true` 被过滤时，返回结果中可能没有对应记录。需要同时展示账号公开资料时，可再调用[获取指定用户资料](/sdk/android/user/user-profile/get-users-info)。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<UserInfo>>` | 是 | 异步请求回调。 |
+| `userIDs` | `List<String>` | 是 | 目标好友用户 ID 列表，建议调用前去重并过滤空值。 |
+| `filterBlack` | `boolean` | 是 | 传入 `true` 表示自动过滤黑名单用户；传入 `false` 则包含黑名单好友。 |
 
-只需要判断好友关系时，使用[检查好友关系](/sdk/android/user/friends/check-friend)。
+## 返回结果
+
+成功回调返回包含命中好友的 `List<UserInfo>` 列表。客户端应以 `userID` 为主键合并本地好友资料，包含好友的公开基础信息、备注与扩展字段。
+
+若目标用户非好友或因 `filterBlack == true` 被过滤，返回列表中将不包含该用户。如需在对方非好友时展示陌生人公开资料，请调用[获取指定用户资料](/sdk/android/user/user-profile/get-users-info)；若仅需判断双方好友关系，请参考[检查好友关系](/sdk/android/user/friends/check-friend)。

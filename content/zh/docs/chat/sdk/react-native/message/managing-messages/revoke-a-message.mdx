@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-messages/revoke-a-message'
 ---
 
-使用 `revokeMessage()` 撤回已发送的消息。撤回后，会话成员可看到消息撤回状态。
+撤回已发送的消息。撤回成功后，会话各端会将对应消息替换为撤回提示状态。
 
 ```ts
 await OpenIMSDK.revokeMessage({
@@ -21,21 +21,31 @@ await OpenIMSDK.revokeMessage({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
 | `conversationID` | `string` | 是 | 消息所属的会话 ID。 |
-| `clientMsgID` | `string` | 是 | 要撤回的消息 ID。 |
+| `clientMsgID` | `string` | 是 | 要撤回的消息客户端 ID。 |
 
-调用完成后，撤回请求已完成。允许撤回的消息、发送者和时间范围由服务端校验。
+## 返回结果
+
+调用成功代表撤回请求已被服务端处理完成。撤回的时间范围（如发送后一定时间内）及操作权限由服务端策略校验，超出时限或无权操作将返回错误。
 
 ## 监听消息撤回
 
-消息撤回时会触发 `OnNewRecvMessageRevoked`，回调携带 `RevokedInfo`。使用其中的 `clientMsgID` 更新对应消息的撤回状态。
+消息被成功撤回后，会话各端会收到 `OnNewRecvMessageRevoked` 事件通知。回调携带 `RevokedInfo` 数据对象，客户端应根据 `clientMsgID` 找到原消息，并将其展示状态变更为撤回提示（如展示“xx 撤回了一条消息”）。
 
 ```ts
-function handleMessageRevoked(revokedInfo) {
-  // ...
+interface RevokedInfo {
+  clientMsgID: string;
+  revokerID: string;
+  revokerRole: number;
+  revokerNickname: string;
+  sessionType: number;
 }
+
+const handleMessageRevoked = (revokedInfo: RevokedInfo) => {
+  // 根据 revokedInfo.clientMsgID 更新对应消息状态为已撤回
+};
 
 // 设置监听
 OpenIMSDK.on(OpenIMEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
@@ -44,4 +54,4 @@ OpenIMSDK.on(OpenIMEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 OpenIMSDK.off(OpenIMEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 ```
 
-组件销毁、退出登录或切换账号时，取消监听。仅从当前设备移除消息时，使用[删除本地消息](/sdk/react-native/message/managing-messages/delete-local-message)。
+组件销毁、退出登录或切换账号时，取消该监听。若仅希望从当前设备移除消息记录而不影响对方，请调用[删除本地消息](/sdk/react-native/message/managing-messages/delete-local-message)。

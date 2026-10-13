@@ -4,6 +4,19 @@ description: '使用 iOS SDK 控制群成员能否通过群组发送好友申请
 sourcePath: '/sdk/ios/group/set-group-member-friend-permission'
 ---
 
+控制群成员之间是否可以通过本群相互发起好友申请：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | 包含 `groupID` 和好友添加权限配置的字典对象。 |
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `OIMAllowTypeAllowed` | `0` | 允许群成员互相添加好友。 |
+| `OIMAllowTypeNotAllowed` | `1` | 禁止群成员互相添加好友。 |
+
 ```objc
 NSDictionary *changes = @{
     @"groupID": groupID,
@@ -11,10 +24,16 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        [self showPermissionUpdated];
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        [self showErrorCode:code message:message];
+    }];
 ```
 
-`OIMAllowTypeAllowed` 的值为 `0`，表示允许；`OIMAllowTypeNotAllowed` 的值为 `1`，表示不允许。该字段不负责隐藏群成员资料。
+状态以 `groupID` 为合并标识。该字段仅控制添加好友权限，若需限制成员查看他人资料，请使用[设置成员资料查看权限](/sdk/ios/group/set-group-member-profile-access)。
 
-成功 callback 后，通过 `onGroupInfoChanged:` 更新设置，或重新查询确认最终状态。
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已更新该配置。群内各端随后会通过群资料变更事件收到更新后的 `OIMGroupInfo`，完整事件处理见[群组概览](/sdk/ios/group/overview-group)。

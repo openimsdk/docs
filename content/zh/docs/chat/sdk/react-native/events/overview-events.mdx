@@ -38,7 +38,7 @@ OpenIMSDK.off("onConversationChanged", handleEvent);
 
 React Native SDK 的事件按业务领域分为以下类别：
 
-| 事件类别 | 典型事件 | 说明 |
+| 事件类别 | 典型事件 | 含义 |
 | --- | --- | --- |
 | 连接与登录状态 | `OnConnecting`、`OnConnectSuccess`、`OnConnectFailed`、`OnKickedOffline`、`OnUserTokenExpired`、`OnUserTokenInvalid` | 连接建立、连接失败、强制下线和 Token 状态变化。 |
 | 初始化同步 | `OnSyncServerStart`、`OnSyncServerProgress`、`OnSyncServerFinish`、`OnSyncServerFailed` | 登录后 SDK 同步服务端数据的生命周期。 |
@@ -50,21 +50,33 @@ React Native SDK 的事件按业务领域分为以下类别：
 | 消息 | `OnRecvNewMessage`、`OnMsgDeleted`、`OnNewRecvMessageRevoked`、`OnMessageModified`、`OnRecvC2CReadReceipt` | 新消息、消息删除、撤回、修改和单聊已读回执。 |
 | 文件上传 | `UploadOnProgress`、`UploadComplete` | 文件上传进度和上传完成。 |
 | 音视频通话 | `OnReceiveNewInvitation`、`OnInviteeAccepted`、`OnInvitationCancelled`、`OnHangUp`、`OnReceiveCustomSignal` | 通话邀请、参与者状态和通话信令变化。 |
-| 自定义业务消息 | `OnRecvCustomBusinessMessage` | 自定义业务消息。 |
+| 自定义业务消息 | `OnRecvCustomBusinessMessage` | 自定义业务通知。 |
 
 ## 注册时机与生命周期
 
-React Native SDK 可以在任意时机注册全局事件监听。完成 `initSDK()` 并登录后，SDK 才会触发连接、同步及业务数据等事件回调；如果需要接收这些事件，应在对应操作前完成监听注册。
+React Native SDK 可以在任意时机注册全局事件监听。完成[认证与管理登录会话](/sdk/react-native/getting-started/authenticate-and-manage-session)并成功登录后，SDK 才会触发连接、同步及业务数据等事件回调；如果需要接收这些事件，应在对应操作前完成监听注册。
 
 React Native SDK 支持对同一事件同时注册多个监听函数，事件触发时，所有监听函数都会收到回调，这与 Flutter 和 Android SDK 的单一 listener 机制不同。虽然 React Native SDK 允许同一事件注册多个监听，但仍建议在应用中集中注册和管理回调，避免页面渲染或组件重复进入时注册相同的业务处理逻辑。
 
-监听函数应保持稳定引用。退出登录、切换账号或销毁相关状态时，使用注册时的同一事件名称和函数引用调用 `off()` 取消监听。
+监听函数应保持稳定引用。退出登录、切换账号或销毁相关状态时，使用注册时的同一事件名称和函数引用调用取消监听接口完成注销。
+
+## 客户端状态合并规范
+
+当收到业务事件推送时，客户端应当使用以下唯一主键标识更新本地状态，切勿使用数组索引或展示名称进行合并：
+
+- **会话**：`conversationID`
+- **会话分组**：`conversationGroupID`
+- **群组**：`groupID`
+- **群成员**：`groupID:userID`
+- **好友与黑名单**：`userID`
+- **消息**：`clientMsgID`，必要时同时限定 `conversationID`
+- **通话**：`roomID`，参与者状态同时使用用户 ID
 
 ## 连接与初始化同步事件
 
 连接事件用于反映 SDK 与服务端的连接状态：
 
-| 事件 | 说明 |
+| 事件 | 含义 |
 | --- | --- |
 | `OnConnecting` | SDK 开始连接服务端。 |
 | `OnConnectSuccess` | SDK 连接成功。 |
@@ -75,7 +87,7 @@ React Native SDK 支持对同一事件同时注册多个监听函数，事件触
 
 登录后，SDK 通过以下事件通知初始化同步状态：
 
-| 事件 | 说明 |
+| 事件 | 含义 |
 | --- | --- |
 | `OnSyncServerStart` | 开始同步。 |
 | `OnSyncServerProgress` | 当前同步进度。 |

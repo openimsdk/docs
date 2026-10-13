@@ -4,14 +4,26 @@ description: '使用 iOS SDK 检查指定用户的好友关系。'
 sourcePath: '/sdk/ios/user/friends/check-friend'
 ---
 
+批量检查指定用户与当前登录用户的好友关系状态：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | 待检查的用户 ID 列表。 |
+
 ```objc
 [[OIMManager manager] checkFriend:@[@"user_a", @"user_b"]
                         onSuccess:^(NSArray<OIMSimpleResultInfo *> *results) {
                             [relationshipStore mergeResults:results];
                         }
-                        onFailure:nil];
+                        onFailure:^(NSInteger code, NSString *message) {
+                            NSLog(@"checkFriend failed: %ld %@", (long)code, message);
+                        }];
 ```
 
-参数是待检查的用户 ID 数组。成功 callback 中每项 `OIMSimpleResultInfo` 以 `userID` 标识目标，`result == 1` 表示目标是好友且不在黑名单中。本方法未定义其他 `result` 值的业务含义。
+## 返回结果
 
-该方法只返回调用时的好友关系，不触发好友 delegate。需要好友备注、头像或扩展字段时使用[查询指定好友资料](/sdk/ios/user/friends/get-specified-friends-info)。
+成功回调 `onSuccess` 返回 `NSArray<OIMSimpleResultInfo *> *` 数组。每个结果对象以 `userID` 标识目标用户，`result == 1` 表示双方互为好友且未被黑名单阻断。
+
+该方法仅返回当前时刻的好友关系状态，不触发好友事件。如需进一步读取好友备注、昵称或关系扩展字段，请使用[查询指定好友资料](/sdk/ios/user/friends/get-specified-friends-info)。

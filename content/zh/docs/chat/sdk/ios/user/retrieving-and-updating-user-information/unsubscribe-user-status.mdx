@@ -4,12 +4,26 @@ description: '使用 iOS SDK 取消用户在线状态订阅。'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/unsubscribe-user-status'
 ---
 
+当用户离开可见区域、页面退出或切换账号时，调用取消在线状态订阅接口：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | 待取消订阅的用户 ID 列表。 |
+
 ```objc
 [[OIMManager manager] unsubscribeUsersStatus:userIDs
-    onSuccess:^(NSString *data) {
-        [presenceStore removeUserIDs:userIDs];
-    }
-    onFailure:nil];
+                                   onSuccess:^(NSString *data) {
+    [presenceStore removeUserIDs:userIDs];
+}
+                                   onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"unsubscribeUsersStatus failed: %ld %@", (long)code, message);
+}];
 ```
 
-用户离开可见范围、页面结束或切换账号时取消订阅。成功后再移除应用订阅集合；失败时保留以便重试。取消用户订阅与移除 listener 是两件事。
+状态以 `userID` 为合并标识。注意取消特定用户的状态订阅与注销整个状态 Delegate 监听是两个不同维度的操作。
+
+## 返回结果
+
+成功回调 `onSuccess` 表示服务端已移除指定用户的在线状态订阅，后续不再向当前客户端下发这些用户的在线状态变化通知。重新订阅可参阅[订阅用户在线状态](/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status)。

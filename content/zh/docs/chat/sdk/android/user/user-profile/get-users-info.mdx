@@ -1,14 +1,14 @@
 ---
 title: '获取指定用户资料'
-description: '按 userID 批量查询应用用户公开资料（PublicUserInfo）。'
+description: '按用户 ID 列表批量查询指定用户的公开资料。'
 sourcePath: '/sdk/android/user/user-profile/get-users-info'
 ---
 
-`getUsersInfo()` 按 `userID` 查询应用用户的公开资料，适合展示好友候选人和陌生人资料卡。
+按用户 ID 批量查询应用内用户的公开基础资料，适合在搜索添加好友、展示候选人或陌生人资料卡等场景下使用。
 
 ## 查询公开资料
 
-调用 `getUsersInfo()` 并传入要查询的用户 ID 列表，即可获取这些用户的公开资料。调用前应去除空值和重复 ID，并控制单次请求数量。
+传入待查询的用户 ID 列表，即可批量获取对应用户的公开资料。调用前建议去除空值和重复 ID，并合理控制单次请求数量。
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -29,25 +29,32 @@ OpenIMClient.getInstance().userInfoManager.getUsersInfo(
 );
 ```
 
-`userIDs` 是要查询的用户 ID 列表。成功 callback 返回 `List<PublicUserInfo>`。
+## 参数说明
 
-### 返回结果
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<PublicUserInfo>>` | 是 | 异步请求回调。 |
+| `userIDs` | `List<String>` | 是 | 待查询的目标用户 ID 列表，建议调用前去重并过滤空值。 |
+
+## 返回结果
+
+成功回调返回包含命中用户公开资料的 `List<PublicUserInfo>`：
 
 | 字段 | 说明 |
 | --- | --- |
-| `userID` | 用户 ID。 |
-| `nickname` | 账号公开昵称。 |
-| `faceURL` | 账号公开头像地址。 |
-| `ex` | 账号公开扩展字符串，格式由业务约定。 |
-| `createTime` | 用户资料创建时间。 |
+| `userID` | 用户的全局唯一 ID。 |
+| `nickname` | 用户的公开昵称。 |
+| `faceURL` | 用户的公开头像 URL 地址。 |
+| `ex` | 用户的公开自定义扩展字符串。 |
+| `createTime` | 用户账号的注册时间。 |
 
-这里返回的 `ex` 用于读取用户的公开扩展资料。当前用户自己的扩展资料通过[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)修改。
+此处返回的公开资料应以 `userID` 为主键进行本地缓存与去重。若需修改当前登录用户自身的资料与扩展信息，请参考[更新当前用户资料](/sdk/android/user/user-profile/set-self-info)。
 
 ## 搜索添加好友
 
-当业务已经获得候选用户的 `userID` 时，可以先调用 `getUsersInfo()` 展示公开资料，用户确认后再通过[发送好友申请](/sdk/android/user/friend-applications/add-friend)向目标用户发起申请。
+当业务已经获得候选用户的 `userID` 时，可以先查询并展示公开资料，用户确认后再通过[发送好友申请](/sdk/android/user/friend-applications/add-friend)向目标用户发起申请。
 
-`getUsersInfo()` 只按 `userID` 查询公开资料；昵称、手机号等其他条件的用户搜索不属于该 API。
+该接口仅根据 `userID` 精确查询公开资料；昵称、手机号等其他维度的模糊搜索需由业务服务端接口支持。
 
 ## 按场景选择展示数据
 

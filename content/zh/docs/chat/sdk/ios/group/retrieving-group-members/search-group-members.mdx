@@ -4,24 +4,41 @@ description: '搜索指定 iOS 群组的成员。'
 sourcePath: '/sdk/ios/group/retrieving-group-members/search-group-members'
 ---
 
-构造 `OIMSearchGroupMembersParam`，提供 `groupID`、一个非空关键词、搜索字段以及 `offset`、`count`。成功 callback 返回当前页匹配的 `OIMGroupMemberInfo`。
+在指定群组中按用户 ID 或群内昵称搜索群成员：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `keywordList` | `NSArray<NSString *> *` | 搜索关键字列表。 |
+| `isSearchUserID` | `BOOL` | 是否匹配群成员用户 ID。 |
+| `isSearchMemberNickname` | `BOOL` | 是否匹配群成员在群内的昵称。 |
+| `offset` | `NSInteger` | 分页拉取的偏移量（从 0 开始）。 |
+| `count` | `NSInteger` | 每页返回的最大条数。 |
 
 ```objc
 OIMSearchGroupMembersParam *param = [OIMSearchGroupMembersParam new];
-param.groupID = groupID;
-param.keywordList = @[keyword];
+param.groupID = @"group_1001";
+param.keywordList = @[@"张三"];
 param.isSearchUserID = YES;
 param.isSearchMemberNickname = YES;
 param.offset = 0;
 param.count = 20;
 
 [[OIMManager manager] searchGroupMembers:param
-  onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
-    [self replaceSearchResults:members];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+                               onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
+                                   [self replaceSearchResults:members];
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"searchGroupMembers failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-关键词或搜索字段变化时重置分页；查询不会触发成员 delegate。
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回当前页满足匹配条件的群成员信息数组 `NSArray<OIMGroupMemberInfo *> *`。若无匹配结果则返回空数组。
+
+当关键词或搜索字段发生改变时，建议将 `offset` 重置为 0。搜索操作仅在本地已同步的数据中检索快照，不会触发群成员 delegate 回调。群成员事件监听参见[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。

@@ -4,19 +4,41 @@ description: '使用 iOS SDK 发送待发送消息对象。'
 sourcePath: '/sdk/ios/message/sending-messages/send-message'
 ---
 
+通过发送消息接口可将预先创建好的消息对象发送至指定的单聊用户或群聊会话中。发送富媒体消息时，SDK 会自动完成本地存储和文件上传流程，并通过进度回调通知上传比例。
+
 ```objc
 [[OIMManager manager] sendMessage:message
                            recvID:receiverUserID
                           groupID:nil
                      isOnlineOnly:NO
                   offlinePushInfo:nil
-                        onSuccess:^(OIMMessageInfo *sent) {
-    if (sent != nil) [messageStore upsert:sent];
-}
                        onProgress:^(NSInteger progress) {
+    // 富媒体消息上传进度（0 ~ 100）
     [messageStore updateProgress:progress clientMsgID:message.clientMsgID];
 }
-                        onFailure:nil];
+                        onSuccess:^(OIMMessageInfo *sent) {
+    // 发送成功，按 clientMsgID 更新本地状态
+    if (sent != nil) {
+        [messageStore upsert:sent];
+    }
+}
+                        onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理发送失败状态
+}];
 ```
 
-单聊只传 `recvID`，群聊只传 `groupID`。`isOnlineOnly` 消息不进入普通离线历史；`offlinePushInfo` 是可选推送配置。成功 callback 的消息可能为空，非空时按 `clientMsgID` 合并。进度、成功、接收 delegate 和历史查询是不同阶段。
+## 参数说明
+
+- `message`：待发送的消息对象（`OIMMessageInfo`），由各类消息创建接口生成。
+- `recvID`：单聊接收方用户 ID。发送单聊消息时必填；发送群聊消息时传 `nil`。
+- `groupID`：群聊目标群组 ID。发送群聊消息时必填；发送单聊消息时传 `nil`。`recvID` 与 `groupID` 互斥，两者不能同时赋值。
+- `isOnlineOnly`：是否仅在线投递。传 `YES` 时，消息不落入离线存储、不触发离线推送，仅当前在线用户可见；通常传 `NO`。
+- `offlinePushInfo`：离线推送自定义配置（`OIMOfflinePushInfo`），包含标题、描述与透传数据；使用默认配置时传 `nil`。
+- `onProgress`：上传进度回调，返回 0 到 100 的数值；纯文本等无须上传资源的消息通常不触发该回调。
+- `onSuccess`：发送成功回调，返回发送完成的完整消息对象 `sent`。
+- `onFailure`：发送失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调返回服务端确认后的 `OIMMessageInfo` 对象，客户端状态合并标识为 `clientMsgID`（必要时同时限定 `conversationID`）。
+- 消息发送流程包含本地排队插入、媒体资源上传（进度）、网络投递及成功确认等阶段；接收端的到达通知与历史同步是不同阶段。新消息接收与监听处理见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。

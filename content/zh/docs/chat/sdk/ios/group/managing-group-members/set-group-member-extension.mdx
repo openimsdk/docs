@@ -4,18 +4,38 @@ description: '使用 iOS SDK 设置指定群成员的业务扩展字符串。'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-extension'
 ---
 
+设置群成员在指定群组内的业务自定义扩展字符串：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `userID` | `NSString *` | 目标群成员的用户 ID。 |
+| `ex` | `NSString *` | 业务自定义扩展字符串（通常为 JSON 格式）。 |
+
 ```objc
 NSDictionary *updates = @{
-    @"groupID": groupID,
-    @"userID": targetUserID,
-    @"ex": mergedExtensionJSON
+    @"groupID": @"group_1001",
+    @"userID": @"user_003",
+    @"ex": @"{\"level\":5,\"title\":\"技术骨干\"}"
 };
 
 [[OIMManager manager] setGroupMemberInfo:updates
-    onSuccess:nil
-    onFailure:nil];
+                               onSuccess:^(NSString * _Nullable data) {
+                                   NSLog(@"setGroupMemberInfo ex success");
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"setGroupMemberInfo ex failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-`ex` 是完整字符串，SDK 不会自动合并 JSON。写入前应保留其他业务模块的命名空间。
+状态以 `groupID:userID` 为合并标识。
 
-成功 callback、`onGroupMemberInfoChanged:` 到达和重新查询是三个阶段；按 `groupID:userID` 合并最终成员资料。
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+服务端完成扩展字段保存后，群内各端会通过 `onGroupMemberInfoChanged:` 事件分发更新通知（监听注册参见[群组概览](/sdk/ios/group/overview-group)），客户端应以 `groupID:userID` 为合并标识更新对应成员的资料。
+
+`ex` 为全量覆盖字符串，SDK 不会在客户端解析或合并内部键值对。写入前如需保留已有业务字段，建议先拉取当前成员资料合并后再行保存。更多群成员管理接口可查阅[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。

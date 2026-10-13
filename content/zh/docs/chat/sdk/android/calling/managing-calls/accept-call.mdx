@@ -4,7 +4,7 @@ description: '使用 Android SDK 接受通话邀请并获取房间凭据。'
 sourcePath: '/sdk/android/calling/managing-calls/accept-call'
 ---
 
-从 `onReceiveNewInvitation` 取得原始 `SignalingInfo` 后，使用 `signalingAccept()` 接受邀请：
+在通话事件监听中收到新邀请通知后，可接受通话邀请并获取音视频房间连接凭据：
 
 ```java
 OpenIMClient.getInstance().signalingManager.signalingAccept(
@@ -23,6 +23,15 @@ OpenIMClient.getInstance().signalingManager.signalingAccept(
 );
 ```
 
-`receivedInfo` 必须保留收到的原始 `roomID`、邀请人、被邀请人和会话类型，不能重新构造为只包含 `roomID` 的对象。
+## 参数说明
 
-成功回调返回 `SignalingCertificate`。取得有效的 `token` 和 `roomID` 后再连接媒体房间；API 成功仅表示已向服务端提交接听请求，不代表通话已建立，请继续监听[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)，根据邀请方、其他设备或房间参与者返回的事件更新通话界面和状态。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<SignalingCertificate>` | 是 | 异步请求回调，返回进入音视频房间所需的凭据。 |
+| `signalingInfo` | `SignalingInfo` | 是 | 收到邀请时获取的完整信令对象，必须保留原始 `roomID`、邀请人、被邀请人和会话类型，不可自行构造缺损对象。 |
+
+## 返回结果
+
+成功回调返回 `SignalingCertificate` 房间凭据，包含 `roomID`、`token` 和 `liveURL`。获取到有效凭据后即可连接实时媒体引擎。
+
+接口调用成功仅代表接听信令已成功提交至服务端，不代表双方媒体流已接通。客户端需以 `roomID` 为通话全局标识、以 `roomID:userID` 为参与者状态标识，在[处理通话事件](/sdk/android/calling/managing-calls/handle-call-events)中监听对端及房间参与者的实时状态流转。

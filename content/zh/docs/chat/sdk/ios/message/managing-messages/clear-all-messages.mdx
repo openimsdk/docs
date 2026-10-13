@@ -4,10 +4,19 @@ description: '使用 iOS SDK 清理当前账号本地与服务端的全部消息
 sourcePath: '/sdk/ios/message/managing-messages/clear-all-messages'
 ---
 
+调用清理全部消息接口将清空当前登录账号在本地数据库及服务端保存的所有会话历史消息。这是一个账号级别的破坏性操作，执行后无法撤销。
+
 ```objc
-[[OIMManager manager] deleteAllMsgFromLocalAndSvrWithOnSuccess:^(NSString *data) {
+[[OIMManager manager] deleteAllMsgFromLocalAndSvrWithOnSuccess:^(NSString * _Nullable data) {
+    // 清理成功，重置本地所有会话的消息缓存与视图展示
     [self resetAllMessageSnapshots];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理清理失败
+}];
 ```
 
-这是不可撤销的账号级操作。成功表示当前账号本地与服务端保存的消息已清理，不会删除其他会话成员保存的副本，也不能证明其他设备已刷新。会话摘要可通过 delegate 更新；必要时重新查询，以当前结果为准。
+## 返回结果
+
+- `onSuccess`：清理成功回调。表示当前账号在本地与服务端的所有历史消息已被清空。该操作仅作用于当前登录账号，不会删除其他会话成员设备上保存的消息副本。
+- `onFailure`：清理失败回调，返回错误码 `code` 和错误信息 `msg`。
+- 执行清理后，客户端应重置所有会话内的消息展示数据。会话的最后一条消息摘要等属性将通过会话变更通知同步更新。若仅需清除当前设备的本地缓存而不删除服务端数据，见[清理全部本地消息](/sdk/ios/message/managing-messages/clear-all-local-messages)。

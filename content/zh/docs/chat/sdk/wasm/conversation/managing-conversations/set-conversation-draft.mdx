@@ -4,9 +4,9 @@ description: '使用 WASM SDK 保存或清空会话草稿。'
 sourcePath: '/sdk/wasm/conversation/managing-conversations/set-conversation-draft'
 ---
 
-用户离开聊天页、切换会话或输入框内容变化时，可以使用 `setConversationDraft()` 保存当前会话的草稿。调用时传入 `conversationID` 和草稿文本 `draftText`。
+当用户离开聊天界面、切换会话或编辑内容发生变更时，可调用 `setConversationDraft()` 保存对应会话的未发送草稿。参数需传入目标会话 `conversationID` 和草稿文本 `draftText`。
 
-输入过程中建议先在本地维护编辑器状态，并对保存调用做防抖；离开页面或切换会话前再立即提交一次最新文本，避免每次按键都写入 SDK。
+在输入过程中，建议在界面本地维护输入框状态并做防抖处理；在用户离开页面、切出聊天窗口或切换会话时再提交一次最新草稿，避免频繁写入 SDK。
 
 ```ts
 await openimsdk.setConversationDraft(
@@ -28,6 +28,6 @@ await openimsdk.setConversationDraft({
 
 ## 调用后的状态变化
 
-`setConversationDraft()` 成功表示草稿内容已经保存。SDK 通过 `SdkEvent.OnConversationChanged` 返回变化后的会话；事件中的 `data` 是 `ConversationItem[]`，应使用 `conversationID` 更新对应会话的 `draftText` 和 `draftTextTime`。
+接口调用成功后，草稿内容即已成功保存。随后 SDK 会触发 `SdkEvent.OnConversationChanged` 事件（`data` 为变更后的 `ConversationItem[]` 列表），业务层可根据 `conversationID` 匹配并更新本地会话的 `draftText` 与 `draftTextTime`。
 
-完整的事件注册、清理和会话更新方式见[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。退出登录或切换账号时还应清理编辑器内存状态，避免把一个账号的草稿带到另一个账号。
+完整的会话事件注册、更新与销毁流程请参考[获取会话列表](/sdk/wasm/conversation/retrieving-conversations/retrieve-conversation-list)。在用户退出登录或切换账号时，建议同时清理前端输入组件的内存草稿状态，防止残留数据影响新账号。

@@ -4,14 +4,44 @@ description: '使用 iOS SDK 批量删除同一会话中的消息。'
 sourcePath: '/sdk/ios/message/managing-messages/delete-saved-messages'
 ---
 
+调用批量删除消息接口可在指定会话中一次性删除多条历史消息，并支持选择是否将删除状态同步至当前账号的其他在线终端。
+
 ```objc
 [[OIMManager manager] deleteMessages:conversationID
-    clientMsgID:selectedClientMsgIDs
-    isSync:YES
-    onSuccess:nil
-    onFailure:nil];
+                         clientMsgID:selectedClientMsgIDs
+                              isSync:YES
+                           onSuccess:^(NSString * _Nullable data) {
+    // 本端删除成功，从界面中移除选中的消息
+    [self removeMessagesByIDs:selectedClientMsgIDs];
+}
+                           onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理删除失败
+}];
 ```
 
-消息 ID 必须属于同一会话。`isSync` 控制是否请求同步到当前账号其他客户端，不代表其他会话成员已经删除。
+## 参数说明
 
-`onMsgDeleted:` 是本页归属事件。按消息路由和 `clientMsgID` 幂等移除；事件可能来自其他客户端。listener 的稳定注册与移除见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)。
+- `conversationID`：目标会话 ID。
+- `clientMsgID`：待删除的客户端消息 ID 列表（`NSArray<NSString *>`），所传 ID 必须全部属于同一会话。
+- `isSync`：是否将删除状态同步到当前账号的其他登录客户端。
+- `onSuccess`：删除成功回调。
+- `onFailure`：删除失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 监听消息删除事件
+
+当当前账号在其他设备端删除了消息并开启同步时，SDK 通过 `OIMAdvancedMsgListener` 协议的删除回调通知本地：
+
+```objc
+- (void)onMsgDeleted:(OIMMessageInfo *)message {
+    if (message.clientMsgID.length == 0) {
+        return;
+    }
+    // 依据 clientMsgID 幂等从本地列表中移除该消息
+    [self removeMessageByClientMsgID:message.clientMsgID];
+}
+```
+
+## 客户端状态合并与注意事项
+
+- 客户端状态合并标识为 `clientMsgID`（限定当前 `conversationID`）。收到删除事件或调用成功后，应按 `clientMsgID` 幂等从本地数据源中移除。
+- 删除操作仅针对当前登录账号生效，不会影响会话中其他成员的消息记录。完整的消息监听注册见[接收消息](/sdk/ios/message/receiving-messages/receive-messages)；单条消息删除见[删除消息](/sdk/ios/message/managing-messages/delete-saved-message)。

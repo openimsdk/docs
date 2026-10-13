@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/message/retrieving-messages/load-message-context'
 ---
 
-使用 `fetchSurroundingMessages()` 读取一条已知消息前后的上下文，适合从搜索结果或回复消息进入聊天记录。
+以一条已获取的锚点消息为基准，向前和向后读取其相邻的上下文消息记录。适合在用户从搜索结果、引用回复或特定跳转定位到某条消息时，还原当时完整的对话语境。
 
 ```ts
 const { messageList } = await OpenIMSDK.fetchSurroundingMessages({
@@ -23,11 +23,17 @@ const { messageList } = await OpenIMSDK.fetchSurroundingMessages({
 
 ## 参数说明
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 含义 |
 | --- | --- | --- | --- |
-| `startMessage` | `MessageItem` | 是 | 已取得的锚点消息。 |
-| `viewType` | `ViewType` | 是 | 上下文查看类型；从搜索结果进入时可传 `ViewType.Search`。 |
-| `before` | `number` | 是 | 锚点之前最多读取的消息数量。 |
-| `after` | `number` | 是 | 锚点之后最多读取的消息数量。 |
+| `startMessage` | `MessageItem` | 是 | 作为基准的锚点消息对象。 |
+| `viewType` | `ViewType` | 是 | 上下文查看场景类型；从搜索结果进入时传入 `ViewType.Search`。 |
+| `before` | `number` | 是 | 锚点消息之前（更早产生）最多读取的消息条数。 |
+| `after` | `number` | 是 | 锚点消息之后（更新产生）最多读取的消息条数。 |
 
-调用后返回 `{ messageList }`，其中 `messageList` 是锚点前后取得的 `MessageItem[]`。返回数量可能少于 `before + after`，例如锚点靠近记录边界或部分消息已删除。
+## 返回结果
+
+调用成功后返回包含上下文消息数组的对象 `{ messageList: MessageItem[] }`。
+
+- 列表中消息按发送时间升序排列，并包含锚点消息本身。
+- 实际返回的消息数量可能小于 `before + after + 1`（例如锚点处于会话开头、末尾，或临近消息已被删除）。
+- 客户端在渲染时应以 `clientMsgID` 为合并标识对消息列表进行去重，避免与当前已加载的消息重复。

@@ -4,11 +4,29 @@ description: '使用 iOS SDK 删除当前账号在指定会话中的一条消息
 sourcePath: '/sdk/ios/message/managing-messages/delete-saved-message'
 ---
 
+调用删除消息接口可删除当前登录用户在指定会话中的某条历史消息。
+
 ```objc
 [[OIMManager manager] deleteMessage:conversationID
-    clientMsgID:clientMsgID
-    onSuccess:nil
-    onFailure:nil];
+                        clientMsgID:clientMsgID
+                          onSuccess:^(NSString * _Nullable data) {
+    // 本端删除成功，从本地界面移除该消息
+    [self removeMessageFromUI:clientMsgID];
+}
+                          onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // 处理删除失败
+}];
 ```
 
-成功表示当前设备和当前账号服务端保存的消息删除请求完成。它没有多端同步开关，不删除其他成员的副本，也不产生撤回提示；需要批量或同步删除时使用相应独立页面。
+## 参数说明
+
+- `conversationID`：目标会话 ID。
+- `clientMsgID`：待删除消息的客户端消息 ID。
+- `onSuccess`：删除成功回调。
+- `onFailure`：删除失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 返回结果
+
+- 成功回调表示已完成本端消息删除请求。该操作仅影响当前账号侧的消息可见性，不会删除会话内其他成员的消息副本，也不会产生“消息已撤回”提示。
+- 客户端状态合并标识为 `clientMsgID`（必要时同时限定 `conversationID`）。
+- 若需要让会话内所有成员看到撤回提示，见[撤回消息](/sdk/ios/message/managing-messages/revoke-a-message)；若需在同一会话中同时删除多条消息或同步删除状态至当前账号的其他端，见[批量删除消息](/sdk/ios/message/managing-messages/delete-saved-messages)。

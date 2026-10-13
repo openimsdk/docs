@@ -1,16 +1,45 @@
 ---
 title: '设置群成员禁言'
-description: '使用 Android SDK 设置指定成员的禁言时长。'
+description: '设置指定群成员的禁言时长或解除禁言。'
 sourcePath: '/sdk/android/group/managing-group-members/change-group-member-mute'
 ---
 
-`seconds` 为禁言时长，单位为秒；传 `0` 解除成员禁言。该操作与[全员禁言](/sdk/android/group/change-group-mute)相互独立。
+设置指定群成员的禁言时长。群主或管理员可针对特定成员禁言指定秒数；传入 `0` 秒表示解除该成员的禁言。此操作仅影响指定成员，与[设置群组全员禁言](/sdk/android/group/change-group-mute)相互独立。
 
 ```java
-OpenIMClient.getInstance().groupManager.changeGroupMemberMute(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* 请求已完成。 */ }
-    @Override public void onError(int code, String error) { /* code 和 error 说明失败原因。 */ }
-}, groupID, userID, 3600L);
+String groupID = "group_123";
+String userID = "user_b";
+long seconds = 3600L; // 禁言 1 小时，传 0L 为解除禁言
+
+OpenIMClient.getInstance().groupManager.changeGroupMemberMute(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // 成员禁言设置成功
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // 处理设置失败
+        }
+    },
+    groupID,
+    userID,
+    seconds
+);
 ```
 
-成功回调表示设置请求已完成，不表示其他客户端界面已经更新。`onGroupMemberInfoChanged` 返回更新后的 `GroupMembersInfo`；按 `groupID:userID` 更新成员状态。完整 listener 注册见[群组概览](/sdk/android/group/overview-group)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `groupID` | `String` | 是 | 目标群组全局唯一 ID。 |
+| `userID` | `String` | 是 | 目标群成员的用户 ID。 |
+| `seconds` | `long` | 是 | 禁言时长（单位：秒）。传 `0` 表示解除禁言。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+设置成功代表服务端已更新该成员的禁言状态。本地及群内成员端随后将收到 `onGroupMemberInfoChanged` 事件通知，返回更新后的 `GroupMembersInfo`（其中包含禁言结束时间戳 `muteEndTime`）。客户端应以 `groupID:userID` 为标识更新该成员状态；完整监听见[群组概览](/sdk/android/group/overview-group)。

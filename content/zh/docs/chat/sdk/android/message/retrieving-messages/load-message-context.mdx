@@ -1,43 +1,50 @@
 ---
 title: '读取消息上下文'
-description: '使用 Android SDK 读取一条消息前后的上下文。'
+description: '读取指定锚点消息前后的上下文消息列表。'
 sourcePath: '/sdk/android/message/retrieving-messages/load-message-context'
 ---
 
-从搜索结果或引用消息跳入聊天上下文时，把已经取得的 `Message` 作为锚点。
-
-## 参数说明
-
-| 参数 | 类型 | 是否必填 | 说明 |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | 是 | 锚点消息所在的会话 ID。 |
-| `startMsg` | `Message` | 是 | 已经取得的锚点消息。 |
-| `type` | `ViewType` | 是 | 上下文查看类型；引用消息使用 `ViewType.History`，搜索结果使用 `ViewType.Search`。 |
-| `before` | `int` | 是 | 锚点之前最多读取的消息数量。 |
-| `after` | `int` | 是 | 锚点之后最多读取的消息数量。 |
+围绕指定锚点消息，向前后两个时间方向同时拉取一定数量的上下文消息。常用于从全局搜索结果、回复引用或系统通知跳转定位到具体消息时，还原其前后的完整对话语境。
 
 ```java
-messageManager.fetchSurroundingMessages(
+String conversationID = "si_user_a_user_b";
+int before = 20; // 锚点之前拉取的条数
+int after = 20;  // 锚点之后拉取的条数
+
+OpenIMClient.getInstance().messageManager.fetchSurroundingMessages(
     new OnBase<Messages>() {
         @Override
         public void onSuccess(Messages messages) {
             List<Message> surrounding = messages.getData();
-            // surrounding 是目标消息及其上下文。
+            // surrounding 包含目标锚点消息及其前后的上下文消息
         }
 
         @Override
         public void onError(int code, String error) {
-            // 处理失败
+            // 处理获取失败
         }
     },
     conversationID,
     targetMessage,
     ViewType.Search,
-    20,
-    20
+    before,
+    after
 );
 ```
 
-成功回调中的 `messages.getData()` 是锚点前后取得的消息列表，消息字段见[消息概览](/sdk/android/message/overview-message)。
+## 参数说明
 
-`before` 和 `after` 分别限制锚点前后的数量。锚点靠近历史边界或部分消息已经删除时，返回结果可能少于请求总数。需要先定位消息时，见[按 ID 查找消息](/sdk/android/message/retrieving-messages/find-messages-by-id)。
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<Messages>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 锚点消息所在的会话 ID。 |
+| `startMsg` | `Message` | 是 | 作为定位基准的锚点消息对象。 |
+| `type` | `ViewType` | 是 | 上下文查看类型：从引用回复跳转通常传 `ViewType.History`，从搜索结果跳转通常传 `ViewType.Search`。 |
+| `before` | `int` | 是 | 锚点消息之前（更早）最多读取的消息数量。 |
+| `after` | `int` | 是 | 锚点消息之后（更新）最多读取的消息数量。 |
+
+## 返回结果
+
+成功回调返回包含锚点在内的前后上下文消息列表 `List<Message>`。
+
+客户端应以 `clientMsgID` 为标识进行列表排重与高亮定位。当锚点靠近历史消息两端或中间部分消息已被清理时，实际返回的消息总数可能会少于请求数量。若需预先定位单条消息，请参阅[按 ID 查找消息](/sdk/android/message/retrieving-messages/find-messages-by-id)。

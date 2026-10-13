@@ -4,7 +4,7 @@ description: '使用 iOS SDK 读取一条消息前后的上下文。'
 sourcePath: '/sdk/ios/message/retrieving-messages/load-message-context'
 ---
 
-取得定位消息后，把它作为锚点读取前后文：
+在点击全局搜索结果、跳转引用消息或查看特定上下文时，可调用读取消息上下文接口，以某条目标消息为基准，同时拉取其前后的历史消息。
 
 ```objc
 OIMFetchSurroundingMessagesReq *request = [OIMFetchSurroundingMessagesReq new];
@@ -14,10 +14,30 @@ request.before = 20;
 request.after = 20;
 
 [[OIMManager manager] fetchSurroundingMessages:request
-                                     onSuccess:^(NSArray<OIMMessageInfo *> *messages) {
+                                     onSuccess:^(NSArray<OIMMessageInfo *> * _Nullable messages) {
+                                         // 将获取到的上下文消息按时间升序刷新到当前视图
                                          [self replaceContext:messages ?: @[]];
                                      }
-                                     onFailure:nil];
+                                     onFailure:^(NSInteger code, NSString * _Nullable msg) {
+                                         // 处理拉取失败
+                                     }];
 ```
 
-`viewType` 可按搜索或引用场景选择。返回数量可能少于 `before + after + 1`，应确认锚点并按 `clientMsgID` 去重，不要依赖固定数组位置。需要先取回锚点时见[按 ID 查找消息](/sdk/ios/message/retrieving-messages/find-messages-by-id)。
+## 参数说明
+
+`OIMFetchSurroundingMessagesReq` 请求参数字段：
+
+- `startMessage`：作为基准的锚点消息对象（`OIMMessageInfo`）。
+- `before`：锚点之前（更早时间）需要拉取的消息条数。
+- `after`：锚点之后（较新时间）需要拉取的消息条数。
+- `viewType`：视图查询类型，例如 `OIMFetchSurroundingHistoryViewTypeSearch`（搜索跳转场景）。
+
+## 返回结果
+
+- `onSuccess`：返回按时间排序的上下文消息数组（`NSArray<OIMMessageInfo *>`）。
+- `onFailure`：拉取失败回调，返回错误码 `code` 和错误信息 `msg`。
+
+## 客户端状态合并
+
+- 实际返回的消息数量可能小于 `before + after + 1`（例如锚点位于会话首尾边界时）。客户端应以 `clientMsgID`（限定当前 `conversationID`）作为合并去重标识，不要依赖固定的数组下标。
+- 若当前仅持有消息 ID 而缺少完整的消息对象，可先通过[按 ID 查找消息](/sdk/ios/message/retrieving-messages/find-messages-by-id)查询并获取锚点对象。

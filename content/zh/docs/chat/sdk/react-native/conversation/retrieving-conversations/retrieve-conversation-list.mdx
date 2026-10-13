@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-使用 `getConversationListSplit()` 分页获取会话。
+分页拉取当前登录账号的本地会话列表，建立会话列表初始快照。
 
 ```ts
 const conversations = await OpenIMSDK.getConversationListSplit({
@@ -21,8 +21,8 @@ const conversations = await OpenIMSDK.getConversationListSplit({
 
 ## 参数说明
 
-| 参数     | 类型     | 是否必填 | 说明                                                     |
-| -------- | -------- | -------- | -------------------------------------------------------- |
+| 参数 | 类型 | 必填 | 含义 |
+| --- | --- | --- | --- |
 | `offset` | `number` | 是       | 分页偏移量，首页传 `0`。继续加载时按已请求的条目数递增。 |
 | `count`  | `number` | 是       | 本次请求的会话数量。                                     |
 
@@ -60,11 +60,11 @@ const conversations = await OpenIMSDK.getConversationListSplit({
 | `ex`                                                              | `string`（可选）        | 会话扩展字符串。                        |
 | `remark` <span className="enterprise-field-badge">商业版</span>   | `string`（可选）        | 会话备注。                              |
 
-拉取会话列表时，应按 `conversationID` 合并分页结果去重，避免同一会话重复出现在列表中。刷新列表时从 `offset: 0` 重新读取。
+拉取会话列表时，客户端必须以 `conversationID` 为唯一合并标识进行分页累加与去重，避免同一会话在列表中重复出现。刷新列表时从 `offset: 0` 重新读取。
 
 ## 监听会话变化
 
-新建会话时触发 `OnNewConversation`，已有会话发生变化时触发 `OnConversationChanged`。两个事件的回调参数都是 `ConversationItem[]`。
+新建会话时会触发 `OnNewConversation` 事件，已有会话发生变化（如接收新消息、未读数更新、草稿设置或置顶状态变化）时会触发 `OnConversationChanged` 事件。两个事件的回调参数均为 `ConversationItem[]`。客户端在收到增量事件时，同样根据 `conversationID` 定位并更新对应会话项目。
 
 ```ts
 function handleNewConversation(conversations: ConversationItem[]) {
@@ -84,4 +84,4 @@ OpenIMSDK.off(OpenIMEvent.OnNewConversation, handleNewConversation);
 OpenIMSDK.off(OpenIMEvent.OnConversationChanged, handleConversationChanged);
 ```
 
-退出登录、切换账号或销毁会话列表状态时，取消监听。
+退出登录、切换账号或销毁会话列表页面时，应使用相同函数引用取消监听。

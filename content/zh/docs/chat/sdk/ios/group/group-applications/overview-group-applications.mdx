@@ -4,15 +4,49 @@ description: '查询、处理和监听 iOS 入群申请。'
 sourcePath: '/sdk/ios/group/group-applications/overview-group-applications'
 ---
 
-本菜单分别说明收到的申请、发出的申请、未处理数量、同意、拒绝和删除记录。iOS SDK 没有独立查询或清除服务端角标的 selector。
+当群组开启入群验证时，普通用户的加群请求需要群主或管理员审核。入群申请由 `OIMGroupApplicationInfo` 对象承载，客户端在状态管理中统一使用 `groupID:userID`（其中 `userID` 为申请人用户 ID）作为唯一合并标识。
+
+## 申请与处理能力
+
+- [获取收到的入群申请](/sdk/ios/group/group-applications/get-group-application-list-as-recipient)：群主与管理员分页拉取待处理或已处理的加群申请。
+- [获取发出的入群申请](/sdk/ios/group/group-applications/get-group-application-list-as-applicant)：普通用户分页拉取自己主动提交的加群申请记录。
+- [获取未处理入群申请数](/sdk/ios/group/group-applications/get-group-application-unhandled-count)：查询指定时间之后的待处理申请数量，用于角标与红点展示。
+- [接受入群申请](/sdk/ios/group/group-applications/accept-group-application)：群主或管理员同意申请并将用户加入群组。
+- [拒绝入群申请](/sdk/ios/group/group-applications/refuse-group-application)：群主或管理员驳回加群申请。
+- [删除入群申请](/sdk/ios/group/group-applications/delete-group-requests)：清理本地或服务端的申请历史记录。
+
+## 申请事件监听
+
+入群申请的新增、审批结果及删除会通过 `OIMGroupListener` 协议回调通知：
 
 ```objc
-- (void)startApplicationEvents { [[OIMManager callbacker] addGroupListener:self]; }
-- (void)stopApplicationEvents { [[OIMManager callbacker] removeGroupListener:self]; }
-- (void)onGroupApplicationAdded:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }
-- (void)onGroupApplicationAccepted:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }
-- (void)onGroupApplicationRejected:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }
-- (void)onGroupApplicationDeleted:(OIMGroupApplicationInfo *)item { [self removeApplication:item]; }
+- (void)startApplicationEvents {
+    [[OIMManager callbacker] addGroupListener:self];
+}
+
+- (void)stopApplicationEvents {
+    [[OIMManager callbacker] removeGroupListener:self];
+}
+
+- (void)onGroupApplicationAdded:(OIMGroupApplicationInfo *)item {
+    // 收到新的入群申请
+    [self upsertApplication:item];
+}
+
+- (void)onGroupApplicationAccepted:(OIMGroupApplicationInfo *)item {
+    // 入群申请已被同意
+    [self upsertApplication:item];
+}
+
+- (void)onGroupApplicationRejected:(OIMGroupApplicationInfo *)item {
+    // 入群申请已被拒绝
+    [self upsertApplication:item];
+}
+
+- (void)onGroupApplicationDeleted:(OIMGroupApplicationInfo *)item {
+    // 入群申请记录被删除
+    [self removeApplication:item];
+}
 ```
 
-事件按 `groupID:userID` 合并。分页期间发生变化时，从第一页重新加载。
+所有申请事件均使用 `groupID:userID` 作为合并标识。在分页加载申请列表过程中若收到新事件，建议将分页偏移重置为 0 重新获取最新列表，以保证列表顺序与未处理计数准确。

@@ -4,14 +4,32 @@ description: '更新 iOS 成员的群内昵称。'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-nickname'
 ---
 
-传入 `groupID`、`userID` 和新的 `groupNickname`。成功 callback 表示服务端完成请求；最终资料通过 `onGroupMemberInfoChanged:` 更新，或重新查询确认。
+修改群成员在指定群组内的专属昵称（群名片）：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `groupID` | `NSString *` | 目标群组 ID。 |
+| `userID` | `NSString *` | 目标群成员的用户 ID。 |
+| `groupNickname` | `NSString *` | 新的群内昵称。 |
 
 ```objc
-[[OIMManager manager] setGroupMemberNickname:groupID
-  userID:targetUserID
-  groupNickname:@"新的群内昵称"
-  onSuccess:^(NSString * _Nullable data) { [self showSaved]; }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] setGroupMemberNickname:@"group_1001"
+                                      userID:@"user_003"
+                               groupNickname:@"项目经理 - 张三"
+                                   onSuccess:^(NSString * _Nullable data) {
+                                       NSLog(@"setGroupMemberNickname success");
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"setGroupMemberNickname failed: %ld %@", (long)code, message);
+                                   }];
 ```
+
+状态以 `groupID:userID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+服务端完成昵称修改后，群内各端会通过 `onGroupMemberInfoChanged:` 事件分发成员资料更新（监听注册参见[群组概览](/sdk/ios/group/overview-group)），客户端应以 `groupID:userID` 为合并标识更新对应成员在当前群内的展示昵称。群内昵称仅在当前群聊中生效，不改变用户的全局资料昵称。更多群成员查询与管理接口参见[群成员查询概览](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)。

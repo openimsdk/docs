@@ -4,16 +4,16 @@ description: '使用 OpenIM Android SDK 初始化、登录、查询登录状态�
 sourcePath: '/sdk/android/getting-started/authenticate-and-manage-session'
 ---
 
-OpenIM Android SDK 使用 `initSDK()` 初始化本机运行环境，再使用 `login()` 建立当前用户的登录会话。开始认证前，应先完成[开始之前](/sdk/android/getting-started/before-you-start)列出的服务、用户和 Token 准备，并按[按 Android 环境接入](/sdk/android/getting-started/environment-specific-implementation)添加依赖和权限。
+OpenIM Android SDK 初始化本机运行环境后，通过建立当前用户的登录会话接入即时通讯服务。开始认证前，应先完成[开始之前](/sdk/android/getting-started/before-you-start)列出的服务、用户和 Token 准备，并按[按 Android 环境接入](/sdk/android/getting-started/environment-specific-implementation)添加依赖和权限。
 
 完整流程如下：
 
-1. 在应用级会话组件中创建稳定的 `OnConnListener`。
-2. 调用 `initSDK()` 并确认返回 `true`。
-3. 在登录前设置消息、用户、好友、会话、群组和通话信令 listener。
-4. 从业务后端取得对应的 `userID` 与 Token，然后调用 `login()`。
-5. 分别等待登录回调成功与 `onConnectSuccess()`，再开放依赖连接的业务操作。
-6. 主动退出或切换账号时调用 `logout()`，完成后清理当前账号的应用状态。
+1. 在应用级会话组件中创建稳定的连接监听器 `OnConnListener`。
+2. 初始化 SDK 运行环境并确认初始化成功。
+3. 在登录前按业务模块集中设置事件监听器。
+4. 从业务后端取得对应的 `userID` 与 Token，然后发起登录。
+5. 分别等待登录回调成功与长连接就绪通知，再开放依赖连接的业务操作。
+6. 主动退出或切换账号时注销会话，完成后清理当前账号的应用状态。
 
 下文中的 `apiAddr`、`wsAddr`、`userID` 和 `token` 由应用配置或业务后端提供。
 
@@ -87,7 +87,7 @@ if (!initialized) {
 }
 ```
 
-`initSDK()` 返回 `true` 表示 SDK 本地运行环境初始化成功。`OnConnListener` 的连接回调在调用 `login()` 后开始反映长连接状态。
+初始化方法返回 `true` 表示 SDK 本地运行环境初始化成功。`OnConnListener` 的连接回调在调用登录接口后开始反映长连接状态。
 
 | 字段                  | 类型          | 说明                                                       |
 | --------------------- | ------------- | ---------------------------------------------------------- |
@@ -122,7 +122,7 @@ OpenIMClient.getInstance().login(new OnBase<String>() {
 }, userID, token);
 ```
 
-`login()` 的成功回调表示当前登录调用完成；`OnConnListener.onConnectSuccess()` 表示长连接可用。这两个阶段必须分别处理。不要并发调用 `login()`，也不要仅凭某一个回调同时推断登录与连接状态。
+登录回调成功表示当前账号认证请求已通过，而长连接就绪回调（`onConnectSuccess`）则表明长连接已经建立并就绪。两者的关注点不同：认证成功后通常紧接着建立长连接，但不要在登录完成前并发发起重复登录，也不要将认证结果直接等同于长连接已经打通。
 
 ## 查询登录状态
 
@@ -141,11 +141,11 @@ if (loginStatus == LoginStatus.Logged) {
 | `LoginStatus.Logging` | 登录正在进行，不应再次发起并行登录。                 |
 | `LoginStatus.Logged`  | SDK 已登录；网络是否连接仍以 `OnConnListener` 为准。 |
 
-`getLoginStatus()` 和 `getLoginUserID()` 返回调用时保存在本地 SDK 中的登录状态和用户 ID，不会触发连接回调。切换账号时应先退出旧账号，而不是直接用新参数覆盖当前登录。
+获取登录状态和获取当前用户 ID 的方法直接读取保存在本地 SDK 中的状态与用户标识，不会触发网络连接回调。切换账号时应先退出旧账号，而不是直接用新参数覆盖当前登录。
 
 ## 处理 Token 和强制下线
 
-收到 `onUserTokenExpired()` 或 `onUserTokenInvalid()` 后，可以向业务后端取得当前用户的新凭据，再重新登录或进入应用的登录流程。`onKickedOffline()` 表示当前账号被其他设备或服务端强制下线，与用户主动退出是不同状态。
+收到 Token 过期或 Token 失效回调后，可以向业务后端取得当前用户的新凭据，再重新登录或进入应用的登录流程。强制下线回调表示当前账号被其他设备或服务端强制踢下线，与用户主动退出是不同状态。
 
 这些是当前登录账号级别的回调。切换账号前必须停止旧账号的异步任务和页面订阅，并清理旧账号状态。
 
@@ -165,7 +165,7 @@ OpenIMClient.getInstance().logout(new OnBase<String>() {
 });
 ```
 
-`logout()` 成功表示当前 SDK 登录会话已退出。应用状态清理应在成功回调后执行；切换账号时，等待旧账号退出完成后再调用新账号的 `login()`。
+退出成功表示当前 SDK 登录会话已注销。应用状态清理应在成功回调后执行；切换账号时，等待旧账号退出完成后再发起新账号的登录。
 
 应用最终不再使用 SDK 时可以调用：
 
@@ -173,7 +173,7 @@ OpenIMClient.getInstance().logout(new OnBase<String>() {
 OpenIMClient.getInstance().unInit();
 ```
 
-`unInit()` 用于释放 SDK 运行环境，不是 `logout()` 的替代品，也不应在普通页面销毁时调用。
+反初始化用于释放 SDK 运行环境，不是注销登录会话的替代品，也不应在普通页面销毁时调用。
 
 ## 下一步
 

@@ -1,24 +1,25 @@
 ---
 title: '插入本地单聊消息'
-description: '使用 insertSingleMessageToLocalStorage 插入仅当前设备可见的单聊消息。'
+description: '向当前设备的单聊会话中插入一条仅本地可见的消息。'
 sourcePath: '/sdk/android/message/managing-messages/insert-local-single-message'
 ---
 
-`insertSingleMessageToLocalStorage()` 把一条消息写入当前设备的指定单聊，可用于迁移记录或展示仅本地可见的业务提示。它不会向服务器发送消息。
-
-`message` 是要插入的完整消息对象，`receiver` 是接收者用户 ID，`sender` 是发送者用户 ID。两者决定消息所属的单聊方向，不能互换。
+将一条构造好的消息直接写入当前设备的单聊本地数据库中。该操作不会触发网络请求向服务端发送消息，也不会同步到其他端或对方设备，常用于插入本地安全提示、系统辅助说明或本地数据迁移。若需真实发送消息，请调用[发送消息](/sdk/android/message/sending-messages/send-message)。
 
 ```java
+String receiverUserID = "user_b";
+String senderUserID = "user_a";
+
 OpenIMClient.getInstance().messageManager.insertSingleMessageToLocalStorage(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 重新读取或更新当前设备上的单聊消息列表。
+            // 本地写入成功，刷新单聊界面
         }
 
         @Override
         public void onError(int code, String error) {
-            // 提示本地写入失败。
+            // 写入失败处理
         }
     },
     message,
@@ -27,4 +28,17 @@ OpenIMClient.getInstance().messageManager.insertSingleMessageToLocalStorage(
 );
 ```
 
-成功回调表示本地写入完成。该操作不触发新消息事件，不能用于代替[发送消息](/sdk/android/message/sending-messages/send-message)。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `message` | `Message` | 是 | 待插入的完整消息对象（通常由各 `create*Message` 接口创建）。 |
+| `receiver` | `String` | 是 | 单聊接收方的用户 ID。 |
+| `sender` | `String` | 是 | 单聊发送方的用户 ID。两字段决定消息方向，不可颠倒。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+写入成功后，客户端应以 `clientMsgID` 为标识将该消息追加至单聊列表进行本地渲染。该操作不触发新消息事件。

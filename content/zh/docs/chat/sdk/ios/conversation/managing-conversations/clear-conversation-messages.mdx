@@ -4,12 +4,31 @@ description: '使用 iOS SDK 保留会话入口并清空其消息。'
 sourcePath: '/sdk/ios/conversation/managing-conversations/clear-conversation-messages'
 ---
 
-产品语义为“清空聊天记录”时调用：
+清空指定会话的全部历史消息，并保留会话在列表中的入口：
+
+## 参数说明
+
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| `conversationID` | `NSString *` | 目标会话 ID。 |
 
 ```objc
-[[OIMManager manager] clearConversationAndDeleteAllMsg:conversationID
-                                              onSuccess:nil
-                                              onFailure:nil];
+[[OIMManager manager] clearConversationAndDeleteAllMsg:@"c2c_user1002"
+                                             onSuccess:^(NSString * _Nullable data) {
+                                                 NSLog(@"clearConversationAndDeleteAllMsg success");
+                                             }
+                                             onFailure:^(NSInteger code, NSString *message) {
+                                                 NSLog(@"clearConversationAndDeleteAllMsg failed: %ld %@", (long)code, message);
+                                             }];
 ```
 
-成功 callback 表示请求完成。应用应立即清理当前消息列表，再通过 `onConversationChanged:` 更新会话摘要、最后一条消息和未读状态；需要确认完整结果时重新查询，会话入口继续保留。
+状态以 `conversationID` 为合并标识。
+
+## 返回结果
+
+成功回调 `onSuccess` 返回操作结果。
+
+操作成功后，当前会话的所有历史消息将被清空，最后一条消息内容与未读数将被重置，会话本身仍保留在聊天列表中。状态更新会通过 `onConversationChanged:` 事件广播，客户端应以 `conversationID` 为合并标识更新对应会话的展示摘要。
+
+会话监听配置参见[获取会话列表](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)。若需连同会话入口一并彻底删除，请调用[删除会话及消息](/sdk/ios/conversation/managing-conversations/delete-conversation-with-messages)。
+

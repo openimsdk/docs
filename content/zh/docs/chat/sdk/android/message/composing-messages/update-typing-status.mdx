@@ -1,38 +1,54 @@
 ---
 title: '上报输入状态'
-description: '使用 Android SDK 上报当前会话的输入状态。'
+description: '上报当前用户在指定会话中的正在输入状态或停止输入状态。'
 sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
 ---
 
-进入输入状态时，将 `focus` 设为 `true`；输入结束、输入框失去焦点或退出会话时，将其设为 `false`。
+在会话中上报用户的输入状态。当用户正在编辑文本时，将 `focus` 设为 `true` 上报“正在输入”状态；当用户发送消息、清空输入框、输入框失去焦点或离开聊天页面时，将 `focus` 设为 `false` 及时清除输入状态。建议对输入事件进行适当防抖，避免频繁向服务端发送相同状态。
 
 ```java
-conversationManager.changeInputState(
+String conversationID = "si_user_a_user_b";
+
+// 开始输入时上报
+OpenIMClient.getInstance().conversationManager.changeInputState(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 输入状态已上报
+            // 输入状态上报成功
         }
 
         @Override
         public void onError(int code, String error) {
-            // code 和 error 说明上报失败原因。
+            // 处理上报失败
         }
     },
     conversationID,
     true
 );
+
+// 停止输入或离开页面时清除
+OpenIMClient.getInstance().conversationManager.changeInputState(
+    null,
+    conversationID,
+    false
+);
 ```
 
-输入结束时及时清除状态：
+## 参数说明
 
-```java
-conversationManager.changeInputState(callback, conversationID, false);
-```
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+| `conversationID` | `String` | 是 | 目标会话全局唯一 ID。 |
+| `focus` | `boolean` | 是 | 是否处于正在输入状态：`true` 表示正在输入，`false` 表示停止输入。 |
 
-避免频繁重复上报相同状态。成功回调表示上报请求已经完成。
+## 返回结果
 
-其他客户端通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化。Android SDK 以 JSON 字符串形式返回事件数据，应先校验内容再解析：
+成功回调中的 `data` 返回确认信息。
+
+## 监听对端输入状态
+
+对端用户通过 `OnConversationListener.onConversationUserInputStatusChanged` 接收输入状态变化通知。Android SDK 以 JSON 字符串形式派发事件数据：
 
 ```java
 @Override
@@ -44,10 +60,10 @@ public void onConversationUserInputStatusChanged(String payload) {
     if (state == null || state.getConversationID() == null) {
         return;
     }
-    // state 包含会话、用户和正在输入的平台。
+    // state.getConversationID() 对应会话
+    // state.getUserID() 对应正在输入的用户
+    // state.getPlatformIDs() 正在输入的平台列表
 }
 ```
 
-回调中的 `conversationID`、`userID` 和 `platformIDs` 分别表示会话、用户和正在输入的平台。`ConversationManager` 只能设置一个 `OnConversationListener`；如果应用还需要处理其他会话事件，请在同一个 listener 中实现相应回调。
-
-需要主动查询指定用户是否正在输入时，使用[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)。
+如需主动查询某用户的实时输入状态，请参阅[查询输入状态](/sdk/android/message/composing-messages/get-typing-status)。

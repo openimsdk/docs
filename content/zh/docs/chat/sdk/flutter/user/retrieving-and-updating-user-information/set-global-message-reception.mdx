@@ -4,7 +4,20 @@ description: '使用 Flutter SDK 设置当前账号的默认消息接收与通�
 sourcePath: '/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception'
 ---
 
-通过 `setSelfInfo()` 单独写入 `globalRecvMsgOpt`，不要在保存昵称或头像时顺带覆盖账号级消息策略。
+配置当前账号在所有单聊与群聊会话中的默认全局消息接收与离线推送策略：
+
+## 参数说明
+
+通过更新当前用户资料方法传入 `globalRecvMsgOpt` 字段，单独配置全局免打扰策略，避免与修改昵称或头像混淆：
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `globalRecvMsgOpt` | `int` | 是 | 全局消息接收选项枚举值。通常在正常接收与免打扰之间切换。 |
+
+| 枚举值 | 数值 | 含义 |
+| --- | --- | --- |
+| `ReceiveMessageOpt.receive` | `0` | 正常接收消息，并允许离线推送或通知提醒。 |
+| `ReceiveMessageOpt.notNotify` | `2` | 接收消息，但不触发离线推送或通知提醒（全天免打扰）。 |
 
 ```dart
 await OpenIM.iMManager.userManager.setSelfInfo(
@@ -12,12 +25,11 @@ await OpenIM.iMManager.userManager.setSelfInfo(
 );
 ```
 
-| 常量 | 数值 | 含义 |
-| --- | --- | --- |
-| `ReceiveMessageOpt.receive` | `0` | 正常接收消息，并允许离线推送或通知。 |
-| `ReceiveMessageOpt.notReceive` | `1` | 不接收消息，也不触发离线推送或通知。 |
-| `ReceiveMessageOpt.notNotify` | `2` | 接收消息，但不触发离线推送或通知。 |
+## 返回结果
 
-如果产品只提供“全局免打扰”开关，通常在 `receive` 与 `notNotify` 之间切换；`notReceive` 会停止接收消息，应作为含义不同的选项展示。
+Future 成功返回 `void`，表示全局消息接收方式配置请求已提交至服务端。
 
-单个会话还可以设置自己的接收方式，见[设置会话消息接收方式](/sdk/flutter/conversation/managing-conversations/set-message-receive-option)。Future 成功只表示请求完成；最终账号资料通过 `onSelfInfoUpdated` 更新，或重新查询确认，事件归属见[更新当前用户资料](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile)。
+该操作为状态变更接口。单个会话若单独设置了个性化接收选项，其优先级通常高于全局默认策略。单会话的消息接收选项配置请参考[设置会话消息接收方式](/sdk/flutter/conversation/managing-conversations/set-message-receive-option)。
+
+服务端配置生效后，当前端与其他端会触发 `onSelfInfoUpdated` 事件通知。客户端应以 `userID` 为合并标识，更新本地存储的当前登录用户信息。用户资料变更事件的处理逻辑请参考[更新当前用户资料](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile)。
+

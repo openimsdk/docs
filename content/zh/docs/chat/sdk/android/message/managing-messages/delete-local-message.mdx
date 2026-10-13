@@ -1,27 +1,42 @@
 ---
 title: '删除本地消息'
-description: '使用 deleteMessageFromLocalStorage 仅删除当前设备的消息副本。'
+description: '仅从当前设备的本地数据库中删除指定消息，不影响服务端及其他设备。'
 sourcePath: '/sdk/android/message/managing-messages/delete-local-message'
 ---
 
-`deleteMessageFromLocalStorage()` 只删除当前设备中由 `conversationID` 和 `clientMsgID` 指定的消息，不影响服务端、其他设备或其他用户的记录。
+仅从当前设备的本地数据库中物理删除指定单条消息。该操作不会请求服务端，不会影响云端漫游记录，也不会同步到当前账号的其他端或会话中的其他成员。
 
 ```java
+String conversationID = "si_user_a_user_b";
+String clientMsgID = "msg_001";
+
 OpenIMClient.getInstance().messageManager.deleteMessageFromLocalStorage(
     conversationID,
     clientMsgID,
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // 按 clientMsgID 从当前会话列表移除消息。
+            // 本地删除成功，从 UI 列表中移除该消息
         }
 
         @Override
         public void onError(int code, String error) {
-            // 保留消息并提示删除失败。
+            // 处理删除失败
         }
     }
 );
 ```
 
-成功回调表示本地记录已经删除。此操作不会触发共享消息事件；重新同步或重新安装后，仍可能再次读取到服务端保留的消息。
+## 参数说明
+
+| 参数 | 类型 | 是否必填 | 说明 |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | 是 | 目标会话全局唯一 ID。 |
+| `clientMsgID` | `String` | 是 | 待删除目标消息的客户端消息 ID。 |
+| `base` | `OnBase<String>` | 是 | 异步请求回调。 |
+
+## 返回结果
+
+成功回调中的 `data` 返回确认信息。
+
+此操作为纯本地变更，不会触发共享消息事件。如果后续通过[加载历史消息](/sdk/android/message/retrieving-messages/load-older-messages)重新从服务端拉取历史记录，仍可能再次同步到服务端保留的该条消息。若需要在服务端及多端同步删除消息，请使用[批量删除消息](/sdk/android/message/managing-messages/delete-saved-messages)。

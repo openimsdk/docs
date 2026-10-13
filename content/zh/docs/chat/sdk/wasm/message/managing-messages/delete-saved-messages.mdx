@@ -20,11 +20,11 @@ await openimsdk.deleteMessages({
 });
 ```
 
-`isSync: false` 删除当前设备及当前账号服务端记录；`true` 还请求把删除动作同步到其他客户端。它不会删除其他会话成员的副本，也不会产生撤回提示。
+`isSync: false` 仅删除当前设备本地与当前账号的服务端记录；`true` 则会请求服务端向当前账号的多端设备同步该删除动作。该操作仅影响当前账号的消息视图，不会删除其他会话成员的消息副本，也不会产生撤回系统提示。
 
-Promise 成功表示删除请求已经完成；同步开启时，这不代表其他客户端已经收到事件或完成界面更新。
+接口调用成功表示删除请求已完成。若启用了多端同步，其他客户端随后会收到删除事件。
 
-`SdkEvent.OnMsgDeleted` 的完整监听示例集中在本页。`data` 是 `MessageItem`；先根据消息路由确定会话，再用 `clientMsgID` 移除对应消息。重复收到同一删除事件时，不应再次改变列表。
+本页集中提供 `SdkEvent.OnMsgDeleted` 事件的监听示例：事件载荷 `data` 为 `MessageItem`，业务层可根据会话路由定位会话，并使用 `clientMsgID` 将对应消息从界面列表中移除。
 
 ```ts
 import { SdkEvent } from '@openim/wasm-client-sdk';
@@ -40,4 +40,4 @@ function removeMessageDeletedListener() {
 }
 ```
 
-组件卸载、退出登录或切换账号时调用 `removeMessageDeletedListener()`。如果需要确认当前消息列表，应重新查询对应会话的历史消息，并以最新结果为准。
+在组件销毁、退出登录或切换账号时，请调用 `removeMessageDeletedListener()` 解绑监听。如需校准消息列表，可重新拉取历史记录。

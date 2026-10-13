@@ -126,44 +126,44 @@ const copy = {
   zh: {
     eyebrow: 'Version 4',
     intro:
-      'OpenIM WASM SDK 为浏览器应用提供用户、会话、群组、消息、通话信令、实时事件和本地存储能力。先完成运行环境与登录配置，再通过 SDK API 和事件把各项能力接入应用状态。',
+      'OpenIM WASM SDK 为浏览器应用提供用户、会话、群组、消息、通话信令、实时事件和本地存储能力。完成运行环境与登录配置后，即可通过 SDK API 与事件监听快速将各项即时通讯能力接入你的前端项目。',
     mostPopular: '热门主题',
     recommended: '推荐功能',
     resources: '资源',
     popular: [
       {
         title: '管理会话',
-        description: '设置会话状态、草稿、未读数、隐藏和删除等客户端会话能力。',
+        description: '维护会话列表、草稿编辑、未读数同步、会话隐藏与删除等能力。',
         href: '/sdk/wasm/conversation/overview-conversation',
         visual: 'migration',
       },
       {
         title: '未读消息数',
-        description: '读取会话未读数，并同步聊天列表、角标和全局未读状态。',
+        description: '读取会话及全局未读数，实时同步聊天列表红点与应用角标。',
         href: '/sdk/wasm/conversation/managing-conversations/mark-conversation-read',
         visual: 'unread',
       },
       {
         title: '群聊消息已读',
-        description: '上报群消息已读状态、接收回执事件，并查询已读成员。',
+        description: '上报群消息已读状态、实时接收已读回执并查询已读成员列表。',
         href: '/sdk/wasm/message/managing-read-status/send-group-read-receipts',
         visual: 'receipt',
       },
       {
         title: '发送消息',
-        description: '创建文本、文件或自定义消息，并发送给单聊用户或群组。',
+        description: '支持发送文本、图片、音视频、文件或自定义消息到单聊或群聊。',
         href: '/sdk/wasm/message/sending-messages/send-message',
         visual: 'message',
       },
       {
         title: '接收消息',
-        description: '订阅新消息事件，把增量消息稳定合并到应用状态。',
+        description: '监听实时新消息事件，将增量消息稳定平滑地合并到应用界面。',
         href: '/sdk/wasm/message/receiving-messages/receive-messages',
         visual: 'events',
       },
       {
         title: '历史消息',
-        description: '使用会话 ID 和消息游标读取本地及同步后的历史消息。',
+        description: '基于会话 ID 与游标加载本地离线缓存及云端同步的历史消息。',
         href: '/sdk/wasm/message/retrieving-messages/load-older-messages',
         visual: 'history',
       },
@@ -171,39 +171,39 @@ const copy = {
     features: [
       {
         title: '用户认证',
-        description: '使用后端签发的 token 登录，并处理连接、过期和被踢下线事件。',
+        description: '使用业务后端签发的 Token 快速登录，监听连接状态与多端事件。',
         href: '/sdk/wasm/getting-started/authenticate-and-manage-session',
       },
       {
         title: '音视频通话',
-        description: '处理通话邀请、房间凭据、自定义信令和通话事件。',
+        description: '支持发起通话邀请、接收房间凭据、发送自定义信令与通话事件监听。',
         href: '/sdk/wasm/calling/overview-calling',
       },
       {
-        title: '事件',
-        description: '在同一个 SDK 实例上注册连接事件和各领域增量事件。',
+        title: '事件监听',
+        description: '通过统一的 SDK 实例注册连接生命周期与各业务领域数据事件。',
         href: '/sdk/wasm/events/overview-events',
       },
     ],
     links: [
       {
         title: '发送第一条消息',
-        description: '完成安装、初始化、登录、选择目标并发送消息。',
+        description: '快速完成 SDK 引入、初始化与登录，体验首条消息收发。',
         href: '/sdk/wasm/getting-started/send-first-message',
       },
       {
         title: '运行环境配置',
-        description: '在浏览器、SSR 和 Electron 中正确放置 WASM 资源。',
+        description: '在普通浏览器、SSR 框架或 Electron 中正确加载 WASM 静态资源。',
         href: '/sdk/wasm/getting-started/environment-specific-implementation',
       },
       {
         title: '日志与诊断',
-        description: '记录错误码、错误信息和必要上下文，用于定位客户端与服务端问题。',
+        description: '合理配置 SDK 日志级别，利用链路标识排查客户端与服务端交互。',
         href: '/sdk/wasm/logger',
       },
       {
         title: '客户端 SDK 错误码',
-        description: '查询通用客户端错误码，并按错误来源选择处理方式。',
+        description: '查询客户端通用错误码释义及常见故障定位与处理方案。',
         href: '/sdk/error-codes',
       },
     ],
@@ -537,13 +537,13 @@ function createMobilePopularCards(
   return [
     {
       title: '管理会话',
-      description: '设置会话状态、草稿、未读数、隐藏和删除等客户端会话能力。',
+      description: '维护会话列表、草稿编辑、未读数同步、会话隐藏与删除等能力。',
       href: `${prefix}/conversation/overview-conversation`,
       visual: 'migration',
     },
     {
       title: '未读消息数',
-      description: '读取会话未读数，并同步聊天列表、角标和全局未读状态。',
+      description: '读取会话及全局未读数，实时同步聊天列表红点与应用角标。',
       href: `${prefix}/conversation/managing-conversations/mark-conversation-read`,
       visual: 'unread',
     },
@@ -551,8 +551,8 @@ function createMobilePopularCards(
       title: platform === 'ios' ? '群聊消息已读' : '会话已读',
       description:
         platform === 'ios'
-          ? '上报群消息已读状态、接收回执事件，并查询已读成员。'
-          : '清理会话未读数，并处理单聊消息已读回执。',
+          ? '上报群消息已读状态、实时接收已读回执并查询已读成员列表。'
+          : '清理会话未读数，并处理单聊消息已读回执与状态同步。',
       href:
         platform === 'ios'
           ? `${prefix}/message/managing-read-status/send-group-read-receipts`
@@ -561,19 +561,19 @@ function createMobilePopularCards(
     },
     {
       title: '发送消息',
-      description: '创建文本、文件或自定义消息，并发送给单聊用户或群组。',
+      description: '支持发送文本、图片、音视频、文件或自定义消息到单聊或群聊。',
       href: `${prefix}/message/sending-messages/send-message`,
       visual: 'message',
     },
     {
       title: '接收消息',
-      description: '订阅新消息事件，把增量消息稳定合并到应用状态。',
+      description: '监听实时新消息事件，将增量消息稳定平滑地合并到应用界面。',
       href: `${prefix}/message/receiving-messages/receive-messages`,
       visual: 'events',
     },
     {
       title: '历史消息',
-      description: '使用会话标识和消息游标读取本地及同步后的历史消息。',
+      description: '基于会话标识与游标加载本地离线缓存及云端同步的历史消息。',
       href: `${prefix}/message/retrieving-messages/load-older-messages`,
       visual: 'history',
     },
