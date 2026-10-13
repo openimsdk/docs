@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Fragment, type ReactNode } from 'react';
@@ -1218,13 +1218,40 @@ function resolveGuideHref(
   if (href.startsWith('#')) return href;
   if (isExternalHref(href)) return href;
 
+  const [rawPath, hash] = href.split('#');
+  const hashPart = hash ? `#${hash}` : '';
+
+  // 1. Direct absolute internal route (e.g. /docs/..., /platform-api/..., /sdk/...)
+  const normalizedAbs = rawPath.replace(/^\/(?:zh-Hans|zh)(?=\/|$)/, '');
+  if (
+    normalizedAbs.startsWith('/docs/') ||
+    normalizedAbs.startsWith('/platform-api/') ||
+    normalizedAbs.startsWith('/sdk/') ||
+    normalizedAbs === '/'
+  ) {
+    return `${toLocalizedPath(normalizedAbs, locale)}${hashPart}`;
+  }
+
+  // 2. Relative path based on current local guide path (e.g. ./components, ../operations/monitoring)
+  const currentLocalPath = sourceMap.get(sourcePath);
+  if (currentLocalPath && (rawPath.startsWith('./') || rawPath.startsWith('../'))) {
+    const candidateLocalPath = posix.resolve(posix.dirname(currentLocalPath), rawPath);
+    for (const guidePathValue of sourceMap.values()) {
+      if (candidateLocalPath === guidePathValue) {
+        return `${toLocalizedPath(candidateLocalPath, locale)}${hashPart}`;
+      }
+    }
+  }
+
+  // 3. Fallback to legacy sourcePath resolution
   const base = `https://docs.openim.io/zh-Hans${sourcePath.replace(/\/[^/]+$/, '/')}`;
-  const resolved = new URL(href, base).pathname
+  const resolved = new URL(rawPath, base).pathname
     .replace(/^\/zh-Hans/, '')
     .replace(/\.(?:md|mdx)$/, '');
   const local = sourceMap.get(resolved);
-  if (local) return toLocalizedPath(local, locale);
-  return `https://docs.openim.io/zh-Hans${resolved}`;
+  if (local) return `${toLocalizedPath(local, locale)}${hashPart}`;
+
+  return `https://docs.openim.io/zh-Hans${resolved}${hashPart}`;
 }
 
 function resolveGuideImageSrc(href: string, sourcePath: string) {
