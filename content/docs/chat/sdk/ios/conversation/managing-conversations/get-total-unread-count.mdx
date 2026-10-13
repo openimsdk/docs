@@ -5,21 +5,32 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/get-total-unread-count'
 ---
 
-This query returns a snapshot of the total unread count across all conversations for the current account. Do not derive it by summing `unreadCount` values from the currently loaded pages.
+Query the aggregate unread message count across all conversations for the authenticated account using `getTotalUnreadMsgCountWithOnSuccess:onFailure:`. This method calculates the complete server-backed unread total, avoiding manual client-side tallying across paginated conversation lists.
+
+## Code example
 
 ```objc
 [[OIMManager manager] getTotalUnreadMsgCountWithOnSuccess:^(NSInteger count) {
     [badgeStore setTotalUnread:count];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"getTotalUnreadMsgCount failed: %ld %@", (long)code, message);
+}];
 ```
 
-The query itself does not trigger a delegate. This page is the sole owner of subsequent total-count updates:
+## Return value
+
+The `onSuccess` callback delivers an integer `count` representing the total unread message count across all conversations for the logged-in user.
+
+## State changes after the call
+
+- **Local badge update**: Update global tab bar badges or unread counter labels with the returned count.
+- **Snapshot query**: This query retrieves an instantaneous snapshot and does not emit delegate callbacks.
+- **Asynchronous event listening**: When new incoming messages arrive or conversations are marked as read, the SDK broadcasts the updated total unread count via `onTotalUnreadMessageCountChanged:` in `OIMConversationListener`:
 
 ```objc
 @interface TotalUnreadSync : NSObject <OIMConversationListener>
@@ -31,9 +42,11 @@ The query itself does not trigger a delegate. This page is the sole owner of sub
 }
 @end
 
-[[OIMManager callbacker] addConversationListener:totalUnreadSync];
-// When the account scope ends:
-[[OIMManager callbacker] removeConversationListener:totalUnreadSync];
+TotalUnreadSync *sync = [TotalUnreadSync new];
+[[OIMManager callbacker] addConversationListener:sync];
+
+// When logging out or tearing down view controllers:
+[[OIMManager callbacker] removeConversationListener:sync];
 ```
 
-To synchronize this value with the SDK's push badge state, see [Set the app badge count](/sdk/ios/message/set-app-badge).
+To synchronize this count with the iOS system application icon badge, refer to [Set the app badge count](/sdk/ios/message/set-app-badge).

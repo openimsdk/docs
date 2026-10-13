@@ -1,17 +1,58 @@
 ---
-title: 'Create a rich-text reply'
-description: 'OpenIM HarmonyOS SDK guide for Create a rich-text reply.'
+title: 'Create advanced quote message'
+description: 'Quote an existing message with rich entity spans attached to the reply text.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/creating-messages/create-advanced-quote-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Creates a quote message referencing an existing message while supporting embedded rich text entities (such as links or mentions) in the reply body.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  CreateAdvancedQuoteMessageReq,
+  CreateAdvancedQuoteMessageResp,
+  MessageEntity,
+} from '@openimsdk/imsdk';
+
+const entity: MessageEntity = {
+  type: 'url',
+  offset: 3,
+  length: 4,
+  url: 'https://example.com/task/42',
+  ex: '',
+};
+const request: CreateAdvancedQuoteMessageReq = {
+  text: 'View task details',
+  quoteMessage: originalMessage,
+  messageEntities: [entity],
+};
+const response: CreateAdvancedQuoteMessageResp = await sdk.createAdvancedQuoteMessage(request);
+const message = response.message;
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | Yes | Reply body text. |
+| `quoteMessage` | `IMMessage` | Yes | The original message being quoted. |
+| `messageEntities` | `MessageEntity[]` | Yes | Array of rich entity spans within the reply text. |
+
+## Return value
+
+Returns a Promise resolving to `CreateAdvancedQuoteMessageResp`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `message` | `IMMessage` | Locally constructed advanced quote message object ready to send. |
+
+## State changes after the call
+
+Entity offsets and lengths must fall strictly within the bounds of `text`. The quoted message must belong to the destination conversation. Receiving clients should validate boundaries, URLs, and extension data. This method creates the message object locally without modifying the quoted message or initiating network requests. Call [Send message](/sdk/harmony/message/sending-messages/send-message) to dispatch it.

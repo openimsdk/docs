@@ -5,20 +5,41 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-nickname'
 ---
 
-Provide `groupID`, `userID`, and the new `groupNickname`. A successful callback means that the server completed the request. Reconcile the final profile through `onGroupMemberInfoChanged:` or a new query.
+Invoke `setGroupMemberNickname:userID:groupNickname:onSuccess:onFailure:` to update a member's group-specific display nickname:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `userID` | `NSString *` | Yes | User ID of the target group member. |
+| `groupNickname` | `NSString *` | Yes | New group-specific nickname. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] setGroupMemberNickname:groupID
-  userID:targetUserID
-  groupNickname:@"New group nickname"
-  onSuccess:^(NSString * _Nullable data) { [self showSaved]; }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] setGroupMemberNickname:@"group_1001"
+                                      userID:@"user_003"
+                               groupNickname:@"Project Lead - Alex"
+                                   onSuccess:^(NSString * _Nullable data) {
+                                       NSLog(@"setGroupMemberNickname success");
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"setGroupMemberNickname failed: %ld %@", (long)code, message);
+                                   }];
 ```
+
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the nickname update.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the member's group nickname matching `groupID:userID`. This nickname is scoped strictly to the current group and does not alter the user's global profile name.
+2. **Event notification**: Updated member details broadcast across active client sessions through `onGroupMemberInfoChanged:`.
+3. **Re-query calibration**: For member queries, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

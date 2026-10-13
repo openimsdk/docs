@@ -1,17 +1,18 @@
 ---
 title: 'Schedule server message deletion'
-description: 'Use setConversation() to configure scheduled server message deletion for a conversation.'
+description: 'Enable, disable, and configure scheduled server-side message retention for a specific conversation.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/managing-conversations/set-message-destruct'
 ---
 
-`isMsgDestruct` and `msgDestructTime` together configure scheduled server message deletion and can be sent in one `ConversationReq`.
+Configure scheduled server-side message destruction policies for a specific conversation. When enabled, the server automatically purges historical messages that exceed the configured retention window. This is a server retention strategy, distinct from client-side burn-after-reading.
+
+## Code example
 
 ```java
 ConversationReq request = new ConversationReq();
@@ -22,7 +23,7 @@ OpenIMClient.getInstance().conversationManager.setConversation(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The request completed.
+            // Destruction settings saved successfully.
         }
 
         @Override
@@ -35,4 +36,25 @@ OpenIMClient.getInstance().conversationManager.setConversation(
 );
 ```
 
-`msgDestructTime` is measured in seconds. Set `request.setMsgDestruct(false)` to disable the policy. This capability is distinct from burn after reading. Conversation list changes can be received through `onConversationChanged`; see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) for listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `conversationID` | `String` | Yes | Target conversation identifier. |
+| `request` | `ConversationReq` | Yes | Conversation configuration request object. |
+
+### Request attributes
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `isMsgDestruct` | `boolean` | Enables or disables scheduled server-side message purging. Pass `false` to disable. |
+| `msgDestructTime` | `int` | Retention interval in seconds, such as `3600`. |
+
+## Return value
+
+The successful callback indicates that the server recorded the destruction policy. This configuration applies strictly to server-side history retention; to destroy messages immediately upon viewing, see [Enable or disable burn after reading](/sdk/android/conversation/managing-conversations/set-private-chat).
+
+## State changes after the call
+
+Once the policy takes effect, the SDK triggers the `OnConversationListener.onConversationChanged` event. Locate the conversation by `conversationID` and update its `isMsgDestruct` and `msgDestructTime` fields. For complete listener registration details, see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list).

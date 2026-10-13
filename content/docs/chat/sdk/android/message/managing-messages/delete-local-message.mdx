@@ -1,34 +1,54 @@
 ---
-title: 'Delete a local message'
-description: 'Use deleteMessageFromLocalStorage to delete only the message copy on the current device.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/managing-messages/delete-local-message'
+title: "Delete a local message"
+description: "Use deleteMessageFromLocalStorage to delete only the message copy on the current device."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/managing-messages/delete-local-message"
 ---
 
-`deleteMessageFromLocalStorage()` removes the message identified by `conversationID` and `clientMsgID` from this device only. It does not affect the server, other devices, or other users.
+Delete a single message record exclusively from the local SQLite storage on the current device. This operation does not issue a network request to the server, does not alter cloud roaming history, and does not synchronize to other client devices logged into the same account or to chat peers.
+
+## Code example
 
 ```java
+String conversationID = "si_user_a_user_b";
+String clientMsgID = "msg_001";
+
 OpenIMClient.getInstance().messageManager.deleteMessageFromLocalStorage(
     conversationID,
     clientMsgID,
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Remove the message from the current conversation by clientMsgID.
+            // Local deletion succeeded, remove message from UI timeline
         }
 
         @Override
         public void onError(int code, String error) {
-            // Keep the message and report the failure.
+            // Failed to delete message from local storage
         }
     }
 );
 ```
 
-The success callback means the local record was deleted. No shared message event is triggered. A later synchronization or reinstall may retrieve the server copy again.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Globally unique ID of the target conversation. |
+| `clientMsgID` | `String` | Yes | Client message ID of the message to delete. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the record was removed from the local database on this device.
+2. **Local scope**: This is a local-only operation that does not trigger network events or synchronization listeners.
+3. **Re-query behavior**: If the conversation history is later refetched from the server via [Load older messages](/sdk/android/message/retrieving-messages/load-older-messages), the message may reappear because it remains in cloud storage. To delete messages from both local storage and the server across all devices, call [Delete messages in a batch](/sdk/android/message/managing-messages/delete-saved-messages).

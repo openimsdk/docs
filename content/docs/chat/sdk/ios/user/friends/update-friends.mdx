@@ -5,18 +5,53 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/update-friends'
 ---
+
+Update friend remarks, pinned statuses, or custom relationship extension attributes using `updateFriends:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `OIMUpdateFriendsReq *` | Yes | Request object containing target friend user IDs and attributes to update. |
+
+### Request attributes (`OIMUpdateFriendsReq`)
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `friendUserIDs` | `NSArray<NSString *> *` | Yes | List of friend user IDs. Modifications apply uniformly to every listed friend. |
+| `remark` | `NSString *` | No | Custom alias or remark name for the friend. |
+| `isPinned` | `BOOL` | No | Whether to pin the friend in contact lists. |
+| `ex` | `NSString *` | No | Custom extension string, replacing the existing field entirely. |
+
+## Code example
 
 ```objc
 OIMUpdateFriendsReq *req = [OIMUpdateFriendsReq new];
 req.friendUserIDs = @[@"user_b"];
 req.remark = @"Alex";
 req.isPinned = YES;
-[[OIMManager manager] updateFriends:req onSuccess:nil onFailure:nil];
+
+[[OIMManager manager] updateFriends:req
+                          onSuccess:^(NSString *data) {
+    [friendStore updateRemark:req.remark forUserID:@"user_b"];
+}
+                          onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"updateFriends failed: %ld %@", (long)code, message);
+}];
 ```
 
-One call applies the same field values to every user in `friendUserIDs`. The `ex` field is replaced as a complete string. Handle the success callback and `onFriendInfoChanged:` as separate stages.
+The `ex` attribute replaces the previous string in its entirety. Preserve existing application JSON key-value pairs before writing.
+
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the update request.
+
+## State changes after the call
+
+- **Local state merge**: Merge updated friend attributes using `userID` as the unique entity key.
+- **Asynchronous event listening**: Multi-device clients and local listeners observe updates via `onFriendInfoChanged:` in `OIMFriendshipListener` (see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page)).
+- **Re-query calibration**: To reconcile contact data snapshots, invoke [Retrieve specified friends](/sdk/ios/user/friends/get-specified-friends-info).

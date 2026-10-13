@@ -1,17 +1,145 @@
 ---
-title: 'Logging'
-description: 'OpenIM HarmonyOS SDK guide for Logging.'
+title: 'Logging and diagnostics'
+description: 'Configure OpenIM HarmonyOS SDK logging, record diagnostic telemetry, and upload diagnostics.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/logger'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM HarmonyOS SDK writes core engine logs to internal application directories or system logs, and provides capabilities to temporarily modify log verbosity levels, append custom diagnostic events, and upload diagnostic artifacts for troubleshooting.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Initialize logging configuration
+
+Specify a writable application sandbox directory for logs during SDK initialization. Set `isLogStandardOutput` to control whether logs are also mirrored to system console output (`hilog`).
+
+## Code example
+
+```ts
+import sdk, { HttpClientMode, InitSDKReq, LogLevel } from '@openimsdk/imsdk';
+
+const request: InitSDKReq = {
+  config: {
+    apiAddr: apiAddress,
+    wsAddr: websocketAddress,
+    dataDir: context.filesDir,
+    dbPath: context.databaseDir,
+    logFilePath: context.filesDir + '/openim-logs',
+    logLevel: LogLevel.LevelInfo,
+    isLogStandardOutput: false,
+    StopGoroutineOnBackground: false,
+    LogRemainCount: 7,
+    diagnoseHashSalt: diagnoseHashSalt,
+    httpClientMode: HttpClientMode.TCPFirst,
+  },
+};
+await sdk.initSDK(request);
+```
+
+| Log level | Description |
+| --- | --- |
+| `LevelFatal`, `LevelPanic` | Critical fatal conditions that cause abnormal termination. |
+| `LevelError`, `LevelWarn` | Actionable runtime errors and operational warnings. |
+| `LevelInfo` | Informational events for standard execution flow and debugging. |
+| `LevelDebug`, `LevelDebugWithSQL` | Verbose troubleshooting details, including SQL execution statements. |
+
+## Adjust log level temporarily
+
+Elevate the SDK logging level for a specific duration without permanently altering your baseline startup configuration:
+
+```ts
+import sdk, { LogLevel, SetTemporaryLogLevelReq } from '@openimsdk/imsdk';
+
+const request: SetTemporaryLogLevelReq = {
+  logLevel: LogLevel.LevelDebug,
+  durationSeconds: 600,
+};
+await sdk.setTemporaryLogLevel(request);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `logLevel` | `LogLevel` | Yes | Target temporary log level to activate. |
+| `durationSeconds` | `number` | Yes | Lifetime of the temporary level in seconds. Once expired, the SDK reverts to its initial level. |
+
+## Return value
+
+Returns a Promise that resolves to `void` when the temporary log level is applied.
+
+## Record application diagnostic logs
+
+Call `log()` to write application-level diagnostic records into the unified SDK log stream. Regular business APIs do not require an explicit `operationID` because the SDK generates one automatically; in logging and diagnostic contexts, you can supply a custom `operationID` to correlate operations across distributed traces:
+
+```ts
+import sdk, { LogLevel, LogReq } from '@openimsdk/imsdk';
+
+const request: LogReq = {
+  logLevel: LogLevel.LevelInfo,
+  file: 'ConversationStore.ets',
+  line: 120,
+  msg: 'conversation reload requested',
+  err: '',
+  kvs: [],
+};
+const operationID = createDiagnosticOperationID();
+await sdk.log(request, operationID);
+```
+
+Register a process-level log callback using `setLogCallback()` to receive raw native core log strings. Submitting a new callback replaces any previous registration, so register from a centralized diagnostic manager:
+
+```ts
+const handleNativeLog = (message: string): void => {
+  appendSDKLog(message);
+};
+sdk.setLogCallback(handleNativeLog);
+```
+
+The internal debugging method `emitLog` is intended for native bridge test fixtures rather than production application logging.
+
+## Upload diagnostic data
+
+Invoke `uploadSDKData()` to upload logs, databases, or both depending on the selected `mode`. Monitor progress using the `EventOnUploadSDKDataProgress` event:
+
+```ts
+import sdk, {
+  EventOnUploadSDKDataProgressData,
+  OpenIMSDKEvent,
+  UploadSDKDataMode,
+  UploadSDKDataReq,
+} from '@openimsdk/imsdk';
+
+const handleDiagnosticProgress = (data: EventOnUploadSDKDataProgressData): void => {
+  setDiagnosticUploadProgress(data.progress);
+};
+const unsubscribeDiagnosticProgress = sdk.on(
+  OpenIMSDKEvent.EventOnUploadSDKDataProgress,
+  handleDiagnosticProgress,
+);
+
+const request: UploadSDKDataReq = {
+  line: 2000,
+  ex: 'user-approved-diagnostic-session',
+  mode: UploadSDKDataMode.UploadLogs,
+  cancelID: `diagnostic-${Date.now()}`,
+};
+await sdk.uploadSDKData(request);
+unsubscribeDiagnosticProgress();
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `line` | `number` | Yes | Maximum number of log lines to extract for upload. |
+| `ex` | `string` | No | Custom diagnostic metadata attached to the upload request. |
+| `mode` | `UploadSDKDataMode` | Yes | Upload target type (`UploadLogs`, `UploadDatabase`, or `UploadAll`). |
+| `cancelID` | `string` | Yes | Unique task identifier used to track or abort the upload operation. |
+
+## Return value
+
+Returns a Promise that resolves to `void` upon successful completion of the upload task. If the operation fails, inspect the error code and message to determine network or storage causes.

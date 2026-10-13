@@ -5,18 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/clear-conversation-messages'
 ---
 
-Call this API when the product action means “Clear chat history”:
+Invoke `clearConversationAndDeleteAllMsg:onSuccess:onFailure:` to delete all historical messages within a specified conversation while retaining its entry in the conversation list:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] clearConversationAndDeleteAllMsg:conversationID
-                                              onSuccess:nil
-                                              onFailure:nil];
+[[OIMManager manager] clearConversationAndDeleteAllMsg:@"c2c_user1002"
+                                             onSuccess:^(NSString * _Nullable data) {
+                                                 NSLog(@"clearConversationAndDeleteAllMsg success");
+                                             }
+                                             onFailure:^(NSInteger code, NSString *message) {
+                                                 NSLog(@"clearConversationAndDeleteAllMsg failed: %ld %@", (long)code, message);
+                                             }];
 ```
 
-A successful callback means that the request has completed. Clear the current message list immediately, then reconcile the conversation summary, latest message, and unread state through `onConversationChanged:` or a subsequent query. The conversation entry remains available.
+## Return value
+
+The `onSuccess` callback returns confirmation when the operation succeeds.
+
+## State changes after the call
+
+1. **Local message and conversation update**: All local historical messages in the specified conversation are cleared. The conversation's latest message preview is wiped, and its unread message count resets to 0. The conversation entry remains in the list.
+2. **Event notification**: Updated conversation properties are broadcast via the `onConversationChanged:` delegate callback. The client uses `conversationID` as the primary key to refresh the list cell and empty preview text.
+3. **Re-query calibration**: If the conversation needs full deletion alongside its message records, call [Delete a conversation and its messages](/sdk/ios/conversation/managing-conversations/delete-conversation-with-messages). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

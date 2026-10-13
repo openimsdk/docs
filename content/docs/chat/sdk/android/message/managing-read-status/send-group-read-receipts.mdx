@@ -5,39 +5,61 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-read-status/send-group-read-receipts'
 ---
 
+Report read receipts for group messages that the current user has viewed. As the conversation timeline scrolls or messages enter the visible viewport, pass the list of visible client message IDs to the server. This allows group message senders to track read and unread member counts in real time.
+
+## Code example
+
 ```java
-messageManager.sendGroupMessageReadReceipt(
+String conversationID = "g_group_123";
+List<String> visibleClientMsgIDs = Arrays.asList("msg_001", "msg_002");
+
+OpenIMClient.getInstance().messageManager.sendGroupMessageReadReceipt(
     conversationID,
     visibleClientMsgIDs,
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The read receipts have been reported
+            // Read receipts reported successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the failure
+            // Handle reporting failure
         }
     }
 );
 ```
 
-Every message in one batch must belong to the target group conversation. A successful callback means only that the server accepted the report; it does not mean that other client interfaces have already updated. The conversation unread count is maintained separately through `markConversationMessageAsRead`.
+## Parameters
 
-Other clients receive group-message read receipts through `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt`:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Globally unique ID of the target group conversation. |
+| `clientMsgIDs` | `List<String>` | Yes | List of client message IDs in the visible viewport to mark as read. All messages must belong to the specified conversation. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server accepted the read receipts.
+2. **Asynchronous event delivery**: Group message senders and participants receive incremental read receipt events through `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt`:
 
 ```java
 @Override
 public void onRecvGroupMessageReadReceipt(GroupMessageReceipt receipt) {
-    // receipt contains the group message read receipt.
+    // Update read count and read status for messages matched by clientMsgID
 }
 ```
 
-To retrieve members who have or have not read a specific group message, use [Get members who read a group message](/sdk/android/message/managing-read-status/get-group-message-readers).
+3. **Aggregate unread count separation**: Group message read receipts update message-level reader counts. To clear the aggregate unread badge count for the conversation locally and on the server, call [Mark a conversation as read](/sdk/android/conversation/managing-conversations/mark-conversation-read).
+4. **Member detail query**: To view the full list of members who have or have not read a specific group message, see [Get members who read a group message](/sdk/android/message/managing-read-status/get-group-message-readers).
+
+For complete listener registration and lifecycle management, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

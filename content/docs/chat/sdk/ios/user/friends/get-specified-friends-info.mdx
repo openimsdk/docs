@@ -5,13 +5,21 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/get-specified-friends-info'
 ---
 
-When you already know the friends' `userID` values, retrieve the corresponding `OIMFriendInfo` objects as needed:
+Batch-query detailed relationship profiles for specified friends by user ID using `getSpecifiedFriendsInfo:filterBlack:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | Yes | List of user IDs to query. |
+| `filterBlack` | `BOOL` | Yes | Whether to filter out users currently present on the user's blacklist. Pass `YES` to exclude blacklisted friends. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] getSpecifiedFriendsInfo:@[@"user_a", @"user_b"]
@@ -19,9 +27,17 @@ When you already know the friends' `userID` values, retrieve the corresponding `
                                     onSuccess:^(NSArray<OIMFriendInfo *> *friends) {
                                         [friendStore mergeFriends:friends];
                                     }
-                                    onFailure:nil];
+                                    onFailure:^(NSInteger code, NSString *message) {
+                                        NSLog(@"getSpecifiedFriendsInfo failed: %ld %@", (long)code, message);
+                                    }];
 ```
 
-The first argument is an array of user IDs. `filterBlack` determines whether blocked users are excluded. The success callback returns matching friend profiles; merge them by `userID`. An empty array can mean that the targets are not friends or were filtered out.
+## Return value
 
-This query does not trigger a friendship delegate. If you only need to check relationship status, use [`checkFriend:onSuccess:onFailure:`](/sdk/ios/user/friends/check-friend).
+The `onSuccess` callback delivers an array of `OIMFriendInfo` objects matching the queried IDs. If the returned array is empty, none of the requested users are friends with the current account, or all matching entries were excluded by the blacklist filter.
+
+## State changes after the call
+
+- **Local state merge**: Merge retrieved friend records into contact caches using `userID` as the unique entity key.
+- **Snapshot query**: This query establishes an instantaneous point-in-time snapshot and does not emit friendship delegate events.
+- **Lightweight verification**: To verify friend relationship status without fetching full relationship details, invoke [Check friendship status](/sdk/ios/user/friends/check-friend).

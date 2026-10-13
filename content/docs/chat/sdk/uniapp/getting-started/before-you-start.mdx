@@ -1,17 +1,76 @@
 ---
 title: 'Before you start'
-description: 'OpenIM uni-app / uni-app x SDK guide for Before you start.'
+description: 'Prepare OpenIMServer endpoints, user credentials, the UTS plugin, and your native app build environment.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/getting-started/before-you-start'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Before integrating OpenIMClientSDK into a uni-app or uni-app x project, ensure you have an accessible OpenIMServer deployment, user authentication credentials, the complete UTS native plugin package, and a native build environment capable of compiling native mobile dependencies. These prerequisites support both [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session) and [Send your first message](/sdk/uniapp/getting-started/send-first-message).
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Prepare OpenIMServer endpoints
+
+If you do not have an operational OpenIMServer deployment, complete the [Docker Deployment Guide](/docs/guides/quick-deployment/docker) first. Confirm that your target Android, iOS, or HarmonyOS devices can reach the following endpoints:
+
+| Endpoint | Description |
+| --- | --- |
+| `apiAddr` | The HTTP API base address for OpenIMServer, used for login, data synchronization, and server resource queries. Use HTTPS in production. |
+| `wsAddr` | The WebSocket gateway address for OpenIMServer, used for maintaining persistent connections and streaming real-time events. Use WSS in production. |
+
+Do not verify these URLs exclusively from your development workstation or localhost. Test connectivity from physical devices or emulators to ensure proper DNS resolution, valid TLS certificates, permissive firewall rules, WebSocket handshake upgrades, and media storage asset routing.
+
+## Prepare user identities and tokens
+
+A `userID` uniquely identifies an OpenIM user, while an authentication `token` validates that user session. Your business backend creates or links users, generates tokens, and verifies application permissions. The client app then consumes the credentials returned by your server.
+
+Before setting up your server, review [Preparation](/platform-api/prepare-to-use-api) and [Get user token](/platform-api/auth/tokens/get-user-token). If your product already manages an account system, your backend service should authenticate the user and return their corresponding `userID`, `token`, `apiAddr`, and `wsAddr`.
+
+Each `token` must match its corresponding `userID`. Never attempt to generate or assemble OpenIM tokens directly within client-side application code.
+
+## Prepare the plugin and HBuilderX
+
+Ensure your workspace meets the following setup requirements:
+
+- Obtain the `unix-openim-sdk` distribution package matching your licensing agreement and target mobile operating systems.
+- Use an HBuilderX and uni-app / uni-app x version compatible with the delivered UTS plugin.
+- Place the entire `uni_modules/unix-openim-sdk` folder into the `uni_modules/` directory of your project. Do not copy only the inner `utssdk` subfolder.
+- Avoid installing multiple versions of `unix-openim-sdk`. Do not manually link standalone OpenIM Android AARs, iOS XCFrameworks, CocoaPods pods, or HarmonyOS HARs, as doing so leads to duplicate symbols and mismatched native dependencies.
+
+Always import SDK functions from the package root:
+
+```uts
+import { initSDK, login } from '@/uni_modules/unix-openim-sdk'
+```
+
+Do not import directly from internal platform directories such as `utssdk/app-android`, `utssdk/app-ios`, or `utssdk/app-harmony`.
+
+## Prepare your native runtime environment
+
+The standard HBuilderX debugging base does not package native OpenIM binary libraries, so it cannot validate SDK initialization, login, message transmission, or real-time event callbacks. During development, package a custom debugging base containing this plugin. Before releasing to production, perform physical device validation using formally compiled application builds.
+
+The SDK supports the following native platforms:
+
+- **Android**: Supports Android 5.0 (API level 21) and later.
+- **iOS**: Supports iOS 14.0 and later.
+- **HarmonyOS**: Supports API 24 and later, requiring the corresponding commercial release package.
+- **Web and Mini Programs**: Not supported by this native UTS SDK.
+
+When your application requires access to the photo library, camera, microphone, local files, or push notifications, declare and request the appropriate system permissions in your host app manifest and runtime handlers. The SDK does not request permissions on behalf of unused application features.
+
+## Pre-production checklist
+
+Before releasing your application, verify that:
+
+- The custom debugging base or release build contains the compiled OpenIM native binaries for your target platforms.
+- Physical devices can reach `apiAddr`, `wsAddr`, and media upload/download domain endpoints.
+- Your backend service returns matching `userID` and `token` pairs for each authenticating user.
+- Your client architecture accounts for background/foreground transitions, network reconnections, token expirations, multi-device sessions, and user logout/switch operations.
+- The SDK stores SQLite data inside a writable sandbox directory rather than a temporary folder, shared external volume, or virtual web path.
+
+## Next steps
+
+Once you satisfy these prerequisites, proceed to [Integrate by project and platform](/sdk/uniapp/getting-started/environment-specific-implementation) to install and configure the plugin. Next, complete [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session). After confirming connectivity, verify the messaging flow with [Send your first message](/sdk/uniapp/getting-started/send-first-message).

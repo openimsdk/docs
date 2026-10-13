@@ -1,17 +1,78 @@
 ---
 title: 'Get the blacklist'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get the blacklist.'
+description: 'Query the list of users blocked by the authenticated user.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/blacklist/get-black-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The blacklist records users blocked by the current account, suitable for rendering blacklist configuration screens, determining contact relationship states on profile cards, and managing chat entry points. Blacklisting is independent of friendships, group memberships, or platform-wide bans.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+Invoke `getBlackList()` without parameters. An empty array indicates that no users are currently blocked.
+
+## Code example
+
+```uts
+import { getBlackList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getBlackList()
+const blockedUsers = result?.blackUsers ?? []
+replaceBlockedUsers(blockedUsers)
+```
+
+In profile dialogs, conversation menus, and contact lists, checking whether a `userID` exists in a local blacklist set is usually sufficient. Maintain a set of blocked user IDs for fast checks, using nicknames and avatars for display purposes only.
+
+## Return value
+
+The Promise resolves with an `OpenIMBlackListResult | null` object containing an array of `OpenIMBlackUserItem` elements in `blackUsers`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | The user ID of the blocked user; serves as the merge key for blacklist updates. |
+| `nickname` | `string` | Display nickname of the blocked user. |
+| `faceURL` | `string` | Avatar URL of the blocked user. |
+| `ownerUserID` | `string` | Owner of this blacklist record (the authenticated user). |
+| `operatorUserID` | `string` | User ID that performed the blacklist operation. |
+| `createTime` | `number` | Timestamp when the user was blacklisted, in Unix milliseconds. |
+| `addSource` | `number` | Numeric source code indicating how the user was added to the blacklist. |
+| `ex` | `string` | Custom blacklist extension string. |
+| `attachedInfo` | `string` | SDK internal metadata. |
+
+If a screen also renders public profiles or friend remarks, join data by `userID`, distinguishing between `OpenIMBlackUserItem`, `OpenIMFriendUserItem`, and `OpenIMPublicUserItem`.
+
+## Monitor blacklist updates
+
+Blacklist additions and removals are centrally handled here. Queries establish the initial snapshot, while events stream incremental changes:
+
+```uts
+import {
+  OpenIMBlackUserItem,
+  off,
+  onBlackAdded,
+  onBlackDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleBlackAdded = (user: OpenIMBlackUserItem | null) => {
+  if (user == null) return
+  mergeBlockedUser(user)
+}
+
+const handleBlackDeleted = (user: OpenIMBlackUserItem | null) => {
+  if (user == null) return
+  removeBlockedUser(user.userID)
+}
+
+const blackAddedSubscription = onBlackAdded(handleBlackAdded)
+const blackDeletedSubscription = onBlackDeleted(handleBlackDeleted)
+
+function removeBlacklistListeners() {
+  off(blackAddedSubscription)
+  off(blackDeletedSubscription)
+}
+```
+
+When a user is blacklisted, they cannot send messages to the authenticated account, though the authenticated account can still message them; if bidirectional restrictions are required, implement them in your application logic. Unregister these listeners when logging out, switching accounts, or tearing down the blacklist manager.

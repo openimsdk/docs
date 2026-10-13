@@ -1,6 +1,6 @@
 ---
-title: 'Conversation group overview'
-description: 'Learn about conversation groups in the OpenIM React Native SDK.'
+title: 'Conversation groups overview'
+description: 'Understand conversation categorization, group types, data structures, and event listeners in the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
@@ -10,61 +10,67 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/conversation/managing-conversation-groups/overview-conversation-groups'
 ---
 
-Conversation groups classify the current account's conversation list by business scenario, such as work, pending tasks, or custom categories.
+Conversation groups allow applications to categorize the current account's conversations into dedicated views—such as Work, Personal, Follow-up, or custom business categories.
 
 ## Group types
 
-`ConversationGroupType` contains these values:
+`ConversationGroupType` defines the categorization criteria:
 
-| Enum value | Numeric value | Description |
+| Enum value | Value | Description |
 | --- | --- | --- |
-| `ConversationGroupType.ConversationGroupTypeNormal` | `0` | Normal custom group. |
-| `ConversationGroupType.ConversationGroupTypeFilter` | `1` | Group filtered by rules. |
-| `ConversationGroupType.ConversationGroupTypeAll` | `2` | Query all group types. |
+| `ConversationGroupType.ConversationGroupTypeNormal` | `0` | Standard user-created custom group. |
+| `ConversationGroupType.ConversationGroupTypeFilter` | `1` | Rule-based automated filter group. |
+| `ConversationGroupType.ConversationGroupTypeAll` | `2` | Match all conversation group types when querying. |
 
-## Group fields
+## ConversationGroup properties
 
-`ConversationGroup` uses `conversationGroupID` as its identifier:
+A `ConversationGroup` is uniquely identified by `conversationGroupID`:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `conversationGroupID` | `string` | Conversation-group ID. |
-| `name` | `string` | Group name. |
-| `serial` | `number` | Group sort value. |
-| `version` | `number` | Group data version. |
+| `conversationGroupID` | `string` | Unique conversation group identifier. |
+| `name` | `string` | Display name of the group. |
+| `serial` | `number` | Ordering sequence value for sorting groups. |
+| `version` | `number` | Data synchronization version. |
 | `conversationGroupType` | `ConversationGroupType` | Group type. |
-| `hidden` | `boolean` | Whether the group is hidden. |
-| `unreadCount` | `number` | Total unread count in the group. |
-| `conversationIDs` | `string[]` | Conversation IDs currently in the group. |
-| `ex` | `string` (optional) | Application extension string. |
+| `hidden` | `boolean` | Whether the group is hidden from the UI. |
+| `unreadCount` | `number` | Aggregate unread message count of conversations in this group. |
+| `conversationIDs` | `string[]` | List of conversation IDs currently belonging to this group. |
+| `ex` | `string` (optional) | Custom business extension string. |
 
 ## Listen for group changes
 
-Group operations emit events for added, updated, or deleted groups. Membership events include the group, conversation IDs, and conversation details. Event callbacks receive the entities directly, without a `data` field. Update groups by `conversationGroupID` and membership by the event's `conversationIDs`.
+When groups are created, updated, or deleted, the SDK emits group lifecycle events. Membership changes dispatch member-specific callbacks. When updating local application state, always use `conversationGroupID` to locate and manage conversation groups, and use `conversationID` to manage member conversations inside each group.
 
 ```ts
 const handleGroupAdded = (groups: ConversationGroup[]) => {
-  // ...
-};
-const handleGroupChanged = (groups: ConversationGroup[]) => {
-  // ...
-};
-const handleGroupDeleted = (groups: ConversationGroup[]) => {
-  // ...
-};
-const handleGroupMemberAdded = (payload: ConversationGroupMemberChangedCallbackData) => {
-  // ...
-};
-const handleGroupMemberDeleted = (payload: ConversationGroupMemberChangedCallbackData) => {
-  // ...
+  // Insert new groups into local state
 };
 
+const handleGroupChanged = (groups: ConversationGroup[]) => {
+  // Update modified group properties
+};
+
+const handleGroupDeleted = (groups: ConversationGroup[]) => {
+  // Remove deleted groups from local state
+};
+
+const handleGroupMemberAdded = (payload: ConversationGroupMemberChangedCallbackData) => {
+  // Add conversation IDs into target group
+};
+
+const handleGroupMemberDeleted = (payload: ConversationGroupMemberChangedCallbackData) => {
+  // Remove conversation IDs from target group
+};
+
+// Register listeners
 OpenIMSDK.on(OpenIMEvent.OnConversationGroupAdded, handleGroupAdded);
 OpenIMSDK.on(OpenIMEvent.OnConversationGroupChanged, handleGroupChanged);
 OpenIMSDK.on(OpenIMEvent.OnConversationGroupDeleted, handleGroupDeleted);
 OpenIMSDK.on(OpenIMEvent.OnConversationGroupMemberAdded, handleGroupMemberAdded);
 OpenIMSDK.on(OpenIMEvent.OnConversationGroupMemberDeleted, handleGroupMemberDeleted);
 
+// Remove listeners
 OpenIMSDK.off(OpenIMEvent.OnConversationGroupAdded, handleGroupAdded);
 OpenIMSDK.off(OpenIMEvent.OnConversationGroupChanged, handleGroupChanged);
 OpenIMSDK.off(OpenIMEvent.OnConversationGroupDeleted, handleGroupDeleted);
@@ -72,4 +78,13 @@ OpenIMSDK.off(OpenIMEvent.OnConversationGroupMemberAdded, handleGroupMemberAdded
 OpenIMSDK.off(OpenIMEvent.OnConversationGroupMemberDeleted, handleGroupMemberDeleted);
 ```
 
-Remove the listeners when the component is destroyed, the user logs out, or the account changes.
+Unregister these listeners when the component unmounts, the user logs out, or accounts switch.
+
+## Related tasks
+
+| Task | Guide |
+| --- | --- |
+| Create & modify groups | [Create a conversation group](/sdk/react-native/conversation/managing-conversation-groups/create-conversation-group), [Update a conversation group](/sdk/react-native/conversation/managing-conversation-groups/update-conversation-group), [Set conversation group order](/sdk/react-native/conversation/managing-conversation-groups/set-conversation-group-order) |
+| Delete groups | [Delete a conversation group](/sdk/react-native/conversation/managing-conversation-groups/delete-conversation-group) |
+| Manage members | [Add conversations to groups](/sdk/react-native/conversation/managing-conversation-groups/add-conversations-to-groups), [Remove conversations from groups](/sdk/react-native/conversation/managing-conversation-groups/remove-conversations-from-groups) |
+| Query groups & memberships | [Get conversation groups](/sdk/react-native/conversation/managing-conversation-groups/get-conversation-groups), [Get conversation group IDs by conversation ID](/sdk/react-native/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id), [Get conversation group info with conversations](/sdk/react-native/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations) |

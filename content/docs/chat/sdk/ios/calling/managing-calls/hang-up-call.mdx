@@ -5,20 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/managing-calls/hang-up-call'
 ---
 
-After a call has been established, a participant can hang up with the saved `OIMSignalingInfo`:
+Terminate an active audio or video call using `signalingHungUp:onSuccess:onFailure:`. Any connected participant can invoke this method using the active `OIMSignalingInfo` object associated with the room.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `signalingInfo` | `OIMSignalingInfo *` | Yes | The active signaling information object for the ongoing call session. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] signalingHungUp:signalingInfo
-                            onSuccess:^{ [self releaseCallResources]; }
+                            onSuccess:^{
+    [self releaseCallResources];
+}
                             onFailure:^(NSInteger code, NSString * _Nullable message) {
-    [self showCallError:code message:message ?: @"Failed to hang up the call"];
+    [self showCallError:code message:message ?: @"Failed to hang up call"];
 }];
 ```
 
-The success callback only means that the hang-up signaling request completed. The app must also stop capture, disconnect from the media room, and release the camera, microphone, and `AVAudioSession`. Make cleanup idempotent by `roomID`.
+## Return value
+
+The `onSuccess` callback confirms that the hang-up signaling command was accepted by OpenIMServer.
+
+## State changes after the call
+
+- **Local resource teardown**: Stop audio and video capture pipelines, disconnect from the RTC media room, deactivate `AVAudioSession`, and release camera/microphone devices idempotently by `roomID`.
+- **Remote event notification**: Remaining participants receive a hang-up notification via `onInvitationTimeout:` or room termination callbacks in `OIMSignalingListener` (see [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events)).
+- **State merge key**: Call sessions merge state by `roomID` and correlate individual participant statuses with `userID`.

@@ -5,17 +5,41 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/accept-group-application'
 ---
 
+Invoke `acceptGroupApplication:fromUserId:handleMsg:onSuccess:onFailure:` to approve a specified group application (restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `fromUserId` | `NSString *` | Yes | User ID of the applicant. |
+| `handleMsg` | `NSString *` | No | Approval remark or message. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] acceptGroupApplication:application.groupID
-  fromUserId:application.userID handleMsg:@"Approved"
-  onSuccess:^(NSString * _Nullable data) { [self showHandled]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] acceptGroupApplication:@"group_1001"
+                                  fromUserId:@"user_003"
+                                   handleMsg:@"Approved to join the project team"
+                                   onSuccess:^(NSString * _Nullable data) {
+                                       NSLog(@"acceptGroupApplication success");
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"acceptGroupApplication failed: %ld %@", (long)code, message);
+                                   }];
 ```
 
-A successful callback means that the handling request has completed. Do not fabricate a member record directly. Process application and member events independently.
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the approval.
+
+## State changes after the call
+
+1. **Application status update**: The application status change broadcasts via the `onGroupApplicationAccepted:` listener callback. The client matches records by `groupID:userID` and updates the entry status to approved.
+2. **Member addition**: Once the applicant successfully enters the group, the `onGroupMemberAdded:` event is broadcast. The client adds the user into the local member cache matching `groupID:userID`.
+3. **Re-query calibration**: For listener integration and list management, refer to [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications) and [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

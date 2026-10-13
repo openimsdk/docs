@@ -5,16 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-group-members/get-specified-group-members-info'
 ---
 
+Invoke `getSpecifiedGroupMembersInfo:usersID:onSuccess:onFailure:` to query profile snapshots for specified group members in a batch:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `usersID` | `NSArray<NSString *> *` | Yes | List of member user IDs to retrieve. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] getSpecifiedGroupMembersInfo:groupID usersID:userIDs
-  onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) { [self mergeMembers:members]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getSpecifiedGroupMembersInfo:@"group_1001"
+                                           usersID:@[@"user_001", @"user_002"]
+                                         onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
+                                             [self mergeMembers:members];
+                                         }
+                                         onFailure:^(NSInteger code, NSString *message) {
+                                             NSLog(@"getSpecifiedGroupMembersInfo failed: %ld %@", (long)code, message);
+                                         }];
 ```
 
-The success callback returns each target user's profile within the group. Cache it by `groupID:userID`.
+## Return value
+
+The `onSuccess` callback delivers an array of matched `OIMGroupMemberInfo` objects (`NSArray<OIMGroupMemberInfo *> *`). Any user IDs not currently in the group are excluded from the result list.
+
+## State changes after the call
+
+1. **Snapshot query**: This method queries an instantaneous profile snapshot without triggering delegate callbacks.
+2. **Local cache merge**: Merge member records using the composite key `groupID:userID`.
+3. **Event notification**: Incremental changes to nicknames, roles, or muting arrive via listener callbacks. For listener setup, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

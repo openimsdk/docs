@@ -5,22 +5,48 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-read-status/get-group-message-readers'
 ---
 
+Invoke `getGroupMessageReaderList:clientMsgID:filter:offset:count:onSuccess:onFailure:` on `OIMManager` to query a paginated list of members who have or have not read a specific group message:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target group conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the target group message. |
+| `filter` | `NSInteger` | Yes | Filter mode: pass `0` to retrieve members who have read the message; pass `1` to retrieve members who have not read it. |
+| `offset` | `NSInteger` | Yes | Pagination starting offset (0-indexed). |
+| `count` | `NSInteger` | Yes | Maximum number of group members to retrieve per page. |
+| `onSuccess` | `void (^)(NSArray<OIMGroupMemberInfo *> * _Nullable members)` | Yes | Success callback returning a list of group member models. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] getGroupMessageReaderList:conversationID
-    clientMsgID:clientMsgID
-    filter:0
-    offset:0
-    count:20
-    onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
-        [self replaceReaders:members ?: @[] clientMsgID:clientMsgID];
-    }
-    onFailure:nil];
+                                    clientMsgID:clientMsgID
+                                         filter:0
+                                         offset:0
+                                          count:20
+                                      onSuccess:^(NSArray<OIMGroupMemberInfo *> * _Nullable members) {
+    // Render current page of group message readers
+    [self replaceReaders:members ?: @[] clientMsgID:clientMsgID];
+}
+                                      onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle query failure
+}];
 ```
 
-Set `filter` to `0` for members who have read the message or `1` for members who have not. The result is the current page snapshot, and the query does not trigger the receipt delegate. Reconcile counts from the latest receipt or by querying again.
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMGroupMemberInfo` models (`NSArray<OIMGroupMemberInfo *> *`) representing the queried member list snapshot.
+
+## State changes after the call
+
+1. **Snapshot querying**: This query establishes an on-demand snapshot of group member read states and does not trigger read receipt event listeners.
+2. **Client merge key**: Group member models are merged using the composite key `groupID:userID`.
+3. **Receipt counters and live broadcasts**: Real-time read and unread counter increments are driven by incoming receipt events. For reporting receipts and receipt event handling, see [Report group-message read status](/sdk/ios/message/managing-read-status/send-group-read-receipts).

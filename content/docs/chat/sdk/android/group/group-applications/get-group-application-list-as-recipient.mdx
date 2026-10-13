@@ -1,23 +1,57 @@
 ---
 title: 'Get received group applications'
-description: 'Use getRecvGroupApplicationList to retrieve group applications that the current user can handle.'
+description: 'Paginate group join requests received by the user as group owner or administrator using getRecvGroupApplicationList().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/group-applications/get-group-application-list-as-recipient'
 ---
 
-Pass `GetGroupApplicationListAsRecipientReq` to set pagination and filters. You can set `offset`, `count`, `groupIDs`, and `handleResults`.
+Paginate join requests that the authenticated user is authorized to review as a group owner or administrator. Configure the request object with paging offset and count, and optionally filter by target group IDs or review statuses.
+
+## Code example
 
 ```java
 GetGroupApplicationListAsRecipientReq request = new GetGroupApplicationListAsRecipientReq(0, 20);
+
 OpenIMClient.getInstance().groupManager.getRecvGroupApplicationList(
     new OnBase<List<GroupApplicationInfo>>() {
-        @Override public void onSuccess(List<GroupApplicationInfo> items) { /* items contains the current page. */ }
-        @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-    }, request);
+        @Override
+        public void onSuccess(List<GroupApplicationInfo> items) {
+            // items contains the current page of application records
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle query failure
+        }
+    },
+    request
+);
 ```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupApplicationInfo>>` | Yes | Callback delivering the asynchronous operation result. |
+| `request` | `GetGroupApplicationListAsRecipientReq` | Yes | Paging and filter configuration object holding `offset` and `count`, with optional `groupIDs` and `handleResults` filters. |
+
+## Return value
+
+The successful callback returns the current page as `List<GroupApplicationInfo>`. Core properties of each record include:
+
+| Field | Description |
+| --- | --- |
+| `groupID` | Target group ID of the join request. |
+| `userID` | User ID of the applicant. |
+| `nickname` | Display nickname of the applicant. |
+| `faceURL` | Avatar URL of the applicant. |
+| `reqMsg` | Application note or reason provided by the applicant. |
+| `handleResult` | Approval status: `0` for pending, `1` for approved, `-1` for rejected. |
+| `reqTime` | Timestamp (in milliseconds) when the application was submitted. |
+
+Deduplicate and update records in your local list using `groupID:userID` as the composite key. For review actions, see [Accept a group application](/sdk/android/group/group-applications/accept-group-application) and [Refuse a group application](/sdk/android/group/group-applications/refuse-group-application).

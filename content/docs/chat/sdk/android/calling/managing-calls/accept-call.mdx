@@ -1,24 +1,25 @@
 ---
 title: 'Accept a call'
-description: 'Accept a call invitation with the Android SDK and retrieve room credentials.'
+description: 'Accept an incoming call invitation and acquire room credentials using signalingAccept().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/accept-call'
 ---
 
-After receiving the original `SignalingInfo` from `onReceiveNewInvitation`, pass it to `signalingAccept()`:
+After receiving an incoming call invitation event, accept the invitation and acquire credentials to connect to the audio/video media room:
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().signalingManager.signalingAccept(
     new OnBase<SignalingCertificate>() {
         @Override
         public void onSuccess(SignalingCertificate credentials) {
-            // credentials provides the roomID, token, and liveURL for joining a media room.
+            // credentials provides roomID, token, and liveURL to join the media room.
         }
 
         @Override
@@ -30,6 +31,17 @@ OpenIMClient.getInstance().signalingManager.signalingAccept(
 );
 ```
 
-Preserve the original `roomID`, inviter, invitees, and session type in `receivedInfo`. Do not rebuild it as an object that contains only `roomID`.
+## Parameters
 
-The success callback returns `SignalingCertificate`. Connect to the media room only after obtaining a valid `token` and `roomID`. A successful API call only confirms that the accept request was submitted to the server; it does not mean the call is established. Continue listening for [call events](/sdk/android/calling/managing-calls/handle-call-events) and update the call UI and state based on events from the inviter, other devices, or room participants.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<SignalingCertificate>` | Yes | Callback delivering room credentials to enter the media room. |
+| `signalingInfo` | `SignalingInfo` | Yes | Complete signaling payload received in the invitation event. Maintain the original `roomID`, inviter, invitees, and session type without passing an incomplete object. |
+
+## Return value
+
+The successful callback returns a `SignalingCertificate` containing `roomID`, `token`, and `liveURL`. Use these credentials to establish a connection to your real-time media engine.
+
+## State changes after the call
+
+A successful callback indicates that the acceptance signal was submitted to the server, not that audio/video media streams have connected. Track the call using `roomID` and monitor individual participant lifecycles using `roomID:userID`. For real-time updates regarding participant entries and stream states, see [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

@@ -1,17 +1,119 @@
 ---
-title: 'Events overview'
-description: 'OpenIM HarmonyOS SDK guide for Events overview.'
+title: 'Event listener overview'
+description: 'Register, consume, and clean up OpenIM HarmonyOS SDK events across application and account lifecycles.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/events/overview-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The `sdk.on()` method registers an event listener and returns a cancellation callback. Maintain stable function references for all event handlers; do not register anonymous closures inside reactive component render methods. Connection, message, and call signaling events should reside in global or account-level state stores, whereas page-scoped listeners should be unsubscribed when the view unmounts.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+| Event domain | Primary documentation page |
+| --- | --- |
+| Connection, token, and sign-out | [Authenticate and manage session](/sdk/harmony/getting-started/authenticate-and-manage-session) |
+| Conversation lists and unread badges | [Retrieve conversation list](/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Users, relationships, groups, and members | [User overview](/sdk/harmony/user/overview-user), [Group overview](/sdk/harmony/group/overview-group) |
+| Incoming messages | [Receive messages](/sdk/harmony/message/receiving-messages/receive-messages) |
+| File uploads | [Upload file](/sdk/harmony/file-uploads/upload-file) |
+| Audio and video calls | [Handle call events](/sdk/harmony/calling/managing-calls/handle-call-events) |
+
+## Listen for server data synchronization
+
+After successful sign-in, the SDK synchronizes state with OpenIMServer. The `reinstalled` flag indicates whether the sync occurred after a fresh installation or local database reset. Once synchronization finishes, reload visible UI snapshots from the local cache.
+
+## Code example
+
+```ts
+import sdk, {
+  EventOnSyncServerFailedData,
+  EventOnSyncServerFinishData,
+  EventOnSyncServerProgressData,
+  EventOnSyncServerStartData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleSyncStart = (data: EventOnSyncServerStartData): void => {
+  setSyncState('syncing', 0, data.reinstalled);
+};
+const handleSyncProgress = (data: EventOnSyncServerProgressData): void => {
+  setSyncState('syncing', data.progress, false);
+};
+const handleSyncFinish = (data: EventOnSyncServerFinishData): void => {
+  setSyncState('ready', 100, data.reinstalled);
+  reloadVisibleData();
+};
+const handleSyncFailed = (data: EventOnSyncServerFailedData): void => {
+  setSyncState('failed', 0, data.reinstalled);
+};
+
+const unsubscribeSyncStart = sdk.on(OpenIMSDKEvent.EventOnSyncServerStart, handleSyncStart);
+const unsubscribeSyncProgress = sdk.on(
+  OpenIMSDKEvent.EventOnSyncServerProgress,
+  handleSyncProgress,
+);
+const unsubscribeSyncFinish = sdk.on(OpenIMSDKEvent.EventOnSyncServerFinish, handleSyncFinish);
+const unsubscribeSyncFailed = sdk.on(OpenIMSDKEvent.EventOnSyncServerFailed, handleSyncFailed);
+
+export function removeSyncListeners(): void {
+  unsubscribeSyncStart();
+  unsubscribeSyncProgress();
+  unsubscribeSyncFinish();
+  unsubscribeSyncFailed();
+}
+```
+
+## Listen for local database migration
+
+When upgrading the SDK or modifying local database schemas, the engine may initiate an automatic migration. Do not query or populate views from local stores while migration is active.
+
+```ts
+import sdk, {
+  EventOnMigrationFailedData,
+  EventOnMigrationProgressData,
+  OpenIMSDKEmptyPayload,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleMigrationStart = (data: OpenIMSDKEmptyPayload): void => {
+  setMigrationState('running', 0, '');
+};
+const handleMigrationProgress = (data: EventOnMigrationProgressData): void => {
+  setMigrationState('running', data.progress, data.message);
+};
+const handleMigrationFinished = (data: OpenIMSDKEmptyPayload): void => {
+  setMigrationState('finished', 100, '');
+};
+const handleMigrationFailed = (data: EventOnMigrationFailedData): void => {
+  setMigrationFailed(data.errCode, data.errMsg);
+};
+
+const unsubscribeMigrationStart = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationStart,
+  handleMigrationStart,
+);
+const unsubscribeMigrationProgress = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationProgress,
+  handleMigrationProgress,
+);
+const unsubscribeMigrationFinished = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationFinished,
+  handleMigrationFinished,
+);
+const unsubscribeMigrationFailed = sdk.on(
+  OpenIMSDKEvent.EventOnMigrationFailed,
+  handleMigrationFailed,
+);
+
+export function removeMigrationListeners(): void {
+  unsubscribeMigrationStart();
+  unsubscribeMigrationProgress();
+  unsubscribeMigrationFinished();
+  unsubscribeMigrationFailed();
+}
+```
+
+When signing out or disposing of application stores, call `removeSyncListeners()` and `removeMigrationListeners()` to release references. Because network notifications may arrive out of order, merge domain objects using stable unique keys: `userID`, `conversationID`, `groupID`, `groupID:userID`, and `clientMsgID`.

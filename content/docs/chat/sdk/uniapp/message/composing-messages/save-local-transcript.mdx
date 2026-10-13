@@ -1,17 +1,55 @@
 ---
-title: 'Save a local transcript'
-description: 'OpenIM uni-app / uni-app x SDK guide for Save a local transcript.'
+title: 'Save local transcript'
+description: 'Replace the content payload of a message directly in the local device database.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/composing-messages/save-local-transcript'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Updating local message content is a Commercial Edition capability used to replace message payload content stored in the device's local database. It accepts a complete `OpenIMMessageItem` struct rather than updating individual string fields in isolation.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+The following example demonstrates updating a local message's text element. Retain all original message headers and update the element matching `contentType`:
+
+```uts
+import {
+  OpenIMMessageItem,
+  setMessageLocalContent,
+} from '@/uni_modules/unix-openim-sdk'
+
+const updatedMessage = JSON.parse<OpenIMMessageItem>(
+  JSON.stringify(message),
+)
+const textElem = updatedMessage.textElem
+if (textElem == null) return
+
+textElem.content = 'Text displayed exclusively on this device'
+updatedMessage.textElem = textElem
+
+await setMessageLocalContent({
+  conversationID,
+  message: updatedMessage,
+})
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the conversation containing the message. |
+| `message` | `OpenIMMessageItem` | Yes | Full message struct retaining original identifiers and updated content elements. |
+
+Clone the object via serialization to avoid modifying in-memory references directly, and avoid passing abbreviated objects that omit mandatory message properties.
+
+## Return value
+
+The Promise resolves with `void` upon successful local database persistence.
+
+## State changes after the call
+
+Promise resolution indicates that the local database record was updated. This change is never transmitted to OpenIMServer, does not synchronize to other participants, and does not emit shared network message events. Update your local UI state using `conversationID:clientMsgID`.
+
+Note that `OpenIMSoundElem` in the UniApp SDK does not expose a dedicated voice transcription property. If your application needs to persist voice transcriptions or auxiliary presentation flags without modifying the message element itself, see [Set message local extension](/sdk/uniapp/message/managing-messages/set-message-local-ex) to store data in `localEx`.

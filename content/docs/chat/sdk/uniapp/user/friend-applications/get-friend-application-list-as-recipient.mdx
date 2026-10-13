@@ -1,17 +1,111 @@
 ---
 title: 'Get received friend applications'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get received friend applications.'
+description: 'Query friend applications received by the authenticated user with pagination.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/friend-applications/get-friend-application-list-as-recipient'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `getFriendApplicationListAsRecipient()` to retrieve a paginated list of incoming friend requests sent to the authenticated user. While `offset` and `count` can be omitted, specify them explicitly starting with `offset: 0` for predictable pagination.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | No | Pagination offset index; pass `0` for the first page. |
+| `count` | `number` | No | Number of application records to fetch per page. |
+
+This API does not accept a `handleResults` filter parameter. If your UI needs to display only pending, accepted, or rejected applications, filter the fetched array in your application layer using `handleResult`.
+
+## Code example
+
+```uts
+import { getFriendApplicationListAsRecipient } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendApplicationListAsRecipient({
+  offset: 0,
+  count: 20,
+})
+const applications = result?.applications ?? []
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMFriendApplicationListResult | null` object containing an array of `OpenIMFriendApplicationItem` elements in `applications`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `fromUserID` | `string` | The user ID of the applicant who submitted the request. |
+| `fromNickname` | `string` | The applicant's display nickname saved with the application. |
+| `fromFaceURL` | `string` | The applicant's avatar URL saved with the application. |
+| `toUserID` | `string` | The user ID of the recipient (the active account). |
+| `toNickname` | `string` | The recipient's display nickname saved with the application. |
+| `toFaceURL` | `string` | The recipient's avatar URL saved with the application. |
+| `reqMsg` | `string` | The greeting or application message text. |
+| `handleResult` | `OpenIMApplicationHandleResult` | Review state: `OpenIMApplicationHandleResultUnprocessed` (pending), `OpenIMApplicationHandleResultAccepted` (approved), or `OpenIMApplicationHandleResultRejected` (declined). |
+| `handlerUserID` | `string` | The user ID who processed the request; may be empty while pending. |
+| `handleMsg` | `string` | Notes or reasons entered when processing the application. |
+| `handleTime` | `number` | Processing timestamp in Unix milliseconds; invalid while pending. |
+| `createTime` | `number` | Application creation timestamp in Unix milliseconds. |
+| `ex` | `string` | Application extension string. |
+| `attachedInfo` | `string` | SDK internal metadata. |
+
+Identify a unique application record using the composite key `fromUserID:toUserID`. Profile attributes stored on the record represent snapshot values at the time of creation; query [Get user profiles](/sdk/uniapp/user/profile/get-users-info) if you require the contact's live account profile.
+
+## Monitor friend application updates
+
+Friend application lifecycle events are centrally registered here. Queries establish initial views, while events merge incremental updates. Update incoming or outgoing application lists depending on whether the current user matches `toUserID` or `fromUserID`:
+
+```uts
+import {
+  OpenIMFriendApplicationItem,
+  off,
+  onFriendApplicationAccepted,
+  onFriendApplicationAdded,
+  onFriendApplicationDeleted,
+  onFriendApplicationRejected,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleApplicationChanged = (
+  application: OpenIMFriendApplicationItem | null,
+) => {
+  if (application == null) return
+  mergeFriendApplication(application)
+}
+
+const handleApplicationDeleted = (
+  application: OpenIMFriendApplicationItem | null,
+) => {
+  if (application == null) return
+  removeFriendApplication(
+    application.fromUserID,
+    application.toUserID,
+  )
+}
+
+const applicationAddedSubscription = onFriendApplicationAdded(
+  handleApplicationChanged,
+)
+const applicationAcceptedSubscription = onFriendApplicationAccepted(
+  handleApplicationChanged,
+)
+const applicationRejectedSubscription = onFriendApplicationRejected(
+  handleApplicationChanged,
+)
+const applicationDeletedSubscription = onFriendApplicationDeleted(
+  handleApplicationDeleted,
+)
+
+function removeFriendApplicationListeners() {
+  off(applicationAddedSubscription)
+  off(applicationAcceptedSubscription)
+  off(applicationRejectedSubscription)
+  off(applicationDeletedSubscription)
+}
+```
+
+If application records change during active paging, reset the pagination index and re-query. When an application is approved, also update your contact roster via [Get the friend list](/sdk/uniapp/user/friends/get-friend-list-page). Unregister these listeners when logging out, switching accounts, or tearing down the application view model.

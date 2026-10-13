@@ -5,20 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/quit-group'
 ---
 
+Invoke `quitGroup:onSuccess:onFailure:` to voluntarily leave a specified group:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. Regular members and administrators can exit directly; group owners must transfer ownership first via [Transfer group ownership](/sdk/ios/group/managing-group-members/transfer-group-owner). |
+
+## Code example
+
 ```objc
 [[OIMManager manager] quitGroup:groupID
-    onSuccess:^(NSString * _Nullable data) { [self closeGroupPage]; }
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"quitGroup success");
+    }
     onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
+        NSLog(@"quitGroup failed: %ld %@", (long)code, message);
     }];
 ```
 
-Regular members and administrators can leave a group. The owner must transfer ownership first.
+## Return value
 
-A successful callback means that the leave request has completed. `onJoinedGroupDeleted:` may subsequently remove the group by `groupID`. For the complete delegate, see [Groups overview](/sdk/ios/group/overview-group).
+The `onSuccess` callback returns confirmation when the server accepts the group departure.
+
+## State changes after the call
+
+1. **Local state removal**: The client removes the group corresponding to `groupID` from the locally cached joined group collection.
+2. **Event notification**: Active client sessions receive notifications through the `onJoinedGroupDeleted:` listener callback.
+3. **Re-query calibration**: For group listener lifecycle details, refer to [Groups overview](/sdk/ios/group/overview-group).

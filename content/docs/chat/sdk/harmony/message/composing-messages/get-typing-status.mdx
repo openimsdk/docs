@@ -1,17 +1,62 @@
 ---
-title: 'Get typing status'
-description: 'OpenIM HarmonyOS SDK guide for Get typing status.'
+title: 'Receive and query typing status'
+description: 'Query active typing platforms for a member and listen for real-time typing status changes.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/composing-messages/get-typing-status'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When entering a conversation, reconnecting, or when event state might be incomplete, query which platforms a specific member is currently typing on.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnConversationUserInputStatusChangedData,
+  GetInputStatesReq,
+  GetInputStatesResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetInputStatesReq = {
+  conversationID: conversationID,
+  userID: memberUserID,
+};
+const response: GetInputStatesResp = await sdk.getInputStates(request);
+setTyping(memberUserID, response.platforms.length > 0);
+
+const handleInputStatusChanged = (data: EventOnConversationUserInputStatusChangedData): void => {
+  updateTypingState(data.conversationID, data.userID, data.platforms);
+};
+const unsubscribeInputStatus = sdk.on(
+  OpenIMSDKEvent.EventOnConversationUserInputStatusChanged,
+  handleInputStatusChanged,
+);
+
+export function removeInputStatusListener(): void {
+  unsubscribeInputStatus();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target conversation identifier. |
+| `userID` | `string` | Yes | Member user ID to query. |
+
+## Return value
+
+Returns a Promise resolving to `GetInputStatesResp`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `platforms` | `number[]` | Array of platform IDs on which the user is actively typing. |
+
+## State changes after the call
+
+An empty `platforms` array indicates that no device is currently typing. Merge member typing indicators using `conversationID:userID`. Event updates do not replace initial query snapshots and are ephemeral. Upon reconnecting, re-query only members currently visible on screen; avoid polling all members in large group chats. Call `unsubscribeInputStatus()` when disposing of the state layer. To broadcast typing state from the sender side, see [Update typing status](/sdk/harmony/message/composing-messages/update-typing-status).

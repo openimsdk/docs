@@ -11,6 +11,20 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/sending-messages/send-message'
 ---
 
+Deliver a constructed message object to a direct or group conversation. If the message references local media files, the SDK automatically uploads the files and delivers the message:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `Message` | Yes | The prepared message object constructed using a factory method. |
+| `userID` | `String?` | Required for single chat | Recipient user ID in direct chats. Omit when sending group messages. |
+| `groupID` | `String?` | Required for group chat | Target group ID in group chats. Omit when sending direct messages. |
+| `offlinePushInfo` | `OfflinePushInfo?` | No | Custom offline push notification settings (title, description, and passthrough data). |
+| `isOnlineOnly` | `bool` | No | Whether the message is online-only; defaults to `false`. When `true`, the message is not persisted to local storage or cloud roaming history. |
+
+## Code example
+
 ```dart
 final sent = await OpenIM.iMManager.messageManager.sendMessage(
   message: message,
@@ -19,4 +33,12 @@ final sent = await OpenIM.iMManager.messageManager.sendMessage(
 );
 ```
 
-For a one-to-one message, set only `userID`; for a group message, set only `groupID`. A message sent with `isOnlineOnly` is not stored in ordinary history. The Future returns the server-confirmed `Message`. Confirm that its `clientMsgID` is non-empty before replacing the local pending item.
+Set only `userID` for direct chats, and set only `groupID` for group chats. These parameters are mutually exclusive; never supply both.
+
+## Return value
+
+Returns a `Future` resolving to the server-confirmed `Message` object. Update the delivery status and server timestamp of the pending message in your local UI list using its non-empty `clientMsgID`.
+
+## State changes after the call
+
+If sending images, audio, or video created from local filesystem paths, the SDK automatically handles media uploading during transmission. To track upload progress callbacks, see [Set message send progress listener](/sdk/flutter/message/sending-messages/set-msg-send-progress-listener). When media files have already been uploaded by your application server and URLs are available, use [Send a message without OSS](/sdk/flutter/message/sending-messages/send-message-not-oss) to bypass SDK upload pipelines.

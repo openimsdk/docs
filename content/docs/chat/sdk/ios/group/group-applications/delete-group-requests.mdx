@@ -5,19 +5,48 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/delete-group-requests'
 ---
 
+Invoke `deleteGroupRequests:onSuccess:onFailure:` to delete group join application records in batches:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `requests` | `NSArray<DeleteGroupRequest *> *` | Yes | List of application deletion items. |
+
+### DeleteGroupRequest properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `fromUserID` | `NSString *` | Yes | Applicant user ID. |
+
+## Code example
+
 ```objc
 DeleteGroupRequest *request =
-  [[DeleteGroupRequest alloc] initWithGroupID:application.groupID
-                                   fromUserID:application.userID];
+    [[DeleteGroupRequest alloc] initWithGroupID:@"group_1001"
+                                     fromUserID:@"user_003"];
+
 [[OIMManager manager] deleteGroupRequests:@[request]
-  onSuccess:^(NSString * _Nullable data) { [self reloadApplications]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+                                onSuccess:^(NSString * _Nullable data) {
+                                    [self reloadApplications];
+                                }
+                                onFailure:^(NSInteger code, NSString *message) {
+                                    NSLog(@"deleteGroupRequests failed: %ld %@", (long)code, message);
+                                }];
 ```
 
-Deleting a record is not the same as rejecting an application and does not change group membership. Other clients remove the same record through `onGroupApplicationDeleted:`.
+## Return value
+
+The `onSuccess` callback returns confirmation when the application records are successfully deleted.
+
+## State changes after the call
+
+1. **History pruning**: Deleting application records removes historical review items without approving or rejecting membership requests, and without modifying group member relationships.
+2. **Event notification**: Multi-device synchronization broadcasts the deletion via the `onGroupApplicationDeleted:` listener callback. The client removes matching records using `groupID:userID`.
+3. **Re-query calibration**: For listener integration, refer to [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).

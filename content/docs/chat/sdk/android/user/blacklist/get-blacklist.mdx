@@ -1,55 +1,56 @@
 ---
 title: 'Get the blacklist'
-description: 'Use getBlacklist() to retrieve the current user blacklist.'
+description: 'Retrieve the complete list of blocked users for the authenticated account using getBlacklist().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/blacklist/get-blacklist'
 ---
 
-The blacklist records users blocked by the current account. Use it for a blacklist settings screen, relationship state on a profile card, or to limit a chat entry point.
+Retrieve the full list of users blocked by the authenticated account. This is typically used in privacy settings to manage blocked accounts or on user profile cards to render a "Blocked" state.
 
-## Get the blacklist
-
-After SDK initialization and login, call `getBlacklist()` to retrieve the full blacklist for the signed-in account. An empty list means no users are blocked.
+## Code example
 
 ```java
 OpenIMClient.getInstance().friendshipManager.getBlacklist(
     new OnBase<List<UserInfo>>() {
         @Override
         public void onSuccess(List<UserInfo> users) {
-            // Use users to update the blacklist.
+            // Update blocked users list UI using users
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     }
 );
 ```
 
-The callback returns `List<UserInfo>`; call `UserInfo.getBlackInfo()` to retrieve the blacklist relationship object.
+## Parameters
 
-## Blacklist record fields
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<UserInfo>>` | Yes | Callback delivering the asynchronous operation result. |
 
-Common `BlacklistInfo` fields are:
+## Return value
 
-| Field            | Description                                                         |
-| ---------------- | ------------------------------------------------------------------- |
-| `userID`         | Target user ID blocked by the current user.                          |
-| `nickname`       | Target user nickname.                                                |
-| `faceURL`        | Target user avatar URL.                                               |
-| `gender`         | Target user gender value.                                           |
-| `operatorUserID` | User ID that performed the block operation.                         |
-| `createTime`     | Blacklist relationship creation time.                               |
-| `addSource`      | Source that added the blacklist relationship.                       |
-| `ex`             | Blacklist relationship extension string.                            |
+The successful callback returns a `List<UserInfo>`. If no users are blocked, an empty list is returned. Deduplicate and cache items using `userID` as the unique key.
 
-When the screen also needs friend remarks or the latest public profile, query the corresponding friend or public profile data.
+Access `BlacklistInfo` on each `UserInfo` object via the `blackInfo` property:
 
-Receive blacklist changes through the listeners described in [Block a user](/sdk/android/user/blacklist/add-blacklist) and [Unblock a user](/sdk/android/user/blacklist/remove-blacklist).
+| Field | Description |
+| --- | --- |
+| `userID` | User ID of the blocked user. |
+| `nickname` | Display nickname of the blocked user. |
+| `faceURL` | Avatar URL of the blocked user. |
+| `gender` | Gender indicator of the blocked user. |
+| `operatorUserID` | User ID of the operator who executed the block. |
+| `createTime` | Unix timestamp when the user was added to the blocklist. |
+| `addSource` | Channel or origin of the block operation. |
+| `ex` | Custom blocklist extension metadata. |
+
+When users are added to or removed from the blocklist, the SDK dispatches events via `OnFriendshipListener`; see [Add to blacklist](/sdk/android/user/blacklist/add-blacklist) and [Remove from blacklist](/sdk/android/user/blacklist/remove-blacklist).

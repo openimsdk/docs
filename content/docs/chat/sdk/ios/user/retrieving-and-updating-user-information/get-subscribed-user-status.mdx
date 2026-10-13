@@ -5,16 +5,30 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/get-subscribed-user-status'
 ---
 
+Query the current real-time presence snapshot for all active subscribed users using `getSubscribeUsersStatusWithOnSuccess:onFailure:`. This method accepts no parameters and leaves the active subscription roster unchanged.
+
+## Code example
+
 ```objc
 [[OIMManager manager] getSubscribeUsersStatusWithOnSuccess:^(NSArray<OIMUserStatusInfo *> *states) {
     [presenceStore mergeStates:states];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"getSubscribeUsersStatus failed: %ld %@", (long)code, message);
+}];
 ```
 
-This method does not accept an array of users and does not change the subscription set. Use it to reconcile state after reconnecting or returning to a page, and merge the results by `userID`. The query does not trigger the online-status delegate.
+Use this method to reconcile presence records upon network reconnection or view foregrounding.
+
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMUserStatusInfo` objects capturing the latest online status and platform lists for all actively subscribed users.
+
+## State changes after the call
+
+- **Local state merge**: Merge presence records into local state collections using `userID` as the unique entity key.
+- **Asynchronous event tracking**: This query returns a point-in-time snapshot and does not emit delegate callbacks. Ongoing incremental status changes continue to arrive via `onUserStatusChanged:` in `OIMUserListener` (see [Subscribe to user status](/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status)).

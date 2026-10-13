@@ -1,15 +1,26 @@
 ---
-title: 'Retrieve the friend list by page'
-description: 'Retrieve the current user’s Flutter friend list by page.'
+title: 'Get friend list with pagination'
+description: 'Retrieve the current user friend list using pagination in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/friends/get-friend-list-page'
 ---
+
+Retrieve the currently logged-in user's friend list using pagination:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `int` | Yes | Pagination offset index. Start at `0` for the first page. |
+| `count` | `int` | Yes | Maximum number of friend records to fetch per page. |
+| `filterBlack` | `bool` | No | Whether to exclude friends present on the blocklist. Pass `true` to filter out blocked users; pass `false` to include them. |
+
+## Code example
 
 ```dart
 final friends = await OpenIM.iMManager.friendshipManager.getFriendListPage(
@@ -19,13 +30,17 @@ final friends = await OpenIM.iMManager.friendshipManager.getFriendListPage(
 );
 ```
 
-`offset` starts at `0`, `count` is the page size, and `filterBlack` determines whether blocked users are excluded. A successful `Future` returns the current page as `List<FriendInfo>`. Append and deduplicate records by `userID`; receiving fewer items than the page size generally means that the last page has been reached.
+## Return value
 
-Use only the paginated API, not the non-paginated `getFriendList()`. A query does not trigger the friendship listener.
+A successful `Future` returns a list of friend profiles for the requested page (`List<FriendInfo>`).
 
-## Synchronize friendship changes
+The client should deduplicate and append items to the local contacts list using `userID` as the primary key. When the returned list length is less than `count`, the end of the friend list has been reached.
 
-This page owns state handling for `onFriendAdded`, `onFriendInfoChanged`, and `onFriendDeleted`:
+Always use paginated queries to retrieve friend data to avoid performance overhead on large contact rosters. This query returns a local database snapshot and does not emit friendship events.
+
+## Listen for friend change events
+
+Friend additions, profile modifications, and deletions are handled centrally through listener callbacks. In your contact state store, use `userID` as the sole key for merging, updating, or deleting friend entries:
 
 ```dart
 void handleFriendChanged(FriendInfo info) {
@@ -38,4 +53,4 @@ void handleFriendDeleted(FriendInfo info) {
 }
 ```
 
-The Flutter SDK retains only one `OnFriendshipListener`. Put these functions in the contacts state layer and set the application-level listener once through the composition entry point described in [Events overview](/sdk/flutter/events/overview-events). Do not let multiple widgets overwrite the listener. Merge both snapshots and increments by `userID`.
+The Flutter SDK maintains a single `OnFriendshipListener` instance inside `FriendshipManager`. Integrate these handler functions into your application's contact store and register the listener centrally (see [Events overview](/sdk/flutter/events/overview-events)) rather than setting listeners inside individual Widget trees.

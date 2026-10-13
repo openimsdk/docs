@@ -1,21 +1,22 @@
 ---
-title: 'Event overview'
-description: 'Configure OpenIM Flutter SDK listeners centrally and dispatch events by business domain.'
+title: 'Events overview'
+description: 'Register OpenIM Flutter SDK listeners centrally and dispatch real-time events across application domains.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/events/overview-events'
 ---
 
-The OpenIM Flutter SDK uses listeners to deliver connection, synchronization, user, relationship, conversation, conversation-group, group, message, and call changes. Each manager retains only one corresponding listener, and a later configuration replaces the Dart instance stored previously. Compose every callback when initializing the application state layer, and configure each listener type exactly once. Do not configure listeners in a widget's `build()` method or separately on each feature screen.
+The OpenIM Flutter SDK delivers real-time notifications for connection state, background data synchronization, users, friendships, conversations, conversation groups, groups, messages, and VoIP calling via listeners. Each manager maintains only one active listener instance; invoking a setter again overwrites the previously registered instance in the Dart layer. Therefore, register all callbacks once within a centralized application state service during startup, and avoid re-registering listeners inside Widget build methods or individual page routes.
 
-## Configure listeners centrally
+## Centralized listener registration
 
-The following example shows an application-level composition entry point. The complete merge logic for each `handle*` function belongs on the ownership page linked in the table below.
+The following entry point consolidates application-wide listener registrations. The full incremental merge logic for each `handle*` callback is documented in the dedicated topic pages listed in the table below.
+
+### Code example
 
 ```dart
 Future<void> registerOpenIMListeners() async {
@@ -107,36 +108,38 @@ Future<void> registerOpenIMListeners() async {
 }
 ```
 
-`ConversationGroupManager` retains the conversation-group listener separately, so it is not configured again in this combined entry point. See [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) for its complete registration, five callback types, and state-merging rules.
+The conversation group listener is maintained separately by `ConversationGroupManager` and is omitted from the consolidated entry point above. See [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) for its registration, five callback types, and state merge rules.
 
-The SDK does not expose corresponding remove or unset APIs. On sign-out, account switch, or state-layer disposal, stop dispatching callbacks to the old account and disposed widgets, and release the application's own references. After signing in again, overwrite the configurations with the complete listener set for the new account.
+The SDK does not provide explicit `remove` or `unset` APIs. When signing out, switching accounts, or destroying state layers, cease dispatching events to old user stores or unmounted widgets. When logging in with a new account, overwrite the active listeners with new callbacks.
 
-## Event ownership
+## Event domain mapping
 
-| Event scope                     | Merge identifier                                  | Complete handling page                                                                                 |
-| ------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| User profile and online status  | `userID`                                          | [User overview](/sdk/flutter/user/overview-user)                                                       |
-| Friends and blocklist           | `userID`                                          | [Retrieve the friend list by page](/sdk/flutter/user/friends/get-friend-list-page)                     |
-| Conversation list               | `conversationID`                                  | [Retrieve the conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list) |
-| Conversation groups             | `conversationGroupID`                             | [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) |
-| Total unread count              | Current signed-in user                            | [Maintain the total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count) |
-| Typing status                   | `conversationID:userID`                           | [Report typing status](/sdk/flutter/message/composing-messages/update-typing-status)                   |
-| Groups                          | `groupID`                                         | [Group overview](/sdk/flutter/group/overview-group)                                                    |
-| Group members                   | `groupID:userID`                                  | [Group-member retrieval](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members) |
-| Group applications              | `groupID:userID`                                  | [Group applications overview](/sdk/flutter/group/group-applications/overview-group-applications)       |
-| New messages                    | `conversationID:clientMsgID`                      | [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)                           |
-| Message deletion                | `conversationID:clientMsgID`                      | [Delete a message](/sdk/flutter/message/managing-messages/delete-saved-message)                        |
-| Message recall                  | `conversationID:clientMsgID`                      | [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message)                            |
-| Message modification            | `conversationID:clientMsgID`                      | [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message)                            |
-| Pinned messages                 | `conversationID`; messages by `clientMsgID`       | [Pin or unpin a message](/sdk/flutter/message/managing-messages/set-message-pinned)                    |
-| One-to-one read receipts        | `conversationID:clientMsgID`                      | [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read) |
-| Custom business notifications   | ID or idempotency key from the business protocol  | [Receive custom business messages](/sdk/flutter/message/receiving-messages/custom-business-listener)  |
-| Calls                           | `roomID`; participants also use user IDs          | [Call events](/sdk/flutter/calling/managing-calls/handle-call-events)                                 |
-| Custom call signals             | `roomID:eventID`                                  | [Send a custom signal](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal)              |
+| Domain | Entity Merge Key | Dedicated Documentation Page |
+| --- | --- | --- |
+| User profile & online status | `userID` | [Users overview](/sdk/flutter/user/overview-user) |
+| Friends & blocklist | `userID` | [Get friend list with pagination](/sdk/flutter/user/friends/get-friend-list-page) |
+| Conversation list | `conversationID` | [Retrieve conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Conversation groups | `conversationGroupID` | [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) |
+| Total unread message count | Current user | [Get total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count) |
+| Typing status | `conversationID:userID` | [Update typing status](/sdk/flutter/message/composing-messages/update-typing-status) |
+| Groups | `groupID` | [Groups overview](/sdk/flutter/group/overview-group) |
+| Group members | `groupID:userID` | [Retrieving group members overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members) |
+| Group join applications | `groupID:userID` | [Group applications overview](/sdk/flutter/group/group-applications/overview-group-applications) |
+| New incoming messages | `conversationID:clientMsgID` | [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) |
+| Message deletion | `conversationID:clientMsgID` | [Delete saved message](/sdk/flutter/message/managing-messages/delete-saved-message) |
+| Message revocation | `conversationID:clientMsgID` | [Revoke a message](/sdk/flutter/message/managing-messages/revoke-a-message) |
+| Message modification | `conversationID:clientMsgID` | [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message) |
+| Pinned messages | `conversationID` (messages by `clientMsgID`) | [Pin or unpin message](/sdk/flutter/message/managing-messages/set-message-pinned) |
+| C2C read receipts | `conversationID:clientMsgID` | [Mark conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read) |
+| Custom business notifications | Payload business ID or idempotency key | [Custom business listener](/sdk/flutter/message/receiving-messages/custom-business-listener) |
+| VoIP calls | `roomID` (participants by `userID`) | [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events) |
+| Custom call signaling | `roomID:eventID` | [Send a custom signal](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal) |
 
-## Listen for initial synchronization
+## Listen to initial synchronization
 
-The synchronization lifecycle also belongs to the application's single `OnConversationListener`. It describes SDK data synchronization and is not the Future callback of any query API.
+Synchronization callbacks belong to `OnConversationListener`. They describe background database synchronization progress with the server and are separate from query Future completions.
+
+### Code example
 
 ```dart
 void handleSyncStart(bool? reinstalled) {
@@ -157,4 +160,4 @@ void handleSyncFailed(bool? reinstalled) {
 }
 ```
 
-Use `onSyncServerStart` to enter the synchronizing state and `onSyncServerProgress` to update progress. After completion, re-query the snapshots required by the current UI. On failure, record the error and wait for retry or connection recovery. Always treat event increments, query snapshots, and Future completion as separate stages.
+Use `onSyncServerStart` to transition into a syncing state, and `onSyncServerProgress` to render progress bars. When `onSyncServerFinish` fires, reload the snapshots required by currently visible screens. If `onSyncServerFailed` triggers, record the failure and wait for connection recovery. Always handle asynchronous events, query results, and Future completions as distinct operational stages.

@@ -1,17 +1,110 @@
 ---
 title: 'Group overview'
-description: 'OpenIM HarmonyOS SDK guide for Group overview.'
+description: 'Understand group profiles, member relationships, applications, roles, and group events in the OpenIM HarmonyOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/group/overview-group'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+OpenIMSDK organizes multi-user chats, shared profiles, memberships, and permissions through groups. Use `groupID` when sending group messages, updating group profiles, managing members, and processing group applications. The conversation record representing a group chat in the conversation list uses `conversationID`; do not confuse the two identifiers.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Core data models
+
+| Model | Purpose |
+| --- | --- |
+| `IMGroup` | Group name, avatar, announcement, owner, verification options, member count, and custom metadata. |
+| `IMGroupMember` | A user’s group-specific nickname, role level, mute status, and join details. |
+| `IMGroupApplication` | Membership application records and their review outcomes. |
+
+Member roles are represented by `GroupMemberRoleLevel`: ordinary members are `GroupOrdinaryUsers`, administrators are `GroupAdmin`, and the group owner is `GroupOwner`. Use role levels to control client UI actions; the server strictly validates all permissions.
+
+## Group profile fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | Stable group identifier and event merge key. |
+| `groupName` | `string` | Group display title. |
+| `faceURL` | `string` | Group avatar image URL. |
+| `notification` | `string` | Group announcement text. |
+| `introduction` | `string` | Brief group description. |
+| `ownerUserID` | `string` | User ID of the current group owner. |
+| `creatorUserID` | `string` | User ID of the group creator. |
+| `memberCount` | `number` | Total member count at query time. |
+| `needVerification` | `GroupNeedVerification` | Verification policy for new applicants joining the group. |
+| `lookMemberInfo` | `GroupLookMemberInfo` | Permission controlling member profile visibility. |
+| `applyMemberFriend` | `GroupApplyMemberFriend` | Permission controlling whether members can add each other as friends from within the group. |
+| `status` | `GroupStatus` | Group operational status (e.g., active, dismissed, muted). |
+| `createTime` | `number` | Group creation timestamp in Unix milliseconds. |
+| `ex` | `string` | Application-defined custom group metadata string. |
+| `attachedInfo` | `string` | Additional engine metadata. |
+| `isShowGroupRead` | `boolean` | Server configuration indicating whether message read receipts are displayed in this group. |
+
+## Listen for group changes
+
+Listen for group property changes, joins, departures, and group dissolutions to keep UI views synchronized in real time:
+
+## Code example
+
+```ts
+import sdk, {
+  EventOnGroupDismissedData,
+  EventOnGroupInfoChangedData,
+  EventOnJoinedGroupAddedData,
+  EventOnJoinedGroupDeletedData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleJoinedGroupAdded = (data: EventOnJoinedGroupAddedData): void => {
+  mergeGroup(data.group);
+};
+const handleJoinedGroupDeleted = (data: EventOnJoinedGroupDeletedData): void => {
+  removeJoinedGroup(data.group.groupID);
+};
+const handleGroupInfoChanged = (data: EventOnGroupInfoChangedData): void => {
+  mergeGroup(data.group);
+};
+const handleGroupDismissed = (data: EventOnGroupDismissedData): void => {
+  markGroupDismissed(data.group.groupID);
+};
+
+const unsubscribeJoinedGroupAdded = sdk.on(
+  OpenIMSDKEvent.EventOnJoinedGroupAdded,
+  handleJoinedGroupAdded,
+);
+const unsubscribeJoinedGroupDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnJoinedGroupDeleted,
+  handleJoinedGroupDeleted,
+);
+const unsubscribeGroupInfoChanged = sdk.on(
+  OpenIMSDKEvent.EventOnGroupInfoChanged,
+  handleGroupInfoChanged,
+);
+const unsubscribeGroupDismissed = sdk.on(
+  OpenIMSDKEvent.EventOnGroupDismissed,
+  handleGroupDismissed,
+);
+
+export function removeGroupListeners(): void {
+  unsubscribeJoinedGroupAdded();
+  unsubscribeJoinedGroupDeleted();
+  unsubscribeGroupInfoChanged();
+  unsubscribeGroupDismissed();
+}
+```
+
+## State changes after the call
+
+Detach listeners using `removeGroupListeners()` upon account sign-out or when terminating the group manager. API Promise resolution, event notifications, and re-querying snapshots represent three separate lifecycle phases. If membership changes occur during active pagination, reset the pagination offset and re-query from page 1.
+
+## Related capabilities
+
+- [Update group profile](/sdk/harmony/group/update-group-profile)
+- [Set group join verification](/sdk/harmony/group/set-group-join-verification)
+- [Change group mute status](/sdk/harmony/group/change-group-mute)
+- [Paginate joined groups](/sdk/harmony/group/retrieving-groups/get-joined-group-list-page)
+- [Retrieve received group applications](/sdk/harmony/group/group-applications/get-group-application-list-as-recipient)
+- [Paginate group members](/sdk/harmony/group/retrieving-group-members/get-group-member-list)

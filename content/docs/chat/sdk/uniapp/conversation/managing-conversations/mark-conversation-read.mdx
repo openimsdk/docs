@@ -1,17 +1,73 @@
 ---
 title: 'Mark a conversation as read'
-description: 'OpenIM uni-app / uni-app x SDK guide for Mark a conversation as read.'
+description: 'Mark all received messages in a conversation as read and listen for peer C2C read receipts.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/managing-conversations/mark-conversation-read'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When the user enters a chat screen and views incoming messages, invoke `markConversationMessageAsRead()` to mark all currently received messages in that conversation as read. Avoid triggering this call prematurely when the app is in the background or when merely previewing system banner notifications.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the target conversation. |
+
+## Code example
+
+```uts
+import { markConversationMessageAsRead } from '@/uni_modules/unix-openim-sdk'
+
+await markConversationMessageAsRead(conversationID)
+```
+
+## Return value
+
+The Promise resolves with `void` upon successful completion.
+
+## State changes after the call
+
+Promise resolution indicates that the read status request was processed. You can optimistically set the local conversation's `unreadCount` to `0`. The SDK then emits `onConversationChanged`, where you can confirm the updated unread count by `conversationID`. For the centralized conversation list listener, see [Retrieve conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list).
+
+In group chats, calling this method only resets the unread count for the authenticated account; for member-level message read receipt tracking, see [Send group read receipts](/sdk/uniapp/message/managing-read-status/send-group-read-receipts) and [Get group message readers](/sdk/uniapp/message/managing-read-status/get-group-message-readers).
+
+## Receive single-chat read receipts
+
+When the authenticated user marks a single-chat conversation as read, the peer user's device receives a single-chat (C2C) read receipt. Centrally register `onRecvC2CReadReceipt` to monitor incoming read confirmations from conversation peers. The callback receives an `OpenIMMessageReceiptListResult | null` object containing receipt items in `receipts`.
+
+```uts
+import {
+  OpenIMMessageReceiptListResult,
+  off,
+  onRecvC2CReadReceipt,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleC2CReadReceipts = (
+  result: OpenIMMessageReceiptListResult | null,
+) => {
+  if (result == null) return
+
+  result.receipts.forEach((receipt) => {
+    mergeC2CReadReceipt(
+      receipt.userID,
+      receipt.msgIDList,
+      receipt.readTime,
+    )
+  })
+}
+
+const c2cReadReceiptSubscription = onRecvC2CReadReceipt(
+  handleC2CReadReceipts,
+)
+
+function removeC2CReadReceiptListener() {
+  off(c2cReadReceiptSubscription)
+}
+```
+
+In the receipt payload, `userID` identifies the peer user who read the messages, `msgIDList` contains the `clientMsgID` array of marked messages, and `readTime` is the Unix millisecond timestamp of the read action. Unregister the listener by calling `off()` when logging out, switching accounts, or tearing down the message store layer.

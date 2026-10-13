@@ -5,13 +5,24 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/managing-calls/start-single-call'
 ---
 
-Use `signalingInvite:offlinePushInfo:onSuccess:onFailure:` to start a one-to-one call. The SDK handles signaling; your app must still connect to the media engine with the credentials returned by the success callback.
+Initiate a direct audio or video call by dispatching a call invitation. The SDK coordinates signaling exchange and room credential allocation. The application layer consumes the returned room credentials to connect to your WebRTC or RTC media engine.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `inviteeUserIDList` | `NSArray<NSString *> *` | Yes | List of target user IDs. For one-to-one calls, provide exactly one target user ID. |
+| `roomID` | `NSString *` | Yes | Unique room identifier, generated as a UUID by the client or provided by your backend. |
+| `timeout` | `NSInteger` | Yes | Invitation timeout duration in seconds. |
+| `mediaType` | `NSString *` | Yes | Media stream type: `@"video"` or `@"audio"`. |
+| `groupID` | `NSString *` | No | Target group identifier. Pass an empty string `@""` for one-to-one calls. |
+
+## Code example
 
 ```objc
 OIMInvitationInfo *invitation = [OIMInvitationInfo new];
@@ -25,13 +36,23 @@ OIMSignalingInfo *signalingInfo =
     [[OIMManager manager] signalingInvite:invitation
                           offlinePushInfo:push
                                 onSuccess:^(OIMInvitationResultInfo * _Nullable credentials) {
-    if (credentials != nil) [self joinMediaRoom:credentials];
-}
+        if (credentials != nil) {
+            [self joinMediaRoom:credentials];
+        }
+    }
                                  onFailure:^(NSInteger code, NSString * _Nullable message) {
-    [self showCallError:code message:message ?: @"Failed to start the call"];
-}];
+        [self showCallError:code message:message ?: @"Failed to initiate call"];
+    }];
 ```
 
-For a one-to-one call, pass an empty string as `groupID`. The SDK fills in the inviter and session type. Save the `OIMSignalingInfo` returned synchronously by the method so it can be used later to cancel or hang up the call and merge state.
+Retain the `OIMSignalingInfo` object returned synchronously by `signalingInvite:...`; it stores the active signaling snapshot required to cancel, hang up, or correlate subsequent signaling events.
 
-The success callback returns an `OIMInvitationResultInfo`. Connect to the media room only after obtaining a valid `token` and `roomID`. Success does not mean that the other user has answered.
+## Return value
+
+The `onSuccess` callback returns an `OIMInvitationResultInfo` instance containing the allocated `roomID`, room access `token`, streaming `liveURL`, and busy user list (`busyLineUserIDList`). Success indicates only that OpenIMServer processed the signaling invitation; it does not indicate that the callee has answered.
+
+## State changes after the call
+
+- **Local state merge**: Track active call session state using `roomID` as the primary key and track participant states combining `roomID` and `userID`.
+- **Remote event notification**: The callee receives an incoming invitation notification via `onReceiveNewInvitation:` in `OIMSignalingListener` (see [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events)).
+- **Answer detection**: The caller tracks whether the callee accepts or rejects the call via the `onInviteeAccepted:` and `onInviteeRejected:` delegate callbacks.

@@ -5,15 +5,33 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/get-conversation-groups'
 ---
 
-Use `Open_im_sdkGetConversationGroups` to establish a complete snapshot of the current user's conversation groups for a specified type.
+Invoke `Open_im_sdkGetConversationGroups` to query the list of conversation groups belonging to the signed-in user by category:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupType` | `int64_t` | Yes | Category of conversation groups to retrieve. |
+
+### Group type enumeration
+
+| Value | Numeric value | Description |
+| --- | --- | --- |
+| `0` | `0` | Regular custom groups manually created and managed by users. |
+| `1` | `1` | Rule-filtered groups maintained automatically. |
+| `2` | `2` | All group categories. |
+
+## Code example
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 int64_t groupType = 2; // 0: regular, 1: filtered, 2: all
 
 CallbackProxy *callback = [[CallbackProxy alloc]
@@ -21,14 +39,17 @@ CallbackProxy *callback = [[CallbackProxy alloc]
         [self replaceConversationGroupsFromJSON:data];
     }
     onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showConversationGroupError:code message:message ?: @"Failed to retrieve conversation groups"];
+        NSLog(@"GetConversationGroups failed: %ld %@", (long)code, message);
     }];
+
+Open_im_sdkGetConversationGroups(callback, groupType);
 ```
 
-Pass `callback` and `groupType` to `Open_im_sdkGetConversationGroups`. Use `0` for regular custom groups and `2` to retrieve all types.
+## Return value
 
-## Result
+The `onSuccess` callback delivers a JSON array string in `data` containing the matching group objects. Parse the array and update the local in-memory group list keyed by `conversationGroupID`.
 
-The success callback's `data` is a JSON array of groups. After parsing it, cache groups by `conversationGroupID`. iOS Core does not provide a corresponding high-level Objective-C model.
+## State changes after the call
 
-The query only establishes a snapshot and does not trigger the conversation-group listener. For subsequent incremental updates, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+1. **Snapshot query**: This method provides an initial snapshot of group metadata without triggering asynchronous listener events.
+2. **Event notification**: Real-time modifications to groups across sessions or devices arrive via listener delegates. For listener registration and lifecycle details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

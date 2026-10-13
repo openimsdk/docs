@@ -5,13 +5,14 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/managing-calls/handle-call-events'
 ---
 
-Implement a stable `OIMSignalingListener` in the call state layer, and use the same instance when adding and removing it:
+Implement the `OIMSignalingListener` protocol in your call state controller to observe incoming call invitations, participant acceptance or rejection, timeouts, and stream updates. Register and unregister the listener using the same retained instance via `[OIMManager callbacker]`.
+
+## Code example
 
 ```objc
 @interface CallStore () <OIMSignalingListener>
@@ -30,19 +31,43 @@ Implement a stable `OIMSignalingListener` in the call state layer, and use the s
 - (void)onReceiveNewInvitation:(OIMSignalingInfo *)info {
     [self upsertCall:info state:@"ringing"];
 }
-- (void)onInviteeAccepted:(OIMSignalingInfo *)info { [self mergeCall:info state:@"accepted"]; }
-- (void)onInviteeRejected:(OIMSignalingInfo *)info { [self mergeCall:info state:@"rejected"]; }
-- (void)onInvitationCancelled:(OIMSignalingInfo *)info { [self finishCall:info.invitation.roomID]; }
-- (void)onInvitationTimeout:(OIMSignalingInfo *)info { [self finishCall:info.invitation.roomID]; }
-- (void)onInviteeAcceptedByOtherDevice:(OIMSignalingInfo *)info { [self stopRinging:info.invitation.roomID]; }
-- (void)onInviteeRejectedByOtherDevice:(OIMSignalingInfo *)info { [self stopRinging:info.invitation.roomID]; }
-- (void)onHunguUp:(OIMSignalingInfo *)info { [self finishCall:info.invitation.roomID]; }
+
+- (void)onInviteeAccepted:(OIMSignalingInfo *)info {
+    [self mergeCall:info state:@"accepted"];
+}
+
+- (void)onInviteeRejected:(OIMSignalingInfo *)info {
+    [self mergeCall:info state:@"rejected"];
+}
+
+- (void)onInvitationCancelled:(OIMSignalingInfo *)info {
+    [self finishCall:info.invitation.roomID];
+}
+
+- (void)onInvitationTimeout:(OIMSignalingInfo *)info {
+    [self finishCall:info.invitation.roomID];
+}
+
+- (void)onInviteeAcceptedByOtherDevice:(OIMSignalingInfo *)info {
+    [self stopRinging:info.invitation.roomID];
+}
+
+- (void)onInviteeRejectedByOtherDevice:(OIMSignalingInfo *)info {
+    [self stopRinging:info.invitation.roomID];
+}
+
+- (void)onHunguUp:(OIMSignalingInfo *)info {
+    [self finishCall:info.invitation.roomID];
+}
+
 - (void)onRoomParticipantConnected:(OIMParticipantConnectedInfo *)info {
     [self mergeParticipants:info roomID:info.roomID];
 }
+
 - (void)onRoomParticipantDisconnected:(OIMParticipantConnectedInfo *)info {
     [self removeParticipants:info roomID:info.roomID];
 }
+
 - (void)onStreamChange:(OIMMeetingStreamEvent *)event {
     [self updateStream:event roomID:event.roomID];
 }
@@ -50,4 +75,7 @@ Implement a stable `OIMSignalingListener` in the call state layer, and use the s
 @end
 ```
 
-This is the only page that owns complete examples for the call delegates above. Merge events by `roomID`, and use the user ID as well for participant state. Call `removeSignalingListener:` when the user logs out or switches accounts, or when the call state layer is destroyed.
+## State changes after the call
+
+- **State merge key**: Merge all incoming signaling events using `roomID` as the primary key. For participant rosters within multi-party calls, combine `roomID` and `userID`.
+- **Lifecycle management**: When logging out, switching user accounts, or tearing down the call controller, invoke `removeSignalingListener:` with the exact listener instance registered earlier to avoid memory leaks or cross-account event collisions.

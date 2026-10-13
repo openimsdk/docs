@@ -1,17 +1,27 @@
 ---
 title: 'Audio and video calling overview'
-description: 'OpenIM HarmonyOS SDK guide for Audio and video calling overview.'
+description: 'Understand call signaling, room credentials, and RTC lifecycle boundaries in the OpenIM HarmonyOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/overview-calling'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM HarmonyOS SDK provides call signaling APIs to initiate, accept, reject, cancel, and hang up calls, as well as query active group rooms, refresh room credentials, and restore unhandled incoming invitations.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+The SDK manages signaling channels and room session metadata; it does not handle camera capture, microphone input, remote media rendering, or calling UI components. Pass the provided `roomID`, `token`, and `liveURL` to your selected WebRTC or third-party real-time media engine, and manage hardware permissions, media tracks, quality monitoring, and UI presentation in application code.
+
+## Lifecycle workflow
+
+1. The caller constructs a complete `SignalingInvitationInfo` payload and initiates an invitation via [Start single call](/sdk/harmony/calling/managing-calls/start-single-call) or [Start group call](/sdk/harmony/calling/managing-calls/start-group-call).
+2. The invitee listens for incoming calls in [Handle call events](/sdk/harmony/calling/managing-calls/handle-call-events), or retrieves pending invitations during application cold starts via [Restore pending call invitation](/sdk/harmony/calling/retrieving-call-information/restore-pending-invitation).
+3. The callee calls [Accept call](/sdk/harmony/calling/managing-calls/accept-call) to obtain room credentials and join the media engine session, or dismisses the call UI via [Reject call](/sdk/harmony/calling/managing-calls/reject-call).
+4. During an active call, synchronize room status using the unique `roomID`, and track individual participant presence using each participant's `userID`.
+5. The caller can cancel an unanswered call using [Cancel call](/sdk/harmony/calling/managing-calls/cancel-call), while connected participants end active sessions using [Hang up call](/sdk/harmony/calling/managing-calls/hang-up-call).
+
+The `SignalingParticipantMetaData` object contains the participant's `IMUser` profile, while `OfflinePushInfo` defines push notification payloads delivered when invitees are offline. Room tokens are time-sensitive; always use the token returned by the active invitation or re-fetch valid tokens before joining media channels.
+
+Resolving a signaling Promise, receiving signaling events, and executing room status queries represent three separate stages. Resolving a signaling API call does not imply that remote RTC channels are connected or that remote peers have rendered updated UI views.

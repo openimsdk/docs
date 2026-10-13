@@ -1,15 +1,18 @@
 ---
-title: 'Subscribe to user online status'
-description: 'Use subscribeUsersOnlineStatus() to subscribe to online status for specified users.'
+title: 'Subscribe to user status'
+description: 'Subscribe to the online presence and multi-platform login state of specified users.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/online-status/subscribe-users-online-status'
 ---
+
+Subscribe to real-time online status and multi-platform connection state for specified users. When subscription succeeds, the SDK delivers a snapshot of their current presence immediately and publishes incremental event updates whenever target users log in, disconnect, or change active platforms.
+
+## Code example
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -18,35 +21,44 @@ OpenIMClient.getInstance().userInfoManager.subscribeUsersOnlineStatus(
     new OnBase<List<UsersOnlineStatus>>() {
         @Override
         public void onSuccess(List<UsersOnlineStatus> states) {
-            // Use states to display online status.
+            // Render online presence indicators using states
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     userIDs
 );
 ```
 
-Remove empty and duplicate IDs, and subscribe only to users whose status is needed. The callback returns the initial `List<UsersOnlineStatus>`. Each item contains `userID`, `status`, and `platformIDs`.
+## Parameters
 
-## Status fields
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<UsersOnlineStatus>>` | Yes | Callback delivering the asynchronous operation result. |
+| `userIDs` | `List<String>` | Yes | List of target user IDs to subscribe to. Subscribe on demand when entering a chat or list view. |
 
-| Field         | Description                                         |
-| ------------- | --------------------------------------------------- |
-| `userID`      | Target user ID.                                     |
-| `status`      | Online status value defined by the server contract. |
-| `platformIDs` | Platforms on which the user is online.              |
+## Return value
 
-Receive `onUserStatusChanged` through `OnUserListener` when a user's online status changes:
+The successful callback returns an initial presence snapshot as `List<UsersOnlineStatus>`. Maintain your presence cache using `userID` as the unique key:
+
+| Field | Description |
+| --- | --- |
+| `userID` | Target user ID. |
+| `status` | Presence status (`1` for online, `0` for offline). |
+| `platformIDs` | List of active client platforms (such as Android, iOS, or Web platform codes). |
+
+## State changes after the call
+
+Subsequent presence transitions for subscribed users arrive via `OnUserListener`:
 
 ```java
 @Override
 public void onUserStatusChanged(UsersOnlineStatus status) {
-    // Handle the online-status change.
+    // Received status update; update the UI matching status.getUserID()
 }
 ```
 
-Subscription creates or updates the subscription set. When a user's status is no longer needed, cancel the subscription through [Unsubscribe from user status](/sdk/android/user/online-status/unsubscribe-users-online-status).
+When navigating away from a chat screen or when presence tracking is no longer needed, call [Unsubscribe from user status](/sdk/android/user/online-status/unsubscribe-users-online-status) to conserve bandwidth and avoid unnecessary presence broadcasts.

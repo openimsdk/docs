@@ -1,33 +1,40 @@
 ---
 title: 'Receive custom business messages'
-description: 'OpenIM React Native SDK guide for receive custom business messages.'
+description: 'Listen for custom business notifications and server push signals using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/receiving-messages/receive-custom-business-messages'
 ---
 
-When the server sends a custom business notification, `OnRecvCustomBusinessMessage` is emitted. Its callback receives business data, not a `MessageItem`; ordinary custom chat messages are delivered through the new-message events in [Receive messages](/sdk/react-native/message/receiving-messages/receive-messages).
+When the server dispatches non-chat administrative notifications (such as system-wide broadcasts, order status updates, or marketing alerts) through management endpoints, the SDK emits the `OnRecvCustomBusinessMessage` event.
+
+Unlike standard chat messages, the event payload is raw business data (typically a JSON string), rather than a `MessageItem` object. For in-conversation custom chat messages exchanged between users, see [Receive messages](/sdk/react-native/message/receiving-messages/receive-messages).
 
 ```ts
-function handleCustomBusinessMessage(data) {
-  // ...
-}
+const handleCustomBusinessMessage = (businessData: string) => {
+  try {
+    const payload = JSON.parse(businessData);
+    // Process business notification (e.g., refresh global badge or display banner)
+  } catch (error) {
+    console.error('Failed to parse custom business payload:', error);
+  }
+};
 
-// Set the listener
+// Register listener
 OpenIMSDK.on(
   OpenIMEvent.OnRecvCustomBusinessMessage,
   handleCustomBusinessMessage,
 );
 
-// Remove the listener
+// Unregister listener
 OpenIMSDK.off(
   OpenIMEvent.OnRecvCustomBusinessMessage,
   handleCustomBusinessMessage,
 );
 ```
 
-Validate the received data against your business protocol before processing it. Remove the listener when the component is destroyed, the account signs out, or the account changes.
+Validate payload structures and signatures according to your application protocol before handling data. Always unregister the listener using the same function reference when unmounting components or signing out.

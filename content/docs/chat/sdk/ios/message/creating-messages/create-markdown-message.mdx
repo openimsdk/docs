@@ -5,18 +5,33 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/creating-messages/create-markdown-message'
 ---
 
-OpenIMCore bundled with the enterprise SDK exposes `Open_im_sdkCreateMarkdownMessage`. The returned message JSON corresponds to `OIMMessageInfo.markdownTextElem`, whose content field is `content`.
+Use the underlying `OpenIMCore` C function `Open_im_sdkCreateMarkdownMessage` to construct a message data structure formatted with Markdown syntax:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `payloadJSON` | `NSString *` | Yes | JSON string containing Markdown body text in the format `{"content": "**Markdown text**"}`. |
+
+## Code example
 
 ```objc
-NSString *payloadJSON = @"{\"content\":\"**Project update**\"}";
+NSString *payloadJSON = @"{\"content\":\"**Project Update**\"}";
 NSString *messageJSON = Open_im_sdkCreateMarkdownMessage(payloadJSON);
 OIMMessageInfo *message = [OIMMessageInfo mj_objectWithKeyValues:messageJSON];
 ```
 
-This capability is not available through a high-level `OIMMessageInfo` Objective-C factory. Applications that call Core directly must convert the message JSON in their own binding before using the sending flow. Creation, model conversion, and sending are three separate stages. Receiving clients should safely sanitize untrusted Markdown and provide a plain-text fallback.
+## Return value
+
+The core function returns a JSON string representing the created message. Parse this string into an `OIMMessageInfo` instance whose body content resides in `markdownTextElem.content`.
+
+## State changes after the call
+
+1. **Local memory instantiation**: This function builds an in-memory message structure without persisting to local storage or making network calls.
+2. **Parsing and sanitization**: Creation, deserialization, and network transmission are separate stages. Rendering components should sanitize untrusted Markdown and provide text fallbacks if rendering fails.
+3. **Subsequent dispatch**: Call [Send a message](/sdk/ios/message/sending-messages/send-message) to deliver the Markdown message.

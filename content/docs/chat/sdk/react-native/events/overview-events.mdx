@@ -22,7 +22,7 @@ function handleEvent(payload: unknown) {
   // Update application state from the event payload.
 }
 
-// Set listener
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnConversationChanged, handleEvent);
 // Or use the event string
 OpenIMSDK.on("onConversationChanged", handleEvent);
@@ -60,6 +60,20 @@ The React Native SDK allows global listeners to be registered at any time. It st
 The React Native SDK supports multiple listeners for the same event. Every registered listener receives the event, unlike the single-listener mechanism in the Flutter and Android SDKs, where a later listener replaces the earlier one. Even though multiple listeners are supported, register and manage callbacks centrally in the application so that rendering or re-entering a component does not register the same business handler repeatedly.
 
 Keep listener functions in stable references. When logging out, switching accounts, or destroying related state, call `off()` with the same event name and function reference used for registration.
+
+## Client state reconciliation guidelines
+
+When receiving asynchronous events from the SDK, update local application state using these primary identifiers:
+
+- **Conversation**: `conversationID`
+- **Conversation group**: `conversationGroupID`
+- **Group**: `groupID`
+- **Group member**: `groupID:userID`
+- **Friend & Blacklist**: `userID`
+- **Message**: `clientMsgID` (qualified with `conversationID` when necessary)
+- **Call**: `roomID` (using `userID` for individual participant states)
+
+Never use array indexes or display names as reconciliation keys. Treat Promise resolution, incoming push events, and re-query reconciliation as three distinct phases in your UI architecture.
 
 ## Connection and initial synchronization events
 

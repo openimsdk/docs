@@ -1,19 +1,19 @@
-This example uses two OpenIMServer nodes, A and B. They share a private network at `IP_A` and `IP_B`, and each also has a public IP. The guide covers application nodes and Nginx, not the creation of external component clusters.
+This guide illustrates deploying a two-node OpenIMServer cluster across Node A and Node B. Both machines reside on the same internal network with private IP addresses `IP_A` and `IP_B`, and each node possesses an external public IP. This guide focuses on the application nodes and Nginx reverse proxy configuration, excluding the initial setup of external component clusters.
 
-Prepare Redis, MongoDB sharding, Kafka, and Etcd clusters with at least three nodes, plus an available MinIO service. Record these addresses:
+Before starting, prepare a minimum 3-node Redis cluster, MongoDB sharded cluster, Kafka cluster, and Etcd cluster, along with an operational MinIO instance. Record the following connection endpoints:
 
 - Redis: `redisAddr1`, `redisAddr2`, `redisAddr3`
 - MongoDB: `mongoAddr1`, `mongoAddr2`, `mongoAddr3`
 - Kafka: `kafkaAddr1`, `kafkaAddr2`, `kafkaAddr3`
 - Etcd: `etcdAddr1`, `etcdAddr2`, `etcdAddr3`
-- MinIO private address: `your_minio_internal_address`
-- MinIO public address: `your_minio_external_address`
+- MinIO internal address: `your_minio_internal_address`
+- MinIO external address: `your_minio_external_address`
 
-Both OpenIMServer nodes must be able to reach every external component.
+Both OpenIMServer nodes must have reliable network connectivity to all external backing components.
 
-## Get the same OpenIMServer version
+## Deploy identical OpenIMServer versions
 
-Run the following on both A and B. The nodes must use the same official release tag:
+Execute these steps on both Node A and Node B. Both nodes must be pinned to the exact same official release tag:
 
 ```bash
 git clone https://github.com/openimsdk/open-im-server
@@ -24,15 +24,15 @@ git checkout "$LATEST_STABLE_TAG"
 echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
 ```
 
-Do not deploy `main` or alpha, beta, rc, or other prerelease versions directly to a production cluster.
+`main` is the active development branch; do not deploy it to a production cluster. Pre-release tags such as alpha, beta, and rc should also never be used in production.
 
 ## Configure external components
 
-Use the same cluster configuration on both machines. Address fields use single-line lists.
+Apply identical cluster configuration files on both machines. Endpoint lists use single-line bracket syntax.
 
 ### Kafka
 
-In `config/kafka.yml`:
+Modify `config/kafka.yml`:
 
 ```yaml
 address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
@@ -40,18 +40,18 @@ address: [kafkaAddr1, kafkaAddr2, kafkaAddr3]
 
 ### MinIO
 
-In `config/minio.yml`:
+Modify `config/minio.yml`:
 
 ```yaml
 internalAddress: your_minio_internal_address
 externalAddress: your_minio_external_address
 ```
 
-Clients must be able to reach `externalAddress`. With a unified domain, set it to the HTTPS object storage gateway path.
+`externalAddress` must be reachable by client devices. When utilizing a unified domain name, configure it to the HTTPS object storage gateway path.
 
 ### MongoDB
 
-In `config/mongodb.yml`:
+Modify `config/mongodb.yml`:
 
 ```yaml
 address: [mongoAddr1, mongoAddr2, mongoAddr3]
@@ -59,7 +59,7 @@ address: [mongoAddr1, mongoAddr2, mongoAddr3]
 
 ### Etcd
 
-In `config/discovery.yml`:
+Modify `config/discovery.yml`:
 
 ```yaml
 etcd:
@@ -68,7 +68,7 @@ etcd:
 
 ### Redis
 
-In `config/redis.yml`, enable cluster mode:
+Modify `config/redis.yml` and enable cluster mode:
 
 ```yaml
 address: [redisAddr1, redisAddr2, redisAddr3]
@@ -77,7 +77,7 @@ clusterMode: true
 
 ## Configure Nginx
 
-You can deploy the same Nginx configuration on both machines. Replace the domain, certificate paths, and node addresses:
+You can deploy an identical Nginx configuration on both hosts. Replace the domain name, SSL certificate paths, and upstream node addresses with your actual values:
 
 ```nginx
 events {
@@ -130,31 +130,31 @@ http {
 }
 ```
 
-Validate and reload Nginx:
+Verify syntax and reload Nginx:
 
 ```bash
 nginx -t
 nginx -s reload
 ```
 
-Resolve `yourhost.com` to the public IPs of both entry nodes. In production, use DNS or load-balancer health checks so traffic is not sent to a failed node.
+Configure DNS records resolving `yourhost.com` to the public IPs of both entry nodes. In production environments, configure DNS-level or load balancer health checks to prevent routing traffic to unhealthy nodes.
 
-## Build and start both nodes
+## Compile and start both nodes
 
-Install project tools on the first run:
+Install project dependencies on initial setup:
 
 ```bash
 bash bootstrap.sh
 ```
 
-Within mainland China, you can configure a Go module proxy:
+In mainland China networks, configure a Go module proxy:
 
 ```bash
 go env -w GO111MODULE=on
 go env -w GOPROXY=https://goproxy.cn,direct
 ```
 
-Build and start on both A and B:
+Compile and launch on Node A and Node B:
 
 ```bash
 mage
@@ -162,17 +162,17 @@ mage start
 mage check
 ```
 
-Use the unified endpoints in OpenIMClientSDK:
+Configure OpenIMClientSDK using the unified endpoints:
 
 ```text
 apiAddr: https://yourhost.com/api
 wsAddr: wss://yourhost.com/msg_gateway
 ```
 
-## Pre-production checks
+## Pre-launch checklist
 
-1. Kafka `KAFKA_CFG_ADVERTISED_LISTENERS` must advertise addresses reachable by every OpenIMServer node, for example `PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`.
-2. Synchronize all node clocks. Token issuance allows at most `5s` of clock skew.
-3. Both nodes must use the same official tag, the same `secret`, and consistent external component configuration.
-4. Stop each node in turn and confirm that API and WebSocket traffic moves to the healthy node.
-5. Validate the gateway, login, and messaging path with [Deployment verification](./verification).
+1. Kafka's `KAFKA_CFG_ADVERTISED_LISTENERS` must broadcast network addresses reachable by every OpenIMServer node (for example: `PLAINTEXT://kafka:9092,EXTERNAL://192.168.2.36:19094`).
+2. Clocks across all nodes must be synchronized via NTP. Token issuance permits a maximum clock drift of `5s`.
+3. Both nodes must run the exact same official tag, use identical `secret` keys, and share identical external component configurations.
+4. Stop each node sequentially to verify that API and WebSocket traffic fails over smoothly to the surviving healthy node.
+5. Follow [Deployment verification](./verification) to validate message gateways, authentication, and messaging pipelines.

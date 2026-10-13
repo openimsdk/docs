@@ -1,17 +1,68 @@
 ---
 title: 'Revoke a message'
-description: 'OpenIM uni-app / uni-app x SDK guide for Revoke a message.'
+description: 'Revoke a previously sent message across chat participants and handle revocation events.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/managing-messages/revoke-a-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `revokeMessage()` when a message needs to be withdrawn so that participants see a "Message was revoked" placeholder. Never substitute local or bulk deletion when the intent is to revoke the message for all chat participants.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the conversation containing the message. |
+| `clientMsgID` | `string` | Yes | The `clientMsgID` of the message to revoke. |
+
+## Code example
+
+```uts
+import { revokeMessage } from '@/uni_modules/unix-openim-sdk'
+
+const clientMsgID = message.clientMsgID
+if (clientMsgID == null) return
+
+await revokeMessage({
+  conversationID,
+  clientMsgID,
+})
+```
+
+Allowed revoking roles, time windows, and supported message types are authoritatively enforced by OpenIMServer. If the request fails, do not maintain a revoked placeholder in local state.
+
+## Return value
+
+The Promise resolves with a confirmation string upon successful processing. It does not return a full updated message object; update your local UI model using the original `clientMsgID` optimistically, confirming state via subsequent queries if necessary.
+
+## Listen for revoked messages
+
+Centrally register `onNewRecvMessageRevoked` to observe message revocations. When another user or device revokes a message, the SDK triggers `onNewRecvMessageRevoked`. Update the existing message bubble in your view model to its revoked placeholder state using `conversationID:clientMsgID`, rather than removing the message item completely from the list.
+
+```uts
+import {
+  OpenIMMessageRevokedItem,
+  off,
+  onNewRecvMessageRevoked,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleMessageRevoked = (
+  revoked: OpenIMMessageRevokedItem | null,
+) => {
+  if (revoked == null) return
+  markMessageRevoked(revoked.clientMsgID, revoked)
+}
+
+const revokedSubscription =
+  onNewRecvMessageRevoked(handleMessageRevoked)
+
+function removeMessageRevokedListener() {
+  off(revokedSubscription)
+}
+```
+
+The `OpenIMMessageRevokedItem` object supplies revoker information, revocation timestamp, and revoker role, allowing you to format contextual system notices (for example, "Admin revoked a message"). Unregister the listener when the page unmounts or upon switching accounts.

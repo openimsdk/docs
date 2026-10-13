@@ -5,18 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/clear-group-mentions'
 ---
 
-After the user has handled the @ mentions in a group chat, reset that conversation's `groupAtType`:
+Invoke `resetConversationGroupAtType:onSuccess:onFailure:` to reset the `@` mention alert state of a specified group conversation to normal after the user has viewed or handled mention messages:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target group conversation ID. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] resetConversationGroupAtType:conversationID
-                                         onSuccess:nil
-                                         onFailure:nil];
+[[OIMManager manager] resetConversationGroupAtType:@"group_2001"
+                                         onSuccess:^(NSString * _Nullable data) {
+                                             NSLog(@"resetConversationGroupAtType success");
+                                         }
+                                         onFailure:^(NSInteger code, NSString *message) {
+                                             NSLog(@"resetConversationGroupAtType failed: %ld %@", (long)code, message);
+                                         }];
 ```
 
-Group-mention state and message read state are separate. A successful callback, arrival of `onConversationChanged:`, and a reconciliation query are three distinct stages. Query the conversation again when the state must be confirmed immediately.
+## Return value
+
+The `onSuccess` callback returns confirmation when the operation succeeds.
+
+## State changes after the call
+
+1. **Local state update**: The conversation's `groupAtType` property is reset to normal (`OIMGroupAtTypeNormal`), clearing any special `@` mention badge or indicator on the conversation item.
+2. **Event notification**: Updated conversation properties are broadcast via the `onConversationChanged:` delegate callback. Match conversations by `conversationID` to refresh list presentation.
+3. **Re-query calibration**: Group `@` mention status is independent from message read status. If the local cache needs verification, call `getConversationsWithIDs:onSuccess:onFailure:` or re-query the conversation list. To mark messages as read, refer to [Mark a conversation as read](/sdk/ios/conversation/managing-conversations/mark-conversation-read). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

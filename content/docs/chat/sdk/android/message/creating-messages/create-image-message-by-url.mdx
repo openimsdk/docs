@@ -1,30 +1,56 @@
 ---
-title: 'Create an image message from URLs'
-description: 'Use createImageMessageByURL to create an image message for an uploaded resource.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/creating-messages/create-image-message-by-url'
+title: "Create an image message from URLs"
+description: "Use createImageMessageByURL to create an image message for an uploaded resource."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/creating-messages/create-image-message-by-url"
 ---
 
-Prepare the original, large, and thumbnail `PictureInfo` values before creating the message.
+Construct an image message object using remote image URLs hosted on external cloud storage or a CDN. The SDK does not re-upload the image, making this suitable for applications managing their own file storage pipelines.
+
+## Code example
+
+```java
+String sourceURL = "https://example.com/images/origin.jpg";
+
+PictureInfo sourcePicture = new PictureInfo();
+sourcePicture.setUrl(sourceURL);
+sourcePicture.setWidth(1080);
+sourcePicture.setHeight(1920);
+
+PictureInfo bigPicture = sourcePicture;
+
+PictureInfo snapshotPicture = new PictureInfo();
+snapshotPicture.setUrl("https://example.com/images/thumb.jpg");
+snapshotPicture.setWidth(200);
+snapshotPicture.setHeight(355);
+
+Message message = OpenIMClient.getInstance().messageManager.createImageMessageByURL(
+    sourceURL,
+    sourcePicture,
+    bigPicture,
+    snapshotPicture
+);
+```
 
 ## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `sourceURL` | `String` | Yes | Remote URL of the uploaded original image. |
-| `sourcePicture` | `PictureInfo` | Yes | URL, dimensions, size, and type of the original image. |
-| `bigPicture` | `PictureInfo` | Yes | Large-image data; provide usable image information when no separate large image exists. |
-| `snapshotPicture` | `PictureInfo` | Yes | Thumbnail data used in lists and previews. |
+| `sourceURL` | `String` | Yes | Accessible remote URL of the original image. |
+| `sourcePicture` | `PictureInfo` | Yes | Original image metadata object containing URL, width, height, and size. |
+| `bigPicture` | `PictureInfo` | Yes | High-resolution image metadata object. Pass the original picture metadata if a separate high-res variant is not generated. |
+| `snapshotPicture` | `PictureInfo` | Yes | Thumbnail image metadata object used for fast preview in the message list. |
 
-```java
-Message message = OpenIMClient.getInstance().messageManager.createImageMessageByURL(
-    sourceURL, sourcePicture, bigPicture, snapshotPicture);
-```
+## Return value
 
-The returned `Message` contains metadata for an uploaded image and does not upload the file again. Verify that recipients can access every URL, then use [Send an uploaded media message](/sdk/android/message/sending-messages/send-message-not-oss).
+Returns the created `Message` object ready for transmission, with `contentType` set to `MessageType.PICTURE`.
+
+## State changes after the call
+
+1. **Local initialization**: Initializes the local `Message` structure without issuing network requests.
+2. **Transmission**: Because the media asset is pre-hosted, call [Send a message without OSS upload](/sdk/android/message/sending-messages/send-message-not-oss) to deliver the message without redundant uploads.

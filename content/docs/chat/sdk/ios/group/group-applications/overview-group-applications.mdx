@@ -5,21 +5,54 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/overview-group-applications'
 ---
 
-This section documents received applications, sent applications, unhandled counts, acceptance, rejection, and record deletion separately. The iOS SDK has no dedicated selector for querying or clearing a server-side badge.
+When a group enables join verification, member join requests require administrative review by the group owner or an administrator. Group applications are encapsulated by `OIMGroupApplicationInfo` models, using the composite key `groupID:userID` (where `userID` is the applicant's user ID) as the primary identifier for deduplication and local cache merges.
+
+## Application operations
+
+- [Retrieve received group applications](/sdk/ios/group/group-applications/get-group-application-list-as-recipient): Paginated query for incoming applications reviewed by owners and administrators.
+- [Retrieve sent group applications](/sdk/ios/group/group-applications/get-group-application-list-as-applicant): Paginated query for outgoing applications submitted by the current user.
+- [Retrieve unhandled group application count](/sdk/ios/group/group-applications/get-group-application-unhandled-count): Count of pending review requests for badge and notification displays.
+- [Accept a group application](/sdk/ios/group/group-applications/accept-group-application): Approve a join request and admit the applicant into the group.
+- [Reject a group application](/sdk/ios/group/group-applications/refuse-group-application): Decline an incoming join request.
+- [Delete group application records](/sdk/ios/group/group-applications/delete-group-requests): Prune application history records from storage.
+
+## Application event listeners
+
+Handle application lifecycle events by implementing the `OIMGroupListener` protocol:
 
 ```objc
-- (void)startApplicationEvents { [[OIMManager callbacker] addGroupListener:self]; }
-- (void)stopApplicationEvents { [[OIMManager callbacker] removeGroupListener:self]; }
-- (void)onGroupApplicationAdded:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }
-- (void)onGroupApplicationAccepted:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }
-- (void)onGroupApplicationRejected:(OIMGroupApplicationInfo *)item { [self upsertApplication:item]; }
-- (void)onGroupApplicationDeleted:(OIMGroupApplicationInfo *)item { [self removeApplication:item]; }
+- (void)startApplicationEvents {
+    [[OIMManager callbacker] addGroupListener:self];
+}
+
+- (void)stopApplicationEvents {
+    [[OIMManager callbacker] removeGroupListener:self];
+}
+
+- (void)onGroupApplicationAdded:(OIMGroupApplicationInfo *)item {
+    // New group application received
+    [self upsertApplication:item];
+}
+
+- (void)onGroupApplicationAccepted:(OIMGroupApplicationInfo *)item {
+    // Group application accepted
+    [self upsertApplication:item];
+}
+
+- (void)onGroupApplicationRejected:(OIMGroupApplicationInfo *)item {
+    // Group application rejected
+    [self upsertApplication:item];
+}
+
+- (void)onGroupApplicationDeleted:(OIMGroupApplicationInfo *)item {
+    // Group application record deleted
+    [self removeApplication:item];
+}
 ```
 
-Merge events by `groupID:userID`. If a change occurs during pagination, reload from the first page.
+All application events use `groupID:userID` as the primary key. When new application notifications arrive during pagination, reset the pagination offset to 0 and re-query the list to ensure accurate badge counts and item ordering.

@@ -1,16 +1,18 @@
 ---
-title: 'Report group messages as read'
-description: 'OpenIM React Native SDK guide for report group messages as read.'
+title: 'Send group read receipts'
+description: 'Report read receipts for messages in a group chat using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-read-status/send-group-read-receipts'
 ---
 
-Use `sendGroupMessageReadReceipt()` to report messages read in a group chat.
+Submit read receipts in batches for messages read within a group conversation:
+
+Invoke this method when a user views incoming messages from other group members in the active chat screen. Group members receive read status updates accordingly.
 
 ```ts
 await OpenIMSDK.sendGroupMessageReadReceipt({
@@ -23,25 +25,38 @@ await OpenIMSDK.sendGroupMessageReadReceipt({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `string` | Yes | Group conversation ID. |
-| `clientMsgIDs` | `string[]` | Yes | IDs of messages that were read; all must belong to the group conversation. |
+| `conversationID` | `string` | Yes | Target group conversation ID. |
+| `clientMsgIDs` | `string[]` | Yes | Array of client message IDs that have been read; all messages must belong to the specified group conversation. |
 
-After the call completes, the read receipt has been reported. To update the conversation unread count, see [Mark a conversation as read](/sdk/react-native/conversation/managing-conversations/mark-conversation-read).
+## Return value
 
-## Listen for group read-status changes
+A resolved Promise confirms that the read receipt submission was accepted by the server. To reset or clear the unread counter for the current user in this conversation, invoke [Mark conversation read](/sdk/react-native/conversation/managing-conversations/mark-conversation-read).
 
-When group message read status changes, `OnRecvGroupReadReceipt` is emitted with `GroupMessageReceiptInfo`, including `conversationID`, read and unread counts, and readers for each message.
+## Listen for group read status changes
+
+When other group members view messages and report read receipts, the SDK emits the `OnRecvGroupReadReceipt` event. The callback payload contains `GroupMessageReceiptInfo`, specifying the target `conversationID` alongside updated read and unread counts for each message. Update UI read count badges using `clientMsgID` as the composite key.
 
 ```ts
-function handleGroupReadReceipt(payload) {
-  // ...
+interface GroupMessageReceiptItem {
+  clientMsgID: string;
+  readCount: number;
+  unreadCount: number;
 }
 
-// Set the listener
+interface GroupMessageReceiptInfo {
+  conversationID: string;
+  receiptList: GroupMessageReceiptItem[];
+}
+
+const handleGroupReadReceipt = (payload: GroupMessageReceiptInfo) => {
+  // Match the conversation by payload.conversationID and update read counters by clientMsgID
+};
+
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnRecvGroupReadReceipt, handleGroupReadReceipt);
 
-// Remove the listener
+// Unregister listener on cleanup
 OpenIMSDK.off(OpenIMEvent.OnRecvGroupReadReceipt, handleGroupReadReceipt);
 ```
 
-Remove the listener when the component is destroyed, the account signs out, or the account changes.
+Always unregister listeners using identical function references when unmounting components or signing out.

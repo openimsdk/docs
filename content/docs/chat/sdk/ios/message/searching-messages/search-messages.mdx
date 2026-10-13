@@ -5,19 +5,34 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/searching-messages/search-messages'
 ---
 
-`searchLocalMessages:onSuccess:onFailure:` searches messages visible to the current user in the iOS SDK's local database. To search a group chat, use its `conversationID`, not the `groupID` used when sending messages.
+Invoke `searchLocalMessages:onSuccess:onFailure:` on `OIMManager` to search for messages containing specified keywords across history synchronized to the local database. When searching group chat messages, provide the group's corresponding `conversationID` rather than `groupID`:
 
-The search scope is limited to messages already synchronized locally by the SDK. Complete server-side search and globally sorted results across conversations are outside this method's scope. A backend search service can return the matching `conversationID` and `clientMsgID` values for client navigation.
+## Parameters
 
-## Create search criteria
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `param` | `OIMSearchParam *` | Yes | Search criteria parameters object. |
 
-A search field normally represents one user-entered query. Trim surrounding whitespace and reject an empty string before creating `OIMSearchParam`. When the user changes the keyword, message type, or time range, reset the page index to `1` and clear previous results.
+### Properties of OIMSearchParam
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | No | Target conversation ID. Pass an empty string `@""` to search across all local conversations. For group chats, pass the conversation ID rather than `groupID`. |
+| `keywordList` | `NSArray<NSString *> *` | Yes | Array of keyword strings. Currently supports a single keyword. |
+| `keywordListMatchType` | `NSInteger` | No | Multi-keyword matching mode (currently reserved). |
+| `senderUserIDList` | `NSArray * _Nullable` | No | Sender user ID filter list (currently reserved). |
+| `messageTypeList` | `NSArray * _Nullable` | No | Optional array of message content type codes (such as text messages). |
+| `searchTimePosition` | `NSInteger` | No | Starting UTC timestamp in seconds. Pass `0` to search from current time. |
+| `searchTimePeriod` | `NSInteger` | No | Time window in seconds from the starting point. Pass `0` for unrestricted range. |
+| `pageIndex` | `NSInteger` | Yes | Page index starting from `1` for single-conversation searches. Ignored during cross-conversation searches. |
+| `count` | `NSInteger` | Yes | Number of messages per page for single-conversation searches. Ignored during cross-conversation searches. |
+
+## Code example
 
 ```objc
 NSString *keyword = [searchText stringByTrimmingCharactersInSet:
@@ -39,66 +54,40 @@ param.count = 20;
 [[OIMManager manager] searchLocalMessages:param
     onSuccess:^(OIMSearchResultInfo * _Nullable result) {
         if (result == nil) {
-            [self showSearchError:0 message:@"The search callback returned no result"];
+            [self showSearchError:0 message:@"Search callback returned no result"];
             return;
         }
         [self renderSearchItems:result.searchResultItems
                      totalCount:result.totalCount];
     }
     onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showSearchError:code message:message ?: @"Failed to search messages"];
+        [self showSearchError:code message:message ?: @"Search failed"];
     }];
 ```
 
-### Parameters
+## Return value
 
-| Field | Type | Nullable | Description |
-| --- | --- | --- | --- |
-| `conversationID` | `NSString *` | No | The target conversation. An empty string searches across local conversations. For a group chat, still pass its conversation ID rather than `groupID`. |
-| `keywordList` | `NSArray<NSString *> *` | No | The keyword array. It currently supports one keyword only. |
-| `keywordListMatchType` | `NSInteger` | Value type | A multi-keyword matching field that is currently unused. |
-| `senderUserIDList` | `NSArray * _Nullable` | Yes | A sender-filter field that is currently unused. |
-| `messageTypeList` | `NSArray * _Nullable` | Yes | An optional array of numeric message types, such as text messages. |
-| `searchTimePosition` | `NSInteger` | Value type | The starting time in UTC seconds. `0` starts from the current time. |
-| `searchTimePeriod` | `NSInteger` | Value type | The range in seconds from the starting time. `0` means unrestricted. |
-| `pageIndex` | `NSInteger` | Value type | Pagination within one conversation starts at `1`; ignored for cross-conversation searches. |
-| `count` | `NSInteger` | Value type | The page size within one conversation; ignored for cross-conversation searches. |
-
-`keywordListMatchType` and `senderUserIDList` do not currently participate in the search. Another application search capability can provide multi-keyword or sender filtering.
-
-## Process paginated results
-
-The success callback argument is nullable and must be checked first. A non-null `OIMSearchResultInfo` contains:
+The `onSuccess` callback delivers an `OIMSearchResultInfo` model containing:
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `totalCount` | `NSInteger` | The total number of messages matching the current criteria. |
-| `searchResultItems` | `NSArray<OIMSearchResultItemInfo *> *` | Results from `searchLocalMessages:`, organized by conversation. |
-| `findResultItems` | `NSArray<OIMSearchResultItemInfo *> *` | Results dedicated to `findMessageList:`; not the primary field for this operation. |
+| `totalCount` | `NSInteger` | Total number of messages matching search criteria. |
+| `searchResultItems` | `NSArray<OIMSearchResultItemInfo *> *` | Array of search result buckets grouped by conversation. |
+| `findResultItems` | `NSArray<OIMSearchResultItemInfo *> *` | Result items dedicated to exact ID lookup; not the primary search list. |
 
-Each `OIMSearchResultItemInfo` represents one conversation:
+Each `OIMSearchResultItemInfo` conversation bucket contains:
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `conversationID` | `NSString *` | The ID of the conversation containing the matching messages. |
-| `conversationType` | `OIMConversationType` | The conversation-type enum. |
-| `showName` | `NSString *` | The conversation's display name. |
-| `faceURL` | `NSString *` | The conversation's avatar URL. |
-| `messageCount` | `NSInteger` | The number of matches in this conversation. |
-| `messageList` | `NSArray<OIMMessageInfo *> *` | The matching messages on the current page for this conversation. |
+| `conversationID` | `NSString *` | Identifier of the conversation containing matches. |
+| `conversationType` | `OIMConversationType` | Conversation type enum. |
+| `showName` | `NSString *` | Conversation display name. |
+| `faceURL` | `NSString *` | Conversation avatar URL. |
+| `messageCount` | `NSInteger` | Number of matching messages in this conversation. |
+| `messageList` | `NSArray<OIMMessageInfo *> *` | Array of matching messages on the current page for this conversation. |
 
-For subsequent pages, keep `conversationID`, `keywordList`, message types, and time criteria unchanged and increment only `pageIndex`. Within the search page, deduplicate messages by the result item's `conversationID` plus the message's `clientMsgID`. Do not store selection state by result position.
+## State changes after the call
 
-## Handle changes to search results
-
-Use the successful callback result directly as the search snapshot. The query itself does not trigger message events. A matching message can be revoked, deleted, or changed by later synchronization while the page is open. Reuse the shared handlers owned by [Receive messages](/sdk/ios/message/receiving-messages/receive-messages), [Delete messages in batches](/sdk/ios/message/managing-messages/delete-saved-messages), and [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message); do not register those events again here.
-
-When navigating to a result, locate the target with its `conversationID` and `clientMsgID`. If surrounding context is needed, retrieve the message with `findMessageList:onSuccess:onFailure:` and then [load its context](/sdk/ios/message/retrieving-messages/load-message-context).
-
-The search callback, incremental message events, and rerunning the query are separate paths. To refresh the current results, search again with the same criteria and merge by the same conversation and message identifiers.
-
-## Related pages
-
-- [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id)
-- [Load message history](/sdk/ios/message/retrieving-messages/load-older-messages)
-- [Receive messages](/sdk/ios/message/receiving-messages/receive-messages)
+1. **Local cache reading**: Search executes against the local SQLite database snapshot only and does not trigger real-time message listeners.
+2. **Pagination and deduplication**: When paging through single-conversation matches, keep query parameters identical and increment `pageIndex`. Deduplicate items using composite key `conversationID:clientMsgID`.
+3. **Context navigation**: When a user selects a search result item, obtain the full message model via [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id) if needed, and retrieve adjacent messages via [Load message context](/sdk/ios/message/retrieving-messages/load-message-context).

@@ -1,17 +1,54 @@
 ---
-title: 'Load message history in reverse'
-description: 'OpenIM uni-app / uni-app x SDK guide for Load message history in reverse.'
+title: 'Load newer messages'
+description: 'Paginate forward from an anchor message toward newer historical messages.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/retrieving-messages/load-newer-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When navigating to a specific message from search results, quoted replies, or deep links, invoke `getHistoryMessageList()` with `isReverse: true` to load subsequent messages toward the present. This method queries stored history forward in time; subsequent live incoming messages continue to be delivered via the event listeners in [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages).
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the conversation containing the anchor message. |
+| `startClientMsgID` | `string` | Yes | Non-empty `clientMsgID` of the anchor message from which to read forward. |
+| `count` | `number` | Yes | Maximum number of messages to retrieve in this page. |
+| `isReverse` | `boolean` | Yes | Supply `true` to paginate forward toward newer messages. |
+| `viewType` | `OpenIMMessageViewType` | No | Use `OpenIMMessageViewTypeHistory`; defaults to standard history view when omitted. |
+
+## Code example
+
+```uts
+import {
+  OpenIMMessageViewTypeHistory,
+  getHistoryMessageList,
+} from '@/uni_modules/unix-openim-sdk'
+
+const page = await getHistoryMessageList({
+  conversationID: conversationID,
+  startClientMsgID: anchorMessage.clientMsgID ?? '',
+  count: 30,
+  isReverse: true,
+  viewType: OpenIMMessageViewTypeHistory,
+})
+
+if (page != null && page.errCode == 0) {
+  appendMessages(page.messageList)
+}
+```
+
+The anchor message must possess a non-null `clientMsgID`. If the identifier is unavailable, locate the message using [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id) before invoking reverse pagination. Update `startClientMsgID` with the newest message in the retrieved page for subsequent requests; `isEnd` signifies that the latest boundary of local history has been reached.
+
+## Return value
+
+The Promise resolves with an `OpenIMAdvancedHistoryMessageListResult | null` object containing `messageList` (`OpenIMMessageItem[]`), `isEnd` (`boolean`), `errCode` (`number`), and `errMsg` (`string`).
+
+## State changes after the call
+
+This call performs a read-only local query and does not emit message events. Append results to your UI model scoped to `conversationID`, deduplicating items by `clientMsgID`. Avoid flipping pagination directions interchangeably at the same scroll boundary.

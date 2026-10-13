@@ -5,18 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/delete-conversation-with-messages'
 ---
 
-Call this API when the product action means “Delete this chat”:
+Invoke `deleteConversationAndDeleteAllMsg:onSuccess:onFailure:` to delete a specified conversation entry and clear all of its associated message records:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID to delete. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] deleteConversationAndDeleteAllMsg:conversationID
-                                               onSuccess:nil
-                                               onFailure:nil];
+[[OIMManager manager] deleteConversationAndDeleteAllMsg:@"c2c_user1002"
+                                               onSuccess:^(NSString * _Nullable data) {
+                                                   NSLog(@"deleteConversationAndDeleteAllMsg success");
+                                               }
+                                               onFailure:^(NSInteger code, NSString *message) {
+                                                   NSLog(@"deleteConversationAndDeleteAllMsg failed: %ld %@", (long)code, message);
+                                               }];
 ```
 
-After success, clear the current message list and remove the conversation row. This operation does not delete a friend relationship, leave a group, or dismiss a group. If the chat target still exists, a new message or synchronization can recreate the conversation. Reconcile the result through the conversation delegate or a subsequent query.
+## Return value
+
+The `onSuccess` callback returns confirmation when the operation succeeds.
+
+## State changes after the call
+
+1. **Local state removal**: The client removes the conversation row matching `conversationID` from the local list and deletes corresponding chat records from local storage.
+2. **Relationship scope**: This operation only deletes local conversation and message data for the current account. It does not terminate friend relationships, nor does it leave or disband groups. When new messages arrive for this target, the conversation is recreated automatically and returns to the list.
+3. **Re-query calibration**: If you only need to temporarily remove the conversation entry while keeping chat history intact, refer to [Hide a conversation](/sdk/ios/conversation/managing-conversations/hide-a-conversation). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

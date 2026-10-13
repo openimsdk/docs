@@ -1,49 +1,59 @@
 ---
-title: 'Load newer messages'
-description: 'Use getAdvancedHistoryMessageListReverse to load messages after a starting point.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/retrieving-messages/load-newer-messages'
+title: "Load newer messages"
+description: "Use getAdvancedHistoryMessageListReverse to load messages after a starting point."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/retrieving-messages/load-newer-messages"
 ---
 
-`getAdvancedHistoryMessageListReverse()` reads toward newer messages after a specified message. Use it to continue downward from a search result or another located message. It runs in the opposite direction from ordinary history loading and does not receive live messages.
+Retrieve historical messages forward in time (towards newer messages) starting from a specific anchor message. This is commonly used when jumping to a search result, navigating from a quoted reply, or restoring deep-linked message contexts. This method queries stored messages and is not used for real-time message streaming.
 
-## Parameters
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | Yes | Conversation whose history is being loaded. |
-| `startMsg` | `Message` | Yes | Message after which loading begins. |
-| `count` | `int` | Yes | Maximum number of messages to load; the example uses `20`. |
-| `viewType` | `ViewType` | Yes | Pass `ViewType.History` when browsing message history. |
+## Code example
 
 ```java
+String conversationID = "si_user_a_user_b";
+int count = 20;
+
 OpenIMClient.getInstance().messageManager.getAdvancedHistoryMessageListReverse(
     new OnBase<AdvancedMessage>() {
         @Override
         public void onSuccess(AdvancedMessage result) {
             List<Message> messages = result.getMessageList();
             boolean reachedLatest = result.isEnd();
-            // Deduplicate by clientMsgID, then append messages to the current list.
+            // Deduplicate by clientMsgID and append messages to the bottom of the active timeline
         }
 
         @Override
         public void onError(int code, String error) {
-            // Keep the current list and report that this page failed to load.
+            // Failed to load newer messages
         }
     },
     conversationID,
     startMessage,
-    20,
+    count,
     ViewType.History
 );
 ```
 
-## Result
+## Parameters
 
-The success callback returns `AdvancedMessage`. `messageList` contains messages read after the anchor, and `isEnd` indicates whether the newer end of the available history has been reached. `errCode` and `errMsg` carry the business status included in the result object. Continue handling live messages through [Receive messages](/sdk/android/message/receiving-messages/receive-messages).
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<AdvancedMessage>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the target conversation. |
+| `startMsg` | `Message` | Yes | Anchor starting message from which forward loading begins. |
+| `count` | `int` | Yes | Maximum number of messages to retrieve in this batch. |
+| `viewType` | `ViewType` | Yes | View mode enum. Pass `ViewType.History` for regular history loads. |
+
+## Return value
+
+Upon success, `onSuccess` returns an `AdvancedMessage` object. `messageList` contains messages chronologically after the anchor message, and `isEnd` indicates whether the newest stored message boundary has been reached.
+
+## State changes after the call
+
+1. **Snapshot retrieval**: This is a read-only query that loads point-in-time message records without emitting new-message events.
+2. **Timeline update**: Append deduplicated messages to the bottom of the chat list using `clientMsgID`. Real-time incoming messages continue to be received via [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

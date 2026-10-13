@@ -5,21 +5,47 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/retrieving-conversations/get-conversation-by-target'
 ---
 
-When opening a chat page from a user or group profile, retrieve its `OIMConversationInfo` by the chat target. For a one-to-one chat, pass the other user's ID and `OIMConversationTypeC2C`. For a group chat, pass the group ID and `OIMConversationTypeGroup`.
+Retrieve a conversation snapshot for a specific user or group using `getOneConversationWithSessionType:sourceID:onSuccess:onFailure:`. Use this method when navigating to a chat view from a profile card or group detail screen.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sessionType` | `OIMConversationType` | Yes | Conversation category. Pass `OIMConversationTypeC2C` for direct chats, or `OIMConversationTypeGroup` for group chats. |
+| `sourceID` | `NSString *` | Yes | Target entity identifier: peer user ID for direct chats, or group ID for group chats. |
+
+### Session types (`OIMConversationType`)
+
+| Enum | Value | Description |
+| --- | --- | --- |
+| `OIMConversationTypeC2C` | `1` | Direct one-to-one conversation. |
+| `OIMConversationTypeGroup` | `2` | Regular group conversation. |
+| `OIMConversationTypeSuperGroup` | `3` | Large-scale super group conversation. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] getOneConversationWithSessionType:OIMConversationTypeC2C
-                                              sourceID:targetUserID
+                                               sourceID:@"user_1002"
                                               onSuccess:^(OIMConversationInfo *conversation) {
                                                   [chatRouter openConversation:conversation];
                                               }
-                                              onFailure:nil];
+                                              onFailure:^(NSInteger code, NSString *message) {
+                                                  NSLog(@"getOneConversation failed: %ld %@", (long)code, message);
+                                              }];
 ```
 
-Even if the users have not exchanged messages, do not construct `conversationID` or the model yourself. The success callback returns a complete conversation snapshot. The query itself does not trigger a delegate.
+## Return value
+
+The `onSuccess` callback returns a complete `OIMConversationInfo` object. Even if no message history exists between the participants, the SDK automatically initializes and returns a valid conversation object. Avoid manually synthesizing conversation models. To obtain only the calculated conversation identifier string locally, invoke [Generate a conversation ID](/sdk/ios/conversation/retrieving-conversations/get-conversation-id).
+
+## State changes after the call
+
+- **Local state merge**: Merge the returned record into active view models using `conversationID` as the primary key.
+- **Snapshot query**: This query establishes an instantaneous point-in-time snapshot and does not emit delegate callbacks.
+- **Subsequent synchronization**: Live conversation changes continue to arrive via `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).

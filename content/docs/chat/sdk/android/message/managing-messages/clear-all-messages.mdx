@@ -5,28 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/clear-all-messages'
 ---
 
-`deleteAllMsgFromLocalAndSvr()` clears the current account's local messages and requests deletion of that account's server-side message history. After completion, the SDK cannot restore those messages.
+Clear all message records stored both in the local SQLite database and on the remote server for the logged-in account. This operation is permanent and irreversible; once executed, historical message data for the current account cannot be restored. This operation clears only the caller's message mailbox and does not delete message copies retained by other participants or alter friend and group relationships.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().messageManager.deleteAllMsgFromLocalAndSvr(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Clear message lists and related UI state for the current account.
+            // Local and server messages cleared successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // The request failed, so the current message data remains unchanged.
+            // Handle clearing failure
         }
     }
 );
 ```
 
-The success callback means the deletion request completed. It does not delete message copies retained by other users, and it does not remove friendships, groups, or conversation relationships. Query a conversation again if its messages must be shown later.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that message records across all conversations were purged from both local storage and the server for this account. Clear open chat message views.
+2. **Conversation summary update**: The last message preview (`latestMsg`) on conversations is cleared or refreshed to reflect the empty state.
+3. **Re-query calibration**: To delete only the local offline cache on this device while retaining cloud roaming history, call [Clear all local messages](/sdk/android/message/managing-messages/clear-all-local-messages).

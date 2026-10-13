@@ -1,23 +1,49 @@
 ---
 title: 'Block a user'
-description: 'Add a user to the current account’s blocklist with the OpenIM Flutter SDK.'
+description: 'Add a specified user to the current user blocklist using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/moderating-a-user/block-user'
 ---
 
+Add a specified user to the currently signed-in user's blocklist:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `String` | Yes | Target user ID to add to the blocklist. |
+| `ex` | `String?` | No | Custom extension string. Passing a new value overwrites existing extension text without automatically merging JSON properties. |
+
+## Code example
+
 ```dart
 await OpenIM.iMManager.friendshipManager.addBlacklist(
-  userID: targetUserID,
+  userID: 'user_123',
   ex: '{"source":"profile-menu"}',
 );
 ```
 
-Blocking is a one-way relationship: the blocked user cannot send messages to the current user, but the current user may still be able to message them. `ex` is a complete string value. A successful `Future` does not mean the event has already arrived.
+## Return value
 
-This page owns `onBlackAdded`. Include it in the application's single `OnFriendshipListener`, and insert or replace the record by `userID`.
+A successful `Future` returns `void`, indicating that the block request was committed by the server and recorded locally.
+
+## State changes after the call
+
+This method alters relationship states. Once the block takes effect, the blocked user cannot send single-chat messages to the current user, though the current user can still dispatch messages to them; enforce mutual message suppression at the application layer if required.
+
+## Listen for blocklist events
+
+Handle blocklist additions centrally. When the block takes effect, connected client devices receive `onBlackAdded` event notifications. Use `userID` as the key to merge records into the local blocklist state:
+
+```dart
+void handleBlackAdded(BlacklistInfo info) {
+  mergeBlockedUser(info);
+}
+```
+
+The Flutter SDK maintains a single `OnFriendshipListener` instance inside `FriendshipManager`. Register this handler through the application-wide entry point described in [Events overview](/sdk/flutter/events/overview-events). To fetch the complete list of blocked users, see [Retrieve a list of blocked users](/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users).

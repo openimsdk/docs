@@ -5,23 +5,24 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/file-uploads/upload-file'
 ---
 
-Standalone file uploads can be used for user avatars, group avatars, profile attachments, or application files. They are independent of messages.
+Use standalone file uploads for user avatars, group avatars, profile attachments, or custom business files that do not directly belong to a message.
 
 ## Parameters
 
-| Parameter | Description |
-| --- | --- |
-| `fullPath` | An absolute file path that the app can read. |
-| `name` | The uploaded file name. Pass `nil` to use the final path component. |
-| `cause` | The upload reason defined by your application. |
-| `onProgress` | Reports saved, currently processed, and total bytes. |
-| `onCompletion` | Returns total bytes, the remote URL, and `putType`. |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `fullPath` | `NSString *` | Yes | Absolute filesystem path readable by the iOS application sandbox. |
+| `name` | `NSString *` | No | Target filename on the remote store. Pass `nil` to use the last path component of `fullPath`. |
+| `cause` | `NSString *` | Yes | Business upload category or tag agreed upon with the backend. |
+| `onProgress` | `OIMUploadProgressCallback` | No | Closure receiving saved bytes, currently uploaded bytes, and total file bytes. |
+| `onCompletion` | `OIMUploadCompletionCallback` | No | Closure receiving total bytes, the remote URL, and storage type (`putType`). |
+
+## Code example
 
 ```objc
 [[OIMManager manager] uploadFile:fileURL.path
@@ -39,4 +40,8 @@ Standalone file uploads can be used for user avatars, group avatars, profile att
 }];
 ```
 
-`onCompletion` means that the resource result is available. The final outcome of the overall call is still reported by `onSuccess` or `onFailure`. This method does not update a user profile automatically, nor does it create or send a message. If the resource will be used in chat, use the returned URL to create a URL-based message and then send it explicitly.
+## Return value
+
+The `onCompletion` callback provides the remote resource URL, total size in bytes, and storage engine type (`putType`). The overall operational status resolves through `onSuccess` or `onFailure`. 
+
+Uploading a file does not alter user profiles or automatically construct messages. To share the uploaded file in a chat session, supply the returned URL to the corresponding URL-based message creation method and send it explicitly.

@@ -5,17 +5,47 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-message-receive-option'
 ---
 
+Configure the message reception policy for a specific conversation (such as enabling Do Not Disturb or muting notifications) using `setConversationRecvMessageOpt:status:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `status` | `OIMReceiveMessageOpt` | Yes | Message reception option enum. |
+
+### Message reception options (`OIMReceiveMessageOpt`)
+
+| Enum | Value | Description |
+| --- | --- | --- |
+| `OIMReceiveMessageOptReceive` | `0` | Receive messages normally and trigger offline push notifications. |
+| `OIMReceiveMessageOptNotReceive` | `1` | Block message reception entirely; suppress offline push notifications. |
+| `OIMReceiveMessageOptNotNotify` | `2` | Receive messages while suppressing offline push notifications (Do Not Disturb). |
+
+## Code example
+
 ```objc
-[[OIMManager manager] setConversationRecvMessageOpt:conversationID
+[[OIMManager manager] setConversationRecvMessageOpt:@"c2c_user1002"
                                              status:OIMReceiveMessageOptNotNotify
-                                          onSuccess:nil
-                                          onFailure:nil];
+                                          onSuccess:^(NSString * _Nullable data) {
+                                              NSLog(@"setConversationRecvMessageOpt success");
+                                          }
+                                          onFailure:^(NSInteger code, NSString *message) {
+                                              NSLog(@"setConversationRecvMessageOpt failed: %ld %@", (long)code, message);
+                                          }];
 ```
 
-`OIMReceiveMessageOptReceive` receives messages while online and allows offline push. `OIMReceiveMessageOptNotReceive` disables both message reception and offline push. `OIMReceiveMessageOptNotNotify` receives messages while online but disables offline push. After success, merge the latest state through `onConversationChanged:`.
+## Return value
+
+The `onSuccess` callback confirms that OpenIMServer updated the message reception setting.
+
+## State changes after the call
+
+- **Local state merge**: Merge the updated `recvMsgOpt` property into local conversation models using `conversationID` as the entity key.
+- **Asynchronous event listening**: Multi-device clients observe changes via `onConversationChanged:` in `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).
+- **Re-query calibration**: To verify the active conversation configuration, invoke [Retrieve conversations by ID](/sdk/ios/conversation/retrieving-conversations/get-conversations-by-id).

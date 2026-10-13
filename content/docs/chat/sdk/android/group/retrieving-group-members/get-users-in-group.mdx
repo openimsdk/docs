@@ -1,23 +1,53 @@
 ---
-title: 'Check users in a group'
-description: 'Use getUsersInGroup to select the users who are currently members of a group.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/retrieving-group-members/get-users-in-group'
+title: "Check users in a group"
+description: "Use getUsersInGroup to select the users who are currently members of a group."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/retrieving-group-members/get-users-in-group"
 ---
 
-`getUsersInGroup()` returns the IDs among the supplied candidates that currently belong to the specified group. It does not return member profiles.
+Filter a candidate list of user IDs to determine which users are already members of a specified group. This is typically used to validate and filter candidate lists before inviting users to a group.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.getUsersInGroup(new OnBase<List<String>>() {
-    @Override public void onSuccess(List<String> joinedUserIDs) { /* joinedUserIDs contains group member IDs. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID, candidateUserIDs);
+String groupID = "group_123";
+List<String> candidateUserIDs = Arrays.asList("user_a", "user_b", "user_c");
+
+OpenIMClient.getInstance().groupManager.getUsersInGroup(
+    new OnBase<List<String>>() {
+        @Override
+        public void onSuccess(List<String> joinedUserIDs) {
+            // joinedUserIDs contains candidate users who are already in the group
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to query membership status
+        }
+    },
+    groupID,
+    candidateUserIDs
+);
 ```
 
-To retrieve nicknames, roles, or mute state, call [Get group member profiles](/sdk/android/group/retrieving-group-members/get-specified-group-members-info) afterward.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<String>>` | Yes | Callback handler for the asynchronous request. |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+| `candidateUserIDs` | `List<String>` | Yes | List of candidate user IDs to check. Ensure duplicate or empty strings are removed before calling. |
+
+## Return value
+
+Upon success, `onSuccess` returns a list of user IDs (`List<String>`) that are already members of the group.
+
+## State changes after the call
+
+1. **Snapshot check**: This is a read-only query that checks user membership and does not alter group state.
+2. **Detailed profiles**: This method only returns user IDs. To retrieve detailed in-group profiles (such as nicknames, roles, or mute times), see [Get group member profiles](/sdk/android/group/retrieving-group-members/get-specified-group-members-info).

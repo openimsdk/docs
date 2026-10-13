@@ -5,17 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-message-destruct'
 ---
 
+Invoke `setConversationIsMsgDestruct:isMsgDestruct:onSuccess:onFailure:` to enable or disable the periodic automatic deletion policy for server-stored historical messages in a specified conversation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID. |
+| `isMsgDestruct` | `BOOL` | Yes | Whether to enable periodic server-side message deletion. Pass `YES` to enable, or `NO` to disable. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] setConversationIsMsgDestruct:conversationID
+[[OIMManager manager] setConversationIsMsgDestruct:@"c2c_user1002"
                                      isMsgDestruct:YES
-                                         onSuccess:nil
-                                         onFailure:nil];
+                                         onSuccess:^(NSString * _Nullable data) {
+                                             NSLog(@"setConversationIsMsgDestruct success");
+                                         }
+                                         onFailure:^(NSInteger code, NSString *message) {
+                                             NSLog(@"setConversationIsMsgDestruct failed: %ld %@", (long)code, message);
+                                         }];
 ```
 
-This switch controls whether the conversation's server-side messages are deleted periodically; it does not enable burn after reading in a private chat. Set the deletion period through the separate method, and track the results of the switch and period requests independently. After success, merge the state through `onConversationChanged:`.
+## Return value
+
+The `onSuccess` callback returns confirmation when the operation succeeds.
+
+## State changes after the call
+
+1. **Local state update**: The conversation's `isMsgDestruct` attribute is updated locally and synchronized with the backend.
+2. **Event notification**: Updated conversation properties are broadcast via the `onConversationChanged:` delegate callback. Match items by `conversationID` to update local state and toggle controls.
+3. **Re-query calibration**: This switch controls server-side message retention, which functions independently from client-side burn-after-reading. The actual duration before deletion is configured using [Set the server-side message deletion period](/sdk/ios/conversation/managing-conversations/set-message-destruct-time). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

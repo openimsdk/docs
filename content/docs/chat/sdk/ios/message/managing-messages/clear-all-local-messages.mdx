@@ -5,16 +5,36 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/clear-all-local-messages'
 ---
 
+Invoke `deleteAllMsgFromLocalWithOnSuccess:onFailure:` on `OIMManager` to wipe all historical messages for the current account from local SQLite database storage on the current device:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming local message storage has been cleared. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] deleteAllMsgFromLocalWithOnSuccess:^(NSString *data) {
+[[OIMManager manager] deleteAllMsgFromLocalWithOnSuccess:^(NSString * _Nullable data) {
+    // Local messages cleared; reset in-memory message caches and UI
     [self resetAllMessageSnapshots];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle clearing failure
+}];
 ```
 
-This is a destructive account-level operation. Success means only that messages were cleared from the current device's local storage. The server retains history, which may synchronize again after the local database is rebuilt. This selector has no dedicated deletion event.
+## Return value
+
+The `onSuccess` callback confirms that all local message records on the device were deleted.
+
+## State changes after the call
+
+1. **Local-only operation**: This destructive operation removes records from the current device's local database only. Server roaming records remain intact; if the client synchronizes or re-queries history from the server, messages may be restored.
+2. **No remote events**: This method does not dispatch message deletion events to other devices or users. To clear messages across both the server and local storage simultaneously, see [Clear all messages](/sdk/ios/message/managing-messages/clear-all-messages).

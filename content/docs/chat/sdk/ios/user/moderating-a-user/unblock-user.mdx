@@ -5,16 +5,60 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/moderating-a-user/unblock-user'
 ---
 
+Remove a user from the current account's blacklist using `removeFromBlackList:onSuccess:onFailure:`, restoring standard interaction and message delivery.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `NSString *` | Yes | Target user ID to unblock. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] removeFromBlackList:targetUserID
-    onSuccess:nil
-    onFailure:nil];
+                                onSuccess:^(NSString *data) {
+    [blacklistStore removeUserID:targetUserID];
+}
+                                onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"removeFromBlackList failed: %ld %@", (long)code, message);
+}];
 ```
 
-A successful callback does not mean that the event has already arrived. This page owns `onBlackDeleted:`. Remove the matching record from the blocklist by the payload's `userID`; query the complete blocklist again when reconciliation is needed.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the unblock request and removed the user from the blacklist.
+
+## State changes after the call
+
+- **Local state merge**: Remove the unblocked user from blacklist caches using `userID` as the unique entity key.
+- **Asynchronous event listening**: Multi-device sessions synchronize the removal via `onBlackDeleted:` in `OIMFriendshipListener`.
+- **Re-query calibration**: To restore a complete snapshot of remaining blocked users, invoke [Retrieve the blocklist](/sdk/ios/user/moderating-a-user/retrieve-a-list-of-blocked-users).
+
+```objc
+@interface BlacklistStore () <OIMFriendshipListener>
+@end
+
+@implementation BlacklistStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addFriendListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeFriendListener:self];
+}
+
+- (void)onBlackDeleted:(OIMBlackInfo *)info {
+    [self removeBlackInfoForUserID:info.userID];
+}
+
+@end
+```
+
+Retain this listener instance strongly, and invoke `removeFriendListener:` when signing out or releasing the contacts model.

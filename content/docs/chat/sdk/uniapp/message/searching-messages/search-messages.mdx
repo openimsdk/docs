@@ -1,17 +1,71 @@
 ---
 title: 'Search messages'
-description: 'OpenIM uni-app / uni-app x SDK guide for Search messages.'
+description: 'Search messages stored in the local database by keywords, sender, message type, and time range.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/searching-messages/search-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `searchLocalMessages()` to search through messages synchronized into the current device's local database. This call does not perform full-text indexing queries against backend servers. When searching within a group, supply the group's `conversationID` rather than its `groupID`; omitting `conversationID` or passing `null` searches across all conversations stored locally.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+Global cross-user auditing, server-wide message retrieval, and complex server-side ranking should be performed via backend services, returning matched conversation IDs and message IDs to the client for local navigation.
+
+## Parameters
+
+The UTS signature requires all properties in the search options object. Provide an empty array for unused array filters and `0` for disabled timestamp criteria:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string \| null` | No | Scope query to a specific conversation; pass `null` or omit to search across all local conversations. |
+| `keywordList` | `string[]` | Yes | Non-empty array of keyword strings to match. |
+| `keywordListMatchType` | `number` | Yes | Matching mode: `0` matches any keyword (OR); `1` requires all keywords (AND). |
+| `senderUserIDList` | `string[]` | Yes | Filter by sender user IDs; supply `[]` for no sender restriction. |
+| `messageTypeList` | `OpenIMMessageType[]` | Yes | Filter by message types; supply `[]` for all message types. |
+| `searchTimePosition` | `number` | Yes | UTC second-level starting timestamp; supply `0` to start from current time. |
+| `searchTimePeriod` | `number` | Yes | Number of seconds to look backward from `searchTimePosition`; supply `0` for unlimited time span. |
+| `pageIndex` | `number` | Yes | Page index starting from `1`. |
+| `count` | `number` | Yes | Maximum number of results to retrieve per page. |
+
+## Code example
+
+```uts
+import {
+  OpenIMMessageTypeAtText,
+  OpenIMMessageTypeText,
+  searchLocalMessages,
+} from '@/uni_modules/unix-openim-sdk'
+
+const keyword = searchText.trim()
+if (keyword.length == 0) return
+
+const result = await searchLocalMessages({
+  conversationID: conversationID,
+  keywordList: [keyword],
+  keywordListMatchType: 0,
+  senderUserIDList: [],
+  messageTypeList: [OpenIMMessageTypeText, OpenIMMessageTypeAtText],
+  searchTimePosition: 0,
+  searchTimePeriod: 0,
+  pageIndex: 1,
+  count: 20,
+})
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMSearchMessageResult | null` object:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `totalCount` | `number` | Total number of matching messages under the given criteria. |
+| `searchResultItems` | `OpenIMSearchMessageResultItem[]` | Search results grouped by conversation. |
+
+Each item in `searchResultItems` contains `conversationID`, `conversationType`, `showName`, `faceURL`, `messageCount`, and `messageList` (`OpenIMMessageItem[]`). When navigating to a search hit, navigate using `conversationID` and the message's `clientMsgID`.
+
+## State changes after the call
+
+This call is a local read-only database query and does not trigger message events.

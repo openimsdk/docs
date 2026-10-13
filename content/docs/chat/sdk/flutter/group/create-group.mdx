@@ -1,23 +1,43 @@
 ---
 title: 'Create a group'
-description: 'Create an OpenIM group and configure its initial members with the Flutter SDK.'
+description: 'Create a new OpenIM group and configure initial members in the Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/create-group'
 ---
 
+Create a new group while defining its name, group type, and initial roster of owner, administrators, and regular members:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | Yes | Basic group metadata including `groupName` and `groupType` (for example, `GroupType.work` for work groups). Pass an empty string `''` for `groupID` to have the server generate a unique ID. |
+| `memberUserIDs` | `List<String>?` | No | Initial list of regular member user IDs. |
+| `adminUserIDs` | `List<String>?` | No | Initial list of administrator user IDs. |
+| `ownerUserID` | `String?` | No | Initial group owner user ID; defaults to the current creator if omitted. |
+
+Keep user IDs mutually exclusive across `memberUserIDs`, `adminUserIDs`, and `ownerUserID`.
+
+## Code example
+
 ```dart
 final group = await OpenIM.iMManager.groupManager.createGroup(
-  groupInfo: GroupInfo(groupID: '', groupName: 'Project discussion', groupType: GroupType.work),
+  groupInfo: GroupInfo(groupID: '', groupName: 'Project Team', groupType: GroupType.work),
   memberUserIDs: ['user-003'],
   adminUserIDs: ['user-002'],
   ownerUserID: currentUserID,
 );
 ```
 
-Do not include the same user as a regular member, administrator, and owner. A successful `Future` returns the new `GroupInfo`; merge group-list increments through `onJoinedGroupAdded`.
+## Return value
+
+A successful `Future` returns the newly created `GroupInfo` object containing the server-assigned `groupID`.
+
+## State changes after the call
+
+The creator and invited members receive join group notifications via group listeners. The client merges the new group into its joined group list using `groupID` as the key. For complete listener integration, see [Groups overview](/sdk/flutter/group/overview-group).

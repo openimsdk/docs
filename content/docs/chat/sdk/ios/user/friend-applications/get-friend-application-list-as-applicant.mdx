@@ -5,21 +5,48 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-list-as-applicant'
 ---
 
+Retrieve friend requests sent by the authenticated user with pagination using `getFriendApplicationListAsApplicantWithReq:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `GetFriendApplicationListAsApplicantReq *` | Yes | Request configuration object for sent applications. |
+
+### Request attributes (`GetFriendApplicationListAsApplicantReq`)
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `NSInteger` | Yes | Starting offset for pagination. Pass `0` for the first page. |
+| `count` | `NSInteger` | Yes | Number of application records to fetch per page. |
+
+## Code example
+
 ```objc
 GetFriendApplicationListAsApplicantReq *req = [GetFriendApplicationListAsApplicantReq new];
 req.offset = 0;
 req.count = 20;
+
 [[OIMManager manager] getFriendApplicationListAsApplicantWithReq:req
                                                        onSuccess:^(NSArray<OIMFriendApplication *> *items) {
                                                            [requestStore replaceSent:items];
                                                        }
-                                                       onFailure:nil];
+                                                       onFailure:^(NSInteger code, NSString *message) {
+                                                           NSLog(@"getFriendApplicationListAsApplicant failed: %ld %@", (long)code, message);
+                                                       }];
 ```
 
-`offset` starts at `0`, and `count` is the page size. The success callback returns the current page snapshot. Merge records by `fromUserID:toUserID`. The query does not trigger a friend-request delegate.
+## Return value
+
+The `onSuccess` callback returns an `NSArray<OIMFriendApplication *> *` containing the outgoing friend requests for the current page.
+
+## State changes after the call
+
+- **Local state merge**: Merge sent request records using `fromUserID:toUserID` as the unique composite entity key.
+- **Snapshot query**: This query establishes an instantaneous point-in-time snapshot and does not emit delegate callbacks.
+- **Asynchronous responses**: When target users accept or reject outgoing requests, notifications arrive via `OIMFriendshipListener` callbacks (see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)).

@@ -1,17 +1,59 @@
 ---
-title: 'Delete all messages from a user in a group chat'
-description: 'OpenIM uni-app / uni-app x SDK guide for Delete all messages from a user in a group chat.'
+title: 'Delete user messages'
+description: 'Purge all messages sent by a specific user within a group chat.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/managing-messages/delete-user-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `deleteUserAllMessagesInConv()` to purge all messages sent by a specific member in a group conversation. This is an administrative moderation action; caller permissions are verified authoritatively by OpenIMServer.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target group conversation ID. |
+| `userID` | `string` | Yes | User ID of the member whose messages are being purged. |
+
+## Code example
+
+```uts
+import { deleteUserAllMessagesInConv } from '@/uni_modules/unix-openim-sdk'
+
+await deleteUserAllMessagesInConv({
+  conversationID,
+  userID: targetUserID,
+})
+```
+
+## Return value
+
+The Promise resolves with `void` upon successful server processing.
+
+## Listen for user message purge events
+
+Centrally register `onDeleteUserAllMsgsInConv` to capture group message purge notifications. The event provides an opaque `string` signal. Treat this signal as an invalidation trigger to reload current group history rather than relying on unexposed payload fields.
+
+```uts
+import {
+  off,
+  onDeleteUserAllMsgsInConv,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleUserMessagesDeleted = (_payload: string) => {
+  reloadCurrentGroupHistory()
+}
+
+const userMessagesDeletedSubscription =
+  onDeleteUserAllMsgsInConv(handleUserMessagesDeleted)
+
+function removeUserMessagesDeletedListener() {
+  off(userMessagesDeletedSubscription)
+}
+```
+
+Promise resolution, event delivery, and re-querying the conversation history are three decoupled phases. Unregister the listener when unmounting views or switching accounts.

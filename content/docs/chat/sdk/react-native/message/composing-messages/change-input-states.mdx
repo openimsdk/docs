@@ -1,16 +1,16 @@
 ---
-title: 'Update input states'
-description: 'OpenIM React Native SDK guide for update input states.'
+title: 'Change input states'
+description: 'Update user typing state focus within a conversation using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/composing-messages/change-input-states'
 ---
 
-Use `changeInputStates()` to update the current account's input state in a conversation. Pass `focus: true` while typing, and `false` after sending, losing focus, or leaving the conversation.
+Update the current user's typing activity in a conversation. Pass `focus: true` when the user starts typing into the input field, and `false` when sending a message, losing input focus, or closing the conversation screen.
 
 ```ts
 await OpenIMSDK.changeInputStates({
@@ -23,21 +23,33 @@ await OpenIMSDK.changeInputStates({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `string` | Yes | Conversation whose input state is updated. |
-| `focus` | `boolean` | Yes | `true` means the user is typing; `false` means typing has stopped. |
+| `conversationID` | `string` | Yes | Target conversation ID. |
+| `focus` | `boolean` | Yes | `true` indicates active typing; `false` indicates typing has stopped. |
 
-Avoid reporting the same state on every keyboard event. When the state changes, `OnInputStatusChanged` is emitted with `conversationID`, `userID`, and `platformIDs`.
+To prevent excessive network traffic, debounce repeated keystrokes rather than reporting on every individual character change.
+
+## Return value
+
+A resolved Promise confirms that the typing status update was submitted to the server.
+
+Typing state transitions trigger the `OnInputStatusChanged` event on the recipient client. Reconcile the UI by matching `conversationID` and using `userID` to show or hide the "User is typing..." indicator.
 
 ```ts
-function handleInputStatusChanged(inputStatus) {
-  // ...
+interface InputStatusChangedPayload {
+  conversationID: string;
+  userID: string;
+  platformIDs: number[];
 }
 
-// Set the listener
+const handleInputStatusChanged = (inputStatus: InputStatusChangedPayload) => {
+  // Update typing indicator for the matching conversationID and userID
+};
+
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnInputStatusChanged, handleInputStatusChanged);
 
-// Remove the listener
+// Unregister listener on cleanup
 OpenIMSDK.off(OpenIMEvent.OnInputStatusChanged, handleInputStatusChanged);
 ```
 
-Remove the listener when the component is destroyed, the account signs out, or the account changes.
+Always unregister listeners using identical function references when unmounting components or signing out.

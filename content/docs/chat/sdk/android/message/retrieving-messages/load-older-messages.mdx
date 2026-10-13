@@ -1,49 +1,67 @@
 ---
-title: 'Load older messages'
-description: 'Use getAdvancedHistoryMessageList to load conversation history by page.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/retrieving-messages/load-older-messages'
+title: "Load older messages"
+description: "Use getAdvancedHistoryMessageList to load conversation history by page."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/retrieving-messages/load-older-messages"
 ---
 
-`getAdvancedHistoryMessageList()` reads earlier messages from a conversation by page. Omit the starting message on the first request. For each subsequent page, use the last message from the previous result as the new starting point.
+Retrieve historical messages backwards in time (towards older messages) within a specified conversation. For the initial page load, pass `null` for `startMsg`. For subsequent pages, pass the oldest message from the previous batch as the new `startMsg`.
 
-## Parameters
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | Yes | Conversation whose history is being loaded. |
-| `startMsg` | `Message` | No | Page anchor. Pass `null` initially, then the last message from the previous page. |
-| `count` | `int` | Yes | Maximum number of messages to load; the example uses `20`. |
-| `viewType` | `ViewType` | Yes | Pass `ViewType.History` for ordinary history loading. |
+## Code example
 
 ```java
+String conversationID = "si_user_a_user_b";
+Message startMessage = null; // Pass null for the initial page, or the oldest message from the last batch
+int count = 20;
+
 OpenIMClient.getInstance().messageManager.getAdvancedHistoryMessageList(
     new OnBase<AdvancedMessage>() {
         @Override
         public void onSuccess(AdvancedMessage result) {
             List<Message> messages = result.getMessageList();
             boolean reachedBeginning = result.isEnd();
-            // Deduplicate by clientMsgID, then prepend messages to the current list.
+            // Prepend deduplicated messages to the top of the chat timeline using clientMsgID
         }
 
         @Override
         public void onError(int code, String error) {
-            // Keep the current list and report that this page failed to load.
+            // Failed to load historical messages
         }
     },
     conversationID,
     startMessage,
-    20,
+    count,
     ViewType.History
 );
 ```
 
-## Result
+## Parameters
 
-The success callback returns `AdvancedMessage`. `messageList` contains this page of messages, and `isEnd` indicates whether the beginning of the available history has been reached. `errCode` and `errMsg` carry the business status included in the result object. This query does not trigger a new-message event.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<AdvancedMessage>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the target conversation. |
+| `startMsg` | `Message` | No | Anchor message for pagination. Pass `null` for initial load, or the oldest message from the preceding batch. |
+| `count` | `int` | Yes | Maximum number of messages to retrieve in this batch. |
+| `viewType` | `ViewType` | Yes | View mode enum. Pass `ViewType.History` for regular history loads. |
+
+## Return value
+
+Upon success, `onSuccess` returns an `AdvancedMessage` object:
+
+| Field | Description |
+| --- | --- |
+| `messageList` | List of retrieved messages (`List<Message>`) for the current page. |
+| `isEnd` | Indicates whether the beginning of history has been reached (`true` means no earlier messages exist, `false` means more can be loaded). |
+| `errCode` | Result error code. |
+| `errMsg` | Result error description. |
+
+## State changes after the call
+
+1. **Snapshot retrieval**: This is a read-only query that loads point-in-time message records without emitting new-message events.
+2. **UI integration**: Prepend messages to the chat view, deduplicating records using `clientMsgID`.

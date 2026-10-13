@@ -5,27 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/transfer-group-owner'
 ---
 
-Only the current owner can call `transferGroupOwner:newOwner:onSuccess:onFailure:`, and the target must be a valid group member. `groupID` is the target group ID and `newOwner` is the new owner's user ID; both are non-null `NSString *` arguments.
+Invoke `transferGroupOwner:newOwner:onSuccess:onFailure:` to transfer group ownership to another existing member (only the current group owner has permission to perform this action):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `newOwner` | `NSString *` | Yes | User ID of the new group owner. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] transferGroupOwner:groupID
-    newOwner:targetUserID
-    onSuccess:^(NSString * _Nullable data) { [self showTransferCompleted]; }
-    onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
-    }];
+[[OIMManager manager] transferGroupOwner:@"group_1001"
+                                newOwner:@"user_002"
+                               onSuccess:^(NSString * _Nullable data) {
+                                   NSLog(@"transferGroupOwner success");
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"transferGroupOwner failed: %ld %@", (long)code, message);
+                               }];
 ```
+
+## Return value
+
+The `onSuccess` callback returns confirmation when the server completes the ownership transfer.
 
 ## State changes after the call
 
-A successful callback means that OpenIMServer completed the transfer: the previous owner becomes a regular member and the new owner receives the owner role. Their role changes synchronize incrementally through `onGroupMemberInfoChanged:`. One transfer may produce two member updates; merge both by `groupID:userID`.
-
-Do not infer the result solely from the number of delegate calls. To display the current owner and administrators, retrieve a new snapshot with `getGroupMemberOwnerAndAdmin:onSuccess:onFailure:`. For the complete listener and merge code, see [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).
-
-An owner who wants to leave must transfer ownership before calling the leave-group selector. The owner may dismiss a group that is no longer needed, but dismissal affects every member and does not substitute for an ordinary transfer.
+1. **Role transition**: The former owner is demoted to a regular member, while the designated member is promoted to group owner. Both role updates broadcast via `onGroupMemberInfoChanged:`.
+2. **Local state merge**: Merge updated roles for both affected users using `groupID:userID`. To refresh the management list immediately, call [Retrieve the group owner and administrators](/sdk/ios/group/retrieving-group-members/get-group-member-owner-and-admin).
+3. **Leaving the group**: A group owner wishing to exit must transfer ownership before calling [Leave a group](/sdk/ios/group/quit-group), or dissolve the group with [Dismiss a group](/sdk/ios/group/dismiss-group).

@@ -5,13 +5,20 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/update-group-profile'
 ---
 
-`setGroupInfo:onSuccess:onFailure:` accepts a complete `OIMGroupInfo`. Retrieve and retain the latest object first, then modify only fields owned by the profile editor. This prevents default scalar values from overwriting join-verification or member-permission settings.
+Invoke `setGroupInfo:onSuccess:onFailure:` to update basic display attributes such as group name, description, and avatar URL. Obtain the latest `OIMGroupInfo` instance before modifying target properties to avoid unintentionally overwriting uninitialized verification or permission settings:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `OIMGroupInfo *` | Yes | Group model containing the target `groupID` and modified fields. |
+
+## Code example
 
 ```objc
 OIMGroupInfo *group = latestGroup;
@@ -20,10 +27,20 @@ group.introduction = introduction;
 group.faceURL = avatarURL;
 
 [[OIMManager manager] setGroupInfo:group
-    onSuccess:^(NSString * _Nullable data) { [self showSaved]; }
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"setGroupInfo success");
+    }
     onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
+        NSLog(@"setGroupInfo failed: %ld %@", (long)code, message);
     }];
 ```
 
-A successful callback means that the update request has completed; it does not mean that every client has received the change. Reconcile the final profile through `onGroupInfoChanged:` or a new query. For the complete delegate, see [Groups overview](/sdk/ios/group/overview-group).
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the group profile update.
+
+## State changes after the call
+
+1. **Local state update**: The client updates local cached group attributes corresponding to `groupID`.
+2. **Event notification**: Updated group details broadcast across sessions and devices via the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: For group profile verification, call `getSpecifiedGroupsInfo:onSuccess:onFailure:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

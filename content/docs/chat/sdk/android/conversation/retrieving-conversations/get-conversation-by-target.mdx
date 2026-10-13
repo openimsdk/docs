@@ -1,24 +1,25 @@
 ---
-title: 'Open a conversation'
-description: 'Use getOneConversation() to retrieve one conversation by user or group.'
+title: 'Get a conversation by target'
+description: 'Query detailed information for a single conversation using a target user ID or group ID.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/retrieving-conversations/get-conversation-by-target'
 ---
 
-`getOneConversation()` retrieves one conversation by user or group and is suitable when opening a chat from a contact, user profile, or group profile. Pass the peer user ID for a one-to-one chat and the group ID for a group chat.
+Retrieve a snapshot of a single conversation using the target user ID or group ID. This is typically used when opening a chat screen directly from a contact card, group profile, or search result. If the conversation does not exist locally yet, the SDK creates and returns a base conversation entity automatically.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().conversationManager.getOneConversation(
     new OnBase<ConversationInfo>() {
         @Override
         public void onSuccess(ConversationInfo conversation) {
-            // conversation contains the target conversation profile.
+            // conversation contains the target conversation data.
         }
 
         @Override
@@ -31,6 +32,16 @@ OpenIMClient.getInstance().conversationManager.getOneConversation(
 );
 ```
 
-`sourceId` is the peer `userID` for a one-to-one chat and `groupID` for a group chat. Use `ConversationType.GROUP_CHAT` or `ConversationType.SUPER_GROUP_CHAT` for a group according to its type.
+## Parameters
 
-The callback returns `ConversationInfo`. To receive newly added or changed conversations, see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) for how to set `OnConversationListener`.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<ConversationInfo>` | Yes | Callback delivering the asynchronous query result. |
+| `sourceId` | `String` | Yes | Target identifier. Pass the peer `userID` for direct chats or the `groupID` for group chats. |
+| `sessionType` | `int` | Yes | Conversation type: `ConversationType.SINGLE_CHAT` for direct chats; `ConversationType.GROUP_CHAT` or `ConversationType.SUPER_GROUP_CHAT` for group chats. |
+
+## Return value
+
+The successful callback returns the `ConversationInfo` snapshot of the target conversation, containing unread counts, draft text, pinning status, and the latest message. Use `conversation.conversationID` as the unique key to merge or cache conversation state.
+
+To monitor conversation property modifications or incoming messages continuously, register `OnConversationListener` at the application layer as shown in [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list).

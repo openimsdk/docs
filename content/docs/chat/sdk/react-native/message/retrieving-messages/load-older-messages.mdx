@@ -1,16 +1,18 @@
 ---
-title: 'Load message history'
-description: 'OpenIM React Native SDK guide for load message history.'
+title: 'Load older messages'
+description: 'Load historical messages backward in time with pagination using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/retrieving-messages/load-older-messages'
 ---
 
-Use `getAdvancedHistoryMessageList()` to page through older messages in a conversation. Pass an empty string for `startClientMsgID` on the first page, then pass the `clientMsgID` of the oldest loaded message.
+Page backward in time to retrieve earlier historical messages in a conversation:
+
+Pass an empty string `""` for `startClientMsgID` when fetching the initial page. On subsequent upward scrolls, supply the `clientMsgID` of the earliest loaded message in the current list.
 
 ```ts
 const page = await OpenIMSDK.getAdvancedHistoryMessageList({
@@ -25,20 +27,20 @@ const page = await OpenIMSDK.getAdvancedHistoryMessageList({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `string` | Yes | Conversation whose history is loaded. |
-| `startClientMsgID` | `string` | Yes | Pagination anchor; pass an empty string for the first page. |
-| `count` | `number` | Yes | Number of messages to load. |
-| `viewType` | `ViewType` | Yes | Use `ViewType.History` when browsing message history. |
+| `conversationID` | `string` | Yes | Target conversation ID. |
+| `startClientMsgID` | `string` | Yes | Anchor client message ID; pass an empty string `""` for the initial page. |
+| `count` | `number` | Yes | Maximum number of messages to fetch in this batch. |
+| `viewType` | `ViewType` | Yes | Retrieval context; pass `ViewType.History` when browsing standard chat logs. |
 
 ## Return value
 
-The call returns `AdvancedGetMessageResult`:
+A resolved Promise returns an `AdvancedGetMessageResult` object:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `messageList` | `MessageItem[]` | Messages on the current page. |
-| `isEnd` | `boolean` | Whether the older boundary has been reached. |
-| `errCode` | `number` | Status code for this history request. |
-| `errMsg` | `string` | Description corresponding to `errCode`. |
+| `messageList` | `MessageItem[]` | Array of historical messages for the current page, sorted chronologically. |
+| `isEnd` | `boolean` | Indicates whether pagination has reached the earliest message; `true` means no older messages exist. |
+| `errCode` | `number` | Status code returned for this history request. |
+| `errMsg` | `string` | Status message corresponding to `errCode`. |
 
-Deduplicate messages by `clientMsgID` before adding `messageList` to the conversation.
+When merging `messageList` into the local conversation state, deduplicate entries by `clientMsgID` to prevent duplicate renders from asynchronous callbacks or network retries.

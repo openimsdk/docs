@@ -5,24 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/invite-user-to-group'
 ---
 
-Group owners and administrators can manage members according to OpenIMServer permissions. The client can control action visibility from the current member's role, but the server still performs the final permission check.
+Invoke `inviteUserToGroup:reason:usersID:onSuccess:onFailure:` to invite users to join a specified group (typically initiated by group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `reason` | `NSString *` | No | Invitation explanation or note. |
+| `usersID` | `NSArray<NSString *> *` | Yes | List of user IDs to invite. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] inviteUserToGroup:groupID
-  reason:@"Join the project discussion"
-  usersID:@[targetUserID]
-  onSuccess:^(NSArray<OIMGroupInviteResult *> *results) {
-    [self handleInviteResults:results];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] inviteUserToGroup:@"group_1001"
+                                 reason:@"Inviting to project discussion"
+                                usersID:@[@"user_001", @"user_002"]
+                              onSuccess:^(NSArray<OIMGroupInviteResult *> *results) {
+                                  for (OIMGroupInviteResult *item in results) {
+                                      NSLog(@"user: %@, result: %ld", item.userID, (long)item.result);
+                                  }
+                              }
+                              onFailure:^(NSInteger code, NSString *message) {
+                                  NSLog(@"inviteUserToGroup failed: %ld %@", (long)code, message);
+                              }];
 ```
 
-Provide `groupID`, an invitation message, and an array of user IDs. A successful callback means that the server accepted the request; it does not mean that every user has become a member. After a user joins, merge `onGroupMemberAdded:`. For the complete member delegate setup, see [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).
+## Return value
+
+The `onSuccess` callback delivers an array of invitation outcome records (`NSArray<OIMGroupInviteResult *> *`) specifying the processing status for each user.
+
+## State changes after the call
+
+1. **Invitation processing**: A successful callback confirms the server accepted the invitation request. If join verification is enabled, users may need to accept before joining.
+2. **Event notification**: Once members successfully enter the group, `onGroupMemberAdded:` is broadcast. The client updates the local member cache matching `groupID:userID`.
+3. **Re-query calibration**: For listener configuration and member queries, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

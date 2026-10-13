@@ -5,27 +5,30 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/set-message-local-ex'
 ---
 
-`setMessageLocalEx()` stores an application-defined string on one message on the current device. Use `localEx` for local information such as a download path or playback state. It is not synchronized to the server, other devices, or other users.
+Save device-specific custom extension data (`localEx`) for a designated message on the current device. This is suitable for caching local file download states, media playback timestamps, audio transcription text caches, or custom UI display attributes. The stored data remains strictly local and is never synchronized to the server or other client devices.
 
-`conversationID` and `clientMsgID` identify the message. If `localExJson` contains JSON, serialize it before the call and validate its structure when reading it.
+## Code example
 
 ```java
+String conversationID = "si_user_a_user_b";
+String clientMsgID = "msg_001";
+String localExJson = "{\"downloadStatus\":2,\"localPath\":\"/storage/emulated/0/...\"}";
+
 OpenIMClient.getInstance().messageManager.setMessageLocalEx(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Update this message's localEx in the current device UI.
+            // Local extension saved successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Keep the previous value and report the failure.
+            // Handle save failure
         }
     },
     conversationID,
@@ -34,4 +37,21 @@ OpenIMClient.getInstance().messageManager.setMessageLocalEx(
 );
 ```
 
-The success callback means the local extension was saved. This operation does not modify the message body or trigger a shared message event.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the conversation containing the message. |
+| `clientMsgID` | `String` | Yes | Client message ID of the target message. |
+| `localEx` | `String` | Yes | Custom extension string (typically formatted as JSON). |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that `localEx` was updated in the local database. Update the `localEx` property on the in-memory message instance using `clientMsgID` and refresh the UI item.
+2. **Local scope**: This operation writes strictly to local storage. It does not alter message body content on the server and does not trigger real-time events on other clients.
+3. **Re-query calibration**: The extension persists only in local storage on this device and will not be present if the message is re-fetched from cloud roaming history on another device.

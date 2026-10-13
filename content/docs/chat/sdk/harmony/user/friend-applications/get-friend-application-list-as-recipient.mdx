@@ -1,17 +1,89 @@
 ---
-title: 'Get received friend applications'
-description: 'OpenIM HarmonyOS SDK guide for Get received friend applications.'
+title: 'Retrieve received friend applications'
+description: 'Paginate incoming friend applications received by the current account and listen for application lifecycle events.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/user/friend-applications/get-friend-application-list-as-recipient'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Pass `send: false` to query incoming friend requests received by the signed-in user. Passing an empty array in `handleResults` retrieves requests across all review states:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnFriendApplicationAcceptedData,
+  EventOnFriendApplicationAddedData,
+  EventOnFriendApplicationDeletedData,
+  EventOnFriendApplicationRejectedData,
+  GetFriendApplicationReq,
+  GetFriendApplicationResp,
+  HandleResult,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetFriendApplicationReq = {
+  send: false,
+  handleResults: [HandleResult.ResultDefault],
+  pagination: {
+    pageNumber: 1,
+    showNumber: 20,
+  },
+};
+const response: GetFriendApplicationResp = await sdk.getFriendApplication(request);
+replaceReceivedApplications(response.applications);
+
+const handleAdded = (data: EventOnFriendApplicationAddedData): void => {
+  mergeFriendApplication(data.application);
+};
+const handleAccepted = (data: EventOnFriendApplicationAcceptedData): void => {
+  mergeFriendApplication(data.application);
+};
+const handleRejected = (data: EventOnFriendApplicationRejectedData): void => {
+  mergeFriendApplication(data.application);
+};
+const handleDeleted = (data: EventOnFriendApplicationDeletedData): void => {
+  removeFriendApplication(data.application.fromUserID, data.application.toUserID);
+};
+
+const unsubscribeAdded = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationAdded, handleAdded);
+const unsubscribeAccepted = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationAccepted, handleAccepted);
+const unsubscribeRejected = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationRejected, handleRejected);
+const unsubscribeDeleted = sdk.on(OpenIMSDKEvent.EventOnFriendApplicationDeleted, handleDeleted);
+
+export function removeReceivedFriendApplicationListeners(): void {
+  unsubscribeAdded();
+  unsubscribeAccepted();
+  unsubscribeRejected();
+  unsubscribeDeleted();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `send` | `boolean` | Yes | Set to `false` to query incoming applications received from other users. |
+| `handleResults` | `HandleResult[]` | Yes | Filter by review status: `ResultDefault` (pending), `ResultAccept` (accepted), or `ResultDecline` (declined). Pass `[]` for all. |
+| `pagination.pageNumber` | `number` | Yes | Page index, starting from `1`. |
+| `pagination.showNumber` | `number` | Yes | Number of application records to fetch per page. |
+
+## Return value
+
+Returns a Promise that resolves to a `GetFriendApplicationResp` object containing `applications: IMFriendApplication[]`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `fromUserID` | `string` | Applicant user ID. |
+| `toUserID` | `string` | Recipient user ID (current user). |
+| `handleResult` | `HandleResult` | Review outcome status. |
+| `reqMsg` | `string` | Application greeting or verification message. |
+| `createTime` | `number` | Application creation timestamp in Unix milliseconds. |
+
+## State changes after the call
+
+Identify unique application records using the composite key `fromUserID:toUserID`. If application events arrive while paging, reset the pagination offset to page 1 and reload. When an application is accepted, the resulting friendship is synchronized separately through friend events; see [Paginate friend list](/sdk/harmony/user/friends/get-friend-list-page). Clean up listeners using `removeReceivedFriendApplicationListeners()` when unmounting components or signing out.

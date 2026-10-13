@@ -5,28 +5,53 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/remove-conversations-from-groups'
 ---
 
-Use `Open_im_sdkRemoveConversationsFromGroups` to remove conversations from one or more conversation groups. This operation only removes relationships; it does not delete conversations or clear messages.
+Invoke `Open_im_sdkRemoveConversationsFromGroups` to remove specified conversations from one or more conversation groups. This operation removes group associations only; it does not delete conversations or clear message history:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationIDs` | `NSArray<NSString *> *` | Yes | List of conversation IDs to remove from the groups. |
+| `conversationGroupIDs` | `NSArray<NSString *> *` | Yes | List of target conversation group IDs. |
+
+## Code example
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSData *conversationData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"c2c_user1002"] options:0 error:nil];
 NSString *conversationIDsJSON =
     [[NSString alloc] initWithData:conversationData encoding:NSUTF8StringEncoding];
 
 NSData *groupData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationGroupID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"group_work_101"] options:0 error:nil];
 NSString *groupIDsJSON =
     [[NSString alloc] initWithData:groupData encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        NSLog(@"RemoveConversationsFromGroups success");
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"RemoveConversationsFromGroups failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkRemoveConversationsFromGroups(callback, conversationIDsJSON, groupIDsJSON);
 ```
 
-Pass your callback, `conversationIDsJSON`, and `groupIDsJSON` to `Open_im_sdkRemoveConversationsFromGroups`. Both arrays are required.
+## Return value
 
-## Result
+The `onSuccess` callback returns confirmation when the disassociation request completes.
 
-A successful callback means that the relationship-removal request has completed. It does not return updated group objects. The related incremental update is `onConversationGroupMemberDeleted:`. For the complete handler, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+## State changes after the call
+
+1. **Local state update**: The client removes member associations keyed by composite pairs of `conversationGroupID` and `conversationID`.
+2. **Event notification**: Active client sessions receive removal notifications via the `onConversationGroupMemberDeleted:` listener callback.
+3. **Re-query calibration**: For listener lifecycle and integration details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

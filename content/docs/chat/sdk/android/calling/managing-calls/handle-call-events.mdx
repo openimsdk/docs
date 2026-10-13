@@ -1,86 +1,95 @@
 ---
 title: 'Handle call events'
-description: 'Register Android SDK invitation, participant, and media-stream callbacks in one call listener.'
+description: 'Register the centralized Android SDK listener for call invitations, participants, and media stream state transitions.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/handle-call-events'
 ---
 
-Register `OnSignalingListener` once in your application's call state manager. The SDK uses these callbacks to notify your app about incoming invitations, acceptances, rejections, cancellations, timeouts, hang-ups, and participants joining or leaving a room. Use them to update the call UI and local call state.
+Register `OnSignalingListener` centrally in your application-wide call coordinator. The SDK uses these callbacks to notify you of incoming calls, acceptances, rejections, cancellations, timeouts, hang-ups, and participant entries or exits; your application updates UI states and local media connections accordingly.
 
-`SignalingManager` retains only one listener: calling `setSignalingListener()` again replaces the previous listener. When signing out or switching accounts, first stop updating the old account's call state, then set the listener for the new account.
+`SignalingManager` holds at most one listener instance; registering a new listener overwrites any previously configured listener. When logging out or switching accounts, cease processing callbacks for the previous user before registering a new listener instance.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().signalingManager.setSignalingListener(
     new OnSignalingListener() {
         @Override
         public void onReceiveNewInvitation(SignalingInfo info) {
-            // info contains the incoming call invitation.
+            // info contains the incoming call invitation payload.
         }
 
         @Override
         public void onInviteeAccepted(SignalingInfo info) {
-            // info indicates that the call was accepted.
+            // info indicates the call was accepted.
         }
 
         @Override
         public void onInviteeRejected(SignalingInfo info) {
-            // info indicates that the call was rejected.
+            // info indicates the call was rejected.
         }
 
         @Override
         public void onInvitationCancelled(SignalingInfo info) {
-            // info indicates that the invitation was cancelled.
+            // info indicates the invitation was cancelled.
         }
 
         @Override
         public void onInvitationTimeout(SignalingInfo info) {
-            // info indicates that the invitation timed out.
+            // info indicates the invitation timed out.
         }
 
         @Override
         public void onInviteeAcceptedByOtherDevice(SignalingInfo info) {
-            // info indicates that another device accepted the call.
+            // info indicates another device accepted the call.
         }
 
         @Override
         public void onInviteeRejectedByOtherDevice(SignalingInfo info) {
-            // info indicates that another device rejected the call.
+            // info indicates another device rejected the call.
         }
 
         @Override
         public void onHangup(SignalingInfo info) {
-            // info indicates that the call ended.
+            // info indicates the call has hung up.
         }
 
         @Override
         public void onRoomParticipantConnected(RoomCallingInfo room) {
-            // room contains the participant that joined.
+            // room contains updated participant lists after entry.
         }
 
         @Override
         public void onRoomParticipantDisconnected(RoomCallingInfo room) {
-            // room contains the participant that left.
+            // room contains updated participant lists after exit.
         }
 
         @Override
         public void onStreamChange(String streamInfo) {
-            // streamInfo describes the media stream change.
+            // streamInfo contains media stream changes.
         }
     }
 );
 ```
 
-| Callback | When it is called | What your app should do |
+## Callback events reference
+
+| Callback | Trigger condition | Handling guidance |
 | --- | --- | --- |
-| `onReceiveNewInvitation` | A new call invitation arrives. | Save the `SignalingInfo`, show the incoming-call UI, and let the user accept or reject it. |
-| `onInviteeAccepted`, `onInviteeRejected` | An invitee accepts or rejects. | Update that member's call status. In a group call, do not affect the other members. |
-| `onInvitationCancelled`, `onInvitationTimeout`, `onHangup` | An invitation is cancelled or times out, or either party hangs up. | Close the matching call UI, disconnect from the media room, and release local resources. |
-| `onInviteeAcceptedByOtherDevice`, `onInviteeRejectedByOtherDevice` | Another device signed in to the same account accepts or rejects. | End the incoming-call UI on this device so that two devices do not handle the same invitation. |
-| `onRoomParticipantConnected`, `onRoomParticipantDisconnected` | A member joins or leaves the media room. | Update the member's status in a group call. |
-| `onStreamChange` | The server sends media-stream change information. | Parse the string according to your server integration, then update the media stream. |
+| `onReceiveNewInvitation` | A new calling invitation arrives. | Persist the `SignalingInfo` object, launch the incoming call interface, and await user action. |
+| `onInviteeAccepted`, `onInviteeRejected` | An invitee accepts or declines the invitation. | Update the participant's status in the UI; in group calls, update that specific participant node without disrupting other members. |
+| `onInvitationCancelled`, `onInvitationTimeout`, `onHangup` | The invitation was cancelled, expired, or terminated by either party. | Dismiss calling screens, disconnect from media rooms, and release local hardware audio/video tracks. |
+| `onInviteeAcceptedByOtherDevice`, `onInviteeRejectedByOtherDevice` | Another active device logged into the same account handled the call. | Terminate ringing and dismiss the response UI on this device to avoid multi-device conflicts. |
+| `onRoomParticipantConnected`, `onRoomParticipantDisconnected` | A member enters or leaves the media room. | Refresh active member lists and composite video grids in group calls. |
+| `onStreamChange` | The server broadcasts a media stream state change. | Parse stream descriptors according to server protocols and adjust local track renderers dynamically. |
+
+## State reconciliation and lifecycle
+
+- **Global call identifier**: Use `roomID` (accessible via `SignalingInfo.invitation.roomID` or `RoomCallingInfo.roomID`) to uniquely identify a call session for UI routing and lifecycle handling.
+- **Participant identifier**: Combine `roomID:userID` to merge acceptance, rejection, room presence, and stream states without cross-polluting concurrent group member updates.
+- **Listener cleanup**: `SignalingManager` retains a single listener. When logging out or resetting session components, pass `null` or unbind callbacks to prevent memory leaks and guard against obsolete UI dispatches.

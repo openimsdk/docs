@@ -1,21 +1,22 @@
 ---
-title: 'Get specified user profiles'
-description: 'Retrieve public user profiles in batches by userID using PublicUserInfo.'
+title: 'Get user profiles'
+description: 'Batch query public user profile cards by a list of user IDs using getUsersInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-19'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/user-profile/get-users-info'
 ---
 
-`getUsersInfo()` retrieves public profiles for a list of `userID` values. Use it to display friend candidates and profiles for users who are not friends.
+Batch query public basic profiles for application users by their user IDs. This is suitable for contact search, stranger profile cards, and user candidate presentations.
 
-## Retrieve public profiles
+## Query public profiles
 
-Call `getUsersInfo()` with the user IDs to retrieve. Remove empty and duplicate IDs before calling, and keep each request within the supported batch size.
+Pass a list of target user IDs to retrieve public profile snapshots in batches. Filter empty strings and duplicate IDs before calling, and keep batch sizes reasonable.
+
+## Code example
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -24,52 +25,59 @@ OpenIMClient.getInstance().userInfoManager.getUsersInfo(
     new OnBase<List<PublicUserInfo>>() {
         @Override
         public void onSuccess(List<PublicUserInfo> users) {
-            // Use users to display public profiles.
+            // Render user profiles with users
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     userIDs
 );
 ```
 
-`userIDs` is the list of user IDs to query. A successful callback returns `List<PublicUserInfo>`.
+## Parameters
 
-### Returned fields
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<PublicUserInfo>>` | Yes | Callback delivering the asynchronous operation result. |
+| `userIDs` | `List<String>` | Yes | List of target user IDs to query. Remove duplicate or empty entries before calling. |
+
+## Return value
+
+The successful callback returns a `List<PublicUserInfo>` containing the matched public user records:
 
 | Field | Description |
 | --- | --- |
-| `userID` | User ID. |
-| `nickname` | Public account nickname. |
-| `faceURL` | Public account avatar URL. |
-| `ex` | Public account extension string defined by the application. |
-| `createTime` | User profile creation time. |
+| `userID` | Unique global user ID. |
+| `nickname` | Public display nickname. |
+| `faceURL` | Public avatar URL. |
+| `ex` | Custom public extension string. |
+| `createTime` | Account registration Unix timestamp. |
 
-The returned `ex` contains the user's public extension data. Update the current user's extension data through [Update your profile](/sdk/android/user/user-profile/set-self-info).
+Cache and merge returned public profiles using `userID` as the unique key. To modify the authenticated user's own profile and extension data, see [Update the current user profile](/sdk/android/user/user-profile/set-self-info).
 
-## Search and add a friend
+## Search and add friends
 
-When the application already has candidate user IDs, call `getUsersInfo()` to display their public profiles. After the user confirms a target, send a request through [Send a friend request](/sdk/android/user/friend-applications/add-friend).
+When your application obtains candidate `userID` values, query and display their public profile cards first. After user confirmation, initiate a friend request using [Send a friend application](/sdk/android/user/friend-applications/add-friend).
 
-`getUsersInfo()` queries public profiles by `userID`; searching by nickname, phone number, or other fields is outside this API.
+This method performs exact queries by `userID`. Fuzzy searching by nickname or phone number requires dedicated backend business API support.
 
-## Choose data by scenario
+## Select profile models by context
 
-Use the corresponding user type for each scenario:
+A single `userID` resolves to different profile models depending on context:
 
-| Scenario | Type |
+| Context | Model class |
 | --- | --- |
-| User search and stranger profile cards | `PublicUserInfo` |
-| Friend lists, contact pages, and friend remarks | `FriendInfo` |
-| Group member lists, in-group nicknames, and group roles | `GroupMembersInfo` |
+| User search, candidate lists, stranger cards | `PublicUserInfo` |
+| Friend lists, contact screens, friend remarks | `FriendInfo` |
+| Group member lists, in-group nicknames, group roles | `GroupMembersInfo` |
 
-For friend data, see [Get specified friend profiles](/sdk/android/user/friends/get-friends-info). For group-member data, see [Get group members by page](/sdk/android/group/retrieving-group-members/get-group-member-list).
+For friend profiles, see [Get friend profiles](/sdk/android/user/friends/get-friends-info). For group member profiles, see [Get the group member list](/sdk/android/group/retrieving-group-members/get-group-member-list).
 
 ## Next steps
 
-- [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page)
-- [Get specified friend profiles](/sdk/android/user/friends/get-friends-info)
-- [Get received friend requests](/sdk/android/user/friend-applications/get-recv-friend-application-list)
+- [Get the friend list](/sdk/android/user/friends/get-friend-list-page)
+- [Get friend profiles](/sdk/android/user/friends/get-friends-info)
+- [Get received friend applications](/sdk/android/user/friend-applications/get-recv-friend-application-list)

@@ -11,18 +11,16 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/managing-messages/modify-a-message'
 ---
 
-Use `modifyMessage()` to change the content of an existing message in a conversation. It differs from [deleting a message](/sdk/flutter/message/managing-messages/delete-saved-message), which affects whether the current account still sees the message, and from [recalling a message](/sdk/flutter/message/managing-messages/revoke-a-message), which shows a recalled state to conversation members. Modification replaces the message content and synchronizes it to other clients.
+Modify the content of a previously sent message in a conversation. Unlike [Delete saved messages](/sdk/flutter/message/managing-messages/delete-saved-message), which affects whether the message remains visible to the current account, and [Revoke a message](/sdk/flutter/message/managing-messages/revoke-a-message), which displays a revocation notice to all members, modifying a message replaces its body content and synchronizes updates to all conversation members.
 
-## Modify message content
+## Parameters
 
-`modifyMessage()` accepts the message's `conversationID` and the complete modified `Message`.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | ID of the conversation containing the message. Flutter's `Message` model does not contain this field. |
+| `message` | `Message` | Yes | The complete modified message object; must preserve the original `clientMsgID` and routing fields. |
 
-### Parameters
-
-| Parameter        | Type      | Required | Description                                                                  |
-| ---------------- | --------- | -------- | ---------------------------------------------------------------------------- |
-| `conversationID` | `String`  | Yes      | ID of the conversation containing the message. Flutter's `Message` has no such field. |
-| `message`        | `Message` | Yes      | Complete modified message. Preserve its original `clientMsgID`.              |
+## Code example
 
 ```dart
 final clientMsgID = message.clientMsgID;
@@ -46,17 +44,17 @@ try {
 }
 ```
 
-This method is not a partial update. Start with the current complete message, change only the target element, and preserve `clientMsgID`, routing, sender, timestamps, and every other field. OpenIMServer validates the permitted sender, time window, and message type. If the request fails, restore the previous content or re-query; do not leave a local-only edit displayed as successful.
+This method is not a partial update. Start with the current complete message object, modify only the target element, and preserve `clientMsgID`, routing identifiers, sender, timestamps, and custom attributes. OpenIM Server validates the permitted sender, time window, and message types. If modification fails, revert local content or re-query the message; do not retain uncommitted edits in local memory.
 
-## Result
+## Return value
 
-`modifyMessage()` returns an unspecialized `Future`; its completion value is not the modified `Message`. Future completion means that the modification request has completed. The caller can first display the submitted complete message under `conversationID:clientMsgID`, then reconcile it through `onMessageModified` or a fresh query.
+Returns a `Future<void>`. Success indicates that the server accepted and persisted the message modification request. The local client may preview the submitted message using the composite key `conversationID:clientMsgID`, awaiting subsequent event delivery for final confirmation.
 
-Future completion does not mean that every client UI has updated. An event can also originate from another device or another authorized operator, so never assume that each callback corresponds to the request just made by the current screen.
+`Future` resolution does not imply all participant clients have updated their screens. Events may also originate from other devices or authorized operators; never assume every event corresponds to the call just executed on the current screen.
 
-## Listen for message modifications
+## State changes after the call
 
-This page is the complete owner of `onMessageModified`. The callback carries one modified `Message`. Because Flutter's message object has no `conversationID`, resolve its route first, then replace the original message by `conversationID:clientMsgID`:
+Message modification events are delivered through the `onMessageModified` callback in `OnAdvancedMsgListener`. The callback provides the single modified `Message` object. Because Flutter messages omit the `conversationID` attribute, resolve the conversation routing first, then replace the existing record by `conversationID:clientMsgID`:
 
 ```dart
 Future<void> handleMessageModified(Message message) async {
@@ -73,16 +71,16 @@ Future<void> handleMessageModified(Message message) async {
 }
 ```
 
-`resolveMessageConversationID()` derives the source from `sessionType`, `groupID`, `sendID`, `recvID`, and the current user, then confirms it with `getConversationIDBySessionType()`. See [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) for the complete helper. Do not match messages by array position, displayed text, or current page length.
+The conversation ID resolution logic determines the message origin from `sessionType`, `groupID`, `sendID`, `recvID`, and the current user ID, then retrieves the conversation ID using the conversation ID helper. For complete helper implementation, see [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages). Merge records strictly using `conversationID:clientMsgID`; never match messages by array index, display text, or list length.
 
-Add this handler to the application's single `OnAdvancedMsgListener`. See [Event overview](/sdk/flutter/events/overview-events) for the centralized setup. The SDK does not expose a remove or unset API. On sign-out or account switch, stop dispatching events into the old account's state and replace the listener with the complete instance for the new account.
+Register this handler within the application's single `OnAdvancedMsgListener`. For centralized listener setup, see [Events overview](/sdk/flutter/events/overview-events). When logging out or switching accounts, detach listeners from the prior account state and register the new account's listeners.
 
-Future completion, `onMessageModified` delivery, and a history re-query are three separate stages. Re-read the message when you need to confirm the final snapshot. A failed reconciliation query must not be reported as a failed modification request.
+`Future` completion, `onMessageModified` delivery, and historical re-queries represent three distinct lifecycle stages. Re-read messages when you must confirm final content; a failed query must not be misconstrued as a failed modification request.
 
-## Related pages
+## Related guides
 
-- [Delete a message](/sdk/flutter/message/managing-messages/delete-saved-message)
-- [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message)
+- [Delete saved messages](/sdk/flutter/message/managing-messages/delete-saved-message)
+- [Revoke a message](/sdk/flutter/message/managing-messages/revoke-a-message)
 - [Send a message](/sdk/flutter/message/sending-messages/send-message)
 - [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)
 - [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)

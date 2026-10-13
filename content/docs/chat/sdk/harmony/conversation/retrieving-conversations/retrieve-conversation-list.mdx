@@ -1,17 +1,87 @@
 ---
-title: 'Get the conversation list'
-description: 'OpenIM HarmonyOS SDK guide for Get the conversation list.'
+title: 'Retrieve conversation list'
+description: 'Paginate conversations for the signed-in user and listen for real-time conversation updates.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Use the paginated conversation API to build the current user's conversation list; do not use unpaginated full-list retrieval.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnConversationChangedData,
+  EventOnNewConversationData,
+  GetConversationListSplitReq,
+  GetConversationListSplitResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetConversationListSplitReq = {
+  pagination: {
+    pageNumber: 1,
+    showNumber: 50,
+  },
+};
+const response: GetConversationListSplitResp = await sdk.getConversationListSplit(request);
+mergeConversations(response.conversationList);
+
+const handleNewConversation = (data: EventOnNewConversationData): void => {
+  mergeConversations(data.conversationList);
+};
+const handleConversationChanged = (data: EventOnConversationChangedData): void => {
+  mergeConversations(data.conversationList);
+};
+const unsubscribeNew = sdk.on(OpenIMSDKEvent.EventOnNewConversation, handleNewConversation);
+const unsubscribeChanged = sdk.on(
+  OpenIMSDKEvent.EventOnConversationChanged,
+  handleConversationChanged,
+);
+
+export function removeConversationListListeners(): void {
+  unsubscribeNew();
+  unsubscribeChanged();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `pagination.pageNumber` | `number` | Yes | Page index, starting from `1`. |
+| `pagination.showNumber` | `number` | Yes | Number of conversations to fetch per page. |
+
+## Return value
+
+Returns a Promise that resolves to a `GetConversationListSplitResp` object containing `conversationList: IMConversation[]`. Deduplicate and merge items using `conversationID`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | Unique conversation ID, also used as the incremental merge key. |
+| `conversationType` | `SessionType` | Conversation category (`Single` or `WriteGroup`). |
+| `userID`, `groupID` | `string` | Peer user ID or group ID according to the conversation type. |
+| `showName`, `faceURL` | `string` | Display title and avatar URL for the conversation. |
+| `recvMsgOpt` | `ConvRecvMsgOpt` | Message notification delivery preference. |
+| `unreadCount` | `number` | Current unread message badge count. |
+| `groupAtType` | `ConvGroupAtType` | Group mention notification flag. |
+| `latestMsg` | `IMMessage` | Latest message summary object. |
+| `latestMsgSendTime` | `number` | Unix timestamp in milliseconds of the latest message. |
+| `draftText`, `draftTextTime` | `string`, `number` | Draft content string and draft save timestamp. |
+| `isPinned` | `boolean` | Whether the conversation is pinned to the top. |
+| `isPrivateChat` | `boolean` | Whether burn-after-reading mode is enabled. |
+| `burnDuration` | `number` | Burn-after-reading countdown duration in seconds. |
+| `isMsgDestruct` | `boolean` | Whether periodic message destruction is enabled on the server. |
+| `msgDestructTime` | `number` | Server retention window in seconds before destruction. |
+| `remark` | `string` | User-specific remark note for this conversation. |
+| `isMarked` | `boolean` | Whether this conversation is flagged. |
+| `ex` | `string` | Custom metadata extension string. |
+
+## State changes after the call
+
+Detach listeners using `removeConversationListListeners()` when signing out or unmounting the conversation list view. Receiving an incremental change event does not guarantee that previous unread pagination pages are complete; after reconnection or synchronization completes, re-query starting from page 1 to calibrate local view state.

@@ -5,17 +5,54 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-group-members/get-group-member-list'
 ---
 
+Invoke `getGroupMemberList:filter:offset:count:onSuccess:onFailure:` to query group members with role-based filtering and pagination:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `filter` | `OIMGroupMemberFilter` | Yes | Role-based member filter enumeration. |
+| `offset` | `NSInteger` | Yes | Pagination offset index (starts from `0`). |
+| `count` | `NSInteger` | Yes | Maximum number of member records per page. |
+
+### Member filter enumeration
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMGroupMemberFilterAll` | `0` | All group members. |
+| `OIMGroupMemberFilterOwner` | `1` | Group owner only. |
+| `OIMGroupMemberFilterAdmin` | `2` | Administrators only. |
+| `OIMGroupMemberFilterOrdinaryMember` | `3` | Regular members only. |
+| `OIMGroupMemberFilterAdminAndOrdinaryMember` | `4` | Administrators and regular members. |
+| `OIMGroupMemberFilterOwnerAndAdmin` | `5` | Group owner and administrators. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] getGroupMemberList:groupID filter:OIMGroupMemberFilterAll
-  offset:0 count:50
-  onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) { [self replaceFirstPage:members]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getGroupMemberList:@"group_1001"
+                                  filter:OIMGroupMemberFilterAll
+                                  offset:0
+                                   count:50
+                               onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
+                                   [self replaceFirstPage:members];
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"getGroupMemberList failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-When loading more, increment `offset` by the number of items requested. The iOS SDK does not provide a separate method for retrieving muted members. To identify them, retrieve members by page and inspect `muteEndTime`, which is measured in seconds.
+## Return value
+
+The `onSuccess` callback delivers an array of group member models (`NSArray<OIMGroupMemberInfo *> *`).
+
+## State changes after the call
+
+1. **Snapshot query**: This method queries a paginated slice of members without triggering delegate events. Increment `offset` by the received item count to load subsequent pages.
+2. **Mute status inspection**: The iOS SDK does not provide a dedicated query endpoint exclusively for muted members; to display muted users, inspect `muteEndTime` on each `OIMGroupMemberInfo` model (a timestamp greater than current Unix time indicates an active mute).
+3. **Event notification**: Member additions, removals, and profile changes broadcast via listener callbacks. For listener setup, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

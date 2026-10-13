@@ -5,25 +5,60 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/get-group-application-list-as-applicant'
 ---
 
-Create a `GetGroupApplicationListAsApplicantReq`, set `groupIDs`, `handleResults`, `offset`, and `count`, then pass it to the selector. The success callback returns the current user's sent applications as `OIMGroupApplicationInfo` objects.
+Invoke `getGroupApplicationListAsApplicantWithRep:onSuccess:onFailure:` to query group join applications submitted by the current user with pagination:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `GetGroupApplicationListAsApplicantReq *` | Yes | Request object containing target group IDs, status filters, and pagination parameters. |
+
+### GetGroupApplicationListAsApplicantReq properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupIDs` | `NSArray<NSString *> *` | Yes | List of target group IDs. |
+| `handleResults` | `NSArray<NSNumber *> *` | No | Status filter array wrapping `OIMApplicationStatus` values. |
+| `offset` | `NSInteger` | Yes | Pagination offset index (starts from `0`). |
+| `count` | `NSInteger` | Yes | Maximum number of items per page. |
+
+### Application status enumeration
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMApplicationStatusNormal` | `0` | Pending review (unhandled). |
+| `OIMApplicationStatusAgree` | `1` | Accepted. |
+| `OIMApplicationStatusReject` | `-1` | Rejected. |
+
+## Code example
 
 ```objc
 GetGroupApplicationListAsApplicantReq *req =
-  [[GetGroupApplicationListAsApplicantReq alloc] initWithGroupIDs:@[groupID]
-    handleResults:@[@(OIMApplicationStatusNormal)] offset:0 count:20];
+    [[GetGroupApplicationListAsApplicantReq alloc] initWithGroupIDs:@[@"group_1001"]
+                                                      handleResults:@[@(OIMApplicationStatusNormal)]
+                                                             offset:0
+                                                              count:20];
+
 [[OIMManager manager] getGroupApplicationListAsApplicantWithRep:req
-  onSuccess:^(NSArray<OIMGroupApplicationInfo *> *items) {
-    [self replaceSentApplications:items];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+                                                      onSuccess:^(NSArray<OIMGroupApplicationInfo *> *items) {
+                                                          [self replaceSentApplications:items];
+                                                      }
+                                                      onFailure:^(NSInteger code, NSString *message) {
+                                                          NSLog(@"getGroupApplicationListAsApplicant failed: %ld %@", (long)code, message);
+                                                      }];
 ```
 
-The query only establishes a snapshot and does not trigger the application delegate. For later state changes, see [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).
+## Return value
+
+The `onSuccess` callback delivers an array of application records (`NSArray<OIMGroupApplicationInfo *> *`) created by the current user.
+
+## State changes after the call
+
+1. **Snapshot query**: This method queries a paginated slice of outgoing requests without triggering delegate events.
+2. **Local state merge**: Merge items locally using `groupID:userID` as the unique composite key.
+3. **Event notification**: When submitted applications are accepted, rejected, or deleted, updates broadcast via listener callbacks. For listener setup, refer to [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).

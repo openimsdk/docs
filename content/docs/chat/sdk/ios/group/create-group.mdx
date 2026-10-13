@@ -5,17 +5,33 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/create-group'
 ---
 
-`createGroup:onSuccess:onFailure:` accepts an `OIMGroupCreateInfo`. Do not include the same user more than once across regular members, administrators, and the owner.
+Invoke `createGroup:onSuccess:onFailure:` to create a new group and configure its base information, initial members, administrators, and group owner:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupCreateInfo` | `OIMGroupCreateInfo *` | Yes | Creation request model specifying group profile metadata, member lists, and ownership. |
+
+### OIMGroupCreateInfo properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `OIMGroupBaseInfo *` | Yes | Base group metadata, including `groupName` and `groupType` (such as `OIMGroupTypeWorking`). |
+| `memberUserIDs` | `NSArray<NSString *> *` | No | Initial list of regular member user IDs. |
+| `adminUserIDs` | `NSArray<NSString *> *` | No | Initial list of administrator user IDs. |
+| `ownerUserID` | `NSString *` | No | Group owner user ID, typically the currently signed-in user. User IDs must not duplicate across member, admin, and owner assignments. |
+
+## Code example
 
 ```objc
 OIMGroupBaseInfo *base = [OIMGroupBaseInfo new];
-base.groupName = @"Project discussion";
+base.groupName = @"Project Discussion";
 base.groupType = OIMGroupTypeWorking;
 
 OIMGroupCreateInfo *request = [OIMGroupCreateInfo new];
@@ -25,10 +41,20 @@ request.adminUserIDs = @[@"user-002"];
 request.ownerUserID = currentUserID;
 
 [[OIMManager manager] createGroup:request
-    onSuccess:^(OIMGroupInfo *group) { [self openGroupWithID:group.groupID]; }
+    onSuccess:^(OIMGroupInfo *group) {
+        [self openGroupWithID:group.groupID];
+    }
     onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
+        NSLog(@"createGroup failed: %ld %@", (long)code, message);
     }];
 ```
 
-The success callback returns the new `OIMGroupInfo`. `onJoinedGroupAdded:` may arrive afterward. For the complete delegate, see [Groups overview](/sdk/ios/group/overview-group).
+## Return value
+
+The `onSuccess` callback delivers the fully initialized `OIMGroupInfo` object, including the newly assigned `groupID`.
+
+## State changes after the call
+
+1. **Local state update**: The client inserts the new group into local storage using `groupID` as the primary key.
+2. **Event notification**: Active client sessions receive notifications through the `onJoinedGroupAdded:` listener callback.
+3. **Re-query calibration**: For comprehensive group event listener configuration, refer to [Groups overview](/sdk/ios/group/overview-group).

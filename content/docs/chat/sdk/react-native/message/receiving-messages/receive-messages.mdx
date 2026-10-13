@@ -1,39 +1,49 @@
 ---
 title: 'Receive messages'
-description: 'OpenIM React Native SDK guide for receive messages.'
+description: 'Listen for real-time incoming messages, offline messages, and online-only messages using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/receiving-messages/receive-messages'
 ---
 
-When a new message arrives, `OnRecvNewMessage` is emitted with one `MessageItem`. Offline and online-only messages are delivered through `OnRecvOfflineNewMessage` and `OnRecvOnlineOnlyMessage`; all three callbacks receive a `MessageItem` directly.
+When new messages arrive in a conversation, the SDK dispatches the corresponding `MessageItem` in real time via message events across three primary scenarios:
+
+- `OnRecvNewMessage`: Standard incoming messages received while connected online (applies to both one-to-one and group chats).
+- `OnRecvOfflineNewMessage`: Historical offline messages retrieved in batches upon reconnecting to the server.
+- `OnRecvOnlineOnlyMessage`: Ephemeral instant messages flagged for online-only delivery by the sender or server (these messages are not persisted to offline history).
 
 ```ts
-function handleNewMessage(message) {
-  // ...
-}
+const handleNewMessage = (message: MessageItem) => {
+  // Identify the target conversation and deduplicate by message.clientMsgID
+};
 
-function handleOfflineMessage(message) {
-  // ...
-}
+const handleOfflineNewMessage = (message: MessageItem) => {
+  // Batch process offline messages, deduplicating by message.clientMsgID
+};
 
-function handleOnlineOnlyMessage(message) {
-  // ...
-}
+const handleOnlineOnlyMessage = (message: MessageItem) => {
+  // Handle transient online notifications or typing signals
+};
 
-// Set the listeners
+// Register listeners
 OpenIMSDK.on(OpenIMEvent.OnRecvNewMessage, handleNewMessage);
-OpenIMSDK.on(OpenIMEvent.OnRecvOfflineNewMessage, handleOfflineMessage);
+OpenIMSDK.on(OpenIMEvent.OnRecvOfflineNewMessage, handleOfflineNewMessage);
 OpenIMSDK.on(OpenIMEvent.OnRecvOnlineOnlyMessage, handleOnlineOnlyMessage);
 
-// Remove the listeners
+// Unregister listeners on cleanup
 OpenIMSDK.off(OpenIMEvent.OnRecvNewMessage, handleNewMessage);
-OpenIMSDK.off(OpenIMEvent.OnRecvOfflineNewMessage, handleOfflineMessage);
+OpenIMSDK.off(OpenIMEvent.OnRecvOfflineNewMessage, handleOfflineNewMessage);
 OpenIMSDK.off(OpenIMEvent.OnRecvOnlineOnlyMessage, handleOnlineOnlyMessage);
 ```
 
-Use `clientMsgID` to identify messages. Remove the listeners when the component is destroyed, the account signs out, or the account changes.
+## Client state reconciliation
+
+When receiving incoming messages:
+
+1. Identify the target conversation context (e.g. from the active chat view or session metadata).
+2. Deduplicate and merge messages into your local message cache using `clientMsgID` as the primary key to prevent duplicate entries caused by network retries or multi-device synchronization.
+3. Always unregister event listeners using identical function references when unmounting chat components, logging out, or switching accounts.

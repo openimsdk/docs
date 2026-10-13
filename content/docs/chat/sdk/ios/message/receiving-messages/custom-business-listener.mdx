@@ -5,18 +5,40 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/receiving-messages/custom-business-listener'
 ---
 
-Your application must retain a strong reference to the same `OIMCustomBusinessListener` instance:
+The custom business message listener receives server-pushed business notifications or custom signaling data. Unlike custom chat messages delivered within regular conversations, these notifications are typically used for audio/video room signaling, real-time control directives, or custom cross-device state synchronization.
+
+## Register and remove the listener
+
+Retain a strong reference to your `OIMCustomBusinessListener` instance in your state management layer, and unregister it when the session ends or during logout:
 
 ```objc
+// Register the custom business message listener
 [[OIMManager callbacker] addCustomBusinessListener:businessListener];
-// When the account scope ends:
+
+// Remove the listener when destroying components or signing out
 [[OIMManager callbacker] removeCustomBusinessListener:businessListener];
 ```
 
-The dictionary supplied to `onRecvCustomBusinessMessage:` may be `nil`. When it is present, still validate the ID, type, version, and fields defined by your protocol, then merge it by an application-specific idempotency key. Regular custom chat messages continue to arrive through the new-message delegate.
+## Event callback handling
+
+In your class conforming to `OIMCustomBusinessListener`, implement the message reception callback:
+
+```objc
+- (void)onRecvCustomBusinessMessage:(NSString * _Nullable)businessMessage {
+    if (businessMessage.length == 0) {
+        return;
+    }
+    // Parse business JSON payload and dispatch accordingly
+}
+```
+
+## State changes after the call
+
+1. **Payload verification**: The message string supplied to the callback may be `nil` or empty. Validate the JSON protocol version, message type, and mandatory fields before consumption.
+2. **Idempotency handling**: Process business actions using application-level idempotency identifiers (such as a business transaction ID or serial number) to prevent duplicate execution.
+3. **Regular custom messages**: Custom messages sent within regular conversations (such as red packets, stickers, or contact cards) arrive through the standard message listener instead. See [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

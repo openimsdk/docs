@@ -1,23 +1,53 @@
 ---
 title: 'Search groups'
-description: 'Use searchGroups to search locally available groups by group ID or name.'
+description: 'Search local group records by keywords matching group ID or group name using searchGroups().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/retrieving-groups/search-groups'
 ---
 
-`searchGroups()` accepts a keyword list and separate switches for searching group IDs and group names. If both switches are disabled, there is no valid search scope.
+Search local group records by keywords matching group IDs or group names. Configure individual boolean toggles to enable or disable search targets.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.searchGroups(new OnBase<List<GroupInfo>>() {
-    @Override public void onSuccess(List<GroupInfo> groups) { /* groups contains the matches. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, Collections.singletonList(keyword), true, true);
+List<String> keywordList = Collections.singletonList("Engineering");
+boolean isSearchGroupID = true;
+boolean isSearchGroupName = true;
+
+OpenIMClient.getInstance().groupManager.searchGroups(
+    new OnBase<List<GroupInfo>>() {
+        @Override
+        public void onSuccess(List<GroupInfo> groups) {
+            // groups contains matching group records
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle search failure
+        }
+    },
+    keywordList,
+    isSearchGroupID,
+    isSearchGroupName
+);
 ```
 
-The current user is not necessarily a member of a group returned by `searchGroups()`. See [Check whether the current user has joined a group](/sdk/android/group/retrieving-groups/is-join-group) to determine whether they are a member.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupInfo>>` | Yes | Callback delivering the asynchronous operation result. |
+| `keywordList` | `List<String>` | Yes | List of query keyword strings. Avoid querying with empty keywords or when both toggles are `false`. |
+| `isSearchGroupID` | `boolean` | Yes | Whether to search against group IDs: `true` to include, `false` to exclude. |
+| `isSearchGroupName` | `boolean` | Yes | Whether to search against group names: `true` to include, `false` to exclude. |
+
+## Return value
+
+The successful callback returns a `List<GroupInfo>` containing all matching group records.
+
+Search results reflect a local matching snapshot at query execution time. Returned groups do not necessarily indicate that the user has joined them; to verify membership, call [Check group membership](/sdk/android/group/retrieving-groups/is-join-group).

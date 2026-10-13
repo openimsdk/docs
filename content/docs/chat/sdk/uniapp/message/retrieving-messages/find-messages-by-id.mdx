@@ -1,17 +1,52 @@
 ---
 title: 'Find messages by ID'
-description: 'OpenIM uni-app / uni-app x SDK guide for Find messages by ID.'
+description: 'Retrieve specific local messages by conversation ID and client message IDs.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/retrieving-messages/find-messages-by-id'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When navigating to messages from search hits, quote reply references, or push notification intents, retain both `conversationID` and `clientMsgID`. Invoke `findMessageList()` with an array of query descriptors to look up exact message records stored in the local database.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+The method accepts an array of query objects, each scoped to a single conversation:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the conversation containing the target messages. |
+| `clientMsgIDList` | `string[]` | Yes | Array of `clientMsgID` values to locate within that conversation. |
+
+## Code example
+
+```uts
+import { findMessageList } from '@/uni_modules/unix-openim-sdk'
+
+const result = await findMessageList([{
+  conversationID: conversationID,
+  clientMsgIDList: [clientMsgID],
+}])
+
+if (
+  result != null &&
+  result.findResultItems.length > 0 &&
+  result.findResultItems[0].messageList.length > 0
+) {
+  const targetMessage = result.findResultItems[0].messageList[0]
+  showMessage(targetMessage)
+}
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMFindMessageResult | null` object. The `totalCount` property indicates total matches found across all requested conversations. The `findResultItems` array (`OpenIMFindResultItem[]`) groups returned messages by conversation, providing `conversationID`, display metadata, `messageCount`, and `messageList` (`OpenIMMessageItem[]`).
+
+A single invocation can query multiple conversations concurrently. Do not assume positional correspondence between the input array and `findResultItems`; always match entries using `conversationID` and locate individual items using `clientMsgID`.
+
+## State changes after the call
+
+If a message has not yet synchronized locally, was permanently deleted, or was never created, the returned list for that entry is empty. This call performs a read-only query and does not emit message events.

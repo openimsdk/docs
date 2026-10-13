@@ -1,23 +1,52 @@
 ---
-title: 'Change group mute status'
-description: 'Use the Android SDK to enable or disable mute-all mode for a group.'
+title: 'Mute or unmute a group'
+description: 'Enable or disable group-wide mute mode using changeGroupMute().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/change-group-mute'
 ---
 
-Use `changeGroupMute()` to toggle mute-all mode. Pass `true` to enable it or `false` to disable it. To mute one member, see [Mute or unmute a group member](/sdk/android/group/managing-group-members/change-group-member-mute).
+Enable or disable mute mode for the entire group. This operation is typically restricted to group owners and administrators. When group-wide mute is enabled, regular members cannot post messages, while owners and administrators can continue chatting. To mute an individual member instead, see [Mute or unmute a group member](/sdk/android/group/managing-group-members/change-group-member-mute).
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.changeGroupMute(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID, true);
+String groupID = "group_123";
+boolean isMute = true; // true to mute all members, false to unmute
+
+OpenIMClient.getInstance().groupManager.changeGroupMute(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group mute status updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle failure
+        }
+    },
+    groupID,
+    isMute
+);
 ```
 
-A successful callback means that the setting request completed; it does not mean that every client has updated its UI. `onGroupInfoChanged` provides the updated `GroupInfo`. Merge it by `groupID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `groupID` | `String` | Yes | Target group ID. |
+| `isMute` | `boolean` | Yes | Pass `true` to mute all regular members, or `false` to unmute the group. |
+
+## Return value
+
+The successful callback confirms that the mute setting was updated on the server.
+
+## State changes after the call
+
+A successful callback confirms that the server updated group-wide mute configuration. Group members subsequently receive the `onGroupInfoChanged(GroupInfo group)` event via `OnGroupListener`. Inspect the updated `status` mute flag, merge group state using `groupID`, and enable or disable the chat input bar accordingly. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

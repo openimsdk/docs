@@ -1,50 +1,49 @@
 ---
-title: 'Audio and video calling overview'
-description: 'Learn about call signaling, room data, and event boundaries in the OpenIM Flutter SDK.'
+title: 'Audio and video calls overview'
+description: 'Understand VoIP calling signaling, room information, and event boundaries in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
-template: 'guide'
+template: 'overview'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/overview-calling'
 ---
 
-The OpenIM Flutter SDK's `SignalingManager` provides the signaling APIs needed to start, accept, reject, cancel, and hang up calls, retrieve rooms, and synchronize call state. It coordinates who joins which room and the call lifecycle. It does not capture the camera, play remote media streams, or render the call interface.
+The OpenIM Flutter SDK's `SignalingManager` provides signaling APIs for initiating, accepting, rejecting, cancelling, hanging up, querying rooms, and synchronizing call states. It coordinates participant entry into rooms and manages call session lifecycles; it does not capture camera video, play remote audio/video tracks, or render call UI components.
 
-Pass the `roomID`, `token`, and `liveURL` returned by the SDK to the selected real-time audio/video media engine. The application handles device permissions, media tracks, weak-network behavior, and UI state. OpenIM Flutter SDK provides call signaling here, not a complete real-time media implementation.
+Pass the `roomID`, `token`, and `liveURL` returned by the SDK to your chosen WebRTC/live media engine (such as LiveKit). Your application manages device hardware permissions, audio/video track capture, network fallback policies, and UI views. The OpenIM Flutter SDK provides call signaling orchestration rather than standalone media streaming pipelines.
 
-## Call flow
+## Calling lifecycle workflow
 
-1. Call `signalingInvite()` to start a one-to-one call or `signalingInviteInGroup()` to start a group call.
-2. The invitee receives `SignalingInfo` through `onReceiveNewInvitation` and chooses whether to accept or reject it.
-3. The accepting client calls `signalingAccept()`, then both sides use the returned room credentials to connect their media engines.
-4. During the call, update local state from participant, media-stream, and custom-signaling listeners.
-5. The initiator can cancel an unanswered invitation. Any participant can hang up an established call.
+1. Call [Start a single call](/sdk/flutter/calling/managing-calls/start-single-call) or [Start a group call](/sdk/flutter/calling/managing-calls/start-group-call).
+2. The invitee receives an invitation notification in [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events), extracts `SignalingInfo`, and decides whether to accept or reject.
+3. The callee calls [Accept a call](/sdk/flutter/calling/managing-calls/accept-call). Both parties connect to the media server using the returned room credentials.
+4. Update local state as participants, media streams, and custom signals arrive via listeners during the call.
+5. The initiator can cancel an unanswered invitation; any connected participant can hang up an active call.
 
-## Core data
+## Core data structures
 
-| Data                     | Description                                                                                                                       |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `InvitationInfo`         | Inviter, invitees, group, room, media type, timeout, and conversation type. All fields are nullable and must be validated in listeners. |
-| `SignalingInfo`          | Operator `userID`, original `invitation`, and optional `offlinePushInfo`.                                                          |
-| `SignalingCertificate`   | `roomID`, `token`, `liveURL`, and busy-user list returned by OpenIMServer.                                                         |
-| `RoomCallingInfo`        | Room, invitation, participants, and join credentials retrieved for a group.                                                       |
+| Structure | Description |
+| --- | --- |
+| `InvitationInfo` | Inviter, invitee list, group ID, room ID, media type, timeout, and session type. Fields are nullable in Dart; validate them when handling callbacks. |
+| `SignalingInfo` | Operator `userID`, the full `invitation` payload, and optional `offlinePushInfo`. |
+| `SignalingCertificate` | Room credentials returned by OpenIMServer, including `roomID`, `token`, `liveURL`, and busy user lists. |
+| `RoomCallingInfo` | Group call status including room details, invitations, active participants, and access credentials. |
 
-`customData` is not a field on Flutter's `InvitationInfo`. Use room custom signaling for application negotiation data; it is intended for lightweight, temporary coordination and does not provide file transfer or durable state storage.
+`customData` is not a property of the Flutter `InvitationInfo` model. For lightweight negotiation during a call, send custom signaling messages within the room. Custom signaling is intended for temporary in-call coordination, not persistent data storage or file transfer.
 
-## State updates and event ownership
+## State synchronization and event boundaries
 
-For write operations such as invite, accept, reject, cancel, and hang up, handle the Future and listener separately. Future completion means that the current signaling request completed. A listener represents an incremental state observed by the inviter, invitee, another device, or a room participant. They are not the same completion signal.
+State-modifying operations (initiating, accepting, rejecting, cancelling, and hanging up) require handling both the Future and listener callbacks. Future completion signifies that the signaling request reached the server; listener events reflect asynchronous state transitions received across participants and other devices.
 
-See [Call events](/sdk/flutter/calling/managing-calls/handle-call-events) for the complete invitation lifecycle, participant, hang-up, and media-stream listener. See [Send a custom signal](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal) for custom signaling. Room and credential queries return snapshots only through their Futures and are documented in the three pages under **Call information**.
+Listen to invitation lifecycles, participant joins/leaves, hang-ups, and stream changes in [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events). For in-room messaging, see [Send a custom signal](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal). Room and token queries return snapshot data at invocation time via Futures and are documented under the call information guides.
 
-Do not configure a listener on this overview page. Use `roomID` as the primary key for call state and combine it with user IDs for participant state. Re-query room information whenever the current room snapshot is required.
+Manage call listeners centrally in [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events). Use `roomID` as the primary merge key, qualified by participant `userID`. When rendering room membership, query fresh room status snapshots to reconcile UI state.
 
-## Related pages
+## Related guides
 
-- [Start a one-to-one call](/sdk/flutter/calling/managing-calls/start-single-call)
-- [Call events](/sdk/flutter/calling/managing-calls/handle-call-events)
-- [Restore an invitation received before startup](/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation)
+- [Start a single call](/sdk/flutter/calling/managing-calls/start-single-call)
+- [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events)
+- [Restore pending invitations](/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation)
 - [Send a custom signal](/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal)

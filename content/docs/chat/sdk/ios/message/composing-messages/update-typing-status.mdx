@@ -5,21 +5,40 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/composing-messages/update-typing-status'
 ---
 
-Pass `YES` when typing starts. Pass `NO` after sending, losing focus, switching conversations, or stopping input:
+When the user begins typing text in the input bar or ceases input, invoke `changeInputStates:focus:onSuccess:onFailure:` on `OIMManager` to synchronize the typing indicator with remote members in the conversation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `focus` | `BOOL` | Yes | Input focus flag. Pass `YES` when input commences; pass `NO` when the message is sent, focus is lost, the conversation switches, or typing halts. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the server accepted the typing status request. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] changeInputStates:conversationID
                                   focus:YES
-                              onSuccess:nil
-                              onFailure:nil];
+                              onSuccess:^(NSString * _Nullable data) {
+    // Typing indicator reported successfully
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle reporting failure
+}];
 ```
 
-Typing status is scoped to `conversationID`; it does not save a draft or add an item to the message list. Throttle the start-typing call and deduplicate repeated state. A successful callback means only that the server accepted the request, not that the remote UI has updated.
+## Return value
 
-Merge typing changes from `OIMConversationListener.onConversationUserInputStatusChanged:`. Replace the `platformIDs` snapshot by `conversationID:userID`. For complete listener registration and cleanup, see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).
+The `onSuccess` callback confirms that the server accepted the input state change. The response data does not return a persistent record.
+
+## State changes after the call
+
+1. **Ephemeral nature**: Typing status is a transient state scoped to `conversationID`. It is not stored in the database, does not create drafts, and is not recorded in conversation history. Debounce or throttle start-typing invocations to avoid excessive network overhead.
+2. **Receiving typing updates**: Counterparties receive typing updates through `onConversationUserInputStatusChanged:` in `OIMConversationListener`, which tracks active input platform IDs keyed by composite identity `conversationID:userID`. For complete conversation listener setup and teardown, see [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list). To actively poll input states, see [Retrieve typing status](/sdk/ios/message/composing-messages/get-typing-status).

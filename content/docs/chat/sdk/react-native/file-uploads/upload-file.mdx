@@ -1,16 +1,16 @@
 ---
 title: 'Upload a file'
-description: 'Upload a file independently and obtain its remote URL with OpenIM React Native SDK.'
+description: 'Upload local files independently and obtain remote resource URLs with the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/file-uploads/upload-file'
 ---
 
-Use `uploadFile()` to upload a local file independently. You can use it for avatars, group avatars, profile attachments, or other business files.
+Upload device local files to the OpenIMServer storage backend (such as MinIO or third-party cloud object storage). Upon successful upload, the SDK returns a publicly accessible resource URL, commonly used to update user avatars, configure group avatars, or pre-upload media assets before creating URL-based messages.
 
 ```ts
 const { url } = await OpenIMSDK.uploadFile({
@@ -26,26 +26,44 @@ const { url } = await OpenIMSDK.uploadFile({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `name` | `string` | Yes | The file name used for the upload. |
-| `contentType` | `string` | Yes | The MIME type of the file. |
-| `uuid` | `string` | Yes | The business identifier for this upload. |
-| `cause` | `string` | No | The business-defined reason for the upload. |
-| `filepath` | `string` | Yes | A local file path that the app can read. |
+| `name` | `string` | Yes | Target file name for the upload. |
+| `contentType` | `string` | Yes | MIME type of the file (e.g., `image/png`, `video/mp4`). |
+| `uuid` | `string` | Yes | Unique business identifier for tracking this upload task. |
+| `cause` | `string` | No | Business reason tag (such as `user-avatar` or `group-avatar`). |
+| `filepath` | `string` | Yes | Absolute path to the local file readable within the application sandbox. |
 
-When the call completes, it returns the remote resource URL in `url`. You can use the URL to update an avatar, store a business attachment, or create and send a URL-based media message.
+## Return value
+
+Resolves to an object containing the remote URL: `{ url: string }`.
+
+- Use the returned `url` to update user profiles via [Update current user profile](/sdk/react-native/user/profile/set-self-info).
+- Or pass it to create URL-based media messages and send them via [Send pre-uploaded media messages](/sdk/react-native/message/sending-messages/send-message-not-oss).
 
 ## Listen for upload status
 
-`UploadOnProgress` is triggered during the upload. Its callback parameter includes the uploaded amount in `current` and the total file size in `size`. `UploadComplete` is triggered when the upload completes. Its callback parameter's `data` includes `fileSize`, `streamSize`, and `storageSize`.
+When uploading large files, monitor upload progress and completion events:
 
 ```ts
-function handleUploadProgress({ current, size }) {
-  // ...
+interface UploadProgressPayload {
+  current: number;
+  size: number;
 }
 
-function handleUploadComplete({ data }) {
-  // ...
+interface UploadCompletePayload {
+  data: {
+    fileSize: number;
+    streamSize: number;
+    storageSize: number;
+  };
 }
+
+const handleUploadProgress = ({ current, size }: UploadProgressPayload) => {
+  // Update upload progress percentage in UI
+};
+
+const handleUploadComplete = ({ data }: UploadCompletePayload) => {
+  // Handle post-upload completion logic
+};
 
 // Register listeners
 OpenIMSDK.on(OpenIMEvent.UploadOnProgress, handleUploadProgress);
@@ -56,4 +74,4 @@ OpenIMSDK.off(OpenIMEvent.UploadOnProgress, handleUploadProgress);
 OpenIMSDK.off(OpenIMEvent.UploadComplete, handleUploadComplete);
 ```
 
-Remove the listeners when the component is destroyed, the user signs out, or the account changes.
+Remove these listeners when the component unmounts, the user logs out, or accounts switch.

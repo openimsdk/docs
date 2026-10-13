@@ -5,11 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/set-group-announcement'
 ---
+
+Invoke `setGroupInfoDictionary:onSuccess:onFailure:` to publish or update a group announcement (typically restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing the target `groupID` and modified key-value pairs. |
+
+### Dictionary keys
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `notification` | `NSString *` | Yes | Group announcement text. Pass an empty string to clear the current announcement. Note that this uses the `notification` key rather than `introduction`. |
+
+## Code example
 
 ```objc
 NSDictionary *changes = @{
@@ -18,10 +34,20 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"setGroupInfoDictionary success");
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        NSLog(@"setGroupInfoDictionary failed: %ld %@", (long)code, message);
+    }];
 ```
 
-`notification` is the group announcement and is distinct from the group description in `introduction`. Pass an empty string to clear the announcement. OpenIMServer performs the final permission check.
+## Return value
 
-The success callback, arrival of `onGroupInfoChanged:`, and a new query are three separate stages. For the complete delegate, see [Groups overview](/sdk/ios/group/overview-group).
+The `onSuccess` callback returns confirmation when the server accepts the announcement update.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the local cached group's announcement text matching `groupID`.
+2. **Event notification**: All members in the group receive an updated `OIMGroupInfo` object through the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: To verify group state immediately, call `getSpecifiedGroupsInfo:onSuccess:onFailure:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

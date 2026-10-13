@@ -1,118 +1,129 @@
-## S3 storage integration
+## S3 object storage configuration
 
-- OpenIMSDK supports integration with multiple S3 storage services, including: MinIO, Alibaba Cloud OSS, Tencent Cloud COS, Qiniu KODO, and AWS, providing developers with a wide range of choices.
-- Files are uploaded directly from the SDK to S3 storage, bypassing the API server, which significantly improves server-side performance.
-- The API address called during access only redirects requests to the actual S3 storage address. Business-related permission checks can be added at this stage to ensure data security and business flexibility.
-- When using an Nginx proxy for the API, add `proxy_set_header X-Request-Api $scheme://$host/api;`. See [Domain configuration](../deployment/domain).
-- Integration with other S3 storage types is also fully supported. You only need to implement the corresponding interface on the server side — no SDK modifications required. [Interface Source](https://github.com/openimsdk/tools/blob/main/s3/s3.go)
+OpenIMSDK supports multiple S3-compatible object storage providers: MinIO, Alibaba Cloud OSS, Tencent Cloud COS, Qiniu KODO, and Amazon S3 (AWS).
 
-- Modify `object.enable: <name>` in the `config/openim-rpc-third.yml` file to `minio`, `oss`, `cos`, `kodo`, or `aws`. Default is `minio`.
+- **Direct client uploads:** The SDK uploads media files directly to the S3 bucket via pre-signed URLs, bypassing the API gateway to maximize server throughput and reduce network bottlenecks.
+- **Access redirection & authorization:** Requests routed through the API gateway validate caller permissions and issue HTTP redirects to the real object storage location.
+- **Nginx reverse proxy:** When routing API traffic through Nginx, configure `proxy_set_header X-Request-Api $scheme://$host/api;`. For complete reverse proxy examples, see [Domain configuration](../deployment/domain).
+- **Custom S3 providers:** To integrate an unlisted S3-compatible storage backend, implement the server interface in OpenIM tools without modifying client SDKs. See [s3.go interface definition](https://github.com/openimsdk/tools/blob/main/s3/s3.go).
+
+Set the `object.enable` field in `config/openim-rpc-third.yml` to your chosen provider: `minio`, `oss`, `cos`, `kodo`, or `aws` (default: `minio`).
+
 ```yaml
 object:
   enable: minio
 ```
 
-# MinIO
+## MinIO
 
-1. Edit `externalAddress` in `config/minio.yml` to your application's access address. The server does not need to be able to access this address.
-2. For MinIO behind Nginx, see [Domain configuration](../deployment/domain).
+1. Set `externalAddress` in `config/minio.yml` to your application's public access URL. OpenIMServer does not need direct network reachability to this address; it uses it only to construct signature URLs for clients.
+2. For Nginx reverse proxy configuration with MinIO, see [Domain configuration](../deployment/domain).
+
 ```yaml
-# Bucket name for storing and managing files.
+# Target bucket name for file storage
 bucket: openim
-# Access key ID for authentication.
+# Access key ID for MinIO authentication
 accessKeyID: root
-# Secret access key for authentication.
+# Secret access key for MinIO authentication
 secretAccessKey: openIM123
-# Session token, required if using temporary credentials.
+# Session token (required only when using temporary STS credentials)
 sessionToken:
-# Internal server address, used only for internal server calls, typically a LAN address.
+# Internal service address used strictly for backend RPC calls (typically a private IP or container host)
 internalAddress: localhost:10005
-# External server address, accessible from outside, supports HTTP and HTTPS with domain names. Ensure this address is accessible by clients. The server does not need to access this address — it is only used for signing.
+# Publicly accessible endpoint (HTTP/HTTPS domain or public IP) reachable by client applications
 externalAddress: http://external_ip:10005
-# Whether to enable public read access for the bucket. When set to true, the bucket will be automatically changed to public read. Setting it back to false will NOT revert to private.
+# Whether to enable public read permissions on the bucket. When set to true, the bucket is switched to public read. Setting to false does not automatically revert bucket ACL to private.
 publicRead: false
 ```
 
-# Alibaba Cloud OSS
-1. OSS bucket creation: https://oss.console.aliyun.com/bucket
-2. AccessKey generation: https://ram.console.aliyun.com/profile/access-keys
-3. Official documentation: https://help.aliyun.com/zh/oss/developer-reference/overview-25/?spm=a2c4g.11186623.0.i3
-4. Edit `object.oss` in `config/openim-rpc-third.yml`.
+## Alibaba Cloud OSS
+
+1. Create a bucket in the [Alibaba Cloud OSS Console](https://oss.console.aliyun.com/bucket).
+2. Generate API credentials in the [Alibaba Cloud RAM Console](https://ram.console.aliyun.com/profile/access-keys).
+3. Refer to the [Alibaba Cloud OSS Developer Guide](https://help.aliyun.com/zh/oss/developer-reference/overview-25/) for architecture details.
+4. Configure `object.oss` in `config/openim-rpc-third.yml`:
+
 ```yaml
-# OSS data center endpoint, e.g., http://oss-cn-hangzhou.aliyuncs.com
+# OSS regional endpoint, e.g., http://oss-cn-hangzhou.aliyuncs.com
 endpoint:
-# Bucket name for storing and managing files.
+# Target bucket name
 bucket:
-# Bucket's external access URL, typically an accelerated access address.
+# Publicly accessible URL for the bucket (such as a CDN accelerated domain)
 bucketURL:
-# Access key ID for authentication.
+# Access key ID
 accessKeyID:
-# Secret access key for authentication.
+# Access key secret
 accessKeySecret:
-# Session token, required if using temporary credentials.
+# Session token (required only when using temporary STS credentials)
 sessionToken:
-# Public read mode. Recommended to set to false, otherwise Content-Type and filename cannot be set for downloads. If set to true, configure these in the OSS management console.
+# Public read mode. Recommended to keep false so the API can set Content-Type and download file names. If set to true, manage headers in the OSS console.
 publicRead: false
 ```
 
-# Tencent Cloud COS
-1. COS bucket creation: https://console.cloud.tencent.com/cos5/bucket
-2. AccessKey generation: https://console.cloud.tencent.com/cam/capi
-3. Official documentation: https://cloud.tencent.com/document/product/436/7751
-4. Edit `object.cos` in `config/openim-rpc-third.yml`.
+## Tencent Cloud COS
+
+1. Create a bucket in the [Tencent Cloud COS Console](https://console.cloud.tencent.com/cos5/bucket).
+2. Generate API credentials in the [Tencent Cloud CAM Console](https://console.cloud.tencent.com/cam/capi).
+3. Refer to the [Tencent Cloud COS Documentation](https://cloud.tencent.com/document/product/436/7751) for detailed instructions.
+4. Configure `object.cos` in `config/openim-rpc-third.yml`:
+
 ```yaml
-# Bucket URL Endpoint, e.g., https://temp-1252357374.cos.ap-chengdu.myqcloud.com
+# Bucket endpoint URL, e.g., https://temp-1252357374.cos.ap-chengdu.myqcloud.com
 bucketURL:
-# Secret ID for authentication.
+# Secret ID for authentication
 secretID:
-# Secret key for authentication.
+# Secret key for authentication
 secretKey:
-# Session token, required if using temporary credentials.
+# Session token (required only when using temporary STS credentials)
 sessionToken:
-# Public read mode. Recommended to set to false, otherwise Content-Type and filename cannot be set for downloads. If set to true, configure these in the COS management console.
+# Public read mode. Recommended to keep false so download Content-Type and file names can be specified. If set to true, configure them in the COS console.
 publicRead: false
 ```
 
-# Qiniu KODO
-1. KODO bucket creation: https://portal.qiniu.com/kodo/bucket
-2. AccessKey generation: https://portal.qiniu.com/developer/user/key
-3. Official documentation: https://developer.qiniu.com/kodo/1644/security
-4. Edit `object.kodo` in `config/openim-rpc-third.yml`.
+## Qiniu KODO
+
+1. Create a bucket in the [Qiniu Cloud KODO Console](https://portal.qiniu.com/kodo/bucket).
+2. Generate API keys in the [Qiniu Cloud Key Management Console](https://portal.qiniu.com/developer/user/key).
+3. Refer to the [Qiniu Cloud Security Documentation](https://developer.qiniu.com/kodo/1644/security) for credential setup.
+4. Configure `object.kodo` in `config/openim-rpc-third.yml`:
+
 ```yaml
-# Qiniu KODO endpoint, e.g., http://s3.cn-south-1.qiniucs.com
+# Qiniu KODO regional endpoint, e.g., http://s3.cn-south-1.qiniucs.com
 endpoint:
-# Bucket name for storing and managing files.
+# Target bucket name
 bucket: kodo-bucket-test
-# Bucket URL Endpoint, e.g., http://kodo-bucket-test-oetobfb.qiniudns.com
+# Publicly accessible bucket domain, e.g., http://kodo-bucket-test-oetobfb.qiniudns.com
 bucketURL:
-# Access key ID for authentication.
+# Access key ID
 accessKeyID:
-# Secret access key for authentication.
+# Secret access key
 accessKeySecret:
-# Session token, required if using temporary credentials.
+# Session token (required only when using temporary STS credentials)
 sessionToken:
-# Public read mode. Recommended to set to false, otherwise Content-Type and filename cannot be set for downloads. Configure these in the KODO management console.
+# Public read mode. Recommended to keep false to allow setting Content-Type and download file names.
 publicRead: false
 ```
 
-# AWS
-1. Region documentation: http://docs.aws.amazon.com/general/latest/gr/rande.html
-2. AWS S3 bucket creation: https://s3.console.aws.amazon.com/s3/home
-3. AccessKey generation: https://console.aws.amazon.com/iam/home?#/security_credentials
-4. Official documentation: https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html
-5. AWS does not currently support generating thumbnails via URL parameters.
-Edit `object.aws` in `config/openim-rpc-third.yml`.
+## Amazon S3 (AWS)
+
+1. Review available endpoints in the [AWS Regional Service Endpoints guide](https://docs.aws.amazon.com/general/latest/gr/rande.html).
+2. Create an S3 bucket in the [AWS S3 Console](https://s3.console.aws.amazon.com/s3/home).
+3. Generate credentials in the [AWS IAM Security Credentials Console](https://console.aws.amazon.com/iam/home?#/security_credentials).
+4. Refer to the [Amazon S3 User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) for configuration best practices.
+5. *Note: AWS S3 does not currently support dynamic thumbnail generation via URL parameters.*
+6. Configure `object.aws` in `config/openim-rpc-third.yml`:
+
 ```yaml
-# Region for sending requests, see: http://docs.aws.amazon.com/general/latest/gr/rande.html
+# Target AWS region identifier, e.g., us-east-1
 region:
-# Bucket name for storing and managing files.
+# Target bucket name
 bucket:
-# Access key ID for authentication.
+# Access key ID
 accessKeyID:
-# Secret access key for authentication.
+# Secret access key
 secretAccessKey:
-# Session token, required if using temporary credentials.
+# Session token (required only when using temporary IAM session credentials)
 sessionToken:
-# Public read mode. Currently does not support setting to true.
+# Public read mode. Setting to true is currently unsupported for AWS S3.
 publicRead: false
 ```

@@ -1,19 +1,20 @@
 ---
 title: 'Start a group call'
-description: 'Start a group audio or video call with the Android SDK.'
+description: 'Initiate a group audio or video call and acquire room credentials using signalingInviteInGroup().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/start-group-call'
 ---
 
-`signalingInviteInGroup()` starts a group call and uses the same parameter types as [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call). For group calls, `invitation.groupID` must contain the group ID and `invitation.sessionType` is always `ConversationType.GROUP_CHAT`.
+Initiate a group audio or video call within a group conversation. The parameter models match those of [Start a single call](/sdk/android/calling/managing-calls/start-single-call), except `invitation.groupID` requires a valid group ID and `invitation.sessionType` is set to `ConversationType.GROUP_CHAT`.
 
-Only members in `inviteeUserIDList` are invited; setting `groupID` does not invite every group member automatically. Exclude the current user, empty IDs, and duplicates from the list. This example uses the group ID as the room ID; if you generate a separate `roomID`, every participant must use the same value.
+Only group members explicitly specified in `inviteeUserIDList` receive invitations; providing a `groupID` does not automatically ring all members of the group. Exclude the current user ID, empty values, and duplicates from `inviteeUserIDList`. In the example below, the group ID is reused as the room ID; if you generate custom `roomID` values, ensure all participants join the same identifier.
+
+## Code example
 
 ```java
 SignalingInvitationInfo invitation = new SignalingInvitationInfo();
@@ -35,7 +36,7 @@ OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
     new OnBase<SignalingCertificate>() {
         @Override
         public void onSuccess(SignalingCertificate credentials) {
-            // credentials contains the media room credentials.
+            // credentials contains room token and liveURL to join the media room.
         }
 
         @Override
@@ -47,6 +48,36 @@ OpenIMClient.getInstance().signalingManager.signalingInviteInGroup(
 );
 ```
 
-The success callback returns `SignalingCertificate`. `roomID` is the media room ID, `token` is the short-lived credential for joining it, `liveURL` is the media service address, and `busyLineUserIDList` lists busy users. Busy users do not prevent invitations to the remaining members, and a successful callback does not mean that any member has accepted.
+## Parameters
 
-Connect to the media room only after obtaining a valid `token` and `roomID`. A successful API call does not mean the invitees have accepted; merge subsequent state through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<SignalingCertificate>` | Yes | Callback delivering room credentials needed to connect to the media engine. |
+| `info` | `SignalingInfo` | Yes | Complete signaling payload containing group ID, invitee list, room ID, and media type. |
+
+### Invitation attributes
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `inviterUserID` | `String` | Initiator user ID (authenticated user). |
+| `inviteeUserIDList` | `List<String>` | List of invited member user IDs, excluding the caller and deduplicated. Populating `groupID` does not automatically invite all group members. |
+| `groupID` | `String` | Target group ID for the group call. |
+| `roomID` | `String` | Call room identifier, such as the `groupID` or a random UUID. |
+| `timeout` | `int` | Invitation timeout in seconds. |
+| `mediaType` | `String` | Media type string, such as `"audio"` or `"video"`. |
+| `sessionType` | `int` | Session type; set to `ConversationType.GROUP_CHAT` for group calls. |
+
+## Return value
+
+Upon success, `credentials` in `onSuccess` returns a `SignalingCertificate` object containing:
+
+- `roomID`: Unique global identifier of the call room.
+- `token`: Authentication token used to join the media room.
+- `liveURL`: Media server endpoint URL.
+- `busyLineUserIDList`: List of invited members currently engaged in another call.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the signaling request succeeded and room credentials were acquired. It does not indicate that invited group members have answered or connected to the media engine.
+2. **Asynchronous event delivery**: The initiator and invited members track subsequent call events through `OnSignalingListener`. Track the group call room state using `roomID` and track individual member response and connectivity states using `roomID:userID`.
+3. **Media connection**: Connect to the real-time audio/video engine using the returned `token` and `roomID`. For real-time event updates, see [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

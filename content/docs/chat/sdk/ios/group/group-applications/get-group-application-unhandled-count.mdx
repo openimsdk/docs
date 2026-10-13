@@ -5,18 +5,45 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/get-group-application-unhandled-count'
 ---
 
+Invoke `getGroupApplicationUnhandledCount:onSuccess:onFailure:` to count pending join applications submitted after a specific timestamp, typically used for badges and notification counters:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `GetGroupApplicationUnhandledCountReq *` | Yes | Request object containing the filter timestamp. |
+
+### GetGroupApplicationUnhandledCountReq properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `time` | `NSInteger` | Yes | Cutoff start timestamp for counting applications. Pass `0` to count all pending join applications. |
+
+## Code example
+
 ```objc
 GetGroupApplicationUnhandledCountReq *req =
-  [[GetGroupApplicationUnhandledCountReq alloc] initWithTime:0];
+    [[GetGroupApplicationUnhandledCountReq alloc] initWithTime:0];
+
 [[OIMManager manager] getGroupApplicationUnhandledCount:req
-  onSuccess:^(NSInteger count) { [self updateBadge:count]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+                                              onSuccess:^(NSInteger count) {
+                                                  [self updateApplicationBadge:count];
+                                              }
+                                              onFailure:^(NSInteger code, NSString *message) {
+                                                  NSLog(@"getGroupApplicationUnhandledCount failed: %ld %@", (long)code, message);
+                                              }];
 ```
 
-`time` is the starting point for the query. The success callback returns a count and does not modify any application state.
+## Return value
+
+The `onSuccess` callback delivers the total count of pending group applications as an `NSInteger`.
+
+## State changes after the call
+
+1. **Read-only query**: This method queries an aggregate count without modifying application status or triggering delegate callbacks.
+2. **Operations and details**: To inspect or resolve pending applications, refer to [Retrieve received group applications](/sdk/ios/group/group-applications/get-group-application-list-as-recipient) and [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).

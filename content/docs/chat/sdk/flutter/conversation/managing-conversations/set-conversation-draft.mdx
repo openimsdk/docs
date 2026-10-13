@@ -1,17 +1,25 @@
 ---
-title: 'Set a conversation draft'
-description: 'Save a conversation draft with setConversationDraft in the OpenIM Flutter SDK.'
+title: 'Set conversation draft'
+description: 'Save or clear unsent message text drafts for a conversation using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/managing-conversations/set-conversation-draft'
 ---
 
-Use `setConversationDraft()` to save a conversation draft when the user leaves a chat page, switches conversations, or changes the editor content. While the user is typing, keep the editor state locally and debounce save calls. Submit the latest text once more immediately before leaving the page.
+When a user leaves a chat screen, switches channels, or pauses typing, persist the unsent draft text for that conversation. Maintain editor state locally while typing, debounce persistence calls, and commit the latest text immediately before navigating away.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Target conversation ID. |
+| `draftText` | `String` | Yes | Draft text content. Pass an empty string `''` to clear the draft. |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.conversationManager.setConversationDraft(
@@ -20,7 +28,7 @@ await OpenIM.iMManager.conversationManager.setConversationDraft(
 );
 ```
 
-Pass an empty string to clear the draft:
+Clear the draft by supplying an empty string:
 
 ```dart
 await OpenIM.iMManager.conversationManager.setConversationDraft(
@@ -29,6 +37,10 @@ await OpenIM.iMManager.conversationManager.setConversationDraft(
 );
 ```
 
-## State after the call
+## Return value
 
-A successful `Future` means only that this save request completed; it does not mean the conversation-change callback has arrived. The SDK can subsequently report the updated `List<ConversationInfo>` through `onConversationChanged`. Merge `draftText` and `draftTextTime` by `conversationID`, and query the conversation again when reconciliation is needed. Request completion, event arrival, and a new query are three separate stages. For complete event handling, see [Retrieve the conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list). Also clear in-memory editor state when the user logs out or switches accounts.
+A successful `Future` indicates that the draft has been written to the local conversation database.
+
+## State changes after the call
+
+Multi-device synchronization and arriving changes trigger conversation change events. The client uses `conversationID` as the merge key to update `draftText` and `draftTextTime` on the local conversation model. For complete listener integration, see [Retrieve conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list). Purge in-memory editor states when logging out or switching user accounts.

@@ -1,17 +1,78 @@
 ---
-title: 'Modify a message'
-description: 'OpenIM HarmonyOS SDK guide for Modify a message.'
+title: 'Modify message'
+description: 'Edit the content of an already sent message and synchronize changes across participants.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/managing-messages/modify-a-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Modifying a message replaces existing content on both the server and peer clients, unlike local-only content overwrites or deletions.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnMessageEditedData,
+  EventOnMessageModifiedData,
+  IMMessage,
+  ModifyMessageReq,
+  ModifyMessageResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const editedMessage: IMMessage = cloneMessage(message);
+if (editedMessage.textElem !== undefined) {
+  editedMessage.textElem.content = editedText;
+}
+const request: ModifyMessageReq = {
+  conversationID: conversationID,
+  message: editedMessage,
+};
+const response: ModifyMessageResp = await sdk.modifyMessage(request);
+replaceMessage(conversationID, response.message);
+
+const handleMessageModified = (data: EventOnMessageModifiedData): void => {
+  const targetConversationID = resolveMessageConversationID(data.message);
+  replaceMessage(targetConversationID, data.message);
+};
+const unsubscribeMessageModified = sdk.on(
+  OpenIMSDKEvent.EventOnMessageModified,
+  handleMessageModified,
+);
+
+const handleMessageEdited = (data: EventOnMessageEditedData): void => {
+  const targetConversationID = resolveMessageConversationID(data.message);
+  replaceMessage(targetConversationID, data.message);
+};
+const unsubscribeMessageEdited = sdk.on(OpenIMSDKEvent.EventOnMessageEdited, handleMessageEdited);
+
+export function removeMessageEditListeners(): void {
+  unsubscribeMessageModified();
+  unsubscribeMessageEdited();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target conversation identifier. |
+| `message` | `IMMessage` | Yes | Modified message object containing updated content elements. |
+
+## Return value
+
+Returns a Promise resolving to `ModifyMessageResp`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `message` | `IMMessage` | Updated message object acknowledged by the server. |
+
+## State changes after the call
+
+The modified message object must retain its original `clientMsgID` and mandatory metadata. Permitted sender identities, editing time windows, and editable message types are strictly validated by OpenIMServer. After the Promise resolves, immediately update the local message item; other clients receive updates via events.
+
+Both `EventOnMessageModified` and `EventOnMessageEdited` deliver the latest `IMMessage`. Locate the conversation using `conversationID`, then update the message matching `clientMsgID`. These two events represent different underlying notification paths; do not assume a modification necessarily triggers both simultaneously. Remove listeners when tearing down the state layer.

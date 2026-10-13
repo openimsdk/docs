@@ -1,23 +1,59 @@
 ---
-title: 'Reject a group application'
-description: 'Use the Android SDK to reject a user’s application to join a group.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/group-applications/refuse-group-application'
+title: "Reject a group application"
+description: "Use the Android SDK to reject a user’s application to join a group."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/group-applications/refuse-group-application"
 ---
 
-The reject operation also takes the application's `groupID`, the applicant's `userID`, and a handling message.
+Group owners and administrators can reject a user's application to join a group. To reject the request, specify the target group ID, the applicant's user ID, and an optional rejection reason.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.refuseGroupApplication(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID, applicantUserID, "The group is currently full");
+String groupID = "group_123";
+String applicantUserID = "user_applicant";
+String handleMsg = "The group has reached its maximum member capacity.";
+
+OpenIMClient.getInstance().groupManager.refuseGroupApplication(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group application rejected successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to reject group application
+        }
+    },
+    groupID,
+    applicantUserID,
+    handleMsg
+);
 ```
 
-A successful callback means that the rejection request completed; it does not mean that every client has received the change. `onGroupApplicationRejected` provides the updated `GroupApplicationInfo`. Merge it by `groupID:userID`, and query the application list again when necessary. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+| `applicantUserID` | `String` | Yes | User ID of the applicant requesting to join. |
+| `handleMsg` | `String` | No | Optional rejection reason or explanation. Pass an empty string if not needed. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server has processed the rejection and updated the application record.
+2. **Asynchronous event delivery**: The SDK triggers the `onGroupApplicationRejected` event on affected clients, delivering the updated `GroupApplicationInfo`. The client should merge or update the application record using `groupID:userID` as the unique key.
+3. **Re-query calibration**: If application state or counts diverge after network reconnections, call `getGroupApplicationListAsRecipient()` to reconcile local records with the server.
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

@@ -1,16 +1,18 @@
 ---
 title: 'Load message context'
-description: 'OpenIM React Native SDK guide for load message context.'
+description: 'Retrieve contextual messages before and after an anchor message using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/retrieving-messages/load-message-context'
 ---
 
-Use `fetchSurroundingMessages()` to load messages before and after a known message, such as when opening a result from search or a reply.
+Retrieve adjacent surrounding messages preceding and following a known anchor message:
+
+Use this method when a user navigates to a specific message from search results, quoted replies, or deep links to reconstruct the complete conversational context.
 
 ```ts
 const { messageList } = await OpenIMSDK.fetchSurroundingMessages({
@@ -25,9 +27,15 @@ const { messageList } = await OpenIMSDK.fetchSurroundingMessages({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `startMessage` | `MessageItem` | Yes | Retrieved anchor message. |
-| `viewType` | `ViewType` | Yes | Context view type; use `ViewType.Search` for a search result. |
-| `before` | `number` | Yes | Maximum messages to load before the anchor. |
-| `after` | `number` | Yes | Maximum messages to load after the anchor. |
+| `startMessage` | `MessageItem` | Yes | Reference anchor message object. |
+| `viewType` | `ViewType` | Yes | Context navigation mode; pass `ViewType.Search` when navigating from search results. |
+| `before` | `number` | Yes | Maximum number of earlier messages to load before the anchor. |
+| `after` | `number` | Yes | Maximum number of newer messages to load after the anchor. |
 
-The call returns `{ messageList }`, where `messageList` contains the retrieved surrounding `MessageItem[]`. The number of messages may be less than `before + after` near a boundary or when messages have been deleted.
+## Return value
+
+A resolved Promise returns an object containing `{ messageList: MessageItem[] }`.
+
+- Messages are sorted in ascending chronological order and include the anchor message itself.
+- The returned count may be less than `before + after + 1` if the anchor is close to conversation boundaries or adjacent messages have been deleted.
+- Deduplicate and merge retrieved records into the active conversation view using `clientMsgID`.

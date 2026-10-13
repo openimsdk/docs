@@ -5,19 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/hide-all-conversations'
 ---
 
-This method affects all conversations for the current account:
+Invoke `hideAllConversationsWithOnSuccess:onFailure:` to hide all conversation entries from the chat list for the currently logged-in account in a single call:
+
+## Code example
 
 ```objc
-[[OIMManager manager] hideAllConversationsWithOnSuccess:^(NSString *data) {
+[[OIMManager manager] hideAllConversationsWithOnSuccess:^(NSString * _Nullable data) {
     [self clearConversationList];
-}
-                                              onFailure:nil];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"hideAllConversations failed: %ld %@", (long)code, message);
+}];
 ```
 
-Success means that the hide request completed. The application can then clear the current account's conversation-list state and pagination references. This operation does not delete messages or chat relationships.
+## Return value
+
+The `onSuccess` callback returns confirmation when the operation succeeds.
+
+## State changes after the call
+
+1. **Local cache reset**: The client should clear its in-memory list cache and reset pagination cursors for the conversation screen.
+2. **Persistence and reappearance**: This operation only affects list visibility for the current account. It does not delete historical message records or alter friend or group relationships. As soon as any conversation receives a new message, that conversation automatically reappears in the list.
+3. **Re-query calibration**: To hide a single specific conversation, refer to [Hide a conversation](/sdk/ios/conversation/managing-conversations/hide-a-conversation). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

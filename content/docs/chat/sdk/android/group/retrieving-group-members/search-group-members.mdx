@@ -1,24 +1,65 @@
 ---
-title: 'Search group members'
-description: 'Use searchGroupMembers to search group members by user ID or group nickname.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/retrieving-group-members/search-group-members'
+title: "Search group members"
+description: "Use searchGroupMembers to search group members by user ID or group nickname."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/retrieving-group-members/search-group-members"
 ---
 
-Provide a keyword list, switches for user ID and group nickname matching, and pagination parameters.
+Search for group members in a specified group using keywords. You can search across member user IDs and in-group nicknames, making this useful for quick member lookups, administrative filtering, and mention selection.
+
+## Code example
 
 ```java
+String groupID = "group_123";
+List<String> keywordList = Collections.singletonList("Tech");
+boolean isSearchUserID = true;
+boolean isSearchMemberNickname = true;
+int offset = 0;
+int count = 20;
+
 OpenIMClient.getInstance().groupManager.searchGroupMembers(
     new OnBase<List<GroupMembersInfo>>() {
-        @Override public void onSuccess(List<GroupMembersInfo> members) { /* members contains the matches. */ }
-        @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-    }, groupID, Collections.singletonList(keyword), true, true, 0, 20);
+        @Override
+        public void onSuccess(List<GroupMembersInfo> members) {
+            // members contains matching group member profiles
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to search group members
+        }
+    },
+    groupID,
+    keywordList,
+    isSearchUserID,
+    isSearchMemberNickname,
+    offset,
+    count
+);
 ```
 
-The search is limited to the target group. Do not make the request with an empty keyword or with both search switches disabled.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupMembersInfo>>` | Yes | Callback handler for the asynchronous request. |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+| `keywordList` | `List<String>` | Yes | List of search keywords. The search should not be executed if the list is empty. |
+| `isSearchUserID` | `boolean` | Yes | Whether to search by user ID (`true` to match, `false` to ignore). |
+| `isSearchMemberNickname` | `boolean` | Yes | Whether to search by in-group nickname (`true` to match, `false` to ignore). |
+| `offset` | `int` | Yes | Starting offset for pagination, starting from `0`. |
+| `count` | `int` | Yes | Maximum number of records to retrieve in this batch. |
+
+## Return value
+
+Upon success, `onSuccess` returns a list of matching member profiles (`List<GroupMembersInfo>`).
+
+## State changes after the call
+
+1. **Snapshot retrieval**: This is a read-only search query that returns matching records at query time without altering group state.
+2. **Display results**: Render search results using `groupID:userID` as the unique identifier for each item.

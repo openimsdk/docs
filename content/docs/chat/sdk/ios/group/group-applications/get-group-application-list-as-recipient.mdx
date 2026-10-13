@@ -5,19 +5,60 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/get-group-application-list-as-recipient'
 ---
 
+Invoke `getGroupApplicationListAsRecipientWithReq:onSuccess:onFailure:` to query incoming group join applications with pagination (restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `GetGroupApplicationListAsRecipientReq *` | Yes | Request object containing target group IDs, status filters, and pagination parameters. |
+
+### GetGroupApplicationListAsRecipientReq properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupIDs` | `NSArray<NSString *> *` | Yes | List of target group IDs to query. |
+| `handleResults` | `NSArray<NSNumber *> *` | No | Processing status filter list wrapping `OIMApplicationStatus` values. |
+| `offset` | `NSInteger` | Yes | Pagination offset (starts from `0`). |
+| `count` | `NSInteger` | Yes | Maximum number of items per page. |
+
+### Application status enumeration
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMApplicationStatusNormal` | `0` | Pending review (unhandled). |
+| `OIMApplicationStatusAgree` | `1` | Accepted. |
+| `OIMApplicationStatusReject` | `-1` | Rejected. |
+
+## Code example
+
 ```objc
 GetGroupApplicationListAsRecipientReq *req =
-  [[GetGroupApplicationListAsRecipientReq alloc] initWithGroupIDs:@[groupID]
-    handleResults:@[@(OIMApplicationStatusNormal)] offset:0 count:20];
+    [[GetGroupApplicationListAsRecipientReq alloc] initWithGroupIDs:@[@"group_1001"]
+                                                      handleResults:@[@(OIMApplicationStatusNormal)]
+                                                             offset:0
+                                                              count:20];
+
 [[OIMManager manager] getGroupApplicationListAsRecipientWithReq:req
-  onSuccess:^(NSArray<OIMGroupApplicationInfo *> *items) { [self replaceItems:items]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+                                                      onSuccess:^(NSArray<OIMGroupApplicationInfo *> *items) {
+                                                          [self replaceItems:items];
+                                                      }
+                                                      onFailure:^(NSInteger code, NSString *message) {
+                                                          NSLog(@"getGroupApplicationListAsRecipient failed: %ld %@", (long)code, message);
+                                                      }];
 ```
 
-The success callback returns a snapshot of applications the current user is authorized to handle. Increment the pagination offset by the number of requested items.
+## Return value
+
+The `onSuccess` callback delivers an array of application records (`NSArray<OIMGroupApplicationInfo *> *`).
+
+## State changes after the call
+
+1. **Permission requirement**: Only users who are group owners or administrators for the specified groups can retrieve received applications.
+2. **Snapshot query**: This method queries point-in-time application records and does not trigger delegate events. Increment `offset` by the received item count to load subsequent pages.
+3. **Event notification**: Incoming applications or review decisions arrive via listener callbacks. For listener setup, refer to [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).

@@ -1,31 +1,32 @@
 ---
 title: 'Send your first message'
-description: 'Verify the first one-to-one or group text-message flow in a Flutter app.'
+description: 'Verify the single-chat and group-chat message sending flow in a Flutter application.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/getting-started/send-first-message'
 ---
 
-This page shows how to install and initialize OpenIMClientSDK in a Flutter app, log in, and send the first text message. Complete the prerequisites in [Before you start](/sdk/flutter/getting-started/before-you-start) first.
+Install and initialize the OpenIM Flutter SDK, authenticate a user, and send your first text message in a single-chat or group-chat conversation. Before proceeding, complete the setup steps outlined in [Before you start](/sdk/flutter/getting-started/before-you-start).
 
-For a one-to-one message, provide the recipient's `userID`. For a group message, provide the destination `groupID`. Do not provide both destinations.
+For single-chat conversations, supply the recipient's `userID`. For group-chat conversations, supply the target `groupID`. Never specify both destinations simultaneously.
 
 ## Step 1: Install the SDK
+
+Add the dependency to your Flutter project:
 
 ```bash
 flutter pub add flutter_openim_sdk
 ```
 
-This command selects the latest compatible version from pub.dev and updates `pubspec.yaml` and the dependency lockfile. Commit the lockfile in team projects. After an upgrade, verify initialization, login, sending, and receiving again.
+This command selects the latest compatible release from pub.dev and updates `pubspec.yaml` alongside your lockfile. Commit the lockfile to source control, and verify SDK initialization, login, and message delivery whenever you upgrade dependencies.
 
 ## Step 2: Initialize the SDK
 
-Follow [Integrate for each runtime](/sdk/flutter/getting-started/environment-specific-implementation) to obtain an application data directory and call `initSDK()`. Provide an `OnConnectListener` during initialization and use `onConnectSuccess` to determine when the connection is available.
+Follow [Environment-specific implementation](/sdk/flutter/getting-started/environment-specific-implementation) to resolve your persistent app data directory and initialize the client. Provide an `OnConnectListener` to confirm network readiness before issuing messaging requests.
 
 ```dart
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
@@ -41,6 +42,8 @@ final initialized = await OpenIM.iMManager.initSDK(
 
 ## Step 3: Log in
 
+Authenticate the user session:
+
 ```dart
 await OpenIM.iMManager.login(
   userID: session.userID,
@@ -48,17 +51,17 @@ await OpenIM.iMManager.login(
 );
 ```
 
-Completion of the `login()` `Future` and arrival of `OnConnectListener.onConnectSuccess` are separate stages. Send the message only after the connection-success callback arrives.
+HTTP login completion and WebSocket connection readiness are two distinct stages. Await the `OnConnectListener.onConnectSuccess` callback before sending messages.
 
 ## Step 4: Prepare the destination
 
-A one-to-one message requires an existing recipient:
+For a single-chat conversation, specify an existing recipient's user ID:
 
 ```dart
 const targetUserID = 'user_b';
 ```
 
-A group message requires a group in which the current user is permitted to send messages:
+For a group chat, specify a group ID in which the current user is a valid member permitted to send messages:
 
 ```dart
 const targetGroupID = 'group_123';
@@ -66,11 +69,11 @@ const targetGroupID = 'group_123';
 
 ## Step 5: Create and send a text message
 
-First call `createTextMessage()` to create a local `Message`, then pass it to `sendMessage()`. Creating the message does not send it or trigger a receive event.
+Create a local `Message` object first, then pass it to `sendMessage()`. Creating a message does not transmit data over the network or trigger events on the recipient's client.
 
 ```dart
 final message = await OpenIM.iMManager.messageManager.createTextMessage(
-  text: 'Hello, OpenIMSDK',
+  text: 'Hello, OpenIM',
 );
 
 final sentMessage = await OpenIM.iMManager.messageManager.sendMessage(
@@ -78,14 +81,14 @@ final sentMessage = await OpenIM.iMManager.messageManager.sendMessage(
   userID: targetUserID,
   offlinePushInfo: OfflinePushInfo(
     title: 'New message',
-    desc: 'You received a message',
+    desc: 'You received a new message',
   ),
 );
 
 appendOutgoingMessage(sentMessage);
 ```
 
-For a group message, provide `groupID` instead of `userID`:
+When sending to a group chat, pass `groupID` instead of `userID`:
 
 ```dart
 final sentMessage = await OpenIM.iMManager.messageManager.sendMessage(
@@ -93,15 +96,15 @@ final sentMessage = await OpenIM.iMManager.messageManager.sendMessage(
   groupID: targetGroupID,
   offlinePushInfo: OfflinePushInfo(
     title: 'New group message',
-    desc: 'A new message was sent to the group',
+    desc: 'A new message was posted in the group',
   ),
 );
 ```
 
-After the `sendMessage()` `Future` succeeds, merge the returned `Message` into the current client's local message list by `clientMsgID`. Another logged-in client receives the new message through the message listener; see [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) for the complete listener. Verify the successful `Future` and the recipient's callback separately.
+Once the Future completes, the sender app can append the returned `Message` to the UI using `clientMsgID` as the deduplication and merge key. The recipient receives the incoming message through message listeners (see [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) for implementation details). Sender dispatch success and recipient delivery represent two distinct asynchronous phases; verify both during testing.
 
 ## Next steps
 
-- [User authentication](/sdk/flutter/getting-started/authenticate-and-manage-session)
-- [Send a message](/sdk/flutter/message/sending-messages/send-message)
+- [Authenticate and manage session](/sdk/flutter/getting-started/authenticate-and-manage-session)
+- [Send messages](/sdk/flutter/message/sending-messages/send-message)
 - [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)

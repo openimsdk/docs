@@ -1,31 +1,32 @@
 ---
-title: 'Upload a file'
-description: 'Use the Flutter SDK to upload a file independently of messaging.'
+title: 'Upload file'
+description: 'Upload a local file to storage using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/file-uploads/upload-file'
 ---
 
-Independent uploads can be used for user avatars, group avatars, profile attachments, or other business files. They do not belong to messaging. Generate a stable business `id` to associate each upload task with listener callbacks.
+Upload a local file directly to object storage for user avatars, group avatars, or custom business attachments:
 
 ## Parameters
 
-| Parameter     | Type      | Required | Description                                                   |
-| ------------- | --------- | -------- | ------------------------------------------------------------- |
-| `id`          | `String`  | Yes      | Stable business ID that associates the task with its listener. |
-| `filePath`    | `String`  | Yes      | File path readable on the current platform.                   |
-| `fileName`    | `String`  | Yes      | Original file name.                                           |
-| `contentType` | `String?` | No       | MIME type.                                                     |
-| `cause`       | `String?` | No       | Application-defined reason for the upload.                    |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `String` | Yes | Unique task ID used to correlate progress and completion events in listener callbacks. |
+| `filePath` | `String` | Yes | Absolute local path of the file accessible by the client. |
+| `fileName` | `String` | Yes | Original file name, including its extension. |
+| `contentType` | `String?` | No | MIME type of the file (for example, `image/png`). |
+| `cause` | `String?` | No | Business reason or description for the upload (for example, `user-avatar`). |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.uploadFile(
-  id: uploadID,
+  id: 'upload_task_001',
   filePath: filePath,
   fileName: fileName,
   contentType: contentType,
@@ -33,4 +34,10 @@ await OpenIM.iMManager.uploadFile(
 );
 ```
 
-The Future, progress callbacks, and completion callback are separate stages. Use the URL from the completion callback to update an avatar or another business resource. This method does not automatically update a profile, create a message, or send a message. See [Listen for upload progress and completion](/sdk/flutter/file-uploads/set-upload-file-listener) for the single listener setup.
+## Return value
+
+A successful `Future` returns `void`, indicating that the upload task was accepted and started.
+
+Upload progress and the resulting file URL are delivered through the global upload listener. Once the complete callback provides the remote URL, pass it to subsequent profile update or attachment storage APIs. Calling `uploadFile` does not automatically update user profiles or generate chat messages.
+
+For listener configuration and callback signatures, see [Listen for file upload progress](/sdk/flutter/file-uploads/set-upload-file-listener).

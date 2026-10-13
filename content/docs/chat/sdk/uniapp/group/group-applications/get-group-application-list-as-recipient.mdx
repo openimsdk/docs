@@ -1,17 +1,117 @@
 ---
 title: 'Get received group applications'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get received group applications.'
+description: 'Query group join applications that the authenticated user has authority to review.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Group owners and administrators invoke `getGroupApplicationListAsRecipient()` to query incoming join applications requiring review or previously handled. This API provides offset-based pagination; it does not filter by `groupID` or review outcome.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+The parameters object can be omitted. When paginating, supply the following fields:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | No | Pagination offset index; pass `0` for the first page. |
+| `count` | `number` | No | Number of application records to fetch. |
+
+## Code example
+
+```uts
+import {
+  getGroupApplicationListAsRecipient,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await getGroupApplicationListAsRecipient({
+  offset: 0,
+  count: 20,
+})
+const applications = result != null ? result.applications : []
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMGroupApplicationListResult | null` object containing `OpenIMGroupApplicationItem[]` elements in `applications`.
+
+### Group application fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | Target group identifier. |
+| `userID` | `string` | Applicant user ID; forms a composite key with `groupID`. |
+| `nickname` | `string` | Applicant nickname preserved in the application log. |
+| `userFaceURL` | `string` | Applicant avatar URL preserved in the application log. |
+| `reqMsg` | `string` | Join application greeting or justification text. |
+| `reqTime` | `number` | Application timestamp in Unix milliseconds. |
+| `joinSource` | `OpenIMGroupJoinSource` | How the applicant requested to join. |
+| `inviterUserID` | `string` | User ID of the inviter; empty for direct self-applications. |
+| `handleResult` | `OpenIMApplicationHandleResult` | Review status: `OpenIMApplicationHandleResultUnprocessed` (pending), `OpenIMApplicationHandleResultAccepted` (approved), or `OpenIMApplicationHandleResultRejected` (declined). |
+| `handleUserID` | `string` | User ID of the administrator who handled the request. |
+| `handledMsg` | `string` | Reviewer notes or explanation. |
+| `handledTime` | `number` | Processing timestamp; invalid while pending. |
+| `groupName` | `string` | Group name preserved in the application log. |
+| `groupFaceURL` | `string` | Group avatar preserved in the application log. |
+| `groupType` | `OpenIMGroupType \| null` | Group type code. |
+| `ownerUserID` | `string` | Group owner user ID. |
+| `creatorUserID` | `string` | Group creator user ID. |
+| `introduction` | `string` | Group description preserved in the record. |
+| `notification` | `string` | Group announcement preserved in the record. |
+| `memberCount` | `number` | Group member count preserved in the record. |
+| `status` | `OpenIMGroupStatus` | Group status preserved in the record. |
+| `createTime` | `number` | Application record creation timestamp in Unix milliseconds. |
+| `ex` | `string` | Custom extension string. |
+| `attachedInfo` | `string` | SDK internal metadata. |
+
+Fields stored on application records represent point-in-time snapshots. When current user or group data is required, query those entities through their dedicated APIs.
+
+## Monitor group application updates
+
+Group join application events and badge updates are centrally managed here. Application events return `OpenIMGroupApplicationItem | null` objects merged by `groupID:userID`; the badge event returns the total pending count:
+
+```uts
+import {
+  OpenIMGroupApplicationItem,
+  off,
+  onGroupApplicationAccepted,
+  onGroupApplicationAdded,
+  onGroupApplicationBadgeCountChanged,
+  onGroupApplicationDeleted,
+  onGroupApplicationRejected,
+} from '@/uni_modules/unix-openim-sdk'
+
+const mergeApplication = (application: OpenIMGroupApplicationItem | null) => {
+  if (application == null) return
+  mergeGroupApplication(application)
+}
+
+const deleteApplication = (application: OpenIMGroupApplicationItem | null) => {
+  if (application == null) return
+  removeGroupApplication(application.groupID, application.userID)
+}
+
+const updateBadge = (count: number) => {
+  setGroupApplicationBadge(count)
+}
+
+const addedSubscription = onGroupApplicationAdded(mergeApplication)
+const acceptedSubscription = onGroupApplicationAccepted(mergeApplication)
+const rejectedSubscription = onGroupApplicationRejected(mergeApplication)
+const deletedSubscription = onGroupApplicationDeleted(deleteApplication)
+const badgeSubscription = onGroupApplicationBadgeCountChanged(updateBadge)
+
+function removeGroupApplicationListeners() {
+  off(addedSubscription)
+  off(acceptedSubscription)
+  off(rejectedSubscription)
+  off(deletedSubscription)
+  off(badgeSubscription)
+}
+```
+
+If applications change during pagination, reset the offset and reload from the beginning. Unregister these listeners when unmounting views, logging out, or switching user accounts.

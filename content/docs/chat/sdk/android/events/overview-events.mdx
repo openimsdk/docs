@@ -1,48 +1,47 @@
 ---
 title: 'Events overview'
-description: 'Register Android SDK listeners centrally and route connection, synchronization, and data events by domain.'
+description: 'Register OpenIM Android SDK listeners centrally and dispatch connection, synchronization, and domain data events.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/events/overview-events'
 ---
 
-OpenIM Android SDK uses listeners to report connection, synchronization, user, friendship, conversation, group, message, and calling changes. Each manager keeps only one listener; setting another one replaces the previous listener. Manage these listeners in one place in your application and set them once before login. Do not register them repeatedly from an Activity, Fragment, Compose screen, or feature component.
+The OpenIM Android SDK notifies applications of connection, synchronization, user, friendship, conversation, group, message, and call events via listeners. Each manager holds at most one listener instance; registering a new listener overwrites any previously registered listener. Manage listeners centrally within an application-scoped event coordinator and register them once before logging in, rather than inside activities, fragments, or Compose screens.
 
-`OnConnListener` monitors the connection status to IM Server. It is not set separately through a manager; pass it when calling `initSDK()`. For complete handling guidance, see [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
+The core server connection lifecycle is handled by `OnConnListener`. Rather than configuring it through a domain manager, supply it during SDK initialization; for the full connection lifecycle implementation, see [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
 
-## Register listeners centrally
+## Centralized listener registration
 
-The following example registers each listener in one place in the application. Each listener handles events for its own domain, such as messages, conversations, friends, or calls.
+The following example registers domain-specific listeners at an application-wide event center. Each listener handles callbacks strictly within its respective domain:
 
 ```java
 public final class OpenIMEventCenter {
     private final OpenIMClient client = OpenIMClient.getInstance();
 
     private final OnUserListener userListener = new OnUserListener() {
-        // Handles user profile and online-status changes.
+        // Handle user profile and presence updates
     };
     private final OnFriendshipListener friendshipListener = new OnFriendshipListener() {
-        // Handles friend relationships, friend applications, and blacklist changes.
+        // Handle relationships, friend applications, and blocklist events
     };
     private final OnConversationListener conversationListener = new OnConversationListener() {
-        // Handles conversations, unread counts, input status, and initial synchronization.
+        // Handle conversations, unread counters, typing status, and data sync
     };
     private final OnGroupListener groupListener = new OnGroupListener() {
-        // Handles groups, group members, and group application changes.
+        // Handle group profiles, members, and group applications
     };
     private final OnAdvanceMsgListener messageListener = new OnAdvanceMsgListener() {
-        // Handles new messages, revocations, deletions, modifications, and read receipts.
+        // Handle new messages, revocations, deletions, edits, and read receipts
     };
     private final OnCustomBusinessListener businessListener = new OnCustomBusinessListener() {
-        // Handles custom business messages.
+        // Handle custom business messages
     };
     private final OnSignalingListener signalingListener = new OnSignalingListener() {
-        // Handles call invitations, participant status, and custom call signals.
+        // Handle calling invitations, participant state, and custom signaling
     };
 
     public void registerBeforeLogin() {
@@ -57,61 +56,61 @@ public final class OpenIMEventCenter {
 }
 ```
 
-The Android SDK does not provide a way to remove listeners. When signing out, switching accounts, or destroying a screen, stop callbacks from updating old account data or destroyed UI and clear references held by your application. Before the next login, set each listener again for the new account.
+The Android SDK does not provide an unset or remove listener API. When logging out, switching accounts, or tearing down screens, stop propagating callbacks to stale UI controllers or former user state. Before logging in with a new account, re-register complete listener instances configured for the new session.
 
-## Event ownership
+## Event domain ownership
 
-| Event scope | Listener | Corresponding page |
+| Scope | Listener | Documentation page |
 | --- | --- | --- |
-| Connection, token, and forced logout | `OnConnListener` | [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session) |
+| Connection, token expiration, and kick-offline | `OnConnListener` | [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session) |
 | Current user profile | `OnUserListener` | [Update the current user profile](/sdk/android/user/user-profile/set-self-info) |
-| Online status | `OnUserListener` | [Subscribe to user online status](/sdk/android/user/online-status/subscribe-users-online-status) |
-| Friend relationships and profiles | `OnFriendshipListener` | [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page) |
-| Friend applications | `OnFriendshipListener` | [Get received friend requests](/sdk/android/user/friend-applications/get-recv-friend-application-list) |
-| Blacklist | `OnFriendshipListener` | [Block a user](/sdk/android/user/blacklist/add-blacklist), [Remove a user from the blacklist](/sdk/android/user/blacklist/remove-blacklist) |
-| Conversation list | `OnConversationListener` | [Retrieve the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) |
-| Total unread count | `OnConversationListener` | [Get the total unread count](/sdk/android/conversation/managing-conversations/get-total-unread-count) |
-| Typing state | `OnConversationListener` | [Update typing status](/sdk/android/message/composing-messages/update-typing-status) |
+| Online presence | `OnUserListener` | [Subscribe to user online status](/sdk/android/user/online-status/subscribe-users-online-status) |
+| Friendship status and profiles | `OnFriendshipListener` | [Get the friend list](/sdk/android/user/friends/get-friend-list-page) |
+| Friend applications | `OnFriendshipListener` | [Get received friend applications](/sdk/android/user/friend-applications/get-recv-friend-application-list) |
+| Blocklist | `OnFriendshipListener` | [Block a user](/sdk/android/user/blacklist/add-blacklist), [Unblock a user](/sdk/android/user/blacklist/remove-blacklist) |
+| Conversation list | `OnConversationListener` | [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) |
+| Total unread count | `OnConversationListener` | [Get the total unread message count](/sdk/android/conversation/managing-conversations/get-total-unread-count) |
+| Typing status | `OnConversationListener` | [Report typing status](/sdk/android/message/composing-messages/update-typing-status) |
 | Group profiles, members, and applications | `OnGroupListener` | [Group overview](/sdk/android/group/overview-group) |
-| New, offline, and online-only messages | `OnAdvanceMsgListener` | [Receive messages](/sdk/android/message/receiving-messages/receive-messages) |
+| New messages, offline messages, and online sync | `OnAdvanceMsgListener` | [Receive messages](/sdk/android/message/receiving-messages/receive-messages) |
 | Message revocation | `OnAdvanceMsgListener` | [Revoke a message](/sdk/android/message/managing-messages/revoke-a-message) |
-| Message deletion | `OnAdvanceMsgListener` | [Delete messages in a batch](/sdk/android/message/managing-messages/delete-saved-messages) |
+| Message deletion | `OnAdvanceMsgListener` | [Batch delete messages](/sdk/android/message/managing-messages/delete-saved-messages) |
 | Message modification | `OnAdvanceMsgListener` | [Modify a message](/sdk/android/message/managing-messages/modify-a-message) |
 | Pinned messages | `OnAdvanceMsgListener` | [Pin or unpin a message](/sdk/android/message/managing-messages/set-message-pinned) |
-| One-to-one read receipts | `OnAdvanceMsgListener` | [Mark a conversation as read](/sdk/android/conversation/managing-conversations/mark-conversation-read) |
+| Direct chat read receipts | `OnAdvanceMsgListener` | [Mark a conversation as read](/sdk/android/conversation/managing-conversations/mark-conversation-read) |
 | Custom business messages | `OnCustomBusinessListener` | [Receive custom business messages](/sdk/android/message/receiving-messages/receive-custom-business-messages) |
-| Calls | `OnSignalingListener` | [Handle call events](/sdk/android/calling/managing-calls/handle-call-events) |
-| Custom call signaling | `OnSignalingListener` | [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |
-| SDK data synchronization | `OnConversationListener` | [Handle initial synchronization](#handle-initial-synchronization) |
+| Calling sessions | `OnSignalingListener` | [Handle calling events](/sdk/android/calling/managing-calls/handle-call-events) |
+| Calling custom signaling | `OnSignalingListener` | [Send custom signaling](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |
+| SDK data synchronization | `OnConversationListener` | [Listen for initialization synchronization](#listen-for-initialization-synchronization) |
 
-## Handle initial synchronization
+## Listen for initialization synchronization
 
-The synchronization lifecycle belongs to `OnConversationListener`, which also includes callbacks for the conversation list, unread count, and typing status. The following example shows only the callbacks related to initial synchronization:
+Data synchronization events belong to `OnConversationListener`, which also handles conversation list, unread count, and typing indicators. The following snippet illustrates the synchronization callbacks:
 
 ```java
 private final OnConversationListener conversationListener = new OnConversationListener() {
     @Override
     public void onSyncServerStart(boolean reinstall) {
-        // Synchronization started: update the sync state and show loading UI when needed.
+        // Synchronization started: update sync status and display a loading indicator if appropriate
     }
 
     @Override
     public void onSyncServerProgress(long progress) {
-        // Synchronization in progress: update the progress indicator.
+        // Synchronization in progress: update progress indicators
     }
 
     @Override
     public void onSyncServerFinish(boolean reinstall) {
-        // Synchronization finished: refresh screens that require complete data.
+        // Synchronization finished: refresh UI components that depend on complete local datasets
     }
 
     @Override
     public void onSyncServerFailed(boolean reinstall) {
-        // Synchronization failed: update the failure state and wait for retry or connection recovery.
+        // Synchronization failed: update error state and wait for retry or network reconnection
     }
 
-    // Other conversationListener callbacks...
+    // Implement other conversation callbacks as needed...
 };
 ```
 
-`reinstall` indicates whether synchronization follows a local data rebuild: `true` means synchronization after the application is reinstalled, local data is cleared, or a similar scenario, when local cache is usually unavailable; `false` means ordinary synchronization after login. `onSyncServerProgress` reports the current synchronization progress. After synchronization completes, query the data required by the current screen again. On failure, update the synchronization failure state and wait for retry or connection recovery.
+The `reinstall` flag indicates whether synchronization is performing a full rebuild after local cache eviction: `true` indicates a fresh sync following app re-installation or cleared app storage, where local cached records do not exist; `false` indicates standard incremental synchronization on regular logins. The `onSyncServerProgress` callback provides completion percentage. When synchronization completes, query fresh data snapshots to populate active screens; on failure, reflect error status and wait for automatic retry or connection recovery.

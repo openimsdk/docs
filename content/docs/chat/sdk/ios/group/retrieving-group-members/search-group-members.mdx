@@ -5,30 +5,55 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-group-members/search-group-members'
 ---
 
-Create an `OIMSearchGroupMembersParam` with `groupID`, one non-empty keyword, the searchable fields, `offset`, and `count`. The success callback returns the current page of matching `OIMGroupMemberInfo` objects.
+Invoke `searchGroupMembers:onSuccess:onFailure:` to search for group members within a specified group by user ID or group nickname:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `searchParam` | `OIMSearchGroupMembersParam *` | Yes | Search parameter model defining target group, keywords, match options, and pagination. |
+
+### OIMSearchGroupMembersParam properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `keywordList` | `NSArray<NSString *> *` | Yes | List of search keywords. |
+| `isSearchUserID` | `BOOL` | No | Whether to match member user IDs. |
+| `isSearchMemberNickname` | `BOOL` | No | Whether to match group-specific nicknames. |
+| `offset` | `NSInteger` | Yes | Pagination offset index (starts from `0`). |
+| `count` | `NSInteger` | Yes | Maximum number of results per page. |
+
+## Code example
 
 ```objc
 OIMSearchGroupMembersParam *param = [OIMSearchGroupMembersParam new];
-param.groupID = groupID;
-param.keywordList = @[keyword];
+param.groupID = @"group_1001";
+param.keywordList = @[@"Alex"];
 param.isSearchUserID = YES;
 param.isSearchMemberNickname = YES;
 param.offset = 0;
 param.count = 20;
 
 [[OIMManager manager] searchGroupMembers:param
-  onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
-    [self replaceSearchResults:members];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+                               onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
+                                   [self replaceSearchResults:members];
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"searchGroupMembers failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-Reset pagination when the keyword or searchable fields change. The query does not trigger the member delegate.
+## Return value
+
+The `onSuccess` callback delivers an array of matched `OIMGroupMemberInfo` models (`NSArray<OIMGroupMemberInfo *> *`). If no matching members are found, it returns an empty array.
+
+## State changes after the call
+
+1. **Query offset reset**: Reset `offset` to 0 whenever search terms or filter flags change.
+2. **Read-only query**: Search operations query locally cached members and do not trigger delegate callbacks. For member event listeners, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

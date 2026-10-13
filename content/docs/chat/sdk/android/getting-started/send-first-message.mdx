@@ -1,57 +1,56 @@
 ---
 title: 'Send your first message'
-description: 'Send and verify the first one-to-one text message in an Android application.'
+description: 'Send and verify your first direct text message in a native Android application.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/getting-started/send-first-message'
 ---
 
-Use one-to-one text messaging to confirm that OpenIM is integrated correctly. Before starting, complete SDK initialization and sign-in in [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
+Sending a single direct text message verifies that SDK initialization, connection establishment, and message delivery pipelines are functioning properly. Before proceeding, complete SDK initialization and user login as described in [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
 
-## Before you start
+## Prerequisites
 
-- Prepare a test account for the sender and another for the receiver.
-- Initialize the SDK for both accounts as described in [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session). Register the application's shared message listener on the receiver before it signs in.
-- Replace `user_b` in the example with the receiver's actual `userID`.
+- Prepare two test user accounts: one for the sender and one for the recipient.
+- Initialize the SDK on both accounts following [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session); the recipient must register the application message listener prior to logging in.
+- Replace `user_b` in the examples below with the actual recipient's `userID`.
 
-## Step 1: Listen for incoming messages on the receiver
+## Step 1: Listen for incoming messages on the recipient client
 
-Before sign-in, register the application's only message listener on the receiver. Update the chat UI when `onRecvNewMessage(Message message)` arrives. See [Receive messages](/sdk/android/message/receiving-messages/receive-messages) for the complete listener, event data, and dispatch pattern. Do not register another listener in a quick-start flow or individual chat screen.
+The recipient client registers the message listener before logging in and updates the chat interface when `onRecvNewMessage(Message message)` fires. For complete listener registration details, event payloads, and dispatch architecture, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages). Do not duplicate message listener registrations inside individual chat screens.
 
-## Step 2: Confirm that sending is available
+## Step 2: Confirm connection readiness
 
-After both accounts sign in, the sender can send only after its login callback succeeds and `OnConnListener.onConnectSuccess()` arrives. Keep the receiver connected so it can receive the new message. If a connection is not ready, wait for it to recover instead of calling `login()` again.
+Once both users log in and the sender's client receives `onConnectSuccess` from `OnConnListener`, the client is ready to send messages. Ensure the recipient maintains an active connection to receive messages immediately. If disconnected, wait for reconnection rather than repeating login calls.
 
 ## Step 3: Send a text message
 
-### Send a one-to-one text message
+### Send a direct chat text message
 
-Create the message, then send it. Put the receiver's `userID` in the user destination and leave the group destination empty.
+Construct the message entity first, then dispatch it. Pass the recipient `userID` as the target, leaving the group ID parameter as an empty string.
 
 ```java
 Message message = OpenIMClient.getInstance()
     .messageManager
-    .createTextMessage("Hello, OpenIMSDK");
+    .createTextMessage("Hello, OpenIM");
 
 OnMsgSendCallback sendCallback = new OnMsgSendCallback() {
     @Override
     public void onProgress(long progress) {
-        // Text messages usually do not need progress handling.
+        // Text messages typically do not report upload progress.
     }
 
     @Override
     public void onError(int code, String error) {
-        // Tell the user that sending failed and allow a retry.
+        // Notify the user of failure and enable retry.
     }
 
     @Override
     public void onSuccess(Message sentMessage) {
-        // Update the sender's chat UI with sentMessage.
+        // Update the sender UI with the delivered sentMessage.
     }
 };
 
@@ -64,18 +63,18 @@ OpenIMClient.getInstance().messageManager.sendMessage(
 );
 ```
 
-`OfflinePushInfo` configures offline-push content. For this first test, pass an empty object and add a title, summary, or extra data later if needed.
+`OfflinePushInfo` configures push notification behavior. Pass a default empty instance for initial verification, then populate title, summary, and custom payload fields as required.
 
-`onSuccess()` means the sender has sent the message successfully. `onRecvNewMessage()` on the receiver means the other side received it. Both callbacks should arrive before considering this one-to-one test complete.
+When `onSuccess` triggers on the sender client, the message has been delivered to the server. When `onRecvNewMessage` fires on the recipient client, the message has arrived on the remote device. When both callbacks fire with matching content, your end-to-end messaging pipeline is verified.
 
-### Send a group text message
+### Send a group chat text message
 
-To send a group message, leave the receiver `userID` empty and provide the group's `groupID`:
+To send a group message, set `recvUid` to an empty string and pass the destination `groupID`:
 
 ```java
 Message groupMessage = OpenIMClient.getInstance()
     .messageManager
-    .createTextMessage("Hello, OpenIMSDK");
+    .createTextMessage("Hello everyone, OpenIM");
 
 OpenIMClient.getInstance().messageManager.sendMessage(
     sendCallback,
@@ -86,12 +85,12 @@ OpenIMClient.getInstance().messageManager.sendMessage(
 );
 ```
 
-Set either `userID` or `groupID` in a single call, never both.
+Supply either `recvUid` or `groupID` in a single invocation, leaving the other as an empty string.
 
-## Verify success
+## Verify delivery
 
-- The sender's `sendMessage()` call triggers the `onSuccess()` callback.
-- The receiver enters `onRecvNewMessage()` and sees the text message.
+- The sender receives a successful `onSuccess` callback via `OnMsgSendCallback`.
+- The recipient receives `onRecvNewMessage` via `OnAdvancedMsgListener` and renders the text message content.
 
 ## Next steps
 

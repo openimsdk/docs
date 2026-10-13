@@ -1,105 +1,105 @@
 ---
 title: 'Message overview'
-description: 'OpenIM React Native SDK guide for message overview.'
+description: 'Learn about the OpenIM React Native SDK message model, message lifecycle, and message event listeners.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/overview-message'
 ---
 
-OpenIM React Native SDK represents each message with `MessageItem`. Creating a message only creates a `MessageItem` ready to send; to send it to a one-to-one user or group, call a sending API. Receiving, querying, and state changes such as deletion, revocation, and modification are handled through their respective APIs or events.
+OpenIM React Native SDK represents every message using the `MessageItem` structure. Creating a message creates a client-side `MessageItem` ready to be dispatched; to send it to a one-to-one user or a group, call the appropriate sending API. Incoming messages, queries, and lifecycle state changes (deletion, revocation, modification, read receipts) are processed through their respective APIs and event listeners.
 
-Message lists use `clientMsgID` to identify, deduplicate, and update individual messages. `MessageItem` does not contain `conversationID`; obtain the message's conversation from the current conversation, history-query parameters, or event context.
+Message lists rely on `clientMsgID` as the primary identifier to deduplicate, update, and locate individual messages. Note that `MessageItem` does not contain a `conversationID` property; obtain the message's conversation context from active conversation state, history query parameters, or event metadata.
 
-## Message workflow
+## Message lifecycle workflow
 
-| Stage | Related capability | Description |
+| Stage | Capability | Description |
 | --- | --- | --- |
-| Create | `create*Message()` | Creates a `MessageItem` ready to send. |
-| Send | `sendMessage()` and `sendMessageNotOss()` | Sends a message to a one-to-one chat or group chat. |
-| Receive | New-message events | Receives real-time, offline, and online-only messages. |
-| Query | Message history, lookup by ID, and search | Reads or locates saved messages by conversation. |
-| State changes | Revocation, deletion, modification, and read receipts | Updates the message list from call results and the corresponding events. |
+| Create | `create*Message()` | Initializes a local `MessageItem` instance ready for sending without calling the server. |
+| Send | [Send message](/sdk/react-native/message/sending-messages/send-message), [Send uploaded media message](/sdk/react-native/message/sending-messages/send-message-not-oss) | Dispatches the message to a one-to-one or group conversation. |
+| Receive | Message events | Receives real-time, offline, and online-only incoming messages. |
+| Query | History, lookup by ID, search | Retrieves and paginates historical messages from local cache and server. |
+| State changes | Revoke, delete, modify, read receipts | Reconciles message status transitions via API results and incremental events. |
 
-## MessageItem type
+## MessageItem structure
 
-The message objects returned when creating, sending, receiving, or querying messages are `MessageItem`. Common public fields include:
+All creation, transmission, reception, and query APIs return `MessageItem` objects. Common core properties include:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `clientMsgID` | `string` | Client message ID, used to deduplicate, update, and locate messages. |
-| `serverMsgID` | `string` | Server message ID. |
-| `sessionType` | `SessionType` | Conversation type, used to distinguish one-to-one chats from group chats. |
+| `clientMsgID` | `string` | Unique client-generated message ID, used for deduplication, updates, and indexing. |
+| `serverMsgID` | `string` | Unique server-assigned message ID. |
+| `sessionType` | `SessionType` | Conversation type, distinguishing one-to-one chats from group chats. |
 | `sendID` | `string` | Sender user ID. |
-| `recvID` | `string` | Recipient user ID for a one-to-one message. |
-| `groupID` | `string` | Group ID for a group message. |
-| `contentType` | `MessageType` | Message content type, which determines the content field to render. |
-| `createTime` | `number` | Message-object creation time. |
-| `sendTime` | `number` | Message send time. |
-| `seq` | `number` | Server message sequence number. |
-| `senderPlatformID` | `Platform` | Client platform that sent the message. |
-| `status` | `MessageStatus` | Message send status. |
-| `isRead` | `boolean` | Read state. |
-| `senderNickname` | `string` | Sender nickname. |
-| `senderFaceUrl` | `string` | Sender avatar URL. |
-| `offlinePush` | `OfflinePush` | Offline push configuration. |
-| `content` | `string` | SDK-serialized message content. For rendering, read the content field that corresponds to `contentType`. |
-| `ex` | `string` | Message extension field. |
-| `localEx` | `string` | Message extension field used only on the current device. |
+| `recvID` | `string` | Recipient user ID for one-to-one messages. |
+| `groupID` | `string` | Target group ID for group messages. |
+| `contentType` | `MessageType` | Message content type, determining which payload element to render. |
+| `createTime` | `number` | Timestamp when the message object was created. |
+| `sendTime` | `number` | Timestamp when the message was dispatched. |
+| `seq` | `number` | Server-assigned message sequence number. |
+| `senderPlatformID` | `Platform` | Platform identifier of the sending client. |
+| `status` | `MessageStatus` | Transmission status of the message. |
+| `isRead` | `boolean` | Read receipt state for the message. |
+| `senderNickname` | `string` | Display nickname of the sender. |
+| `senderFaceUrl` | `string` | Avatar URL of the sender. |
+| `offlinePush` | `OfflinePush` | Offline push notification payload configuration. |
+| `content` | `string` | Serialized message payload. For UI rendering, read the specific element corresponding to `contentType`. |
+| `ex` | `string` | Custom global extension field synchronized across clients. |
+| `localEx` | `string` | Custom local-only extension string stored exclusively on the current device. |
 
-Message content is stored in the `MessageItem` field that corresponds to `contentType`:
+Message content payloads are stored in specific element fields matching `contentType`:
 
-| Content | Field |
+| Content payload | Field |
 | --- | --- |
 | Text, rich text, and Markdown | `textElem`, `advancedTextElem`, `markdownTextElem` |
-| Images, audio, video, and files | `pictureElem`, `soundElem`, `videoElem`, `fileElem` |
-| @ messages | `atTextElem` |
-| Reply messages | `quoteElem` |
-| Merged forwards | `mergeElem` |
-| Contact cards, locations, and emoji | `cardElem`, `locationElem`, `faceElem` |
-| Custom messages | `customElem` |
-| Notifications, typing status, and attached status | `notificationElem`, `typingElem`, `attachedInfoElem` |
+| Image, audio, video, and file | `pictureElem`, `soundElem`, `videoElem`, `fileElem` |
+| Mention (@) message | `atTextElem` |
+| Quote reply message | `quoteElem` |
+| Merged forward | `mergeElem` |
+| Business card, location, and face/sticker | `cardElem`, `locationElem`, `faceElem` |
+| Custom business message | `customElem` |
+| System notification, typing indicator, attached info | `notificationElem`, `typingElem`, `attachedInfoElem` |
 
-All content fields are optional. A message usually uses only the content field that corresponds to its `contentType`; determine `contentType` before reading that field for rendering.
+All payload elements are optional fields on `MessageItem`. Inspect `contentType` first to determine which element to parse and render.
 
 ## Create and send messages
 
-First call the applicable creation API to obtain a `MessageItem`, then call a sending API. Use [Send a message](/sdk/react-native/message/sending-messages/send-message) when the SDK uploads a local media file; use [Send an uploaded media message](/sdk/react-native/message/sending-messages/send-message-not-oss) when the media file already has a remote URL.
+Invoke the dedicated creation method to construct a `MessageItem`, then invoke the appropriate sending API. Use [Send message](/sdk/react-native/message/sending-messages/send-message) when the SDK handles uploading local media files; use [Send uploaded media message](/sdk/react-native/message/sending-messages/send-message-not-oss) when media files already have pre-uploaded remote URLs.
 
-| Content | Page |
+| Content type | Guide |
 | --- | --- |
-| Text and rich text | [Create a text message](/sdk/react-native/message/creating-messages/create-text-message), [Create a rich-text message](/sdk/react-native/message/creating-messages/create-advanced-text-message) |
-| @ messages | [Create an @ message](/sdk/react-native/message/creating-messages/create-text-at-message) |
-| Images, audio, video, and files | [Create an image message from a file](/sdk/react-native/message/creating-messages/create-image-message-by-file), [Create an audio message from a file](/sdk/react-native/message/creating-messages/create-sound-message-by-file), [Create a video message from files](/sdk/react-native/message/creating-messages/create-video-message-by-file), [Create a file message from a file](/sdk/react-native/message/creating-messages/create-file-message-by-file) |
-| Contact cards, locations, and emoji | [Create a contact card message](/sdk/react-native/message/creating-messages/create-card-message), [Create a location message](/sdk/react-native/message/creating-messages/create-location-message), [Create an emoji message](/sdk/react-native/message/creating-messages/create-face-message) |
-| Replies, forwards, and merged forwards | [Create a reply message](/sdk/react-native/message/creating-messages/create-quote-message), [Create a forwarded message](/sdk/react-native/message/creating-messages/create-forward-message), [Create a merged forward message](/sdk/react-native/message/creating-messages/create-merger-message) |
-| Custom messages | [Create a custom message](/sdk/react-native/message/creating-messages/create-custom-message) |
+| Text and rich text | [Create text message](/sdk/react-native/message/creating-messages/create-text-message), [Create rich-text message](/sdk/react-native/message/creating-messages/create-advanced-text-message) |
+| Mention (@) | [Create @ message](/sdk/react-native/message/creating-messages/create-text-at-message) |
+| Image, audio, video, and file | [Create image message from file](/sdk/react-native/message/creating-messages/create-image-message-by-file), [Create audio message from file](/sdk/react-native/message/creating-messages/create-sound-message-by-file), [Create video message from file](/sdk/react-native/message/creating-messages/create-video-message-by-file), [Create file message from file](/sdk/react-native/message/creating-messages/create-file-message-by-file) |
+| Business card, location, and face | [Create card message](/sdk/react-native/message/creating-messages/create-card-message), [Create location message](/sdk/react-native/message/creating-messages/create-location-message), [Create face message](/sdk/react-native/message/creating-messages/create-face-message) |
+| Reply, forward, and merged forward | [Create quote message](/sdk/react-native/message/creating-messages/create-quote-message), [Create forward message](/sdk/react-native/message/creating-messages/create-forward-message), [Create merger message](/sdk/react-native/message/creating-messages/create-merger-message) |
+| Custom message | [Create custom message](/sdk/react-native/message/creating-messages/create-custom-message) |
 
-## Browse by task
+## Capabilities by task
 
-| Task | Page |
+| Task | Guide |
 | --- | --- |
 | Receive real-time, offline, and online-only messages | [Receive messages](/sdk/react-native/message/receiving-messages/receive-messages) |
 | Receive custom business messages | [Receive custom business messages](/sdk/react-native/message/receiving-messages/receive-custom-business-messages) |
-| Load message history or message context | [Load message history](/sdk/react-native/message/retrieving-messages/load-older-messages), [Load message context](/sdk/react-native/message/retrieving-messages/load-message-context) |
+| Load message history or message context | [Load older messages](/sdk/react-native/message/retrieving-messages/load-older-messages), [Load message context](/sdk/react-native/message/retrieving-messages/load-message-context) |
 | Find or search messages by ID | [Find messages by ID](/sdk/react-native/message/retrieving-messages/find-messages-by-id), [Search messages](/sdk/react-native/message/searching-messages/search-messages) |
-| Delete, revoke, or modify messages | [Delete messages in a batch](/sdk/react-native/message/managing-messages/delete-saved-messages), [Revoke a message](/sdk/react-native/message/managing-messages/revoke-a-message), [Modify a message](/sdk/react-native/message/managing-messages/modify-a-message) |
-| Manage message data used only on the current device | [Delete a local message](/sdk/react-native/message/managing-messages/delete-local-message), [Set a local message extension](/sdk/react-native/message/managing-messages/set-message-local-ex) |
-| Report or query group message read status | [Report group messages as read](/sdk/react-native/message/managing-read-status/send-group-read-receipts), [Get members who read a group message](/sdk/react-native/message/managing-read-status/get-group-message-readers) |
-| Report or query typing status | [Report typing status](/sdk/react-native/message/composing-messages/update-typing-status), [Get typing status](/sdk/react-native/message/composing-messages/get-typing-status) |
-| Transcribe audio | [Check audio transcription availability](/sdk/react-native/message/composing-messages/check-speech-to-text), [Transcribe audio](/sdk/react-native/message/composing-messages/transcribe-audio) |
+| Delete, revoke, or modify messages | [Delete saved messages](/sdk/react-native/message/managing-messages/delete-saved-messages), [Revoke a message](/sdk/react-native/message/managing-messages/revoke-a-message), [Modify a message](/sdk/react-native/message/managing-messages/modify-a-message) |
+| Manage device-local message data | [Delete local message](/sdk/react-native/message/managing-messages/delete-local-message), [Set message local extension](/sdk/react-native/message/managing-messages/set-message-local-ex) |
+| Report or query group read receipts | [Send group read receipts](/sdk/react-native/message/managing-read-status/send-group-read-receipts), [Get group message readers](/sdk/react-native/message/managing-read-status/get-group-message-readers) |
+| Report or query typing status | [Update typing status](/sdk/react-native/message/composing-messages/update-typing-status), [Get typing status](/sdk/react-native/message/composing-messages/get-typing-status) |
+| Audio transcription | [Check speech-to-text](/sdk/react-native/message/composing-messages/check-speech-to-text), [Transcribe audio](/sdk/react-native/message/composing-messages/transcribe-audio) |
 
 ## Event handling
 
-Complete event-listener examples for message events are available on the following pages:
+Complete event listener implementations and registration patterns are documented on their dedicated pages:
 
-- New, offline, and online-only messages: `OnRecvNewMessage`, `OnRecvOfflineNewMessage`, and `OnRecvOnlineOnlyMessage`. See [Receive messages](/sdk/react-native/message/receiving-messages/receive-messages).
+- New messages, offline messages, and online-only messages: `OnRecvNewMessage`, `OnRecvOfflineNewMessage`, `OnRecvOnlineOnlyMessage`. See [Receive messages](/sdk/react-native/message/receiving-messages/receive-messages).
 - Custom business messages: `OnRecvCustomBusinessMessage`. See [Receive custom business messages](/sdk/react-native/message/receiving-messages/receive-custom-business-messages).
-- Message deletion: `OnMsgDeleted`. See [Delete messages in a batch](/sdk/react-native/message/managing-messages/delete-saved-messages).
+- Message deletion: `OnMsgDeleted`. See [Delete saved messages](/sdk/react-native/message/managing-messages/delete-saved-messages).
 - Message revocation: `OnNewRecvMessageRevoked`. See [Revoke a message](/sdk/react-native/message/managing-messages/revoke-a-message).
 - Message modification: `OnMessageModified`. See [Modify a message](/sdk/react-native/message/managing-messages/modify-a-message).
-- Group-message read status: `OnRecvGroupReadReceipt`. See [Report group messages as read](/sdk/react-native/message/managing-read-status/send-group-read-receipts).
-- Typing-status changes: `OnInputStatusChanged`. See [Update input states](/sdk/react-native/message/composing-messages/change-input-states).
+- Group message read receipts: `OnRecvGroupReadReceipt`. See [Send group read receipts](/sdk/react-native/message/managing-read-status/send-group-read-receipts).
+- Typing status changes: `OnInputStatusChanged`. See [Change input states](/sdk/react-native/message/composing-messages/change-input-states).

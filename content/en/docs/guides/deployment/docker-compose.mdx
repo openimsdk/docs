@@ -1,12 +1,12 @@
 ## Prepare the environment
 
-Review [Environment and components](./components) for server hardware, software, operating system, and dependency requirements.
+Before proceeding, review [Environment and components](./components) for server hardware, software, operating system, and external dependency requirements.
 
 ## Deploy OpenIMServer
 
-### Clone the repository and pin a version
+### Clone the repository and pin a stable release
 
-Use the latest official release tag marked with the green **Latest** badge on GitHub Releases. Do not sort tag names to infer the latest version, and do not use alpha, beta, rc, or other prerelease versions.
+Always use the latest official release tag marked with the green **Latest** badge on GitHub Releases. Avoid relying on alphanumeric tag sorting, and do not deploy alpha, beta, rc, or other pre-release versions into production.
 
 ```bash
 git clone https://github.com/openimsdk/openim-docker && cd openim-docker
@@ -16,11 +16,11 @@ git checkout "$LATEST_STABLE_TAG"
 echo "using openim-docker stable release tag: $LATEST_STABLE_TAG"
 ```
 
-> `main` is the development branch. Do not use it directly in production.
+> `main` is the active development branch. Never deploy `main` directly to production.
 
-### Configure the public object storage address
+### Configure public object storage address
 
-Edit `.env` and set the external MinIO address to one that clients can access:
+Edit `.env` to set the external MinIO access address reachable by client devices:
 
 ```dotenv
 MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
@@ -28,25 +28,25 @@ MINIO_EXTERNAL_ADDRESS="http://your-server-ip:10005"
 
 ### Start and stop services
 
-Start the services:
+Start all services:
 
 ```bash
 docker compose up -d
 ```
 
-The first run downloads large images. Wait `30-60s` after startup before running health checks or API verification.
+The initial run downloads relatively large container images. After containers start, wait `30-60s` before executing health checks or API verification.
 
-This guide assumes a clean environment. If the machine already has containers named `mongo`, `redis`, `kafka`, `etcd`, `minio`, `openim-server`, or `openim-chat`, `docker compose up -d` fails because of `container_name` conflicts. Resolve the duplicate containers first, or reuse the existing components and update the configuration accordingly.
+This guide assumes a clean machine environment. If containers named `mongo`, `redis`, `kafka`, `etcd`, `minio`, `openim-server`, or `openim-chat` already exist on the host, `docker compose up -d` will fail due to `container_name` conflicts. Remove or rename conflicting containers first, or reuse existing components and adjust configuration accordingly.
 
-Warnings that `ETCD_USERNAME`, `ETCD_PASSWORD`, `KAFKA_USERNAME`, or `KAFKA_PASSWORD` are unset can usually be ignored when authentication is not enabled for those components.
+If startup logs warn that `ETCD_USERNAME`, `ETCD_PASSWORD`, `KAFKA_USERNAME`, or `KAFKA_PASSWORD` are unset, and you have not enabled authentication on those components, you can safely ignore these notices.
 
-Stop the services:
+Stop all services:
 
 ```bash
 docker compose down
 ```
 
-Follow OpenIMServer and ChatServer logs:
+Tail logs for OpenIMServer and ChatServer:
 
 ```bash
 docker compose logs -f openim-server openim-chat
@@ -54,13 +54,13 @@ docker compose logs -f openim-server openim-chat
 
 ### Start monitoring and alerting (optional)
 
-To start Prometheus, Alertmanager, Grafana, and node-exporter as well, run:
+To launch Prometheus, Alertmanager, Grafana, and node-exporter alongside the core services, run:
 
 ```bash
 docker compose --profile m up -d
 ```
 
-Default ports come from the current `.env`. Common values are:
+Default listening ports are governed by `.env`. Typical port allocations:
 
 | Port | Component |
 | --- | --- |
@@ -69,18 +69,18 @@ Default ports come from the current `.env`. Common values are:
 | `13000` | Grafana |
 | `19100` | node-exporter |
 
-## Verify the deployment
+## Verify deployment
 
-After startup, follow [Deployment verification](./verification) to check OpenIMServer, ChatServer, the API, WebSocket, and optional frontends.
+After startup completes, follow [Deployment verification](./verification) to validate OpenIMServer, ChatServer, REST APIs, WebSocket connectivity, and optional frontends.
 
-## Common issues
+## Troubleshooting
 
 ### Containers remain unhealthy
 
-1. Run `docker exec -it openim-server mage check` and `docker exec -it openim-chat mage check`, and confirm whether the problem persists for more than one minute.
-2. Run `docker compose logs -f openim-server openim-chat` to inspect the logs.
-3. If `openim-chat` briefly reports `connect: connection refused` during startup, wait `30-60s` and check again. This usually means `openim-server` is not fully ready yet.
+1. Run `docker exec -it openim-server mage check` and `docker exec -it openim-chat mage check` to verify if failures persist for more than one minute.
+2. Run `docker compose logs -f openim-server openim-chat` to inspect detailed container logs.
+3. If `openim-chat` briefly logs `connect: connection refused` during initial startup, wait `30-60s` and recheck. This is normal startup sequencing behavior while `openim-server` completes initialization.
 
-### Configuration changes do not take effect
+### Configuration modifications do not take effect
 
-Changes made directly under the container's `config` directory do not persist. Configure the service with environment variables instead; see the [openim-docker environment variable guide](https://github.com/openimsdk/openim-docker/issues/136).
+Modifying files inside the container's `config` directory directly does not persist across container recreations. Configure parameters via environment variables instead; refer to the [openim-docker environment variable documentation](https://github.com/openimsdk/openim-docker/issues/136).

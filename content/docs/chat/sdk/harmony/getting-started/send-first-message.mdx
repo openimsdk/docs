@@ -1,17 +1,78 @@
 ---
 title: 'Send your first message'
-description: 'OpenIM HarmonyOS SDK guide for Send your first message.'
+description: 'Create and send your first one-to-one or group text message using the OpenIM HarmonyOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/getting-started/send-first-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Before sending messages, complete SDK initialization, sign in the user, and wait for connection establishment and server synchronization. Sending a message consists of two separate phases: creating the message object locally and transmitting it over the network.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Send a one-to-one message
+
+Create a text message object using `createTextMessage()` and send it to a recipient with `sendMessage()`:
+
+## Code example
+
+```ts
+import sdk, { CreateTextMessageResp, SendMessageReq, SendMessageResp } from '@openimsdk/imsdk';
+
+const created: CreateTextMessageResp = await sdk.createTextMessage({
+  text: 'Hello, OpenIM!',
+});
+
+const request: SendMessageReq = {
+  message: created.message,
+  recvID: 'user_b',
+  groupID: '',
+  isOnlineOnly: false,
+};
+
+const sent: SendMessageResp = await sdk.sendMessage(request);
+appendOutgoingMessage(sent.message);
+```
+
+The `recvID` must be a valid user identifier; do not use nicknames, phone numbers, or UI display labels. [Create text message](/sdk/harmony/message/creating-messages/create-text-message) only constructs the message object in memory without network transmission.
+
+## Send a group message
+
+To send a message to a group, specify the `groupID` and leave `recvID` empty:
+
+```ts
+const created: CreateTextMessageResp = await sdk.createTextMessage({
+  text: 'Hello everyone!',
+});
+
+const request: SendMessageReq = {
+  message: created.message,
+  recvID: '',
+  groupID: 'group_123',
+  isOnlineOnly: false,
+};
+
+const sent: SendMessageResp = await sdk.sendMessage(request);
+appendOutgoingMessage(sent.message);
+```
+
+The current user must be an active member of the target group with permission to send messages. Specify only `recvID` for direct messages and only `groupID` for group messages; never provide both destinations simultaneously.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `MessageItem` | Yes | The message object returned by a creation method such as `createTextMessage()`. |
+| `recvID` | `string` | No | Target user ID for one-to-one messages. Leave empty for group messages. |
+| `groupID` | `string` | No | Target group ID for group messages. Leave empty for one-to-one messages. |
+| `isOnlineOnly` | `boolean` | No | Whether the message is delivered only to currently online clients without persisting to history. Default is `false`. |
+
+## Return value
+
+Returns a Promise that resolves to a `SendMessageResp` containing the updated `message` item with delivery status and timestamps.
+
+## State changes after the call
+
+Once the Promise resolves, update or replace your local optimistic pending message in the UI using the stable identifier `clientMsgID`. Message receipt on the remote peer is an asynchronous stage handled via incoming message events. See [Receive messages](/sdk/harmony/message/receiving-messages/receive-messages) for complete event listener examples.

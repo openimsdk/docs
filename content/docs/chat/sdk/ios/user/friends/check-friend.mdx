@@ -5,20 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/check-friend'
 ---
+
+Batch-verify friendship relationship statuses for target user IDs using `checkFriend:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | Yes | List of user IDs to check. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] checkFriend:@[@"user_a", @"user_b"]
                         onSuccess:^(NSArray<OIMSimpleResultInfo *> *results) {
                             [relationshipStore mergeResults:results];
                         }
-                        onFailure:nil];
+                        onFailure:^(NSInteger code, NSString *message) {
+                            NSLog(@"checkFriend failed: %ld %@", (long)code, message);
+                        }];
 ```
 
-Pass an array of user IDs to check. Each `OIMSimpleResultInfo` in the success callback identifies its target by `userID`. A `result` value of `1` means that the target is a friend and is not blocked. This method does not define business meanings for other `result` values.
+## Return value
 
-This method only retrieves a relationship snapshot and does not trigger a friendship delegate. To retrieve friend remarks, avatars, or extension fields, use [`getSpecifiedFriendsInfo:filterBlack:onSuccess:onFailure:`](/sdk/ios/user/friends/get-specified-friends-info).
+The `onSuccess` callback delivers an array of `OIMSimpleResultInfo` objects. Each entry contains a `userID` and an integer `result`. A `result` of `1` indicates that the target user and the current account are mutual friends and neither has blacklisted the other.
+
+## State changes after the call
+
+- **Local state merge**: Merge verification results into relationship caches using `userID` as the unique entity key.
+- **Snapshot query**: This call returns an instantaneous relationship snapshot and does not emit friendship delegate events.
+- **Full relationship profiles**: To retrieve detailed profile properties like friend remarks or avatars, invoke [Retrieve specified friends](/sdk/ios/user/friends/get-specified-friends-info).

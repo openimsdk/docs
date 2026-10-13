@@ -5,18 +5,34 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/retrieving-conversations/get-conversation-id'
 ---
 
-When you only need the conversation ID, call the synchronous method instead of constructing the ID in application code:
+Compute a deterministic conversation identifier string synchronously using `getConversationIDBySessionType:sourceID:`. Use this method to obtain conversation IDs locally without performing string concatenation or sending network requests.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sessionType` | `OIMConversationType` | Yes | Conversation category. Pass `OIMConversationTypeC2C` for direct chats or `OIMConversationTypeGroup` for group chats. |
+| `sourceID` | `NSString *` | Yes | Peer user ID for direct chats, or group ID for group chats. |
+
+## Code example
 
 ```objc
 NSString *conversationID = [[OIMManager manager]
     getConversationIDBySessionType:OIMConversationTypeC2C
-                          sourceID:targetUserID];
+                          sourceID:@"user_1002"];
+
+if (conversationID.length > 0) {
+    [self handleConversationID:conversationID];
+}
 ```
 
-For a one-to-one chat, `sourceID` is the other user's ID. For a group chat, it is the group ID and the type is `OIMConversationTypeGroup`. Do not continue with conversation operations if the returned value is empty. This method does not return an `OIMConversationInfo` or trigger a delegate.
+## Return value
+
+The method synchronously returns a normalized `NSString *` representing the unique conversation identifier. If arguments are invalid, it may return `nil` or an empty string.
+
+This method operates purely in-memory without initiating network requests, database transactions, or delegate notifications. It derives identifier strings only; to retrieve complete conversation metadata including unread counts and drafts, invoke [Retrieve a conversation by chat target](/sdk/ios/conversation/retrieving-conversations/get-conversation-by-target).

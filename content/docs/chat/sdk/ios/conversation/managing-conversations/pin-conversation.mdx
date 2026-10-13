@@ -5,17 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/pin-conversation'
 ---
 
+Update the pinned status of a specified conversation in the chat list using `pinConversation:isPinned:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID to pin or unpin. |
+| `isPinned` | `BOOL` | Yes | Pinned state flag. Pass `YES` to pin the conversation, or `NO` to unpin it. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] pinConversation:conversationID
+[[OIMManager manager] pinConversation:@"c2c_user1002"
                              isPinned:YES
-                            onSuccess:nil
-                            onFailure:nil];
+                            onSuccess:^(NSString * _Nullable data) {
+                                NSLog(@"pinConversation success");
+                            }
+                            onFailure:^(NSInteger code, NSString *message) {
+                                NSLog(@"pinConversation failed: %ld %@", (long)code, message);
+                            }];
 ```
 
-Pass `YES` to pin the conversation or `NO` to unpin it. A successful callback means that the request has completed, not that `onConversationChanged:` has already arrived. Merge the subsequent conversation update by `conversationID`.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer updated the pinned status.
+
+## State changes after the call
+
+- **Local state merge**: Merge the updated `isPinned` flag into local conversation stores using `conversationID` as the entity key, and re-sort the conversation list.
+- **Asynchronous event listening**: Multi-device sessions and local listeners observe updates via `onConversationChanged:` in `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).
+- **Re-query calibration**: To restore authoritative conversation metadata, invoke [Retrieve conversations by ID](/sdk/ios/conversation/retrieving-conversations/get-conversations-by-id).

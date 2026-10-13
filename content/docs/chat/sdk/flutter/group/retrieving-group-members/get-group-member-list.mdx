@@ -1,26 +1,27 @@
 ---
-title: 'Retrieve group members by page'
-description: 'Retrieve group members by page with the OpenIM Flutter SDK.'
+title: 'Get group member list with pagination'
+description: 'Query group members with role filters and pagination using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/retrieving-group-members/get-group-member-list'
 ---
 
-`getGroupMemberList()` returns member profiles for a target group by page. The caller must already belong to that group.
+Query member rosters within a target group using pagination and optional role filters. The caller typically must already be a member of the group:
 
 ## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `groupID` | `String` | Yes | Target group ID. |
-| `filter` | `int` | No | `0` all, `1` owner, `2` administrators, `3` regular members. |
-| `offset` | `int` | No | Starting offset; pass `0` for the first page. |
-| `count` | `int` | No | Number of items to retrieve. |
+| `filter` | `int` | No | Role filter: `0` all members, `1` group owner, `2` administrators, `3` regular members. Defaults to `0`. |
+| `offset` | `int` | No | Zero-based pagination offset index. |
+| `count` | `int` | No | Maximum number of members to fetch per page. |
+
+## Code example
 
 ```dart
 final members = await OpenIM.iMManager.groupManager.getGroupMemberList(
@@ -31,6 +32,10 @@ final members = await OpenIM.iMManager.groupManager.getGroupMemberList(
 );
 ```
 
-A successful `Future` returns the current page as `List<GroupMembersInfo>`. Advance `offset` by the number of items requested, not by the array length after event merges. The Flutter SDK assigns `4` to both combined filter constants; to retrieve the owner and administrators explicitly, see [Retrieve the group owner and administrators](/sdk/flutter/group/retrieving-group-members/get-group-owner-and-admin).
+## Return value
 
-This query establishes a snapshot only. For member increments and merge rules, see [Group member queries overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).
+A successful `Future` returns a list of group member objects for the requested page (`List<GroupMembersInfo>`).
+
+When fetching subsequent pages, advance `offset` by the total number of items requested so far. Do not use local list lengths that fluctuate with incremental event arrivals as pagination offsets. To query group leadership directly, see [Get group owner and admin](/sdk/flutter/group/retrieving-group-members/get-group-owner-and-admin).
+
+This query returns an immediate data snapshot and does not emit event notifications. For subsequent member change events and incremental merging rules, see [Retrieving group members overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).

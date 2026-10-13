@@ -5,17 +5,35 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/creating-messages/create-sound-message-by-url'
 ---
 
+When the application has already uploaded audio recordings to an external server or object storage, invoke `createSoundMessageByURL:duration:size:` on `OIMMessageInfo` to construct an audio message object directly without redundant uploads by the SDK:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `soundURL` | `NSString *` | Yes | Accessible remote URL of the uploaded audio file. |
+| `duration` | `NSInteger` | Yes | Audio playback duration in seconds. |
+| `size` | `NSInteger` | Yes | Actual size of the audio file in bytes. |
+
+## Code example
+
 ```objc
 OIMMessageInfo *message =
     [OIMMessageInfo createSoundMessageByURL:uploadedURL
-                                    duration:durationSeconds
-                                        size:uploadedSize];
+                                   duration:durationSeconds
+                                       size:uploadedSize];
 ```
 
-The URL, duration in seconds, and size in bytes must come from an actual upload result. Send the returned object with `sendMessageNotOss:...`.
+## Return value
+
+Returns an initialized `OIMMessageInfo` model populated with the remote audio URL and metadata. The passed URL, duration, and file size must match valid asset data.
+
+## State changes after the call
+
+1. **Local memory instantiation**: This method constructs an in-memory message object without writing to the database or initiating network activity.
+2. **Subsequent dispatch**: Because the audio file is already hosted externally, deliver the message by calling [Send a message without SDK-managed upload](/sdk/ios/message/sending-messages/send-message-not-oss). If you need the SDK to manage local audio uploading, use [Create an audio message from a local path](/sdk/ios/message/creating-messages/create-sound-message-from-full-path).

@@ -1,16 +1,16 @@
 ---
 title: 'Send a custom signal'
-description: 'Send a custom signal in a call room.'
+description: 'Broadcast application-defined RTC custom signaling messages to call room participants using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-Call `signalingSendCustomSignal()` to send an application-defined signal to a call room, such as raising a hand or changing the layout. `customInfo` is a string. To send structured data, pass a JSON string.
+Broadcast application-defined signaling data to active participants in a calling room—such as hand-raising, custom reactions, or layout mode changes. `customInfo` accepts a string payload; serialize structured data as a JSON string before dispatching.
 
 ```ts
 await OpenIMSDK.signalingSendCustomSignal({
@@ -23,27 +23,32 @@ await OpenIMSDK.signalingSendCustomSignal({
 
 ## Parameters
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `roomID` | `string` | Target call room ID. |
-| `customInfo` | `string` | Application-defined signal content. |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `roomID` | `string` | Yes | Target calling room ID. |
+| `customInfo` | `string` | Yes | Application-defined signaling content payload. |
 
-After the call returns, the custom-signal request is complete.
+## Return value
+
+A resolved Promise confirms that the custom signaling message was processed and forwarded by the server.
 
 ## Receive custom signals
 
-When another participant sends a custom signal, `OnReceiveCustomSignal` is triggered. Its callback parameter is `OnReceiveCustomSignalPayload`, which contains `roomID` and `customInfo`.
+When other participants send custom signals, the SDK triggers the `OnReceiveCustomSignal` event. Its payload is typed as `OnReceiveCustomSignalPayload`, containing `roomID` and `customInfo`. Match the calling room using `roomID` before deserializing the business payload.
 
 ```ts
 function handleCustomSignal(payload: OnReceiveCustomSignalPayload) {
-  // ...
+  if (payload.roomID === currentRoomID) {
+    const data = JSON.parse(payload.customInfo);
+    // Handle application signaling event
+  }
 }
 
-// Start listening
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnReceiveCustomSignal, handleCustomSignal);
 
-// Stop listening
+// Remove listener
 OpenIMSDK.off(OpenIMEvent.OnReceiveCustomSignal, handleCustomSignal);
 ```
 
-Stop listening when the component is unmounted, the user signs out, or the account changes. After receiving `customInfo`, parse and handle its data according to the application protocol.
+Unregister this listener when the call screen unmounts, the user signs out, or accounts switch.

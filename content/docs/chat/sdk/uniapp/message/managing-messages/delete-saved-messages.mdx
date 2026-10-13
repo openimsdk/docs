@@ -1,17 +1,66 @@
 ---
-title: 'Delete messages in a batch'
-description: 'OpenIM uni-app / uni-app x SDK guide for Delete messages in a batch.'
+title: 'Delete saved messages'
+description: 'Batch delete multiple messages from a conversation and listen for synchronization events across devices.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/managing-messages/delete-saved-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Batch deleting messages is a Commercial Edition capability. All messages specified in a single call must belong to the exact same conversation.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the conversation containing the target messages. |
+| `clientMsgIDs` | `string[]` | Yes | Array of `clientMsgID` values belonging to this conversation. |
+| `IsSync` | `boolean` | Yes | Whether to synchronize the deletion across other devices logged into the current account; note the PascalCase capitalization. |
+
+## Code example
+
+```uts
+import { deleteMessages } from '@/uni_modules/unix-openim-sdk'
+
+await deleteMessages({
+  conversationID,
+  clientMsgIDs: selectedMessageIDs,
+  IsSync: true,
+})
+```
+
+Passing `IsSync: false` deletes the records from the local device and server for the current account. Passing `IsSync: true` additionally dispatches deletion notifications to other client instances logged into the same account. It does not delete message copies stored by other chat participants or create a revocation notice.
+
+## Return value
+
+The Promise resolves with `void` upon successful completion.
+
+## Listen for synchronized message deletions
+
+Centrally subscribe to `onMsgDeleted` to handle synchronized message deletions. The callback directly receives the deleted `OpenIMMessageItem | null` object. Determine the owning conversation and remove the item from local state using `conversationID:clientMsgID`. Duplicate event deliveries should be handled idempotently.
+
+```uts
+import {
+  OpenIMMessageItem,
+  off,
+  onMsgDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleMessageDeleted = (message: OpenIMMessageItem | null) => {
+  if (message == null || message.clientMsgID == null) return
+
+  const messageConversationID = resolveMessageConversationID(message)
+  removeMessage(messageConversationID, message.clientMsgID)
+}
+
+const messageDeletedSubscription = onMsgDeleted(handleMessageDeleted)
+
+function removeMessageDeletedListener() {
+  off(messageDeletedSubscription)
+}
+```
+
+Unregister the listener when unmounting the view, logging out, or switching accounts. To calibrate message state after network reconnects, re-query the conversation's history list.

@@ -1,26 +1,25 @@
 ---
 title: 'Get the conversation list'
-description: 'Use getConversationListSplit() to retrieve the signed-in account conversation list by page.'
+description: 'Paginate the conversation list for the authenticated user and keep it synchronized with real-time updates.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-The conversation list belongs to the signed-in account. Each `ConversationInfo` contains list state such as unread count, latest message, pinning, and draft.
+The conversation list belongs to the authenticated user. Paginate queries to avoid loading excessive data into memory at once. Each `ConversationInfo` record encapsulates unread counts, latest messages, pinning state, and drafts.
 
-## Retrieve a page
+## Code example
 
 ```java
 OpenIMClient.getInstance().conversationManager.getConversationListSplit(
     new OnBase<List<ConversationInfo>>() {
         @Override
         public void onSuccess(List<ConversationInfo> conversations) {
-            // conversations contains the current page.
+            // conversations contains the current page of conversations.
         }
 
         @Override
@@ -33,27 +32,32 @@ OpenIMClient.getInstance().conversationManager.getConversationListSplit(
 );
 ```
 
-| Parameter | Type   | Description                                           |
-| --------- | ------ | ----------------------------------------------------- |
-| `offset`  | `long` | Zero-based paging offset; reset it to `0` on refresh. |
-| `count`   | `long` | Requested number of conversations.                    |
+## Parameters
 
-The callback returns the current `List<ConversationInfo>` page. Advance `offset` by the requested item count. A page smaller than `count` normally indicates the end.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<ConversationInfo>>` | Yes | Callback delivering the asynchronous query result. |
+| `offset` | `long` | Yes | Zero-based paging offset; reset to `0` on initial load or pull-to-refresh. |
+| `count` | `long` | Yes | Number of conversation items to fetch in this page. |
+
+## Return value
+
+The successful callback returns the current page as `List<ConversationInfo>`. Merge and deduplicate items using `conversationID` as the unique primary key. When the returned list size is less than `count`, the end of the conversation list has been reached. When loading the next page, increment `offset` by the total number of conversations fetched so far.
 
 ## Keep the list synchronized
 
-Use `OnConversationListener` to receive the following callbacks when conversations are added or changed:
+Register `OnConversationListener` at the application layer to receive real-time notifications when conversations are added or updated:
 
 ```java
 OnConversationListener conversationListener = new OnConversationListener() {
     @Override
     public void onNewConversation(List<ConversationInfo> conversations) {
-        // conversations contains newly added conversations.
+        // conversations contains newly created conversations.
     }
 
     @Override
     public void onConversationChanged(List<ConversationInfo> conversations) {
-        // conversations contains changed conversations.
+        // conversations contains updated conversations.
     }
 };
 
@@ -62,4 +66,4 @@ OpenIMClient.getInstance().conversationManager.setOnConversationListener(
 );
 ```
 
-Both callbacks carry `List<ConversationInfo>`; update the corresponding conversation by `conversationID`. Once set, `setOnConversationListener()` receives conversation changes.
+Both callbacks carry a `List<ConversationInfo>`. When receiving updates, iterate through the list, locate the corresponding local conversation using `conversationID`, merge modified fields or insert new records, and re-sort the UI list. When logging out or switching accounts, pass `null` or unregister callbacks to clear stale listeners.

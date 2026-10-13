@@ -1,19 +1,21 @@
 ---
 title: 'Modify a message'
-description: 'OpenIM React Native SDK guide for modify a message.'
+description: 'Edit and update the content of an existing message using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-messages/modify-a-message'
 ---
 
-Use `modifyMessage()` to modify an existing message in a conversation.
+Modify the content of a previously sent message in a conversation:
+
+Use this method to correct typos or append annotations. Permitted message types, sender permissions, and editing time windows are governed by server configuration policies.
 
 ```ts
-const updatedMessage = {
+const updatedMessage: MessageItem = {
   ...message,
   textElem: {
     ...message.textElem,
@@ -31,27 +33,27 @@ const modifiedMessage = await OpenIMSDK.modifyMessage({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `string` | Yes | Conversation containing the message. |
-| `message` | `MessageItem` | Yes | Complete modified message. Preserve its original `clientMsgID` and other required fields. |
+| `conversationID` | `string` | Yes | Target conversation ID containing the message. |
+| `message` | `MessageItem` | Yes | Complete modified message object, retaining the original `clientMsgID` and core metadata. |
 
 ## Return value
 
-The call returns the server-confirmed `MessageItem`. You can replace the message with the same `clientMsgID` in your list. The server validates permitted message types, senders, and time limits.
+A resolved Promise returns the updated `MessageItem` confirmed by the server. Update the local message list by replacing the entry matching `clientMsgID`. If the modification window has expired or the sender lacks edit permissions, an error is returned.
 
-## Listen for message modification
+## Listen for message modifications
 
-When a message is modified, `OnMessageModified` is emitted with the modified `MessageItem` directly.
+When a message is edited in a conversation, all clients receive an `OnMessageModified` notification. The event delivers the full updated `MessageItem`. Reconcile your UI by matching the message via `clientMsgID`.
 
 ```ts
-function handleMessageModified(message) {
-  // ...
-}
+const handleMessageModified = (message: MessageItem) => {
+  // Locate the message by message.clientMsgID and replace it in the active conversation view
+};
 
-// Set the listener
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnMessageModified, handleMessageModified);
 
-// Remove the listener
+// Unregister listener on cleanup
 OpenIMSDK.off(OpenIMEvent.OnMessageModified, handleMessageModified);
 ```
 
-Remove the listener when the component is destroyed, the account signs out, or the account changes.
+Always unregister listeners using identical function references when unmounting components or signing out.

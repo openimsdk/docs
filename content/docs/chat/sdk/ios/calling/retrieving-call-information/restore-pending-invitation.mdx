@@ -5,22 +5,32 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/retrieving-call-information/restore-pending-invitation'
 ---
 
-This method takes no business parameters. Its success callback returns the `OIMSignalingInfo` that may need to be restored when the app starts:
+Recover pending, unanswered call invitations after an iOS cold app launch using `getSignalingInvitationInfoStartAppWithOnSuccess:onFailure:`. This method requires no input parameters.
+
+## Code example
 
 ```objc
 [[OIMManager manager]
     getSignalingInvitationInfoStartAppWithOnSuccess:^(OIMSignalingInfo * _Nullable info) {
-    if (info.invitation.roomID.length > 0) [self restoreIncomingCall:info];
+    if (info.invitation.roomID.length > 0) {
+        [self restoreIncomingCall:info];
+    }
 }
     onFailure:^(NSInteger code, NSString * _Nullable message) {
-    [self showCallError:code message:message ?: @"Failed to restore the call invitation"];
+    [self showCallError:code message:message ?: @"Failed to restore call invitation"];
 }];
 ```
 
-The result may be empty, so check both `info` and `roomID` before use. This query establishes a snapshot only. After restoration, continue handling cancellation, timeout, acceptance, and hang-up delegate callbacks.
+## Return value
+
+The `onSuccess` callback delivers an `OIMSignalingInfo` object representing the invitation pending at application launch. If no invitation is pending, the callback returns `nil`. Always verify that both `info` and `info.invitation.roomID` are non-empty before presenting the incoming call UI.
+
+## State changes after the call
+
+- **Snapshot restoration**: This query restores an instantaneous snapshot of the unresolved invitation.
+- **Asynchronous event tracking**: After rendering the incoming call screen, observe ongoing state updates (such as cancellation, timeout, remote acceptance, or hangup) via `OIMSignalingListener` delegate callbacks (see [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events)).

@@ -1,41 +1,64 @@
 ---
-title: 'Delete all messages from a user in a group chat'
-description: 'Delete every message sent by a specified user in a group chat with the Android SDK.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-17'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/managing-messages/delete-user-messages'
+title: "Delete all messages from a user in a group chat"
+description: "Delete every message sent by a specified user in a group chat with the Android SDK."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/managing-messages/delete-user-messages"
 ---
 
+Group owners and administrators can clear every historical message sent by a designated member in a group chat. This is commonly used to remove spam, moderate rule violations, or ban abusive accounts across a group conversation.
+
+## Code example
+
 ```java
-messageManager.deleteUserAllMessagesInConv(
+String conversationID = "g_group_123";
+String targetUserID = "user_spammer";
+
+OpenIMClient.getInstance().messageManager.deleteUserAllMessagesInConv(
     conversationID,
     targetUserID,
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The deletion request has completed
+            // Deletion request processed successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the failure
+            // Failed to delete user messages (e.g. insufficient permissions)
         }
     }
 );
 ```
 
-This API is available only for group chats and deletes every message sent by the specified user in the target group conversation. If the caller does not have permission, `onError` returns the error.
+## Parameters
 
-Other clients receive the deletion notification through `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv`. The callback includes the corresponding `conversationID` and `userID`:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Globally unique ID of the target group conversation. Group conversations only. |
+| `targetUserID` | `String` | Yes | User ID of the member whose messages should be cleared. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
 
-```java
-@Override
-public void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {
-    // event identifies the affected conversation and user.
-}
-```
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server has executed the purge across the specified group conversation.
+2. **Asynchronous event delivery**: All online group members receive an event via `OnAdvanceMsgListener.onDeleteUserAllMsgsInConv`:
+   ```java
+   @Override
+   public void onDeleteUserAllMsgsInConv(DeleteUserAllMsgsListenerMsg event) {
+       // Filter by event.getConversationID() and event.getUserID()
+       // Remove all messages sent by this user from the local timeline
+   }
+   ```
+   Group members filter messages by `conversationID` and `sendID == targetUserID`, removing all matching bubbles from their active UI timeline.
+3. **Re-query calibration**: If UI state diverges after reconnecting, reload the message history using [Load older messages](/sdk/android/message/retrieving-messages/load-older-messages).
+
+For complete listener registration and lifecycle management, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

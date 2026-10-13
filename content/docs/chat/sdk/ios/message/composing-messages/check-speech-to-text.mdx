@@ -5,22 +5,40 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/composing-messages/check-speech-to-text'
 ---
 
-Receive the capability JSON through `CallbackProxy`, then validate the format, sample rate, duration, and size:
+Use the underlying `OpenIMCore` C function `Open_im_sdkSpeechToTextCapabilities` to check speech-recognition capabilities and configuration limits (such as audio formats, sample rates, maximum recording durations, and file sizes) prior to recording:
+
+## Code example
 
 ```objc
 CallbackProxy *callback = [[CallbackProxy alloc]
-    initWithOnSuccess:^(NSString *data) {
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        // Parse capability configuration JSON and adapt UI controls
         [self applySpeechToTextCapabilitiesJSON:data];
     }
-    onFailure:^(NSInteger code, NSString *message) {
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // Disable audio transcription feature if capability query fails
         [self disableTranscription];
     }];
+
+Open_im_sdkSpeechToTextCapabilities(callback, @"");
 ```
 
-Pass this callback to `Open_im_sdkSpeechToTextCapabilities`. The result contains `format`, `sampleRateHz`, `maxRecordTimeMs`, `maxFileSize`, `provider`, `requestType`, and `crossDomain`. Do not guess the limits when the call fails.
+## Return value
+
+The `onSuccess` callback delivers a JSON string containing the speech-to-text capability parameters:
+
+- `format`: Supported audio encoding and container format (e.g. `m4a`, `wav`).
+- `sampleRateHz`: Audio sample rate in Hz.
+- `maxRecordTimeMs`: Maximum supported recording duration in milliseconds.
+- `maxFileSize`: Maximum allowed file size in bytes per audio segment.
+- `provider`: Underlying speech recognition service provider code.
+
+## State changes after the call
+
+1. **Client-side boundary constraints**: Use the returned formats and constraints to configure audio recording parameters and perform client-side validation before transcription.
+2. **Executing transcription**: To send an audio file for speech-to-text conversion, see [Transcribe audio](/sdk/ios/message/composing-messages/transcribe-audio).

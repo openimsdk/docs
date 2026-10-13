@@ -1,17 +1,132 @@
 ---
-title: 'Environment-specific implementation'
-description: 'OpenIM uni-app / uni-app x SDK guide for Environment-specific implementation.'
+title: 'Integrate by project and platform'
+description: 'Install the UTS plugin in uni-app and uni-app x projects, and initialize Android, iOS, and HarmonyOS runtimes.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/getting-started/environment-specific-implementation'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Standard uni-app (Vue 2 / Vue 3) and uni-app x share the same `unix-openim-sdk` plugin directory structure, root import path, and API declarations. Differences across target platforms are confined to native binary packages, build bases, platform identifiers, system runtime permissions, and specific HarmonyOS boundary behaviors. The underlying data models for users, relationships, conversations, groups, and messages remain identical.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+Before proceeding, complete the server, user credential, and environment preparations outlined in [Before you start](/sdk/uniapp/getting-started/before-you-start).
+
+## Platform compatibility matrix
+
+| Project type | Android | iOS | HarmonyOS | Web / Mini Programs |
+| --- | --- | --- | --- | --- |
+| uni-app (Vue 2 / Vue 3) | Supported | Supported | Commercial license required | Not supported |
+| uni-app x | Supported | Supported | Commercial license required | Not supported |
+
+When targeting multiple platforms from a shared codebase, verify plugin installation, initialization, authentication, and core API calls within an Android custom debugging base first. Next, validate platform-specific configurations and permissions using iOS and HarmonyOS custom bases or formal release builds. Always test against actual compiled binaries rather than relying on standard debugging bases or behavior observed on another platform.
+
+## Install the UTS plugin
+
+Copy the delivered plugin directory into the `uni_modules/` folder of your host application:
+
+```text
+your-project/
+└── uni_modules/
+    └── unix-openim-sdk/
+        ├── package.json
+        └── utssdk/
+```
+
+If your project already contains an older version of the plugin, verify the version and source origin before overwriting files. Do not merge separate distribution versions. The delivered package already includes platform-locked native binaries, so do not link secondary OpenIM Core libraries via Maven, CocoaPods, or OHPM.
+
+After copying the plugin files, compile a custom debugging base or generate a formal build. The standard HBuilderX base does not package native UTS libraries.
+
+## Import APIs from the plugin root
+
+In both JavaScript/TypeScript pages in traditional uni-app and UTS pages in uni-app x, import public SDK symbols from the plugin root:
+
+```uts
+import {
+  OpenIMLogLevelWarn,
+  OpenIMPlatformAndroid,
+  OpenIMPlatformHarmony,
+  OpenIMPlatformIOS,
+  initSDK,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+Code examples throughout this documentation use UTS syntax. Traditional uni-app pages use the exact same exported symbol names and signatures. Never import internal platform implementation files such as `index.uts`, Kotlin, Swift, or ArkTS files directly.
+
+## Initialize the SDK
+
+Pass the exported platform constant matching your target operating system instead of a numeric literal:
+
+| Target platform | Platform constant |
+| --- | --- |
+| Android App | `OpenIMPlatformAndroid` |
+| iOS App | `OpenIMPlatformIOS` |
+| HarmonyOS App | `OpenIMPlatformHarmony` |
+
+The following example initializes the SDK for Android. For iOS or HarmonyOS, substitute the corresponding platform constant and run against that platform's custom debugging base or release build:
+
+## Code example
+
+```uts
+const initialized = await initSDK({
+  platformID: OpenIMPlatformAndroid,
+  apiAddr: 'https://api.example.com',
+  wsAddr: 'wss://ws.example.com',
+  dataDir: '',
+  logFilePath: '',
+  logLevel: OpenIMLogLevelWarn,
+  isLogStandardOutput: false,
+  systemType: 'your-app',
+})
+
+if (!initialized) {
+  throw new Error('OpenIMClientSDK failed to initialize')
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `platformID` | `OpenIMPlatform` | Yes | The current application platform identifier. Supply the exported constant. |
+| `apiAddr` | `string` | Yes | The OpenIMServer HTTP API endpoint. In production, provide an HTTPS address accessible from physical devices. |
+| `wsAddr` | `string` | Yes | The OpenIMServer WebSocket endpoint. In production, provide a WSS address accessible from physical devices. |
+| `dataDir` | `string` | No | Base directory for SDK local database storage. Pass an empty string to use the default writable application sandbox directory. |
+| `logFilePath` | `string` | No | Native file path for SDK logs. Pass an empty string if local log file persistence is not needed. |
+| `logLevel` | `OpenIMLogLevel` | Yes | SDK logging verbosity. For production environments, use `OpenIMLogLevelWarn` or `OpenIMLogLevelError`. |
+| `isLogStandardOutput` | `boolean` | Yes | Whether the native Core prints log output to standard out. Typically set to `false` in production. |
+| `systemType` | `string` | Yes | A stable application identifier string defined by your project conventions. |
+
+## Return value
+
+The Promise resolves with a boolean value (`true`) indicating that the native initialization completed successfully. Initializing the SDK and authenticating a user are distinct steps: after calling `initSDK()`, register connection event listeners and proceed with [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session). Initializing successfully does not mean the client is connected to OpenIMServer.
+
+## Manage storage and file paths
+
+Leave `dataDir` as an empty string under normal circumstances so the SDK automatically selects the default writable sandbox directory. Do not pass the `uni.env.USER_DATA_PATH` literal string, `unifile://` URI schemas, component-relative paths, temporary cache directories, or read-only locations as the Core database path.
+
+File, image, audio, and video messaging APIs follow different file-path rules: they accept both POSIX absolute paths readable within the app sandbox and `unifile://` URIs generated from `uni.env.USER_DATA_PATH`. The UTS plugin normalizes these paths before passing them to the native Core. Ensure the target file exists on disk and that your application has granted file read permissions before calling media APIs.
+
+## Platform-specific considerations
+
+- Android and iOS support all standard UTS APIs and event streams documented here.
+- HarmonyOS capabilities depend on the licensed commercial distribution. HarmonyOS does not support updating FCM device tokens, and omits the three message extension events, the streaming media status change event <span className="enterprise-field-badge">Commercial</span>, and message key-value update events.
+- Photo, camera, microphone, file system, and push notification permissions must be declared and requested by the host application. Installing the plugin does not automatically grant runtime permissions.
+- Whenever you modify native build configurations or update plugin binaries, rebuild your custom debugging base. Older debugging bases will not automatically pick up native library updates.
+
+## Release the SDK
+
+Invoke `unInitSDK()` only when your application is shutting down or needs to completely release the active SDK instance. Do not initialize and tear down the SDK repeatedly across page lifecycles. When a user logs out, perform a logout flow and clean up event subscriptions as described in [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session).
+
+```uts
+import { unInitSDK } from '@/uni_modules/unix-openim-sdk'
+
+unInitSDK()
+```
+
+## Next steps
+
+- [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [Send your first message](/sdk/uniapp/getting-started/send-first-message)

@@ -1,6 +1,6 @@
 ---
 title: 'Message overview'
-description: 'Learn about the Message model, message types, and message lifecycle in the OpenIM Flutter SDK.'
+description: 'Understand the Message model, message types, and message lifecycle in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -11,138 +11,144 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/overview-message'
 ---
 
-The OpenIM Flutter SDK organizes its messaging capabilities around the `Message` model. Create ordinary messages and media messages backed by local paths or bytes with the corresponding `create*Message()` method, then send them with `sendMessage()`. If your application has already uploaded a media file and obtained its URL, create the message with `create*MessageByURL()` and send it with `sendMessageNotOss()`. Both paths support one-to-one and group conversations. The corresponding listeners keep application state synchronized with new messages, recalls, deletions, read receipts, upload progress, and conversation changes.
+The OpenIM Flutter SDK organizes messaging capabilities around the `Message` model. Create ordinary messages or media messages backed by local paths or bytes using the corresponding factory method, then deliver them with [Send a message](/sdk/flutter/message/sending-messages/send-message). When media files have already been uploaded by your application server and a URL is available, construct the message using the corresponding URL-based creation method and deliver it with [Send a message without OSS](/sdk/flutter/message/sending-messages/send-message-not-oss). Both delivery paths support one-to-one and group chats. Real-time updates, recalls, deletions, read receipts, upload progress, and conversation shifts synchronize to application state via their respective listeners.
 
-The Flutter `Message` model does not contain a `conversationID` field. The `conversationID` used for history, search, and conversation state comes from the active conversation context. When a global listener receives a message from any conversation, derive its target from `sessionType`, `groupID`, `sendID`, `recvID`, and the current user, then confirm the ID with `getConversationIDBySessionType()`.
+The Flutter `Message` model does not include a `conversationID` field. The `conversationID` used for history retrieval, search, and conversation management is derived from the active conversation context. When a global listener receives a cross-conversation message, determine the target from `sessionType`, `groupID`, `sendID`, `recvID`, and the current user ID, then obtain the conversation ID using the conversation ID helper.
 
-Message screens usually need to retain these identifiers:
+Message interfaces typically manage the following key identifiers:
 
-| Identifier       | Purpose                                                                                                                                                                      |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `clientMsgID`    | Stable client-side message ID used for rendering deduplication, status updates, queries, and pagination cursors. Do not use an empty value as a merge key.                    |
-| `conversationID` | ID of the conversation record used to load history, clear unread counts, and search. It comes from the conversation context and is not a field on `Message`.                 |
-| `recvID`         | Target user ID for a one-to-one message. Omit it when sending to a group.                                                                                                     |
-| `groupID`        | Target group ID for a group message. Omit it when sending to a user.                                                                                                          |
+| Identifier | Purpose |
+| --- | --- |
+| `clientMsgID` | Stable client-side message ID used for deduplication, state updates, queries, and pagination cursors. Never use an empty value as a merge key. |
+| `conversationID` | Unique ID of the conversation record used to load history, clear unread counts, and search. Obtained from the conversation context, not a field on `Message`. |
+| `recvID` | Recipient user ID for one-to-one messages. Omitted when sending group messages. |
+| `groupID` | Target group ID for group messages. Omitted when sending one-to-one messages. |
 
 ## Message types
 
-Create each kind of content with its corresponding factory method. The sending layer does not need a separate entry point for every content type: pass the returned `Message` to either `sendMessage()` or `sendMessageNotOss()`.
+Construct each type of content with its dedicated factory method before sending. The sending layer provides a unified interface: pass the resulting `Message` instance to either [Send a message](/sdk/flutter/message/sending-messages/send-message) or [Send a message without OSS](/sdk/flutter/message/sending-messages/send-message-not-oss).
 
 ### Message type comparison
 
-| Content type                                  | Creation method                                                                           | Content element                                                  |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Plain text                                    | `createTextMessage()`                                                                     | `textElem`                                                       |
-| @ mention                                     | `createTextAtMessage()`                                                                   | `atTextElem`                                                     |
-| Image                                         | `createImageMessage()`, `createImageMessageFromFullPath()`, or `createImageMessageByURL()` | `pictureElem`                                                    |
-| Audio                                         | `createSoundMessage()`, `createSoundMessageFromFullPath()`, or `createSoundMessageByURL()` | `soundElem`                                                      |
-| Video                                         | `createVideoMessage()`, `createVideoMessageFromFullPath()`, or `createVideoMessageByURL()` | `videoElem`                                                      |
-| File                                          | `createFileMessage()`, `createFileMessageFromFullPath()`, or `createFileMessageByURL()`    | `fileElem`                                                       |
-| Custom message                                | `createCustomMessage()`                                                                   | `customElem`                                                     |
-| Quote, merged, location, card, and face types | The corresponding `create*Message()` method                                                | `quoteElem`, `mergeElem`, `locationElem`, `cardElem`, `faceElem` |
+| Content type | Recommended guide | Content element |
+| --- | --- | --- |
+| Plain text | [Create a text message](/sdk/flutter/message/creating-messages/create-text-message) | `textElem` |
+| @ mention | [Create an @ mention message](/sdk/flutter/message/creating-messages/create-text-at-message) | `atTextElem` |
+| Image | [Create an image message](/sdk/flutter/message/creating-messages/create-image-message), [Create an image message from full path](/sdk/flutter/message/creating-messages/create-image-message-from-full-path), [Create an image message by URL](/sdk/flutter/message/creating-messages/create-image-message-by-url) | `pictureElem` |
+| Audio | [Create an audio message](/sdk/flutter/message/creating-messages/create-sound-message), [Create an audio message from full path](/sdk/flutter/message/creating-messages/create-sound-message-from-full-path), [Create an audio message by URL](/sdk/flutter/message/creating-messages/create-sound-message-by-url) | `soundElem` |
+| Video | [Create a video message](/sdk/flutter/message/creating-messages/create-video-message), [Create a video message from full path](/sdk/flutter/message/creating-messages/create-video-message-from-full-path), [Create a video message by URL](/sdk/flutter/message/creating-messages/create-video-message-by-url) | `videoElem` |
+| File | [Create a file message](/sdk/flutter/message/creating-messages/create-file-message), [Create a file message from full path](/sdk/flutter/message/creating-messages/create-file-message-from-full-path), [Create a file message by URL](/sdk/flutter/message/creating-messages/create-file-message-by-url) | `fileElem` |
+| Custom | [Create a custom message](/sdk/flutter/message/creating-messages/create-custom-message) | `customElem` |
+| Quotes, merges, locations, cards, and faces | [Create a quote message](/sdk/flutter/message/creating-messages/create-quote-message), [Create a merged message](/sdk/flutter/message/creating-messages/create-merger-message), [Create a location message](/sdk/flutter/message/creating-messages/create-location-message), [Create a card message](/sdk/flutter/message/creating-messages/create-card-message), [Create a face message](/sdk/flutter/message/creating-messages/create-face-message) | `quoteElem`, `mergeElem`, `locationElem`, `cardElem`, `faceElem` |
 
-Media messages created from a local path or bytes are normally uploaded by the SDK and sent with `sendMessage()`. When your application has already uploaded the media and obtained its URL, use `create*MessageByURL()` followed by `sendMessageNotOss()` to avoid running the SDK upload flow again.
+Media messages created from local paths or bytes are typically uploaded by the SDK and dispatched with [Send a message](/sdk/flutter/message/sending-messages/send-message). When media files have already been uploaded by external services and URLs are available, create the message using URL-based factory methods and invoke [Send a message without OSS](/sdk/flutter/message/sending-messages/send-message-not-oss) to bypass SDK upload pipelines.
 
-Place business data that other members need to receive in the message content or server-side extension field. Use `localEx` only for state that affects the current device.
+Attach business metadata intended for all recipients to message content or server-side extension fields. Store client-specific UI states intended only for the local device in `localEx`.
 
-### Common `Message` fields
+### Common Message fields
 
-| Field                                                           | Description                                                                    |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `clientMsgID`                                                   | Stable client-side message ID used for send state, queries, and event merging. |
-| `serverMsgID`                                                   | Message ID assigned after server confirmation.                                 |
-| `sendID` / `recvID` / `groupID`                                 | Sender, one-to-one recipient, and group target.                                |
-| `sessionType`                                                   | One-to-one or group conversation type, used to resolve conversation ownership. |
-| `contentType`                                                   | Message content type, represented by a numeric `MessageType` value.            |
-| `status`                                                        | Message sending status.                                                        |
-| `sendTime` / `createTime`                                       | Server send time and local creation time.                                      |
-| `isRead`                                                        | Current read state of the message.                                              |
-| `textElem`, `pictureElem`, `soundElem`, `videoElem`, `fileElem` | Content objects for the corresponding message types.                           |
-| `atTextElem`, `quoteElem`, `mergeElem`, `customElem`            | Mention, quote, merged-message, and custom content.                            |
-| `offlinePush`                                                   | Offline push configuration for the message.                                    |
-| `ex` / `localEx`                                                | Server-side extension and current-device local extension.                      |
+| Field | Description |
+| --- | --- |
+| `clientMsgID` | Stable client-side identifier used for delivery status tracking, queries, and event reconciliation. |
+| `serverMsgID` | Unique server-assigned message identifier confirmed after receipt. |
+| `sendID` / `recvID` / `groupID` | Sender user ID, recipient user ID in direct chats, and destination group ID in group chats. |
+| `sessionType` | Conversation type: single or group chat; used to determine conversation routing. |
+| `contentType` | Content type identifier, evaluated against integer constants in `MessageType`. |
+| `status` | Message delivery status. |
+| `sendTime` / `createTime` | Server timestamp when sent and local timestamp when created. |
+| `isRead` | Read receipt state for the message. |
+| `textElem`, `pictureElem`, `soundElem`, `videoElem`, `fileElem` | Payload objects for standard media content types. |
+| `atTextElem`, `quoteElem`, `mergeElem`, `customElem` | Payload objects for mentions, quotes, merged chats, and custom data. |
+| `offlinePush` | Push notification configuration for the message. |
+| `ex` / `localEx` | Server-synchronized extension and device-local extension. |
 
-In the Dart model, `clientMsgID`, `sendID`, `recvID`, `groupID`, and `sessionType` are nullable. Check required fields before indexing a message; do not use `!` and turn malformed payloads into runtime crashes.
+In the Dart SDK model, `clientMsgID`, `sendID`, `recvID`, `groupID`, and `sessionType` are nullable. Verify required fields before indexing records; do not use bang operators (`!`) on untrusted message payloads.
 
-### Message lifecycle and conversation ownership
+### Message lifecycle and conversation routing
 
-1. Create a `Message` with a factory such as `createTextMessage()` or `createImageMessage()`. Creation does not send the message or trigger a new-message event.
-2. Send it with `sendMessage()`, or use `sendMessageNotOss()` after a custom upload.
-3. When the Future succeeds, use the returned `Message` to update the sender's state. Other clients receive the increment through message listeners.
-4. History loading, search, and ID-based lookup return the current local snapshot and do not trigger new-message events.
+1. Initialize a local `Message` instance using dedicated factory methods. Constructing a message does not invoke network requests or trigger new-message callbacks.
+2. Call [Send a message](/sdk/flutter/message/sending-messages/send-message) for standard delivery, or call [Send a message without OSS](/sdk/flutter/message/sending-messages/send-message-not-oss) for pre-uploaded media.
+3. Upon `Future` resolution, update the sender UI using the returned `Message` object. Other participants receive the message via their message listeners.
+4. Historical loading, local search, and ID queries return local database snapshots without triggering new-message callbacks.
 
-If the current chat screen already has a `conversationID`, merge query and send results directly into that conversation. A global receive event has no such context, so first derive `sourceID`: for a group, use the non-empty `groupID`; for a one-to-one conversation, choose `recvID` or `sendID` depending on whether `sendID` is the current user. Then pass `sourceID` and `sessionType` to `getConversationIDBySessionType()`.
+When a message is sent or received within an active conversation with a known `conversationID`, merge the record directly into that conversation. For global receive events lacking context, resolve `sourceID`: for group conversations, use `groupID`; for direct conversations, compare `sendID` with the current user ID to select the counterparty ID from `recvID` or `sendID`. Then provide `sourceID` and `sessionType` to the conversation ID helper.
 
-If required routing fields are missing, skip the message. Never substitute an array position, display name, or current list length for a conversation or message identifier.
+Skip messages with incomplete routing identifiers. Never substitute list indices, display names, or array lengths for stable conversation and message keys.
 
-## Browse by task
+## Navigation by task
 
 ### Send messages
 
-Create a message first, then send it to either a user or a group. Set `userID` for a one-to-one message or `groupID` for a group message, and omit the other target.
+Construct a message object, then dispatch it to a user or group. Set `userID` for direct messages or `groupID` for group messages, leaving the alternative target empty.
 
-When the SDK uploads the media, use a local-path or byte-based creation method together with `sendMessage()`. When your application has already uploaded the media, use `create*MessageByURL()` with `sendMessageNotOss()`. In both cases, update the sender's state from the `Message` returned by the Future and merge it by a non-empty `clientMsgID`.
+When uploading media through the SDK, use path-based or byte-based creation methods alongside [Send a message](/sdk/flutter/message/sending-messages/send-message). When media is pre-uploaded, use URL-based creation methods with [Send a message without OSS](/sdk/flutter/message/sending-messages/send-message-not-oss). Both flows return the updated `Message` through a `Future`, which must be merged by `clientMsgID`.
 
-See [Send a message](/sdk/flutter/message/sending-messages/send-message) for parameters, error handling, and delivery boundaries. Image, audio, video, file, and rich-message creation are organized by type under the **Create messages** menu.
+For parameter descriptions and delivery boundaries, see [Send a message](/sdk/flutter/message/sending-messages/send-message).
 
 ### Receive messages
 
-Handle ordinary real-time messages, offline messages synchronized after login, and online-only messages through `onRecvNewMessage`, `onRecvOfflineNewMessage`, and `onRecvOnlineOnlyMessage`. A global listener should resolve the message's conversation first, then merge idempotently by `conversationID:clientMsgID`. Online-only messages are not stored in local history.
+Handle standard real-time messages, offline synchronized messages, and online-only messages through `onRecvNewMessage`, `onRecvOfflineNewMessage`, and `onRecvOnlineOnlyMessage`. Global listeners must resolve the message's conversation first, then merge items idempotently using `conversationID:clientMsgID`. Online-only messages are not persisted to local database storage.
 
-See [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) for the complete receive flow and malformed-payload handling.
+For callback parameters and error handling, see [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages).
 
 ### Retrieve messages
 
-Use `getAdvancedHistoryMessageList()` to page through message history by `conversationID`. Omit `startMsg` on the first page, then use the boundary message as the starting point for the next page. History results and listeners can contain the same message, so both paths must use the same `clientMsgID` deduplication rule.
+Retrieve historical messages in paginated batches by `conversationID`. Omit `startMsg` on the initial request, then pass the boundary message as the cursor for subsequent pages. Historical results and real-time listeners may deliver identical records; deduplicate using `clientMsgID`.
 
-See [Load message history](/sdk/flutter/message/retrieving-messages/load-older-messages) to retrieve lists and [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id) to locate individual messages.
+See [Load older messages](/sdk/flutter/message/retrieving-messages/load-older-messages) to paginate message history, and [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id) to fetch specific records.
 
 ### Search messages
 
-`searchLocalMessages()` searches messages already synchronized to the current account's local store. For a group search, use the group conversation's `conversationID`, not the `groupID` used when sending. `keywordListMatchType` and `senderUserIDList` do not currently participate in the search.
+Search locally synchronized messages using keywords and filter parameters. When searching within a group, supply the group's `conversationID` rather than its `groupID`. The `keywordListMatchType` and `senderUserIDList` fields are currently reserved and do not filter local search results.
 
-See [Search messages](/sdk/flutter/message/searching-messages/search-messages) for the complete flow.
+See [Search messages](/sdk/flutter/message/searching-messages/search-messages) for complete usage.
 
 ### Manage messages
 
-Depending on the supported capability, sent messages can be forwarded, merged, deleted, recalled, modified, pinned, or cleared. You can also insert local-only messages or report typing status. Delete, recall, and modify events should update the original message by `conversationID:clientMsgID`. Replace a pinned-message list by `conversationID`, then deduplicate it by `clientMsgID`.
+Manage existing messages by forwarding, merging, deleting, revoking, modifying, pinning, or inserting local placeholders, or send typing indicators. Revoke, delete, and modify events should update matching records by `conversationID:clientMsgID`. Replace pinned message lists by `conversationID`, then deduplicate by `clientMsgID`.
 
-Related pages include [Create a forwarded message](/sdk/flutter/message/creating-messages/create-forward-message), [Create a merged message](/sdk/flutter/message/creating-messages/create-merger-message), [Delete messages](/sdk/flutter/message/managing-messages/delete-saved-message), [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message), [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message), [Pin or unpin a message](/sdk/flutter/message/managing-messages/set-message-pinned), [Insert a local one-to-one message](/sdk/flutter/message/managing-messages/insert-local-single-message), [Clear all local messages](/sdk/flutter/message/managing-messages/clear-all-local-messages), and [Report typing status](/sdk/flutter/message/composing-messages/update-typing-status).
+See [Create a forward message](/sdk/flutter/message/creating-messages/create-forward-message), [Create a merger message](/sdk/flutter/message/creating-messages/create-merger-message), [Delete saved messages](/sdk/flutter/message/managing-messages/delete-saved-message), [Revoke a message](/sdk/flutter/message/managing-messages/revoke-a-message), [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message), [Pin or unpin a message](/sdk/flutter/message/managing-messages/set-message-pinned), [Insert a local single-chat message](/sdk/flutter/message/managing-messages/insert-local-single-message), [Clear all local messages](/sdk/flutter/message/managing-messages/clear-all-local-messages), and [Update typing status](/sdk/flutter/message/composing-messages/update-typing-status).
 
 ### Mark messages as read
 
-Clear a conversation's unread count with `markConversationMessageAsRead()`. The Flutter SDK can receive one-to-one read receipts, but it does not provide member-level group read reporting, read or unread member queries, or a group-receipt listener. A conversation unread count does not indicate which group members have read a message.
+Clear conversation unread counts using the mark-as-read API. The Flutter SDK receives single-chat read receipts, but does not provide group-member read receipt reporting, group read/unread queries, or group receipt listeners. A conversation's unread counter does not reflect which group members have read a message.
 
-One-to-one read-receipt handling is documented on [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read).
+For single-chat read receipt flows, see [Mark conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read).
 
 ### Mention other users
 
-Create a group @ message with `createTextAtMessage()`, then send it to the group with `sendMessage()`. Identify mentioned users by stable `userID` values. The receiver renders members from `atTextElem` and uses the conversation's `groupAtType` to display mention reminders.
-
-See [Create an @ message](/sdk/flutter/message/creating-messages/create-text-at-message) for the complete flow.
+Create group @ messages using [Create an @ mention message](/sdk/flutter/message/creating-messages/create-text-at-message), then send them to the group via [Send a message](/sdk/flutter/message/sending-messages/send-message). Target users using their stable `userID`. Recipients parse mentions from `atTextElem` and render mention notifications using the conversation's `groupAtType`.
 
 ### Retrieve unread counts
 
-Conversation lists, total unread counts, and @ reminders come from the conversation APIs and `OnConversationListener`. Merge conversation changes by `conversationID` and update the global badge from the latest total unread count. A message screen should not install a second conversation listener.
+Conversation lists, total unread counts, and mention alerts are managed through conversation APIs and `OnConversationListener`. Merge changes by `conversationID` and update global badges from the total unread counter. Message screens should not register redundant conversation listeners.
 
-See [Maintain the total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count).
+See [Get total unread message count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count).
 
 ### Custom messages and extension data
 
-Put additional data that must synchronize to other members in a custom message or server-side extension field before sending. Store data that affects only the current device in `localEx`. `setMessageLocalEx()` replaces the complete string, does not merge the previous value, and does not produce a shared message event.
+Attach metadata intended for other participants to custom message payloads or server-side extension fields before transmission. Store data that only affects the current device in `localEx`. Setting a local extension replaces the entire string without merging prior values and does not generate shared message events.
 
-See [Create a custom message](/sdk/flutter/message/creating-messages/create-custom-message) and [Set a message's local extension](/sdk/flutter/message/managing-messages/set-message-local-ex).
+See [Create a custom message](/sdk/flutter/message/creating-messages/create-custom-message) and [Set message local extension](/sdk/flutter/message/managing-messages/set-message-local-ex).
 
-### Transcribe audio
+### Speech recognition and audio transcription
 
-`speechToText()` accepts an audio-file path readable by the current device and returns nullable recognized text. `speechToTextCapabilities()` returns `Future<void>` and does not provide format, sample-rate, duration, or size fields.
+Audio transcription accepts audio file paths accessible by the local device and returns transcribed text. Checking transcription capabilities returns a `Future<void>` without returning format, sample rate, duration, or file size attributes.
 
-You can store the transcript in the voice message's `soundElem.text` with `setMessageLocalContent()`, but the result is saved only on the current device. It is not synchronized to other members and does not trigger a shared message event. See [Transcribe audio](/sdk/flutter/message/composing-messages/transcribe-audio) for the complete boundaries.
+Transcribed text can be stored in the voice message's `soundElem.text` field using local update APIs, but changes persist only on the local device without synchronizing to other members or emitting shared message events. See [Transcribe audio](/sdk/flutter/message/composing-messages/transcribe-audio).
 
 ### Event ownership
 
-Message events belong to their respective capability pages; this overview only explains navigation and ownership. See [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) for new and offline messages, [Delete messages](/sdk/flutter/message/managing-messages/delete-saved-message) for deletion, [Recall a message](/sdk/flutter/message/managing-messages/revoke-a-message) for recalls, [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message) for modification, [Pin or unpin a message](/sdk/flutter/message/managing-messages/set-message-pinned) for pinning, [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read) for one-to-one read receipts, and [Report typing status](/sdk/flutter/message/composing-messages/update-typing-status) for typing status. The complete conversation-change listener is documented on [Retrieve the conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list).
+Message-related events are distributed across specific capability guides for listening and state synchronization:
+- New message and offline synchronization: [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages)
+- Deletion: [Delete saved messages](/sdk/flutter/message/managing-messages/delete-saved-message)
+- Revocation: [Revoke a message](/sdk/flutter/message/managing-messages/revoke-a-message)
+- Modification: [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message)
+- Pinning: [Pin or unpin a message](/sdk/flutter/message/managing-messages/set-message-pinned)
+- Single-chat read receipts: [Mark conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)
+- Typing indicators: [Update typing status](/sdk/flutter/message/composing-messages/update-typing-status)
+- Conversation list changes: [Retrieve conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)
 
-Message creation and query-only APIs use their Future results to establish objects or snapshots; do not describe them as triggering shared events. For state-changing calls, handle the Future result, event increment, and query-based reconciliation as separate stages.
+Creating messages and querying local data returns objects or snapshots directly via `Future` and does not trigger shared events. For state-changing APIs, handle `Future` resolution, event updates, and queries as distinct lifecycle stages.
 
-The Flutter enterprise SDK provides message modification, pinned conversation messages, and audio transcription. The Flutter SDK does not provide an API for creating targeted group messages.
+The Flutter Enterprise SDK provides message modification, conversation message pinning, and audio transcription. The Flutter SDK does not provide an API for creating targeted group messages.

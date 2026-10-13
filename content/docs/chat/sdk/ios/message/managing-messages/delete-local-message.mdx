@@ -5,17 +5,41 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/delete-local-message'
 ---
 
+Invoke `deleteMessageFromLocalStorage:clientMsgID:onSuccess:onFailure:` on `OIMManager` to remove a single message from the current device's local database without contacting the server or affecting other devices:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the message to delete. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming local deletion. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] deleteMessageFromLocalStorage:conversationID
-    clientMsgID:clientMsgID
-    onSuccess:nil
-    onFailure:nil];
+                                        clientMsgID:clientMsgID
+                                          onSuccess:^(NSString * _Nullable data) {
+    // Local deletion succeeded; update message list UI
+    [self removeMessageFromUI:clientMsgID];
+}
+                                          onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle local deletion failure
+}];
 ```
 
-Success means only that the message was deleted from this device's local storage. The server retains its record, so the message may synchronize again after the local database is rebuilt. This operation does not notify other devices or participants and is not a revocation.
+## Return value
+
+The `onSuccess` callback confirms that the message was removed from local storage on the current device.
+
+## State changes after the call
+
+1. **Local-only removal**: This method deletes the record from the current device's SQLite database only. Server roaming records remain intact; if the user clears app data or rebuilds the local database, the message may be synchronized again.
+2. **No remote events**: This is a purely local operation that does not emit events to other devices or conversation participants. The client merge key is `clientMsgID` scoped to `conversationID`. To delete a message across both local storage and the server, see [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message).

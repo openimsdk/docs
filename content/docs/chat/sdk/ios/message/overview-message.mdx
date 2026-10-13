@@ -5,146 +5,107 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/overview-message'
 ---
 
-Message capabilities in OpenIM iOS SDK center on `OIMMessageInfo`. Create regular messages and media messages backed by local files through the corresponding `OIMMessageInfo` class methods, then send them with `sendMessage:recvID:groupID:isOnlineOnly:offlinePushInfo:onSuccess:onProgress:onFailure:`. If your application has already uploaded a media file and obtained its URL, create the message with the corresponding URL-based class method and send it with `sendMessageNotOss:recvID:groupID:offlinePushInfo:onSuccess:onFailure:`. Both paths support one-to-one and group chats. The application synchronizes new messages, revocations, deletions, read receipts, upload progress, and conversation changes through the appropriate listener or delegate.
+Message capabilities in the OpenIM iOS SDK center on the `OIMMessageInfo` model. Plain text messages and media messages created from local files are initialized via corresponding `OIMMessageInfo` factory class methods, then sent through [Send a message](/sdk/ios/message/sending-messages/send-message). If media files have already been uploaded by your application to object storage and public URLs are available, create messages using URL-based factory methods and send them via [Send a message without OSS](/sdk/ios/message/sending-messages/send-message-not-oss).
 
-A message page normally retains these identifiers:
+Both delivery pathways support one-to-one and group chats. Incoming messages, message revocations, deletions, read receipts, media upload progress, and conversation updates synchronize to the application through listener protocols and delegates.
 
-| Identifier | Purpose |
+Client-side message interfaces and state stores maintain the following core identifiers:
+
+| Identifier | Description |
 | --- | --- |
-| `clientMsgID` | The stable client-side message ID used for rendering deduplication, state updates, queries, and pagination cursors. |
-| `conversationID` | The conversation-record ID used for history, search, and unread state. It comes from conversation data and must not be derived from an array position. |
-| `recvID` | The target user's ID for a one-to-one message. Pass `nil` when sending to a group. |
-| `groupID` | The target group ID for a group message. Pass `nil` when sending one-to-one. |
+| `clientMsgID` | Stable client-generated unique message identifier, used for list deduplication, state updates, queries, and pagination cursors. |
+| `conversationID` | Conversation record identifier, used for history queries, searching, and unread count tracking. Take directly from conversation data rather than deriving from array indices. |
+| `recvID` | Recipient user ID for one-to-one messages. Pass `nil` when sending group messages. |
+| `groupID` | Target group ID for group messages. Pass `nil` when sending one-to-one messages. |
 
 ## Message types
 
-Create an `OIMMessageInfo` for each content type through the corresponding class method. The sending layer consistently uses `sendMessage:...`; it does not need a separate entry point for every content type.
+Initialize `OIMMessageInfo` instances for each content type using dedicated class methods. The sending layer dispatches all message models uniformly without requiring separate transport channels for different formats.
 
-### Message-type comparison
+### Message type comparison
 
-| Content type | Creation method | Typical use |
+| Content type | Typical use case | Guide |
 | --- | --- | --- |
-| Plain text | `createTextMessage:` | Send plain-text chat content. |
-| @ text | `createTextAtMessage:atUsersID:atUsersInfo:message:` | Notify specified members in a group chat. |
-| Image | `createImageMessageFromFullPath:` or `createImageMessageByURL:sourcePicture:bigPicture:snapshotPicture:` | Create an image message from a local file or uploaded URL. |
-| Audio | `createSoundMessage:duration:` or `createSoundMessageByURL:duration:size:` | Create a voice or audio message. |
-| Video | `createVideoMessage:videoType:duration:snapshotPath:` or its URL-based variant | Create a video message with a snapshot. |
-| File | `createFileMessage:fileName:` or `createFileMessageByURL:fileName:size:` | Create a general attachment. |
-| Custom message | `createCustomMessage:extension:description:` | Carry structured application data such as cards, invitations, or orders. |
-| Markdown | OpenIMCore `Open_im_sdkCreateMarkdownMessage` | Create Markdown text; the high-level `OIMMessageInfo` API has no corresponding factory selector. |
+| Plain text | Standard text chat messages. | [Create a text message](/sdk/ios/message/creating-messages/create-text-message) |
+| @ Mention text | Mention one or more members in a group chat. | [Create an @ message](/sdk/ios/message/creating-messages/create-text-at-message) |
+| Image | Create image messages from local files or hosted URLs. | [Create an image message from a local path](/sdk/ios/message/creating-messages/create-image-message-from-full-path) |
+| Audio | Create voice and sound recording messages. | [Create an audio message from a local path](/sdk/ios/message/creating-messages/create-sound-message-from-full-path) |
+| Video | Create video messages with video snapshot covers. | [Create a video message from a local path](/sdk/ios/message/creating-messages/create-video-message-from-full-path) |
+| File | Create general file attachments. | [Create a file message from a local path](/sdk/ios/message/creating-messages/create-file-message-from-full-path) |
+| Custom message | Structured business payloads (cards, red packets, orders). | [Create a custom message](/sdk/ios/message/creating-messages/create-custom-message) |
+| Markdown | Rich text formatted with Markdown syntax. | [Create a Markdown message](/sdk/ios/message/creating-messages/create-markdown-message) |
 
-When the SDK should upload local media, use a path-based creation method and `sendMessage:...`. When your application already has a remote URL, use the matching URL-based method and `sendMessageNotOss:...` to avoid entering the built-in upload flow again. Put application data that must be shared in the message content; put device-local display state in `localEx`.
+When the SDK should handle media uploads, use path-based factory methods and [Send a message](/sdk/ios/message/sending-messages/send-message). When your backend already hosts the files, use URL-based creation methods and [Send a message without OSS](/sdk/ios/message/sending-messages/send-message-not-oss) to bypass the built-in upload pipeline. Store data that must be shared across devices inside the message payload, and store private rendering state in `localEx`.
 
 ### Common OIMMessageInfo properties
 
-These commonly used properties support routing, rendering, and state merging:
-
 | Property | Type | Description |
 | --- | --- | --- |
-| `clientMsgID` | `NSString * _Nullable` | The client message ID. When present, use it as the stable merge key. |
-| `serverMsgID` | `NSString * _Nullable` | The server message ID. It does not replace `clientMsgID` for local merging. |
-| `sessionType` | `OIMConversationType` | The one-to-one or group conversation type used to resolve the message's conversation. |
-| `sendID` | `NSString * _Nullable` | The sender's user ID. In a one-to-one chat, combine it with the current user to determine the other participant. |
-| `recvID` | `NSString * _Nullable` | The recipient's user ID, used to determine the other participant when the current user sends a one-to-one message. |
-| `groupID` | `NSString * _Nullable` | The group ID for a group message. |
-| `contentType` | `OIMMessageContentType` | The content-type enum that determines which content element to render. |
-| `sendTime` | `NSTimeInterval` | The message send time, used for ordering but not as a unique identifier. |
-| `status` | `OIMMessageStatus` | The message-send status enum. |
-| `isRead` | `BOOL` | The read state currently recorded by the SDK. |
+| `clientMsgID` | `NSString * _Nullable` | Client message ID used as the primary deduplication and merge key. |
+| `serverMsgID` | `NSString * _Nullable` | Server message ID, which does not replace `clientMsgID` for local merging. |
+| `sessionType` | `OIMConversationType` | Conversation type (one-to-one or group) used to route the message. |
+| `sendID` | `NSString * _Nullable` | User ID of the message sender. |
+| `recvID` | `NSString * _Nullable` | User ID of the recipient in one-to-one chats. |
+| `groupID` | `NSString * _Nullable` | Group ID in group chats. |
+| `contentType` | `OIMMessageContentType` | Content type enumeration determining which element to parse and render. |
+| `sendTime` | `NSTimeInterval` | Timestamp when the message was sent, used for chronological sorting. |
+| `status` | `OIMMessageStatus` | Message dispatch status (sending, succeeded, failed). |
+| `isRead` | `BOOL` | Read receipt status of the message. |
 
-Content properties such as `textElem`, `pictureElem`, `soundElem`, `videoElem`, `fileElem`, `atTextElem`, and `customElem` may be `nil`. Check both `contentType` and the corresponding element when rendering. If the expected content is absent, show a fallback instead of force-unwrapping it.
+Specific content properties such as `textElem`, `pictureElem`, `soundElem`, `videoElem`, `fileElem`, `atTextElem`, and `customElem` are populated based on `contentType`. Validate that both `contentType` and the corresponding element are non-nil when rendering views, providing fallback placeholders if content is absent.
 
-### Message flow
+### Message handling pipeline
 
-1. Create a local `OIMMessageInfo` with a class method such as `createTextMessage:` or `createImageMessageFromFullPath:`.
-2. Send it with `sendMessage:recvID:groupID:isOnlineOnly:offlinePushInfo:onSuccess:onProgress:onFailure:`.
-3. On the sending client, merge the final message from the success callback by `clientMsgID`. On receiving clients, merge incremental updates through `OIMAdvancedMsgListener`.
-4. When opening a chat page, establish a snapshot with a history query, then continue merging message, revocation, deletion, and read-receipt events.
+1. Construct the message object locally using an `OIMMessageInfo` factory method.
+2. Call [Send a message](/sdk/ios/message/sending-messages/send-message) or [Send a message without OSS](/sdk/ios/message/sending-messages/send-message-not-oss) to dispatch to a user or group.
+3. On the sender client, update UI bubble states using `clientMsgID` upon success or progress callbacks; receiving clients capture new messages via `OIMAdvancedMsgListener`.
+4. When opening a conversation view, fetch an initial history snapshot, then maintain state by listening for incoming messages, revocations, deletions, and read receipts.
 
-Message factories only create in-memory objects. They neither send messages nor trigger receiving events. A successful send, arrival of the remote event, and a subsequent history query are three separate stages.
+Message creation factory methods instantiate models in local memory without initiating network requests or triggering events. Callback completion, asynchronous listener notifications, and cache reconciliation queries operate as three distinct stages.
 
-### Conversation routing
+### Conversation routing rules
 
-For a one-to-one message, provide `recvID` and pass `nil` as `groupID`. For a group message, provide `groupID` and pass `nil` as `recvID`. After a message enters the state layer, deduplicate it by its conversation and `clientMsgID`; never use an array position or display text as the key.
+When sending one-to-one messages, supply `recvID` and set `groupID` to `nil`. When sending group messages, supply `groupID` and set `recvID` to `nil`. Deduplicate messages in local storage using `clientMsgID` scoped to `conversationID`; never use array positions or text summaries as primary keys.
 
-## Browse capabilities by topic
+## Feature navigation
 
-### Send messages
+### Sending and receiving
 
-Create a message first, then send it to a one-to-one or group chat. Provide `recvID` for one-to-one and `groupID` for a group, passing `nil` for the other target. When the SDK should upload a media file, use a local-path factory and `sendMessage:...`. When your application has already uploaded it, use the URL factory and `sendMessageNotOss:...`.
+- [Send a message](/sdk/ios/message/sending-messages/send-message): Dispatch local message instances with built-in upload and progress tracking.
+- [Send a message without OSS](/sdk/ios/message/sending-messages/send-message-not-oss): Dispatch messages initialized with pre-hosted media URLs.
+- [Receive messages](/sdk/ios/message/receiving-messages/receive-messages): Register message listeners to handle incoming real-time and synchronized messages.
+- [Receive custom business messages](/sdk/ios/message/receiving-messages/custom-business-listener): Receive standalone business notification signals outside conversation message streams.
 
-The send success callback may return `nil`. If it returns a message, replace the local pending item by `clientMsgID`. See [Send a message](/sdk/ios/message/sending-messages/send-message) for complete parameters and error handling. Image, audio, video, file, and rich-message factories are separated by type under the Creating messages menu.
+### Retrieval and searching
 
-### Receive messages
+- [Load older messages](/sdk/ios/message/retrieving-messages/load-older-messages): Retrieve historical messages by scrolling upward from an anchor message.
+- [Load newer messages](/sdk/ios/message/retrieving-messages/load-newer-messages): Retrieve newer messages downward from a historical anchor.
+- [Load message context](/sdk/ios/message/retrieving-messages/load-message-context): Read surrounding messages before and after a specified message.
+- [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id): Retrieve specific messages by `clientMsgID` within a conversation.
+- [Search messages](/sdk/ios/message/searching-messages/search-messages): Search locally synchronized chat history by keyword.
 
-Receive regular and online-only messages through `OIMAdvancedMsgListener`. Each callback carries one nullable `OIMMessageInfo`. There is no separate offline-new-message selector; the SDK synchronizes offline changes after a new login. Resolve the message's conversation first, then merge it idempotently by `conversationID:clientMsgID`.
+### Message management and read status
 
-For the complete receiving flow and listener lifecycle, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).
+- [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message): Revoke a sent message and notify connected clients.
+- [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message): Delete a single locally stored message.
+- [Delete messages in batches](/sdk/ios/message/managing-messages/delete-saved-messages): Delete multiple historical messages in a batch.
+- [Modify a message](/sdk/ios/message/managing-messages/modify-a-message) <span className="enterprise-field-badge">Commercial</span>: Edit text content of a previously sent message.
+- [Pin or unpin a message](/sdk/ios/message/managing-messages/set-message-pinned) <span className="enterprise-field-badge">Commercial</span>: Pin or unpin a message within a conversation.
+- [Retrieve pinned messages](/sdk/ios/message/managing-messages/get-pinned-messages) <span className="enterprise-field-badge">Commercial</span>: Query the list of pinned messages in a conversation.
+- [Set local message extension](/sdk/ios/message/managing-messages/set-message-local-ex): Store device-local private metadata on a message.
+- [Send group message read receipts](/sdk/ios/message/managing-read-status/send-group-read-receipts): Acknowledge read status for messages in a group chat.
+- [Retrieve group message readers](/sdk/ios/message/managing-read-status/get-group-message-readers): Query read and unread member breakdowns for a group message.
 
-### Retrieve messages
+### Composition and transcription
 
-Retrieve message history by `conversationID` and `startClientMsgID` with `getAdvancedHistoryMessageList:onSuccess:onFailure:`. Pass `nil` as `startClientMsgID` for the first page, then use the boundary message's `clientMsgID` for later pages. Deduplicate history results and delegate updates with the same identifier.
-
-See [Load message history](/sdk/ios/message/retrieving-messages/load-older-messages) for lists and [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id) for individual messages.
-
-### Search messages
-
-`searchLocalMessages:onSuccess:onFailure:` searches only messages already synchronized to the current account's local storage. For a group-chat search, use the group conversation's `conversationID`, not the `groupID` used when sending.
-
-See [Search messages](/sdk/ios/message/searching-messages/search-messages).
-
-### Manage messages
-
-According to the available capability, sent messages can be forwarded, merged, deleted, revoked, or cleared from history. You can also insert messages for local display only or report typing status. Apply revocation and deletion updates to the original bubble by `conversationID:clientMsgID`; register each complete event handler only on its owning page.
-
-Related pages include [Create a forwarded message](/sdk/ios/message/creating-messages/create-forward-message), [Create a merged message](/sdk/ios/message/creating-messages/create-merge-message), [Modify a message](/sdk/ios/message/managing-messages/modify-a-message), [Pin or unpin a message](/sdk/ios/message/managing-messages/set-message-pinned), [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message), [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message), [Insert a local one-to-one message](/sdk/ios/message/managing-messages/insert-local-single-message), [Clear all local messages](/sdk/ios/message/managing-messages/clear-all-local-messages), and [Report typing status](/sdk/ios/message/composing-messages/update-typing-status).
-
-### Mark messages as read
-
-`markConversationMessageAsRead:onSuccess:onFailure:` clears a conversation's unread count. Merge one-to-one and group read receipts through the message listener. A successful call only means that the read operation completed; it does not mean that the sender's UI or every signed-in client has already updated.
-
-For one-to-one receipts, see [Mark a conversation as read](/sdk/ios/conversation/managing-conversations/mark-conversation-read). For member-level group capabilities, see [Report group-message read status](/sdk/ios/message/managing-read-status/send-group-read-receipts) and [Retrieve group-message readers](/sdk/ios/message/managing-read-status/get-group-message-readers).
-
-### Mention other users
-
-Create a group @ message with `createTextAtMessage:atUsersID:atUsersInfo:message:`, then send it to the group. `atUsersID` contains stable user IDs, while `atUsersInfo` supplies display information. Receiving clients use the conversation's `groupAtType` to display mention indicators.
-
-See [Create an @ message](/sdk/ios/message/creating-messages/create-text-at-message).
-
-### Retrieve unread counts
-
-Conversation lists, total unread counts, and @ indicators come from Conversation APIs and `OIMConversationListener`. Merge conversation-layer changes by `conversationID` and update the global badge with the latest total-unread value. Message pages do not register the conversation delegate again.
-
-See [Retrieve and maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count).
-
-### Custom messages and extension data
-
-Use `createCustomMessage:extension:description:` for structured data that other members must receive. Use `setMessageLocalEx:clientMsgID:localEx:onSuccess:onFailure:` for additional state that affects only the current device. A local extension is not synchronized to other clients and does not produce a shared message event.
-
-See [Create a custom message](/sdk/ios/message/creating-messages/create-custom-message) and [Set a message's local extension](/sdk/ios/message/managing-messages/set-message-local-ex).
-
-### Transcribe audio
-
-The commercial OpenIMCore SDK can check transcription support and transcribe a local audio path or Base64-encoded audio data. The transcript is not an `OIMSoundElem` property. To retain it only on the current device, merge it into the message's existing `localEx` without overwriting fields owned by other features.
-
-For supported formats, size and duration limits, and local persistence, see [Transcribe audio](/sdk/ios/message/composing-messages/transcribe-audio).
-
-### Modify and pin messages
-
-`modifyMessageWithConversationID:message:onSuccess:onFailure:` updates message content in a specified conversation. Other clients merge `onMessageModified:` by `conversationID + clientMsgID`. `setConversationPinnedMsgWithConversationID:clientMsgID:pinned:onSuccess:onFailure:` pins or unpins a message in a conversation. `getConversationPinnedMsgWithConversationID:onSuccess:onFailure:` establishes the pinned-list snapshot, and `onChangedPinnedMsg:` supplies subsequent updates.
-
-For call conditions, result stages, and event payloads, see [Modify a message](/sdk/ios/message/managing-messages/modify-a-message) and [Pin or unpin a message](/sdk/ios/message/managing-messages/set-message-pinned).
-
-### Event ownership
-
-Message events are owned by their respective capability pages; this overview only documents navigation and ownership. New-message events belong to [Receive messages](/sdk/ios/message/receiving-messages/receive-messages), deletions to [Delete messages in batches](/sdk/ios/message/managing-messages/delete-saved-messages), revocations to [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message), one-to-one read receipts to [Mark a conversation as read](/sdk/ios/conversation/managing-conversations/mark-conversation-read), group read receipts to [Report group-message read status](/sdk/ios/message/managing-read-status/send-group-read-receipts), and typing status to [Report typing status](/sdk/ios/message/composing-messages/update-typing-status). For complete conversation-change handling, see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).
-
-Message creation and pure queries establish objects or snapshots directly from callback results; do not describe them as triggering shared events. For state-changing calls, handle the success callback, delegate update, and reconciliation query separately.
-
-Message modification, pinned conversation messages, and audio transcription come from the enterprise SDK and are marked as commercial on their respective pages. The high-level iOS API does not provide an `OIMMessageInfo` factory selector for a targeted group message.
+- [Update typing status](/sdk/ios/message/composing-messages/update-typing-status): Send typing indicators to the peer during input changes.
+- [Retrieve typing status](/sdk/ios/message/composing-messages/get-typing-status): Inspect whether the other participant is actively typing.
+- [Transcribe audio](/sdk/ios/message/composing-messages/transcribe-audio) <span className="enterprise-field-badge">Commercial</span>: Convert voice messages to text.
+- [Save local transcript](/sdk/ios/message/composing-messages/save-local-transcript) <span className="enterprise-field-badge">Commercial</span>: Persist transcribed speech text into local message extension storage.
+- [Check speech-to-text availability](/sdk/ios/message/composing-messages/check-speech-to-text) <span className="enterprise-field-badge">Commercial</span>: Check whether voice transcription is supported on the server.
+- [Set the app badge count](/sdk/ios/message/set-app-badge): Synchronize total unread message counts to the system push badge.

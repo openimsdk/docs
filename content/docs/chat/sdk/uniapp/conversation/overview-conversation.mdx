@@ -1,17 +1,52 @@
 ---
 title: 'Conversation overview'
-description: 'OpenIM uni-app / uni-app x SDK guide for Conversation overview.'
+description: 'Understand conversation records, chat targets, conversation IDs, and list synchronization workflows.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
-template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+template: 'overview'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/overview-conversation'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+In the OpenIM SDK, a conversation represents the client-side chat session state maintained by the currently authenticated user for a direct single chat or group chat. Each `OpenIMConversationItem` record preserves unread counts, the latest message summary, pinned status, draft text, notification options, and message lifecycle policies.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+A conversation record uses distinct identifiers from its chat target: `conversationID` identifies a specific conversation session for the authenticated user, whereas a single chat target is identified by the peer `userID`, and a group chat target is identified by `groupID`. A group chat UI typically needs `groupID` to access group profile and member capabilities, while using `conversationID` to manage conversation settings, unread counts, and message history.
+
+## Conversation identifiers
+
+When retrieving a conversation or generating its identifier by target, pass the peer user ID as `sourceID` with `OpenIMSessionTypeSingle` for single chats, or pass the group ID as `sourceID` with `OpenIMSessionTypeWriteGroup` for group chats. Never manually concatenate or forge conversation ID strings in your application code.
+
+| Identifier | Purpose |
+| --- | --- |
+| `conversationID` | The conversation record ID for the authenticated account, used for conversation settings, message history, and unread state. |
+| `userID` | The user ID of the peer user in a single chat. |
+| `groupID` | The group ID corresponding to a group chat, also used as the target identifier for group APIs. |
+| `sourceID` | The target identifier passed when querying by session type: `userID` for single chats, and `groupID` for group chats. |
+
+## Conversation record responsibilities
+
+The fields in `OpenIMConversationItem` serve several key responsibilities:
+
+| Responsibility | Relevant fields | Description |
+| --- | --- | --- |
+| Identity and type | `conversationID`, `conversationType`, `userID`, `groupID` | Identify the conversation session and associate it with the concrete chat target. |
+| List presentation | `showName`, `faceURL`, `latestMsg`, `latestMsgSendTime` | Render conversation title, avatar, and latest message snippet. |
+| Unread and notifications | `unreadCount`, `groupAtType`, `recvMsgOpt` | Display unread message counts, group `@` mention indicators, and message notification modes. |
+| Local organization | `isPinned`, `draftText`, `draftTextTime`, `isMarked` <span className="enterprise-field-badge">Commercial</span>, `remark` <span className="enterprise-field-badge">Commercial</span> | Maintain pinned position, custom markers, alias remarks, and locally saved draft text. |
+| Message policies | `isPrivateChat` <span className="enterprise-field-badge">Commercial</span>, `burnDuration` <span className="enterprise-field-badge">Commercial</span>, `isMsgDestruct` <span className="enterprise-field-badge">Commercial</span>, `msgDestructTime` <span className="enterprise-field-badge">Commercial</span> | Control self-destructing private chat duration and periodic server-side message cleanup. |
+| Sync boundaries | `minSeq`, `maxSeq`, `updateUnreadCountTime` | Record message synchronization checkpoints and unread calculation timestamps. |
+| Business extensions | `ex`, `attachedInfo` | Store custom application metadata and internal SDK extension payloads. |
+
+## Querying and synchronization
+
+- When entering a chat view from a contact card or group profile, use [Open a conversation](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-by-target).
+- When you only require a stable identifier without fetching message content, use [Get conversation ID](/sdk/uniapp/conversation/retrieving-conversations/get-conversation-id).
+- When you already hold a list of conversation IDs, use [Get conversations by ID](/sdk/uniapp/conversation/retrieving-conversations/get-conversations-by-id).
+- When constructing the conversation list UI, use [Retrieve conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list) and register new conversation and update events on that page.
+- When filtering locally cached conversations, use [Search conversations](/sdk/uniapp/conversation/retrieving-conversations/search-conversations).
+- To organize conversations, use [Pin or unpin a conversation](/sdk/uniapp/conversation/managing-conversations/pin-conversation), [Mark a conversation](/sdk/uniapp/conversation/managing-conversations/mark-conversation), or [Set a conversation remark](/sdk/uniapp/conversation/managing-conversations/set-conversation-remark).
+- To configure message retention policies, use [Set message destruct](/sdk/uniapp/conversation/managing-conversations/set-message-destruct).
+
+Queries obtain a point-in-time local snapshot, while event callbacks deliver subsequent incremental updates. A successful mutation Promise resolution, event arrival, and a re-query snapshot represent three distinct lifecycle stages. Always merge incoming state updates using `conversationID` as the primary key, and re-query the latest conversation snapshot whenever event continuity may have been interrupted.

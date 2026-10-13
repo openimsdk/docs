@@ -1,17 +1,63 @@
 ---
 title: 'Pin or unpin a message'
-description: 'OpenIM uni-app / uni-app x SDK guide for Pin or unpin a message.'
+description: 'Pin or unpin a specific message to the top of a conversation and handle pinned message events.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/managing-messages/set-message-pinned'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Pinning messages is a Commercial Edition capability. Invoke `setConversationPinnedMsg()` with `pinned: true` to pin a message to the top banner of a conversation, or `pinned: false` to unpin it.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the conversation containing the message. |
+| `clientMsgID` | `string` | Yes | The `clientMsgID` of the message to pin or unpin. |
+| `pinned` | `boolean` | Yes | Pass `true` to pin the message, or `false` to unpin it. |
+
+Caller permissions, supported message types, and maximum pin counts are strictly verified by OpenIMServer.
+
+## Code example
+
+```uts
+import { setConversationPinnedMsg } from '@/uni_modules/unix-openim-sdk'
+
+const clientMsgID = message.clientMsgID
+if (clientMsgID == null) return
+
+await setConversationPinnedMsg({
+  conversationID,
+  clientMsgID,
+  pinned: true,
+})
+```
+
+## Return value
+
+The Promise resolves with `void` upon successful server processing.
+
+## Listen for pinned message changes
+
+Centrally register `onChangedPinnedMsg` to observe changes in pinned messages. The event delivers an opaque `string` notification signal. Treat this signal as an invalidation trigger to re-query the pinned messages for the active conversation rather than parsing undocumented properties.
+
+```uts
+import { off, onChangedPinnedMsg } from '@/uni_modules/unix-openim-sdk'
+
+const handlePinnedMessagesChanged = (_payload: string) => {
+  reloadPinnedMessagesForCurrentConversation()
+}
+
+const pinnedMessagesSubscription =
+  onChangedPinnedMsg(handlePinnedMessagesChanged)
+
+function removePinnedMessagesListener() {
+  off(pinnedMessagesSubscription)
+}
+```
+
+For query implementation details, see [Get pinned messages](/sdk/uniapp/message/managing-messages/get-pinned-messages). Unregister the listener when unmounting the view, logging out, or switching accounts.

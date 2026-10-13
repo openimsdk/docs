@@ -5,20 +5,49 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-groups/search-groups'
 ---
 
+Invoke `searchGroups:onSuccess:onFailure:` to search locally synchronized groups by group ID or group name keywords:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `searchParam` | `OIMSearchGroupParam *` | Yes | Search parameter model defining keywords and match targets. |
+
+### OIMSearchGroupParam properties
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `keywordList` | `NSArray<NSString *> *` | Yes | List of search keyword strings. |
+| `isSearchGroupID` | `BOOL` | No | Whether to match keywords against group IDs. |
+| `isSearchGroupName` | `BOOL` | No | Whether to match keywords against group names. |
+
+## Code example
+
 ```objc
 OIMSearchGroupParam *param = [OIMSearchGroupParam new];
-param.keywordList = @[keyword];
+param.keywordList = @[@"tech discussion"];
 param.isSearchGroupID = YES;
 param.isSearchGroupName = YES;
+
 [[OIMManager manager] searchGroups:param
-    onSuccess:^(NSArray<OIMGroupInfo *> *groups) { [self showMatches:groups]; }
-    onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+                         onSuccess:^(NSArray<OIMGroupInfo *> *groups) {
+                             [self showMatches:groups];
+                         }
+                         onFailure:^(NSInteger code, NSString *message) {
+                             NSLog(@"searchGroups failed: %ld %@", (long)code, message);
+                         }];
 ```
 
-This method searches only joined groups already synchronized to local storage. It is not a public group directory.
+## Return value
+
+The `onSuccess` callback delivers an array of matched `OIMGroupInfo` objects (`NSArray<OIMGroupInfo *> *`). If no matching groups are found, it returns an empty array.
+
+## State changes after the call
+
+1. **Local search scope**: This method searches strictly within locally cached joined groups; it does not query unjoined public groups across the server.
+2. **Read-only query**: Search operations do not trigger group delegate callbacks.

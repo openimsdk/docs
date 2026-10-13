@@ -1,21 +1,26 @@
 ---
-title: 'Retrieve specified user profiles'
-description: 'Retrieve application users’ public profiles (PublicUserInfo) in batches by userID.'
+title: 'Retrieve users'
+description: 'Batch query public user profiles (PublicUserInfo) by userID using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/retrieving-users/retrieve-users'
 ---
 
-Use `getUsersInfo()` to retrieve application users' public profiles by `userID`. It is suitable for displaying friend candidates and profile cards for users who are not friends.
+Batch query public profiles of application users by `userID`, ideal for rendering friend candidates and stranger profile cards:
 
-To search by nickname, phone number, organization, email address, or another application field, retrieve candidate `userID` values from the application backend and then query their public profiles with this method.
+When searching users by nickname, phone number, organization, or email, your business backend should first return matching `userID` values. Then call this method to retrieve their public profile details.
 
-## Retrieve public profiles
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDList` | `List<String>` | Yes | List of user IDs to query for public information. Deduplicate entries and cap batch sizes before calling. |
+
+## Code example
 
 ```dart
 final userIDList = {'user_a', 'user_b'}.toList();
@@ -35,49 +40,29 @@ try {
 }
 ```
 
-`userIDList` is a required list of OpenIMSDK user IDs. Deduplicate it and limit the size of each request before calling the API.
+## Return value
 
-### Result
+A successful `Future` returns a list of public user profiles (`List<PublicUserInfo>`):
 
-The successful `Future` returns `List<PublicUserInfo>`:
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `String` | Unique OpenIM user identifier. |
+| `nickname` | `String?` | Account-level public display nickname. |
+| `faceURL` | `String?` | Account-level public avatar URL. |
+| `ex` | `String?` | Account-level extension string formatted per business conventions. |
 
-| Field | Description |
+The returned `ex` is read-only when viewing other accounts. The Flutter client cannot modify other users' profiles; to update the current user's profile, see [Update self profile](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile).
+
+This query is a local read-only operation and does not trigger user listener events. Re-invoke this API to fetch fresh data when opening profile cards, pulling to refresh, reconnecting, or receiving business update notifications.
+
+## Model selection by context
+
+The same `userID` may possess different display names and relationship data across contexts. Select the appropriate data model for each view:
+
+| Context | Recommended Model |
 | --- | --- |
-| `userID` | OpenIMSDK user ID. |
-| `nickname` | Account-level public nickname. |
-| `faceURL` | Account-level public avatar URL. |
-| `ex` | Account-level extension string whose format is defined by the application. |
+| User directory search, stranger profile cards | `PublicUserInfo` |
+| Friend lists, contact cards, friend remarks | `FriendInfo` |
+| Group rosters, in-group nicknames, group roles | `GroupMembersInfo` |
 
-The `ex` returned here is read-only public extension data for other accounts. The Flutter client cannot use the User API to change another account's public profile. The current user can update their own `ex` through `setSelfInfo()`; see [Update the current user's profile](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile) for the whole-value replacement behavior.
-
-## Call result and profile refresh
-
-After the query succeeds, replace the current public-profile snapshot with the returned `List<PublicUserInfo>`. When a page displays several users, collect the visible `userID` values, deduplicate them, query them in one batch, and merge the results by `userID`.
-
-This read-only query does not trigger `OnUserListener`. Call `getUsersInfo()` again to reconcile the snapshot when opening a profile card, when the user refreshes, after reconnection, or when the application backend reports a profile change.
-
-`OnUserListener.onSelfInfoUpdated` contains only the current user's `UserInfo`; it is not an event for the public profile of any user.
-
-## Search before adding a friend
-
-To search for and add a friend, the application backend typically returns candidate `userID` values first, and the client then calls `getUsersInfo()` to display their public profiles. After the user confirms a target, proceed to the friend-application flow.
-
-If the application supports exact user-ID lookup, pass the entered value directly as `userID`. For fuzzy search by nickname, phone number, organization, email, or another application field, obtain candidate IDs from the application backend.
-
-## Choose display data by scenario
-
-The same `userID` can have different display names and relationship data in different contexts. Choose the source that matches the current UI:
-
-| Scenario | Preferred type |
-| --- | --- |
-| Application user search or a non-friend profile card | `PublicUserInfo` |
-| Friend list, contacts, or friend remarks | `FriendInfo` |
-| Group member list, in-group nickname, or group role | `GroupMembersInfo` |
-
-Friend remarks and in-group nicknames come from the friend relationship and group member profile, respectively. Do not overwrite them with `PublicUserInfo.nickname`. See [Retrieve the friend list by page](/sdk/flutter/user/friends/get-friend-list-page), [Retrieve specified friend profiles](/sdk/flutter/user/friends/get-friends-info), and [Retrieve group members](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).
-
-## Next steps
-
-- [Retrieve the friend list by page](/sdk/flutter/user/friends/get-friend-list-page)
-- [Retrieve specified friend profiles](/sdk/flutter/user/friends/get-friends-info)
-- [Retrieve received friend applications](/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient)
+Friend remarks and group nicknames originate from friendship and group membership records; do not overwrite them with `PublicUserInfo.nickname`. For related queries, see [Get friend list with pagination](/sdk/flutter/user/friends/get-friend-list-page), [Get friends info](/sdk/flutter/user/friends/get-friends-info), and [Retrieving group members overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).

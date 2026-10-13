@@ -1,17 +1,82 @@
 ---
-title: 'Start a one-to-one call'
-description: 'OpenIM HarmonyOS SDK guide for Start a one-to-one call.'
+title: 'Start single call'
+description: 'Initiate a 1-on-1 audio or video call invitation to a specific user.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/managing-calls/start-single-call'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Generate a unique `roomID` for each call attempt and preserve the full invitation structure locally to support cancellation, hangup, and UI state restoration.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  OfflinePushInfo,
+  Platform,
+  SessionType,
+  SignalingInvitationInfo,
+  SignalingInviteReq,
+  SignalingInviteResp,
+  SignalingMediaType,
+  SignalingParticipantMetaData,
+} from '@openimsdk/imsdk';
+
+const invitation: SignalingInvitationInfo = {
+  inviterUserID: currentUserID,
+  inviteeUserIDList: [peerUserID],
+  customData: JSON.stringify({ source: 'contact-card' }),
+  groupID: '',
+  roomID: createCallRoomID(),
+  timeout: 30,
+  mediaType: SignalingMediaType.SignalingMediaTypeVideo,
+  platformID: Platform.HarmonyOS,
+  sessionType: SessionType.Single,
+  initiateTime: Date.now(),
+  busyLineUserIDList: [],
+};
+const offlinePush: OfflinePushInfo = {
+  title: 'Video call',
+  desc: 'You have an incoming video call invitation',
+  ex: '',
+  iOSPushSound: 'default',
+  iOSBadgeCount: true,
+  SignalingInfo: '',
+};
+const participant: SignalingParticipantMetaData = { user: selfUser };
+const request: SignalingInviteReq = {
+  invitation: invitation,
+  offlinePush: offlinePush,
+  participant: participant,
+  userID: peerUserID,
+};
+const response: SignalingInviteResp = await sdk.signalingInvite(request);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `SignalingInvitationInfo` | Yes | Call invitation payload containing room ID, media type, timeout, and participants. |
+| `offlinePush` | `OfflinePushInfo` | Yes | Push notification details delivered when the recipient is offline. |
+| `participant` | `SignalingParticipantMetaData` | Yes | Profile metadata of the calling user. |
+| `userID` | `string` | Yes | The target user ID. Must match the element in `inviteeUserIDList`. |
+
+## Return value
+
+Returns a Promise that resolves to a `SignalingInviteResp` object:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `roomID` | `string` | The active room identifier. |
+| `token` | `string` | Dynamic authentication token required to enter the media room. |
+| `liveURL` | `string` | Streaming gateway or media server address. |
+| `busyLineUserIDList` | `string[]` | List of invitees who are currently busy in another call. |
+
+## State changes after the call
+
+Pass the returned `roomID`, `token`, and `liveURL` to your media engine. Resolving the Promise confirms only that the signaling invite was dispatched to the server; it does not indicate that the callee has answered. Track local outgoing call state using `roomID`, and listen for accept, reject, cancel, or timeout events via [Handle call events](/sdk/harmony/calling/managing-calls/handle-call-events).

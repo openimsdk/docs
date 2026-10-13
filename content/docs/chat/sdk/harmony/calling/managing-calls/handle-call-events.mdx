@@ -1,17 +1,105 @@
 ---
 title: 'Handle call events'
-description: 'OpenIM HarmonyOS SDK guide for Handle call events.'
+description: 'Centrally listen for call invitations, acceptances, participant changes, cancellations, and hangup events.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/managing-calls/handle-call-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Register signaling lifecycle and participant status listeners within a centralized application calling controller. Every signaling event carries a typed payload correlated by `invitation.roomID`.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnHangUpData,
+  EventOnInvitationCancelledData,
+  EventOnInvitationTimeoutData,
+  EventOnInviteeAcceptedByOtherDeviceData,
+  EventOnInviteeAcceptedData,
+  EventOnInviteeRejectedByOtherDeviceData,
+  EventOnInviteeRejectedData,
+  EventOnReceiveNewInvitationData,
+  EventOnRoomParticipantConnectedData,
+  EventOnRoomParticipantDisconnectedData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleIncoming = (data: EventOnReceiveNewInvitationData): void => {
+  showIncomingCall(data.invitation, data.offlinePush, data.participant);
+};
+const handleAccepted = (data: EventOnInviteeAcceptedData): void => {
+  markInviteeAccepted(data.invitation.roomID, data.userID);
+};
+const handleAcceptedElsewhere = (data: EventOnInviteeAcceptedByOtherDeviceData): void => {
+  finishLocalIncomingState(data.invitation.roomID);
+};
+const handleRejected = (data: EventOnInviteeRejectedData): void => {
+  markInviteeRejected(data.invitation.roomID, data.userID);
+};
+const handleRejectedElsewhere = (data: EventOnInviteeRejectedByOtherDeviceData): void => {
+  finishLocalIncomingState(data.invitation.roomID);
+};
+const handleCancelled = (data: EventOnInvitationCancelledData): void => {
+  closeCallAndReleaseMedia(data.invitation.roomID);
+};
+const handleTimeout = (data: EventOnInvitationTimeoutData): void => {
+  closeCallAndReleaseMedia(data.invitation.roomID);
+};
+const handleHangUp = (data: EventOnHangUpData): void => {
+  closeCallAndReleaseMedia(data.invitation.roomID);
+};
+const handleParticipantConnected = (data: EventOnRoomParticipantConnectedData): void => {
+  replaceCallParticipants(data.invitation.roomID, data.participants);
+};
+const handleParticipantDisconnected = (data: EventOnRoomParticipantDisconnectedData): void => {
+  replaceCallParticipants(data.invitation.roomID, data.participants);
+};
+
+const unsubscribeIncoming = sdk.on(OpenIMSDKEvent.EventOnReceiveNewInvitation, handleIncoming);
+const unsubscribeAccepted = sdk.on(OpenIMSDKEvent.EventOnInviteeAccepted, handleAccepted);
+const unsubscribeAcceptedElsewhere = sdk.on(
+  OpenIMSDKEvent.EventOnInviteeAcceptedByOtherDevice,
+  handleAcceptedElsewhere,
+);
+const unsubscribeRejected = sdk.on(OpenIMSDKEvent.EventOnInviteeRejected, handleRejected);
+const unsubscribeRejectedElsewhere = sdk.on(
+  OpenIMSDKEvent.EventOnInviteeRejectedByOtherDevice,
+  handleRejectedElsewhere,
+);
+const unsubscribeCancelled = sdk.on(OpenIMSDKEvent.EventOnInvitationCancelled, handleCancelled);
+const unsubscribeTimeout = sdk.on(OpenIMSDKEvent.EventOnInvitationTimeout, handleTimeout);
+const unsubscribeHangUp = sdk.on(OpenIMSDKEvent.EventOnHangUp, handleHangUp);
+const unsubscribeParticipantConnected = sdk.on(
+  OpenIMSDKEvent.EventOnRoomParticipantConnected,
+  handleParticipantConnected,
+);
+const unsubscribeParticipantDisconnected = sdk.on(
+  OpenIMSDKEvent.EventOnRoomParticipantDisconnected,
+  handleParticipantDisconnected,
+);
+
+export function removeCallListeners(): void {
+  unsubscribeIncoming();
+  unsubscribeAccepted();
+  unsubscribeAcceptedElsewhere();
+  unsubscribeRejected();
+  unsubscribeRejectedElsewhere();
+  unsubscribeCancelled();
+  unsubscribeTimeout();
+  unsubscribeHangUp();
+  unsubscribeParticipantConnected();
+  unsubscribeParticipantDisconnected();
+}
+```
+
+## State changes after the call
+
+- **Multi-device coordination**: When another device signs into the same account and accepts or rejects the call, the current device receives `EventOnInviteeAcceptedByOtherDevice` or `EventOnInviteeRejectedByOtherDevice` and must dismiss its incoming call screen immediately.
+- **Idempotent teardown**: Implement teardown handlers for `EventOnInvitationCancelled`, `EventOnInvitationTimeout`, and `EventOnHangUp` idempotently to handle out-of-order delivery gracefully.
+- **Participant roster**: Participant connect and disconnect events report updated `SignalingParticipantMetaData[]` lists for the specified room; track actual audio/video stream publishing states via your RTC media engine callbacks.
+- **Cleanup**: Invoke `removeCallListeners()` when the user signs out or the application terminates the call manager.

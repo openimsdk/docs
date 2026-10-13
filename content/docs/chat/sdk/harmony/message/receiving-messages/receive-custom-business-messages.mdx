@@ -1,17 +1,49 @@
 ---
-title: 'Receive custom business messages'
-description: 'OpenIM HarmonyOS SDK guide for Receive custom business messages.'
+title: 'Receive custom business notifications'
+description: 'Listen for server-pushed custom business notifications.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/receiving-messages/receive-custom-business-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+This event receives business notifications dispatched directly by the server, distinct from custom chat messages created via [Create custom message](/sdk/harmony/message/creating-messages/create-custom-message); the latter are handled by [Receive messages](/sdk/harmony/message/receiving-messages/receive-messages).
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, { EventOnRecvCustomBusinessMessageData, OpenIMSDKEvent } from '@openimsdk/imsdk';
+
+const handleBusinessMessage = (data: EventOnRecvCustomBusinessMessageData): void => {
+  const payload = parseAndValidateBusinessPayload(data.businessMessage);
+  applyBusinessPayload(data.clientMsgID, payload);
+};
+const unsubscribeBusinessMessage = sdk.on(
+  OpenIMSDKEvent.EventOnRecvCustomBusinessMessage,
+  handleBusinessMessage,
+);
+
+export function removeBusinessMessageListener(): void {
+  unsubscribeBusinessMessage();
+}
+```
+
+## Parameters
+
+This event listener does not take API call parameters.
+
+## Event payload
+
+`EventOnRecvCustomBusinessMessageData` provides:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `clientMsgID` | `string` | Unique client message identifier. |
+| `businessMessage` | `string` | Raw payload string delivered by the server. |
+
+## State changes after the call
+
+Validate string formatting, business types, schema versioning, and mandatory attributes before updating application state. Deduplicate by `clientMsgID`, and re-query relevant business endpoints when definitive server state is required. Call `unsubscribeBusinessMessage()` when logging out or disposing of the state layer.

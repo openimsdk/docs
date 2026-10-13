@@ -1,43 +1,42 @@
 ---
 title: 'Conversation groups overview'
-description: 'Understand conversation-group data and the listener lifecycle in the OpenIM Flutter SDK.'
+description: 'Understand the data models, group types, and listener lifecycles of conversation groups in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
-template: 'guide'
+template: 'overview'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups'
 ---
 
-Conversation groups organize the current user's conversation list. They manage relationships between `conversationID` values and groups. They do not create chat groups, change group membership, or alter message destinations.
+Conversation groups allow the currently signed-in user to organize conversations into custom folders or tags. They manage relations between `conversationID` and folder categories; they do not create chat groups, modify group rosters, or change message recipients.
 
-## Group types
+## Conversation group types
 
-| Enum value | Number | Purpose |
+| Enum Option | Value | Behavior |
 | --- | ---: | --- |
-| `ConversationGroupType.custom` | `0` | A regular custom group. |
-| `ConversationGroupType.preset` | `1` | A preset group maintained by SDK or server rules. |
-| `ConversationGroupType.all` | `2` | Used when querying all group types. |
+| `ConversationGroupType.custom` | `0` | Standard user-created custom group folder. |
+| `ConversationGroupType.preset` | `1` | Preset folder managed by SDK or server-side rules. |
+| `ConversationGroupType.all` | `2` | Filter used when querying all folder types. |
 
-Use `custom` for ordinary user-defined categories. The rules that generate preset groups depend on the OpenIMServer deployment.
+Use `custom` for user-defined folders. Preset group behavior depends on your OpenIMServer deployment.
 
-Common `ConversationGroupInfo` fields include `conversationGroupID`, `name`, `serial`, `version`, `ex`, `conversationGroupType`, `hidden`, `unreadCount`, and `conversationIDs`. All of these fields are nullable.
+Key fields in `ConversationGroupInfo` include `conversationGroupID`, `name`, `serial`, `version`, `ex`, `conversationGroupType`, `hidden`, `unreadCount`, and `conversationIDs`. All fields are nullable in Dart.
 
 ## Available operations
 
 - [Create a conversation group](/sdk/flutter/conversation/managing-conversation-groups/create-conversation-group)
-- [Retrieve conversation groups](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-groups)
-- [Retrieve conversations in a group](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
-- [Retrieve the groups containing a conversation](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Query conversation groups](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-groups)
+- [Query conversations in group](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [Query conversation group IDs by conversation ID](/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
 - [Update a conversation group](/sdk/flutter/conversation/managing-conversation-groups/update-conversation-group)
-- [Reorder conversation groups](/sdk/flutter/conversation/managing-conversation-groups/set-conversation-group-order)
+- [Set conversation group order](/sdk/flutter/conversation/managing-conversation-groups/set-conversation-group-order)
 - [Add conversations to groups](/sdk/flutter/conversation/managing-conversation-groups/add-conversations-to-groups)
 - [Remove conversations from groups](/sdk/flutter/conversation/managing-conversation-groups/remove-conversations-from-groups)
 - [Delete a conversation group](/sdk/flutter/conversation/managing-conversation-groups/delete-conversation-group)
 
-## Listen for group changes
+## Listen for conversation group events
 
 ```dart
 Future<void> registerConversationGroupListener() {
@@ -54,14 +53,14 @@ Future<void> registerConversationGroupListener() {
 }
 ```
 
-| Listener | Payload | Handling |
+| Callback | Event Payload | Handling Strategy |
 | --- | --- | --- |
-| `onConversationGroupAdded` | `List<ConversationGroupInfo>` | Merge newly added groups. |
-| `onConversationGroupChanged` | `List<ConversationGroupInfo>` | Update by `conversationGroupID`. |
-| `onConversationGroupDeleted` | `List<ConversationGroupInfo>` | Remove deleted groups. |
+| `onConversationGroupAdded` | `List<ConversationGroupInfo>` | Append or merge newly created groups. |
+| `onConversationGroupChanged` | `List<ConversationGroupInfo>` | Update existing groups by `conversationGroupID`. |
+| `onConversationGroupDeleted` | `List<ConversationGroupInfo>` | Remove deleted groups from local state. |
 | `onConversationGroupMemberAdded` | `List<ConversationGroupMemberChangedInfo>` | Merge `group`, `conversationIDs`, and `conversations`. |
-| `onConversationGroupMemberDeleted` | `List<ConversationGroupMemberChangedInfo>` | Remove the corresponding relationships. |
+| `onConversationGroupMemberDeleted` | `List<ConversationGroupMemberChangedInfo>` | Remove corresponding associations. |
 
-Member-change fields may be empty. Check `group?.conversationGroupID` and each conversation ID first. Merge groups idempotently by `conversationGroupID`, then combine that ID with `conversationID` for membership relationships.
+Fields in member events may be null; always validate `group?.conversationGroupID` and conversation IDs before mutating state. Merge groups idempotently using `conversationGroupID`, and correlate members using `conversationID`.
 
-`ConversationGroupManager` retains only one listener, and the SDK has no remove or unset method. Set the listener centrally once. When switching accounts, stop dispatching events to the old state, then replace the listener with a complete one for the new account. Future completion, listener arrival, and a reconciliation query are three separate stages.
+`ConversationGroupManager` stores only one listener instance, and the SDK does not provide a remove method. Register this listener once in your application state layer; when switching accounts, stop forwarding events to inactive views and re-register the complete listener for the new account. Future completion, listener dispatch, and query recalibration are three separate stages.

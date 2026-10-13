@@ -1,21 +1,41 @@
 ---
 title: 'Accept a call'
-description: 'Use the Flutter SDK to accept a call invitation.'
+description: 'Accept an incoming call invitation and retrieve room credentials using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/managing-calls/accept-call'
 ---
 
-Accept an invitation with the original `SignalingInfo` received from `onReceiveNewInvitation`:
+When an invitee receives a call invitation in [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events) and obtains the raw `SignalingInfo`, call this method to accept the invitation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `info` | `SignalingInfo` | Yes | The complete signaling object received in the invitation callback. Pass the original object rather than reconstructing one from `roomID`. |
+
+## Code example
 
 ```dart
 final credentials = await OpenIM.iMManager.signalingManager
     .signalingAccept(info: receivedInfo);
 ```
 
-Reuse the received object; do not rebuild an object containing only `roomID`. The Future returns `SignalingCertificate`. Join the media room only after obtaining a valid `token` and `roomID`.
+## Return value
+
+A successful `Future` returns a `SignalingCertificate` object containing room connection credentials.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `token` | `String?` | Room authentication token required by the media engine. |
+| `roomID` | `String?` | Target call room ID. |
+| `liveURL` | `String?` | Live media streaming server URL. |
+| `busyLineUserIDList` | `List<String>?` | List of user IDs currently busy on another line. |
+
+## State changes after the call
+
+A successful call indicates that the acceptance signal was accepted by the server and room credentials were issued. It does not imply that WebRTC media tracks are connected. Use `roomID` as the primary key to manage the active call session, and correlate participants with their user IDs. For complete event listening, see [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events).

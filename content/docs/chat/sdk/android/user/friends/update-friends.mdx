@@ -1,15 +1,18 @@
 ---
-title: 'Update friend profiles'
-description: 'Use updateFriendsReq() to update friend remarks, pinned state, or extension data.'
+title: 'Update friend information'
+description: 'Update remarks, pinned status, or custom extensions for specified friends using updateFriendsReq().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/friends/update-friends'
 ---
+
+Modify friend relationship attributes, including setting remark aliases, pinning friends in the contacts list, and updating custom extension fields.
+
+## Code example
 
 ```java
 UpdateFriendsReq request = new UpdateFriendsReq();
@@ -20,25 +23,38 @@ OpenIMClient.getInstance().friendshipManager.updateFriendsReq(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Friend profile update succeeded.
+            // Friend information updated successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     request
 );
 ```
 
-`UpdateFriendsReq` supports `friendUserIDs`, `remark`, `isPinned`, and `ex`. One call applies the same field value to every target friend. Use separate calls when friends need different values. `ex` is a complete string.
+## Parameters
 
-| Field           | Description                                                |
-| --------------- | ---------------------------------------------------------- |
-| `friendUserIDs` | Friend ID array to update.                                 |
-| `remark`        | Friend remark for the current account.                     |
-| `isPinned`      | Whether to pin the friend.                                 |
-| `ex`            | Friendship extension string.                            |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `request` | `UpdateFriendsReq` | Yes | Request payload containing updated friend attributes. |
 
-A successful callback means the update-friends request completed. Receive friend profile changes through `onFriendInfoChanged`, as documented in [Get the friend list by page](/sdk/android/user/friends/get-friend-list-page).
+### Request attributes
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `friendUserIDs` | `String[]` | Array of target friend user IDs. When providing multiple IDs, specified field values overwrite existing values across all targets. |
+| `remark` | `String` | Remark alias set by the authenticated user for the friend. |
+| `isPinned` | `boolean` | Whether to pin the friend at the top of the contacts list. |
+| `ex` | `String` | Custom friend relationship metadata. |
+
+## Return value
+
+The successful callback indicates that the server persisted the updated friend information.
+
+## State changes after the call
+
+Once the updates take effect, the SDK dispatches the `onFriendInfoChanged(FriendInfo friend)` event via `OnFriendshipListener`. Locate the cached friend record using `userID` and update its modified properties. For complete listener registration details, see [Get the friend list](/sdk/android/user/friends/get-friend-list-page).

@@ -1,17 +1,75 @@
 ---
 title: 'Send a custom signal'
-description: 'OpenIM uni-app / uni-app x SDK guide for Send a custom signal.'
+description: 'Transmit lightweight in-call business signaling data within a specified calling room.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Transmit lightweight application-specific signaling data within an active calling room—such as raise-hand requests, video layout switch triggers, or custom interaction states. This API is not a chat messaging interface and does not replace the binary data channels of an RTC engine.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```uts
+import {
+  signalingSendCustomSignaling,
+} from '@/uni_modules/unix-openim-sdk'
+
+const signal = {
+  version: 1,
+  eventID: createBusinessEventID(),
+  type: 'hand-raised',
+  userID: currentUserID,
+  sentAt: Date.now(),
+}
+
+await signalingSendCustomSignaling({
+  roomID,
+  customInfo: JSON.stringify(signal),
+})
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `roomID` | `string` | Yes | The active calling room identifier. |
+| `customInfo` | `string` | Yes | Custom payload string. When passing JSON, include a schema version and a unique event ID. |
+
+## Return value
+
+The Promise resolves with `void` once OpenIMServer accepts the dispatch request; it does not indicate that remote participants have processed the payload. Custom signals are suited for ephemeral, lightweight coordination. Do not use this method for large files, chat history persistence, or long-lived synchronized state.
+
+## Receive custom signals
+
+The `onReceiveCustomSignal` event delivers a raw `string` payload. Identify the call session using `roomID`, and validate JSON schemas, protocol versions, and deduplication IDs within an adapter layer before applying changes to the view:
+
+```uts
+import {
+  off,
+  onReceiveCustomSignal,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleCustomSignal = (payload: string) => {
+  const signal = parseAndValidateCallSignal(payload)
+  if (signal == null) return
+  if (hasAppliedSignal(signal.eventID)) return
+  applyCallSignal(signal)
+}
+
+const customSignalSubscription =
+  onReceiveCustomSignal(handleCustomSignal)
+
+// Clean up when leaving call screens or switching accounts:
+off(customSignalSubscription)
+```
+
+If the incoming string wraps the payload within an SDK container structure, extract `customInfo` in your adapter layer to normalize payload representations across client platforms.
+
+## State changes after the call
+
+A resolved Promise confirms transmission across OpenIMServer. Recipient clients process the payload asynchronously via `onReceiveCustomSignal`. Because custom signaling is ephemeral, it does not alter server-persisted calling records.

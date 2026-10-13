@@ -1,30 +1,52 @@
 ---
-title: 'Create a mention message'
-description: 'Use createTextAtMessage to create a text message that mentions group members.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/creating-messages/create-text-at-message'
+title: "Create a mention message"
+description: "Use createTextAtMessage to create a text message that mentions group members."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/creating-messages/create-text-at-message"
 ---
 
-Pass the text, mentioned user IDs, the `AtUserInfo` list, and an optional quoted message.
+Construct a text message with `@` mentions targeting specific group members, with optional quoting of a previous message. When delivered, recipient clients display high-priority mention notifications and badges in the conversation list.
+
+## Code example
+
+```java
+String text = "@Alex Please review the latest proposal";
+List<String> userIDs = Collections.singletonList("user_alex");
+
+AtUserInfo atUserInfo = new AtUserInfo();
+atUserInfo.setAtUserID("user_alex");
+atUserInfo.setGroupNickname("Alex");
+List<AtUserInfo> atUserInfos = Collections.singletonList(atUserInfo);
+
+Message quoteMessage = null; // Pass an existing Message object to quote-reply, or null
+
+Message message = OpenIMClient.getInstance().messageManager.createTextAtMessage(
+    text,
+    userIDs,
+    atUserInfos,
+    quoteMessage
+);
+```
 
 ## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `text` | `String` | Yes | Complete message text, matching the final UI content. |
-| `userIDs` | `List<String>` | Yes | Deduplicated user IDs to notify. |
-| `atUserInfos` | `List<AtUserInfo>` | Yes | Mentioned users and display names corresponding to `userIDs`. |
-| `quoteMessage` | `Message` | No | Complete quoted message when the mention is also a reply; otherwise `null`. |
+| `text` | `String` | Yes | The complete text of the message, including `@` mention labels. |
+| `userIDs` | `List<String>` | Yes | List of user IDs of the mentioned group members (deduplicated). |
+| `atUserInfos` | `List<AtUserInfo>` | Yes | List of user details corresponding to `userIDs`, containing display names and identifiers. |
+| `quoteMessage` | `Message` | No | Optional reference to a previous message to quote-reply. Pass `null` if not quoting. |
 
-```java
-Message message = OpenIMClient.getInstance().messageManager.createTextAtMessage(
-    text, userIDs, atUserInfos, quoteMessage);
-```
+## Return value
 
-The returned `Message` is only a local pending object. Mentions are normally sent to a group chat. Confirm that each target is still a group member, then use [Send a message](/sdk/android/message/sending-messages/send-message) with that group.
+Returns the newly initialized `Message` object ready for transmission.
+
+## State changes after the call
+
+1. **Local initialization**: Initializes the local `Message` structure without sending data to the server.
+2. **Sending to the group**: Mention messages are typically used in group conversations. Call [Send a message](/sdk/android/message/sending-messages/send-message) passing the target group ID (`recvGid`).

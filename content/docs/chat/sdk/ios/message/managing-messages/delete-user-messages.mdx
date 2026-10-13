@@ -5,19 +5,54 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/delete-user-messages'
 ---
 
+In group administration or moderation scenarios, group owners and administrators can invoke `deleteUserAllMessagesInConversation:userID:onSuccess:onFailure:` on `OIMManager` to delete all historical messages sent by a specified member in a group conversation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target group conversation identifier. |
+| `userID` | `NSString *` | Yes | User ID of the target group member whose messages will be removed. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the deletion request was accepted. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg` (e.g. insufficient permissions). |
+
+## Code example
+
 ```objc
 [[OIMManager manager] deleteUserAllMessagesInConversation:conversationID
-    userID:targetUserID
-    onSuccess:nil
-    onFailure:nil];
+                                                   userID:targetUserID
+                                                onSuccess:^(NSString * _Nullable data) {
+    // Member messages deletion initiated successfully
+}
+                                                onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle deletion failure
+}];
 ```
 
-This selector is for group chats only. It deletes all messages sent by the specified user in the target group conversation. This is a group-administration or content-moderation operation, and the server validates the operator's permissions. Do not infer the affected message IDs from a successful callback.
+## Return value
 
-This page owns `onDeleteUserAllMsgsInConv:`. Its payload contains only `conversationID` and `userID`; clear the matching cache and query history again. For the listener lifecycle, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).
+The `onSuccess` callback confirms that the deletion request was processed by the server.
+
+## Listen for user message cleanup events
+
+When a member's messages are removed from a group conversation, the SDK notifies group members via `onDeleteUserAllMsgsInConv:userID:` in `OIMAdvancedMsgListener`:
+
+```objc
+- (void)onDeleteUserAllMsgsInConv:(NSString *)conversationID userID:(NSString *)userID {
+    if (conversationID.length == 0 || userID.length == 0) {
+        return;
+    }
+    // Remove all cached messages sent by this user in the specified conversation
+    [self removeMessagesByConversationID:conversationID senderUserID:userID];
+}
+```
+
+## State changes after the call
+
+1. **Composite state merge**: The merge key is `conversationID` and sender `userID`. Because the event payload does not include individual `clientMsgID` values, filter out and remove all messages matching the sender in that conversation, or re-query conversation history to reconcile state.
+2. **Permission validation**: This is an administrative operation; the server validates whether the calling user has owner or administrator privileges in the group. For listener registration and lifecycle details, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

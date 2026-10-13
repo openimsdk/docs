@@ -5,11 +5,22 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/creating-messages/create-file-message-by-url'
 ---
+
+When the application has already uploaded files or documents to object storage and possesses remote download URLs, invoke `createFileMessageByURL:fileName:size:` on `OIMMessageInfo` to construct a file message object directly without redundant uploads by the SDK:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `fileURL` | `NSString *` | Yes | Accessible remote download URL of the uploaded file. |
+| `fileName` | `NSString *` | Yes | File display name shown on the recipient interface. |
+| `size` | `NSInteger` | Yes | Actual size of the file in bytes. |
+
+## Code example
 
 ```objc
 OIMMessageInfo *message =
@@ -18,4 +29,11 @@ OIMMessageInfo *message =
                                       size:uploadedSize];
 ```
 
-The URL, file name, and size in bytes must come from an actual upload result. Send the returned object with `sendMessageNotOss:...`.
+## Return value
+
+Returns an initialized `OIMMessageInfo` model populated with the remote file URL and metadata. The passed URL, file name, and file size must match valid asset data.
+
+## State changes after the call
+
+1. **Local memory instantiation**: This method constructs an in-memory message object without writing to the database or initiating network activity.
+2. **Subsequent dispatch**: Because the file is already hosted externally, deliver the message by calling [Send a message without SDK-managed upload](/sdk/ios/message/sending-messages/send-message-not-oss). If you need the SDK to manage local file uploading, use [Create a file message from a local path](/sdk/ios/message/creating-messages/create-file-message-from-full-path).

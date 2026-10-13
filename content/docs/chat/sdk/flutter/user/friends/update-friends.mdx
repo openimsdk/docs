@@ -1,23 +1,46 @@
 ---
-title: 'Update friend information'
-description: 'Update friend remarks, pin state, or extension data with the OpenIM Flutter SDK.'
+title: 'Update friends'
+description: 'Update remarks, pinned status, or custom extensions for specified friends using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/friends/update-friends'
 ---
 
+Update remarks, pin status, or custom business extensions for one or more friends:
+
+## Parameters
+
+The `UpdateFriendsReq` object contains the following fields:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `friendUserIDs` | `List<String>` | Yes | List of friend user IDs whose relationship details should be updated. |
+| `remark` | `String?` | No | Custom friend remark name. |
+| `isPinned` | `bool?` | No | Whether to pin this friend in contact views. |
+| `ex` | `String?` | No | Custom friendship extension string. Passing a new value overwrites existing extension data rather than merging keys incrementally. |
+
+Provide at least one property field to modify alongside `friendUserIDs`. If different friends require distinct remarks or extension attributes, invoke this API separately for each user.
+
+## Code example
+
 ```dart
 await OpenIM.iMManager.friendshipManager.updateFriends(
   UpdateFriendsReq(
-    friendUserIDs: [friendUserID],
-    remark: remark.trim(),
+    friendUserIDs: ['user_123'],
+    remark: 'Alice',
+    isPinned: true,
   ),
 );
 ```
 
-One call applies the same field value to every target friend. `ex` is a complete string value; make separate calls when different friends need different values. Handle successful completion of the `Future` and `onFriendInfoChanged` as separate stages.
+## Return value
+
+A successful `Future` returns `void`, indicating that the update request was accepted and processed by the server.
+
+## State changes after the call
+
+This method alters relationship states. When the server successfully updates the friend details, connected clients receive `onFriendInfoChanged` event notifications. The client should update the corresponding friend item in the local contacts cache using `userID` as the merge key. For friend event listening and state management, see [Get friend list with pagination](/sdk/flutter/user/friends/get-friend-list-page).

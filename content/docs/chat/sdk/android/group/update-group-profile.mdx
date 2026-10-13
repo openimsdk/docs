@@ -1,28 +1,55 @@
 ---
 title: 'Update group profile'
-description: 'Use setGroupInfo to update a group name, avatar, introduction, and other profile fields.'
+description: 'Update basic group attributes such as group name, introduction, and avatar using setGroupInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/update-group-profile'
 ---
 
-Use `setGroupInfo()` to update a group profile. The request object contains the `groupID` and the fields being changed. Submit only the fields for the current update.
+Update basic group attributes including the group name, avatar image URL, and introduction text. Set the target `groupID` and desired fields in the `GroupInfo` object; unassigned fields remain unchanged.
+
+## Code example
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
-update.setGroupName("Mobile project team");
+update.setGroupID("group_123");
+update.setGroupName("Mobile Engineering Team");
 update.setIntroduction("Android and iOS collaboration group");
+update.setFaceURL("https://example.com/group_avatar.png");
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group profile updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle update failure
+        }
+    }
+);
 ```
 
-Group announcements and extra data use the same API and are covered on their respective pages.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | Yes | Group entity holding the target `groupID` and modified properties (such as `groupName`, `introduction`, or `faceURL`). |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+
+## Return value
+
+The successful callback confirms that the group profile update was persisted on the server.
+
+## State changes after the call
+
+Once the update takes effect, all online group members receive the `onGroupInfoChanged(GroupInfo group)` event via `OnGroupListener`. Merge the updated properties into local group caches using `groupID`. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).
+
+To manage group announcements or custom business extension metadata, see [Set group announcement](/sdk/android/group/set-group-announcement) and [Set group extension data](/sdk/android/group/set-group-extension).

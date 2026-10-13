@@ -1,21 +1,25 @@
 ---
 title: 'Send a custom signal'
-description: 'Send and receive custom signaling in a call room with the OpenIM Flutter SDK.'
+description: 'Send and receive lightweight custom signaling payloads within a call room using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-Use `signalingSendCustomSignal()` to send lightweight application negotiation data to a call room, such as a raised-hand action, layout-change hint, or application state update. It is not a chat-message API and cannot replace the media engine's data channel.
+Custom signals deliver lightweight business coordination payloads—such as raising hands, requesting layout changes, or syncing transient presentation state—to participants in an active call room. Custom signaling is not a chat messaging API and does not replace RTC media data channels.
 
-## Send a signal
+## Parameters
 
-`roomID` and `customInfo` are required strings. To send structured data, define a stable format and serialize it as JSON:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `roomID` | `String` | Yes | Target call room ID. |
+| `customInfo` | `String` | Yes | Custom business signaling payload, typically a JSON-serialized string. |
+
+## Code example
 
 ```dart
 final signal = jsonEncode({
@@ -32,11 +36,13 @@ await OpenIM.iMManager.signalingManager.signalingSendCustomSignal(
 );
 ```
 
-Future completion means that OpenIMServer accepted the send request; it does not mean that other participants have processed the signal. `customInfo` can include a protocol version and business idempotency ID. Custom signaling is intended for lightweight, temporary call negotiation; it does not transfer or retain large files, chat history, or durable state.
+## Return value
 
-## Receive signals
+A successful `Future` indicates that the server accepted the signaling payload for dispatch. It does not guarantee that other participants have processed it. Custom signaling is designed for lightweight, ephemeral in-call coordination; do not use it to transfer large files or persist long-term state.
 
-`OnSignalingListener.onReceiveCustomSignal` carries `CustomSignaling`, whose `roomID` and `customInfo` are nullable. Validate the room and business protocol before updating the UI:
+## Receive custom signals
+
+Receive custom signals through the `onReceiveCustomSignal` callback on `OnSignalingListener`:
 
 ```dart
 void handleCustomSignal(CustomSignaling info) {
@@ -56,6 +62,4 @@ Future<void> registerCustomSignalListener() {
 }
 ```
 
-This page is the complete owner of `onReceiveCustomSignal`. `SignalingManager` retains only one listener, and a later configuration replaces the previous Dart instance. Combine this callback with every other call callback in one application-level `OnSignalingListener`; do not configure separate listeners in individual widgets. The SDK has no remove or unset API. When switching accounts, stop dispatching to the previous account's state and replace the listener with the complete instance for the new account.
-
-`parseAndValidateCallSignal()` parses the JSON structure, protocol version, `eventID`, `type`, and application fields. Apply each signal idempotently by `roomID:eventID` without relying on event order. Custom signaling is not a replayable record of durable state; after reconnecting, reconcile state through a room query or application data.
+Include a protocol version and an idempotency key (`eventID`) within the custom business payload. Deduplicate actions using `roomID:eventID` to prevent duplicate processing or out-of-order execution from corrupting UI state. Because the SDK does not provide an unregister method, stop dispatching events to old state stores when logging out or switching accounts, and overwrite the listener with a fresh instance upon the next login. For general call event handling, see [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events).

@@ -5,13 +5,22 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/get-friend-list-page'
 ---
 
-Use the paginated selector to retrieve `OIMFriendInfo` objects instead of loading the entire friend list at once.
+Retrieve the authenticated user's friend list with pagination using `getFriendListPageWithOffset:count:filterBlack:onSuccess:onFailure:`. Paginating friend queries prevents memory spikes and UI hitches in large contact directories.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `NSInteger` | Yes | Pagination starting offset index. Pass `0` for the initial page. |
+| `count` | `NSInteger` | Yes | Number of friend items to fetch per page. |
+| `filterBlack` | `BOOL` | Yes | Whether to filter out users currently present on the user's blacklist. Pass `YES` to omit blacklisted friends. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] getFriendListPageWithOffset:0
@@ -20,16 +29,21 @@ Use the paginated selector to retrieve `OIMFriendInfo` objects instead of loadin
                                          onSuccess:^(NSArray<OIMFriendInfo *> *friends) {
                                              [friendStore replaceFirstPage:friends];
                                          }
-                                         onFailure:nil];
+                                         onFailure:^(NSInteger code, NSString *message) {
+                                             NSLog(@"getFriendListPage failed: %ld %@", (long)code, message);
+                                         }];
 ```
 
-`offset` starts at `0`, `count` is the page size, and `filterBlack` determines whether blocked users are excluded. The success callback returns the current page. When loading more, increment the offset by the number of requested items and deduplicate results by `userID`.
+When fetching subsequent pages, increment `offset` by the count of items already loaded and deduplicate contact records by `userID`.
 
-The query only establishes a snapshot and does not trigger a friendship delegate.
+## Return value
 
-## Synchronize friendship changes
+The `onSuccess` callback returns an `NSArray<OIMFriendInfo *> *` containing friend items for the requested page. When the returned array is empty or contains fewer than `count` items, all friends have been retrieved.
 
-This page is the sole owner of the complete handlers for `onFriendAdded:`, `onFriendInfoChanged:`, and `onFriendDeleted:`. Your application must retain a strong reference to one `OIMFriendshipListener` instance and use that same instance when adding and removing the listener.
+## State changes after the call
+
+- **Snapshot creation**: The paginated query creates an initial data snapshot and does not emit friendship delegate callbacks.
+- **Asynchronous event listening**: Register `OIMFriendshipListener` to merge incremental friend additions, remark updates, and friend removals in real time.
 
 ```objc
 @interface FriendshipStore () <OIMFriendshipListener>
@@ -60,4 +74,4 @@ This page is the sole owner of the complete handlers for `onFriendAdded:`, `onFr
 @end
 ```
 
-Handle the query snapshot and delegate updates separately, always merging them by `userID`. Call `stopListening` when signing out, switching accounts, or destroying the contacts state layer.
+Retain this listener instance strongly, and invoke `removeFriendListener:` when signing out or releasing the contacts view model.

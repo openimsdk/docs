@@ -1,17 +1,83 @@
 ---
-title: 'Get the friend list'
-description: 'OpenIM HarmonyOS SDK guide for Get the friend list.'
+title: 'Paginate friend list'
+description: 'Paginate friend relationships for the signed-in user and listen for real-time friend updates.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/user/friends/get-friend-list-page'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Initialize contact lists by starting with `pageNumber: 1`. When friends are added or deleted, reset the pagination offset to page 1 to prevent duplicated or missing rows across page boundaries:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnFriendAddedData,
+  EventOnFriendDeletedData,
+  EventOnFriendInfoChangedData,
+  GetFriendsPageReq,
+  GetFriendsPageResp,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetFriendsPageReq = {
+  filterBlack: true,
+  pagination: {
+    pageNumber: 1,
+    showNumber: 50,
+  },
+};
+const response: GetFriendsPageResp = await sdk.getFriendsPage(request);
+replaceFriends(response.friends);
+
+const handleFriendAdded = (data: EventOnFriendAddedData): void => {
+  mergeFriend(data.friend);
+};
+const handleFriendChanged = (data: EventOnFriendInfoChangedData): void => {
+  mergeFriend(data.friend);
+};
+const handleFriendDeleted = (data: EventOnFriendDeletedData): void => {
+  removeFriend(data.friend.friendUserID);
+};
+
+const unsubscribeAdded = sdk.on(OpenIMSDKEvent.EventOnFriendAdded, handleFriendAdded);
+const unsubscribeChanged = sdk.on(OpenIMSDKEvent.EventOnFriendInfoChanged, handleFriendChanged);
+const unsubscribeDeleted = sdk.on(OpenIMSDKEvent.EventOnFriendDeleted, handleFriendDeleted);
+
+export function removeFriendListListeners(): void {
+  unsubscribeAdded();
+  unsubscribeChanged();
+  unsubscribeDeleted();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filterBlack` | `boolean` | Yes | Set to `true` to exclude blocked users from the returned list. |
+| `pagination.pageNumber` | `number` | Yes | Page index, starting from `1`. |
+| `pagination.showNumber` | `number` | Yes | Number of friend items to fetch per page. |
+
+## Return value
+
+Returns a Promise that resolves to a `GetFriendsPageResp` object containing `friends: IMFriend[]`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `friendUserID` | `string` | Unique user identifier of the friend. |
+| `nickname` | `string` | Friend's public nickname. |
+| `faceURL` | `string` | Friend's avatar URL. |
+| `remark` | `string` | Private remark note set by the current account. |
+| `isPinned` | `boolean` | Whether this friend is pinned in the contact directory. |
+| `ex` | `string` | Application-defined relationship metadata string. |
+| `ownerUserID` | `string` | Current signed-in user ID owning this friendship record. |
+| `createTime` | `number` | Friendship creation timestamp in Unix milliseconds. |
+
+## State changes after the call
+
+Resolving the Promise populates the initial friend snapshot. Real-time changes arrive through `EventOnFriendAdded`, `EventOnFriendInfoChanged`, and `EventOnFriendDeleted`; correlate updates using `friendUserID`. Invoke `removeFriendListListeners()` when signing out or unmounting contact components. Re-query whenever network synchronization completes or page boundaries require reconciliation.

@@ -5,28 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/clear-all-local-messages'
 ---
 
-`deleteAllMsgFromLocal()` clears every message stored for the current account on this device. It does not delete server records or affect other devices or users. Explain this scope before running the operation.
+Clear all historical message records stored in the local database on the current device for the logged-in account. This operation does not issue a network request, does not alter cloud roaming history, and does not affect message records on other devices or peer accounts. It is recommended to display a confirmation prompt to the user before executing this action.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().messageManager.deleteAllMsgFromLocal(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Clear message lists and related UI state for this account on this device.
+            // Local messages cleared, reset active conversation timelines
         }
 
         @Override
         public void onError(int code, String error) {
-            // Keep the existing UI state and report the failure.
+            // Handle clearing failure
         }
     }
 );
 ```
 
-The success callback means local deletion completed. This operation does not trigger message events on other clients, and messages retained by the server may be synchronized to this device again later.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that all local message data has been cleared from SQLite storage on this device. Clear active message timeline displays across all conversations.
+2. **Local scope**: This is a local-only operation that does not trigger network requests or broadcast events to other devices.
+3. **Re-query calibration**: Because server records remain intact, subsequent roaming history queries may retrieve previous messages from cloud storage. To delete messages from both local storage and the server across all devices, see [Clear all saved messages](/sdk/android/message/managing-messages/clear-all-messages).

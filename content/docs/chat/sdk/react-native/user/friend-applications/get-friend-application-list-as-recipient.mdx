@@ -1,6 +1,6 @@
 ---
 title: 'Get received friend applications'
-description: 'Get received friend requests with the OpenIM React Native SDK.'
+description: 'Paginate and retrieve incoming friend requests by status using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/user/friend-applications/get-friend-application-list-as-recipient'
 ---
 
-Call `getFriendApplicationListAsRecipient()` to page through friend requests received by the current user.
+Paginate and query friend applications received by the authenticated user filtered by handling status:
 
 ```ts
 const applications = await OpenIMSDK.getFriendApplicationListAsRecipient({
@@ -20,55 +20,60 @@ const applications = await OpenIMSDK.getFriendApplicationListAsRecipient({
 });
 ```
 
-## Parameter description
+## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `handleResults` | `number[]` | Yes | Request handling results to retrieve. |
-| `offset` | `number` | Yes | Pagination offset. Use `0` for the first page. |
-| `count` | `number` | Yes | Number of requests to retrieve. |
+| `handleResults` | `number[]` | Yes | List of application statuses to filter by. |
+| `offset` | `number` | Yes | Pagination offset starting from `0`. |
+| `count` | `number` | Yes | Maximum number of records to fetch per batch. |
 
-| Enum value | Numeric value | Meaning |
+Status enum values:
+
+| Enum value | Value | Description |
 | --- | --- | --- |
-| `ApplicationHandleResult.Unprocessed` | `0` | Pending. |
-| `ApplicationHandleResult.Agree` | `1` | Accepted. |
+| `ApplicationHandleResult.Unprocessed` | `0` | Pending review. |
+| `ApplicationHandleResult.Agree` | `1` | Approved. |
 | `ApplicationHandleResult.Reject` | `-1` | Rejected. |
 
-The method returns the current page as `FriendApplicationItem[]`.
+## Return value
 
-### Friend request fields
+Resolves to an array of `FriendApplicationItem[]` for the requested page.
 
-`FriendApplicationItem` contains the following fields:
+### Friend application properties
+
+Key properties in `FriendApplicationItem`:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `fromUserID` | `string` | Applicant's user ID. |
-| `fromNickname` | `string` | Applicant's nickname. |
-| `fromFaceURL` | `string` | Applicant's avatar URL. |
-| `toUserID` | `string` | Recipient's user ID. |
-| `toNickname` | `string` | Recipient's nickname. |
-| `toFaceURL` | `string` | Recipient's avatar URL. |
-| `reqMsg` | `string` | Message attached to the request. |
-| `handleResult` | `ApplicationHandleResult` | Current handling result. |
-| `handlerUserID` | `string` | User ID that handled the request. |
-| `handleMsg` | `string` | Message entered when handling the request. |
-| `handleTime` | `number` | Time when the request was handled. |
-| `createTime` | `number` | Time when the request record was created. |
-| `ex` | `string` | Request record extension string. |
+| `fromUserID` | `string` | User ID of the applicant. |
+| `fromNickname` | `string` | Nickname of the applicant. |
+| `fromFaceURL` | `string` | Avatar URL of the applicant. |
+| `toUserID` | `string` | User ID of the recipient (the current user). |
+| `toNickname` | `string` | Nickname of the recipient. |
+| `toFaceURL` | `string` | Avatar URL of the recipient. |
+| `reqMsg` | `string` | Greeting message attached to the request. |
+| `handleResult` | `ApplicationHandleResult` | Current handling status. |
+| `handlerUserID` | `string` | User ID who processed the application. |
+| `handleMsg` | `string` | Response note provided when processing. |
+| `handleTime` | `number` | Processing timestamp in Unix milliseconds. |
+| `createTime` | `number` | Request creation timestamp in Unix milliseconds. |
+| `ex` | `string` | Custom extension string. |
 
-## Listen for friend-request changes
+## Listen for friend application changes
 
-When a friend request changes, `OnFriendApplicationAdded`, `OnFriendApplicationAccepted`, `OnFriendApplicationRejected`, or `OnFriendApplicationDeleted` is emitted with a `FriendApplicationItem`:
+Friend application events trigger `OnFriendApplicationAdded`, `OnFriendApplicationAccepted`, `OnFriendApplicationRejected`, or `OnFriendApplicationDeleted`, delivering the affected `FriendApplicationItem`:
 
 ```ts
 const handleApplicationChanged = (application: FriendApplicationItem) => {
-  // Update the request by fromUserID and toUserID
-};
-const handleApplicationDeleted = (application: FriendApplicationItem) => {
-  // Remove the request by fromUserID and toUserID
+  // Update state using composite key fromUserID and toUserID
 };
 
-// Add listeners
+const handleApplicationDeleted = (application: FriendApplicationItem) => {
+  // Remove application matching fromUserID and toUserID
+};
+
+// Register listeners
 OpenIMSDK.on(OpenIMEvent.OnFriendApplicationAdded, handleApplicationChanged);
 OpenIMSDK.on(OpenIMEvent.OnFriendApplicationAccepted, handleApplicationChanged);
 OpenIMSDK.on(OpenIMEvent.OnFriendApplicationRejected, handleApplicationChanged);
@@ -81,4 +86,4 @@ OpenIMSDK.off(OpenIMEvent.OnFriendApplicationRejected, handleApplicationChanged)
 OpenIMSDK.off(OpenIMEvent.OnFriendApplicationDeleted, handleApplicationDeleted);
 ```
 
-Identify a request with both `fromUserID` and `toUserID`. Remove these listeners when logging out, switching accounts, or tearing down the request-list state.
+Identify individual application entries using the composite key `fromUserID:toUserID`. Unregister listeners when the view unmounts, the user signs out, or accounts switch.

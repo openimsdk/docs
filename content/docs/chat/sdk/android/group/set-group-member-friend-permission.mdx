@@ -1,27 +1,60 @@
 ---
-title: 'Set member friend request permission'
-description: 'Use GroupInfo.applyMemberFriend to control whether users can send friend requests from the group member list.'
+title: 'Set in-group friending permission'
+description: 'Control whether members can send friend requests to each other from within a group using setGroupInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/set-group-member-friend-permission'
 ---
 
-`applyMemberFriend` is an integer switch: `0` disables friend requests and `1` enables them. This rule only affects requests initiated through the member relationship in this group.
+Control whether group members can initiate friend applications to one another directly from the group roster. Group owners and administrators toggle this policy using the `applyMemberFriend` property on `GroupInfo`. This restriction specifically governs the friend request entry point in group member cards.
+
+## Code example
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
-update.setApplyMemberFriend(0);
+update.setGroupID("group_123");
+update.setApplyMemberFriend(0); // 0 disallows members from adding each other as friends
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Permission updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle update failure
+        }
+    }
+);
 ```
 
-A successful callback means that the permission update request completed; it does not mean that every client has updated its UI. `onGroupInfoChanged` provides the updated `GroupInfo`. Merge this permission by `groupID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Permission values
+
+The `applyMemberFriend` field accepts the following integers:
+
+| Mode | Value | Description |
+| --- | --- | --- |
+| Disallow in-group friending | `0` | Disallows members from sending friend applications to each other from this group. |
+| Allow in-group friending | `1` | Allows members to send friend applications normally from group profile cards. |
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | Yes | Group entity holding the target `groupID` and the updated `applyMemberFriend` integer. |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+
+## Return value
+
+The successful callback confirms that the permission setting was saved on the server.
+
+## State changes after the call
+
+Once updated, group members receive the `onGroupInfoChanged(GroupInfo group)` event via `OnGroupListener`. Merge the updated `GroupInfo` using `groupID`, and hide or disable "Add friend" buttons on member profile cards. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

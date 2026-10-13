@@ -1,17 +1,84 @@
 ---
 title: 'Events overview'
-description: 'OpenIM uni-app / uni-app x SDK guide for Events overview.'
+description: 'Register, consume, and clean up UniApp SDK events across application and session lifecycles.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/events/overview-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The UniApp SDK provides dedicated listener registration functions for connection lifecycles, background data synchronization, user profiles, relationships, conversations, groups, messages, file uploads, and audio/video calling. Each registration call returns an `OpenIMSDKEventSubscription` reference, which you pass to `off()` to unregister that specific listener.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+Always register stable function references rather than inline closures within re-rendering components to prevent memory leaks and duplicate handler execution. Global connection, messaging, and call listeners should reside in application- or session-level stores, while listeners scoped to a specific view should be unsubscribed when that page unmounts.
+
+## Recommended registration lifecycles
+
+| Event domain | Recommended lifecycle | Detailed documentation |
+| --- | --- | --- |
+| Connection, token, and kick-out | Register before login; clean up when switching accounts | [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session) |
+| User profile, friends, and blacklist | Register when initializing the contact state layer | [User overview](/sdk/uniapp/user/overview-user) |
+| Conversation list and unread counts | Register when initializing the conversation state layer | [Get the conversation list](/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list), [Get total unread count](/sdk/uniapp/conversation/managing-conversations/get-total-unread-count) |
+| Groups and group members | Register when initializing the group state layer | [Group overview](/sdk/uniapp/group/overview-group) |
+| Group join applications | Register when initializing group application management | [Get received group applications](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient) |
+| Messages and receipts | Register when initializing the message store | [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages) |
+| File uploads | Register before initiating upload tasks | [Upload a file](/sdk/uniapp/file-uploads/upload-file) |
+| Audio/video calls | Register when initializing calling services | [Handle call events](/sdk/uniapp/calling/managing-calls/handle-call-events) |
+
+## Monitor server data synchronization
+
+After successful login, the SDK synchronizes historical records and offline changes from OpenIMServer. Use these four events to track synchronization progress:
+
+| Event | Callback parameter | Description |
+| --- | --- | --- |
+| `onSyncServerStart` | `boolean` | Emitted when a synchronization cycle begins. |
+| `onSyncServerProgress` | `number` | The current synchronization percentage (`0` to `100`). |
+| `onSyncServerFinish` | `boolean` | Emitted when synchronization completes successfully. |
+| `onSyncServerFailed` | `boolean` | Emitted when synchronization fails. |
+
+The callback parameters for `onSyncServerStart`, `onSyncServerFinish`, and `onSyncServerFailed` are booleans without specific payload properties. Determine the sync phase by the event name itself rather than attempting to interpret the boolean payload.
+
+## Code example
+
+```uts
+import {
+  off,
+  onSyncServerFailed,
+  onSyncServerFinish,
+  onSyncServerProgress,
+  onSyncServerStart,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleSyncStart = (_value: boolean) => {
+  setSyncState('syncing', 0)
+}
+
+const handleSyncProgress = (progress: number) => {
+  setSyncState('syncing', progress)
+}
+
+const handleSyncFinish = (_value: boolean) => {
+  setSyncState('ready', 100)
+  void reloadVisibleData()
+}
+
+const handleSyncFailed = (_value: boolean) => {
+  setSyncState('failed', 0)
+}
+
+const syncStartSubscription = onSyncServerStart(handleSyncStart)
+const syncProgressSubscription = onSyncServerProgress(handleSyncProgress)
+const syncFinishSubscription = onSyncServerFinish(handleSyncFinish)
+const syncFailedSubscription = onSyncServerFailed(handleSyncFailed)
+
+function removeSyncListeners() {
+  off(syncStartSubscription)
+  off(syncProgressSubscription)
+  off(syncFinishSubscription)
+  off(syncFailedSubscription)
+}
+```
+
+Synchronization events describe the SDK's background sync lifecycle rather than a specific query API. Once synchronization completes, refresh view models for active screens, and rely on domain-specific events for subsequent real-time updates. Because events can arrive out of order during network transitions, merge items into your state using stable keys: `userID`, `conversationID`, `groupID`, `groupID:userID`, or `clientMsgID`.

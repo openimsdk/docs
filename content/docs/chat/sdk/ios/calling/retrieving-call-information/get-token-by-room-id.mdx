@@ -5,22 +5,33 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/retrieving-call-information/get-token-by-room-id'
 ---
 
-The parameter name in the public header is `groupID`, but the selector and underlying implementation both use it as a room ID:
+Retrieve the credentials required to enter a call room by room ID using `signalingGetTokenByRoomID:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `roomID` | `NSString *` | Yes | Target call room identifier. (Certain SDK headers denote this selector argument as `groupID`, but pass the actual room ID). |
+
+## Code example
 
 ```objc
 [[OIMManager manager] signalingGetTokenByRoomID:roomID
                                       onSuccess:^(OIMInvitationResultInfo * _Nullable credentials) {
-    if (credentials.roomID.length > 0) [self joinMediaRoom:credentials];
+    if (credentials.roomID.length > 0) {
+        [self joinMediaRoom:credentials];
+    }
 }
                                       onFailure:^(NSInteger code, NSString * _Nullable message) {
     [self showCallError:code message:message ?: @"Failed to retrieve room credentials"];
 }];
 ```
 
-The success callback returns an `OIMInvitationResultInfo`. Connect the media engine after obtaining valid `roomID`, `token`, and `liveURL` values. Call this method again when the credentials expire.
+## Return value
+
+The `onSuccess` callback delivers an `OIMInvitationResultInfo` instance containing the room identifier (`roomID`), RTC room access token (`token`), and live media URL (`liveURL`). Connect to your media engine once valid credentials arrive. When media credentials expire or during connection recovery, invoke this method again to refresh credentials.

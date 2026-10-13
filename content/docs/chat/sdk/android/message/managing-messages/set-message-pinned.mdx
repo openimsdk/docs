@@ -5,32 +5,65 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/set-message-pinned'
 ---
 
-Pass `true` as the final argument to pin the message or `false` to unpin it:
+Pin an important message to the top of a conversation or unpin a previously pinned message. Pinned status is a shared conversation attribute. In group chats, pinning is typically restricted to group owners and administrators. Once pinned, member devices display the message prominently in a pinned banner at the top of the chat screen.
+
+## Code example
 
 ```java
-messageManager.setConversationPinnedMsg(
-    callback,
+String conversationID = "g_group_123";
+String clientMsgID = "msg_001";
+boolean isPinned = true; // true: pin the message; false: unpin the message
+
+OpenIMClient.getInstance().messageManager.setConversationPinnedMsg(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Pinned status updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle update failure
+        }
+    },
     conversationID,
     clientMsgID,
-    true
+    isPinned
 );
 ```
 
-The success callback means that the request completed; it does not mean that the pinned-message event has arrived.
+## Parameters
 
-When pinned messages change, `OnAdvanceMsgListener.onChangedPinnedMsg` returns the corresponding `conversationID` and current list of pinned messages:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the target conversation. |
+| `clientMsgID` | `String` | Yes | Client message ID of the target message to pin or unpin. |
+| `isPinned` | `boolean` | Yes | Pin status flag: `true` to pin the message, `false` to unpin it. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the pinned state change was saved on the server.
+2. **Asynchronous event delivery**: Conversation members receive the change event through `OnAdvanceMsgListener.onChangedPinnedMsg`:
 
 ```java
 @Override
 public void onChangedPinnedMsg(ChangedPinnedMsg event) {
-    // event.getMsgs() contains messages whose pinned state changed.
+    // event.getConversationID() identifies the target conversation
+    // event.getMsgs() returns the updated list of pinned messages
 }
 ```
 
-`MessageManager` can retain only one `OnAdvanceMsgListener`. If the application handles other message events, implement their callbacks in the same listener. See [Events](/sdk/android/events/overview-events) for setup. To retrieve the current pinned messages directly, use [View pinned messages](/sdk/android/message/managing-messages/get-pinned-messages).
+Clients should merge the new list of pinned items using `event.getConversationID()` and `clientMsgID`.
+3. **Re-query calibration**: To retrieve the complete current list of pinned messages directly from storage, see [View pinned messages](/sdk/android/message/managing-messages/get-pinned-messages).
+
+For complete listener registration and lifecycle management, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

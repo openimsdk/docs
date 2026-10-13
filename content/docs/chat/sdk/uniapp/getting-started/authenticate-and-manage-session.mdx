@@ -1,17 +1,230 @@
 ---
 title: 'Authenticate and manage a session'
-description: 'OpenIM uni-app / uni-app x SDK guide for Authenticate and manage a session.'
+description: 'Initialize the UTS plugin, log in as the current user, handle connection events, refresh tokens, and log out.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/getting-started/authenticate-and-manage-session'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The uni-app / uni-app x SDK initializes its native Core before establishing an active user session. Complete the prerequisites and plugin installation in [Before you start](/sdk/uniapp/getting-started/before-you-start) and [Integrate by project and platform](/sdk/uniapp/getting-started/environment-specific-implementation) before proceeding.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+The standard authentication lifecycle follows these steps:
+
+1. Initialize the SDK for the target platform.
+2. Register connection, token expiration, and kick-out event listeners before attempting login.
+3. Retrieve the current user's `userID` and `token` securely from your business backend.
+4. Invoke `login()`, wait for the Promise to resolve, and await `onConnectSuccess` to verify WebSocket connectivity.
+5. Query user profiles, relationships, conversations, groups, and message history once the connection is established.
+6. When logging out or switching accounts, call `logout()` and clean up application state and event subscriptions.
+
+## Initialize the SDK
+
+The following snippet illustrates SDK initialization for the login flow. Refer to [Integrate by project and platform](/sdk/uniapp/getting-started/environment-specific-implementation) for parameter details and directory rules:
+
+```uts
+import {
+  OpenIMLogLevelWarn,
+  OpenIMPlatformAndroid,
+  initSDK,
+} from '@/uni_modules/unix-openim-sdk'
+
+await initSDK({
+  platformID: OpenIMPlatformAndroid,
+  apiAddr,
+  wsAddr,
+  dataDir: '',
+  logFilePath: '',
+  logLevel: OpenIMLogLevelWarn,
+  isLogStandardOutput: false,
+  systemType: 'your-app',
+})
+```
+
+A resolved `initSDK()` Promise indicates that the native Core has initialized. It does not establish a user session or verify WebSocket connectivity.
+
+## Register connection listeners before login
+
+Register listeners for connection lifecycle changes, token invalidations, and kick-out events before calling `login()`. Each registration method returns an `OpenIMSDKEventSubscription` reference for precise unsubscription:
+
+```uts
+import {
+  off,
+  onConnectFailed,
+  onConnectSuccess,
+  onConnecting,
+  onKickedOffline,
+  onUserTokenExpired,
+  onUserTokenInvalid,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleConnecting = () => {
+  setConnectionState('connecting')
+}
+
+const handleConnectSuccess = () => {
+  setConnectionState('connected')
+}
+
+const handleConnectFailed = (errCode: number, errMsg: string) => {
+  setConnectionState('failed')
+  console.error('OpenIMClientSDK connection failed:', errCode, errMsg)
+}
+
+const handleKickedOffline = () => {
+  clearCurrentSession()
+  showSignedInElsewhereDialog()
+}
+
+const handleUserTokenExpired = () => {
+  void refreshOpenIMToken()
+}
+
+const handleUserTokenInvalid = (errCode: number, errMsg: string) => {
+  console.error('OpenIMClientSDK token invalid:', errCode, errMsg)
+  redirectToSignIn()
+}
+
+const connectingSubscription = onConnecting(handleConnecting)
+const connectSuccessSubscription = onConnectSuccess(handleConnectSuccess)
+const connectFailedSubscription = onConnectFailed(handleConnectFailed)
+const kickedOfflineSubscription = onKickedOffline(handleKickedOffline)
+const tokenExpiredSubscription = onUserTokenExpired(handleUserTokenExpired)
+const tokenInvalidSubscription = onUserTokenInvalid(handleUserTokenInvalid)
+```
+
+The callback handlers for `onConnectFailed` and `onUserTokenInvalid` accept two arguments: a numeric `errCode` and a string `errMsg`. Other connection event handlers accept no parameters.
+
+## Log in as the current user
+
+Pass the current user's `userID` and authentication `token` to `login()`. Endpoint addresses and platform constants were already configured during initialization and do not need to be provided again:
+
+## Code example
+
+```uts
+import { login } from '@/uni_modules/unix-openim-sdk'
+
+await login(userID, token)
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `string` | Yes | The unique identifier of the user logging in. |
+| `token` | `string` | Yes | The authentication token issued by your business backend for this user. |
+
+## Return value
+
+The returned Promise resolves with `void` upon successful authentication verification. A resolved Promise indicates that the login request was authenticated by OpenIMServer. Once the client receives the `onConnectSuccess` event, the WebSocket channel is fully established, allowing you to invoke business APIs. Treat authentication success and connection availability as distinct lifecycle phases.
+
+If a user triggers login multiple times, reuse the active login task instead of launching concurrent requests. When switching accounts, await completion of `logout()` before calling `login()` with the new credentials.
+
+## Handle Promise results and errors
+
+Async APIs in the UTS plugin return domain data directly without wrapper response envelopes. When an invocation fails, the returned Promise rejects with an error containing `errCode` and `errMsg`:
+
+```uts
+import {
+  OpenIMError,
+  getSelfUserInfo,
+} from '@/uni_modules/unix-openim-sdk'
+
+try {
+  const currentUser = await getSelfUserInfo()
+  useCurrentUser(currentUser)
+} catch (error) {
+  const sdkError = error as OpenIMError
+  console.error('Failed to retrieve user profile:', sdkError.errCode, sdkError.errMsg)
+}
+```
+
+A resolved query Promise returns a point-in-time snapshot. For state-changing operations, resolution confirms completion of the specific action; update your UI in response to event notifications and query re-calibration.
+
+## Check login status
+
+Query the client's current authentication state and active user ID without passing parameters:
+
+```uts
+import {
+  OpenIMLoginStatusLogged,
+  getLoginStatus,
+  getLoginUserID,
+} from '@/uni_modules/unix-openim-sdk'
+
+const status = await getLoginStatus()
+
+if (status == OpenIMLoginStatusLogged) {
+  const currentUserID = await getLoginUserID()
+  restoreSessionFor(currentUserID)
+}
+```
+
+| Status | Description |
+| --- | --- |
+| `OpenIMLoginStatusLogout` | The SDK is currently logged out. |
+| `OpenIMLoginStatusLogging` | Login is currently in progress; avoid triggering parallel login attempts. |
+| `OpenIMLoginStatusLogged` | The user is authenticated; verify connection events before assuming network readiness. |
+
+`getLoginUserID()` returns the user ID associated with the active session. This helper lets you ensure consistency between your application state and the SDK session, though it should not replace server-side authentication. These queries do not trigger connection events.
+
+## Update the authentication token
+
+When an existing token approaches expiration or your backend issues a refreshed credential, invoke `updateToken()`:
+
+## Code example
+
+```uts
+import { updateToken } from '@/uni_modules/unix-openim-sdk'
+
+const nextToken = await requestOpenIMTokenFromBackend()
+await updateToken({ token: nextToken })
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `token` | `string` | Yes | The refreshed authentication token issued by your business backend. |
+
+## Return value
+
+The Promise resolves with `void` once the SDK adopts the updated token. If the session has been kicked offline or the credential is fundamentally invalid, terminate the local session and prompt the user to sign in again.
+
+## Log out
+
+When a user logs out or switches accounts, invoke `logout()`. Reset local conversation lists, unread counters, and cached message state once the Promise resolves:
+
+```uts
+import { logout } from '@/uni_modules/unix-openim-sdk'
+
+await logout()
+clearCurrentSession()
+```
+
+When an `onKickedOffline` event arrives, the SDK automatically terminates the active session. In that scenario, clean up application UI state and notify the user; do not invoke `logout()` again.
+
+## Clean up event subscriptions
+
+When unmounting components, switching accounts, or tearing down the SDK scope, cancel event listeners using the subscription references captured during registration:
+
+```uts
+function removeSessionListeners() {
+  off(connectingSubscription)
+  off(connectSuccessSubscription)
+  off(connectFailedSubscription)
+  off(kickedOfflineSubscription)
+  off(tokenExpiredSubscription)
+  off(tokenInvalidSubscription)
+}
+```
+
+While `offAll(eventName)` unsubscribes all handlers for a given event, prefer `off(subscription)` within individual views to avoid inadvertently removing listeners managed by other modules.
+
+## Next steps
+
+- [Send your first message](/sdk/uniapp/getting-started/send-first-message)
+- [Integrate by project and platform](/sdk/uniapp/getting-started/environment-specific-implementation)

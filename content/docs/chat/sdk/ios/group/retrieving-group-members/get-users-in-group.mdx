@@ -5,21 +5,38 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-group-members/get-users-in-group'
 ---
 
-Provide `groupID` and the candidate `userIDs`. The success callback returns the IDs of users who still belong to the target group without retrieving their complete member profiles. This method only establishes a snapshot and does not trigger the member delegate.
+Invoke `getUsersInGroup:userIDs:onSuccess:onFailure:` to quickly determine which user IDs from a candidate list currently belong to a specified group:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `userIDs` | `NSArray<NSString *> *` | Yes | Candidate user ID list to evaluate. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] getUsersInGroup:groupID
-  userIDs:candidateUserIDs
-  onSuccess:^(NSArray<NSString *> *userIDs) {
-    [self replaceUsersInGroup:userIDs];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] getUsersInGroup:@"group_1001"
+                              userIDs:@[@"user_001", @"user_002", @"user_003"]
+                            onSuccess:^(NSArray<NSString *> *userIDs) {
+                                [self replaceUsersInGroup:userIDs];
+                            }
+                            onFailure:^(NSInteger code, NSString *message) {
+                                NSLog(@"getUsersInGroup failed: %ld %@", (long)code, message);
+                            }];
 ```
+
+## Return value
+
+The `onSuccess` callback delivers an array of user ID strings (`NSArray<NSString *> *`) identifying only the candidates who are confirmed members of the group.
+
+## State changes after the call
+
+1. **Lightweight membership filtering**: This method verifies membership directly without retrieving or deserializing heavyweight member profile models.
+2. **Read-only query**: Checking membership does not trigger delegate events. For complete member profiles and event handling, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

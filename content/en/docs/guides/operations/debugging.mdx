@@ -1,34 +1,41 @@
-## Step-by-step debugging
+## Debug OpenIMServer with an IDE
 
-This section explains how to perform step-by-step debugging in a source code deployment scenario, using the `openim-api` service of IMServer as an example.
+When developing or troubleshooting OpenIMServer deployed from source, you can attach an IDE debugger (such as JetBrains GoLand) to step through service logic. The following guide demonstrates how to debug the `openim-api` service step by step.
 
-1. Run `docker compose up -d` and `mage start` to start all services.
+1. **Start all services:** Start the supporting dependencies and services by running:
 
-2. Check the console output, as shown below:
-![Service process list](/assets/guides/gettingStarted/faq.assets/debug0.png)
-
-
-Find the service you want to debug, note its `PID`, and stop it using the corresponding command.
-From the screenshot, the `openim-api` service has PID `854942`. You can stop it with:
-
-```sh
-kill -9 854942  # Unix-like systems
-taskkill /PID 854942 /F  # Windows
+   ```bash
+   docker compose up -d
+   mage start
    ```
 
-3. Find the corresponding service entry point — all entry points are located under the `open-im-server/cmd` directory. Start the service in `Debug` mode in your IDE. The entry point for the `openim-api` service is `open-im-server/cmd/openim-api/main.go`.
+2. **Locate the target service PID:** Inspect the console output to view all running OpenIM processes and their process IDs:
 
-4. Set the startup arguments. Using GoLand as an example, click the run arrow and select `Modify Run Configuration`, as shown below:
-![GoLand run configuration](/assets/guides/gettingStarted/faq.assets/debug1.png)
+   ![Service process list](/assets/guides/gettingStarted/faq.assets/debug0.png)
 
-5. Find the `openim-api` service startup arguments from the console output. Extract the startup command: `/data/open-im-server/_output/bin/platforms/linux/amd64/openim-msggateway -i 0 -c /data/open-im-server/config/`, where `-i 0 -c /data/icey/open-im-server/config/` are the startup arguments. Copy and paste them into `Program arguments` and click `OK`, as shown:
+   Find the specific service you want to debug, record its PID, and terminate that single process so the IDE can bind to its port:
 
-![GoLand program arguments](/assets/guides/gettingStarted/faq.assets/debug2.png)
+   ```bash
+   kill -9 854942          # Linux / macOS
+   taskkill /PID 854942 /F  # Windows
+   ```
 
-6. Set breakpoints in the code sections you want to test.
+3. **Locate the service entry point:** Service entry points reside under `open-im-server/cmd/`. For `openim-api`, the entry point file is `open-im-server/cmd/openim-api/main.go`.
 
-7. Start in `debug` mode, as shown:
-![Start GoLand debugging](/assets/guides/gettingStarted/faq.assets/debug3.png)
+4. **Configure IDE run/debug profile:** In GoLand, open `main.go`, click the run icon in the gutter, and select **Modify Run Configuration**:
 
-8. When the code reaches a breakpoint, execution will pause, allowing you to perform step-by-step debugging:
-![Paused at a breakpoint](/assets/guides/gettingStarted/faq.assets/debug4.png)
+   ![GoLand run configuration](/assets/guides/gettingStarted/faq.assets/debug1.png)
+
+5. **Set program arguments:** Extract the exact startup flags from the original terminal output (for example: `-i 0 -c /data/open-im-server/config/`). Paste these flags into **Program arguments** and click **OK**:
+
+   ![GoLand program arguments](/assets/guides/gettingStarted/faq.assets/debug2.png)
+
+6. **Set breakpoints:** Set breakpoints in the code path you want to inspect (such as an API route handler or RPC call).
+
+7. **Launch the debugger:** Start the application in **Debug** mode:
+
+   ![Start GoLand debugging](/assets/guides/gettingStarted/faq.assets/debug3.png)
+
+8. **Step through execution:** Send an API request from your client or curl. When execution hits the breakpoint, use the debugger to inspect variables, call stacks, and goroutine states:
+
+   ![Paused at a breakpoint](/assets/guides/gettingStarted/faq.assets/debug4.png)

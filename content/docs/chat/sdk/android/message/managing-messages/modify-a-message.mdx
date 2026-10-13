@@ -1,31 +1,68 @@
 ---
-title: 'Modify a message'
-description: 'Modify supported message content and handle modification events received by other clients.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-17'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/managing-messages/modify-a-message'
+title: "Modify a message"
+description: "Modify supported message content and handle modification events received by other clients."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/managing-messages/modify-a-message"
 ---
 
-Use `modifyMessage` to change an existing message in a conversation. Normally, start with the original message, change the supported content, and preserve its other fields.
+Edit and update the content of an already-sent message online. Typically, you clone the original `Message` object, modify editable fields (such as text content in `textElem`), and submit the updated object while retaining all original identifiers (`clientMsgID`, `serverMsgID`).
+
+## Code example
 
 ```java
-messageManager.modifyMessage(callback, modifyRequest);
+// Clone or copy original message and update text content
+Message modifiedMessage = originalMessage;
+modifiedMessage.getTextElem().setContent("This is the updated message content.");
+
+OpenIMClient.getInstance().messageManager.modifyMessage(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Message modified successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to modify message
+        }
+    },
+    modifiedMessage
+);
 ```
 
-The success callback means that the modification request completed.
+## Parameters
 
-After a message is modified, other clients receive the complete modified `Message` through `OnAdvanceMsgListener.onMessageModified`:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `message` | `Message` | Yes | The updated `Message` object. Must retain original identifiers including `clientMsgID`, `serverMsgID`, and conversation bindings. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## Handling message modification events
+
+After a message is modified, other online clients in the conversation receive the updated `Message` through `OnAdvanceMsgListener.onMessageModified`:
 
 ```java
 @Override
 public void onMessageModified(Message message) {
-    // message is the modified message.
+    // message contains updated content; refresh UI by message.getClientMsgID()
 }
 ```
 
-`MessageManager` can retain only one `OnAdvanceMsgListener`. If the application handles other message events, implement their callbacks in the same listener. See [Events](/sdk/android/events/overview-events) for setup.
+Upon receiving `onMessageModified`, match the message by `clientMsgID` to refresh the text bubble in-place and display an "edited" status indicator.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the modification was saved on the server. Update the local UI model with the new content.
+2. **Asynchronous event delivery**: Peer clients receive `onMessageModified` with the complete updated `Message`. Merge in-place using `clientMsgID`.
+3. **Re-query calibration**: If message content falls out of sync, reload via [Load older messages](/sdk/android/message/retrieving-messages/load-older-messages).
+
+For complete listener registration and lifecycle management, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

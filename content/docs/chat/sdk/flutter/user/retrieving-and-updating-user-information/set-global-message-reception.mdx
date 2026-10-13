@@ -1,17 +1,31 @@
 ---
-title: 'Set the global message receive option'
-description: 'Set the current account’s default message reception and notification behavior with the OpenIM Flutter SDK.'
+title: 'Set global message reception'
+description: 'Configure default message reception and notification behavior for the current account using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception'
 ---
 
-Write `globalRecvMsgOpt` separately through `setSelfInfo()`. Do not overwrite this account-level message policy as a side effect of saving a nickname or avatar.
+Configure default global message reception and offline push notification policies across all single-chat and group-chat conversations for the current account:
+
+## Parameters
+
+Specify the `globalRecvMsgOpt` parameter in `setSelfInfo` to configure account-level do-not-disturb (DND) behavior without altering other profile fields:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `globalRecvMsgOpt` | `int` | Yes | Global message reception option enumeration value. Typically toggles between normal delivery and do-not-disturb. |
+
+| Enum Option | Value | Behavior |
+| --- | --- | --- |
+| `ReceiveMessageOpt.receive` | `0` | Receive messages normally with offline push notifications enabled. |
+| `ReceiveMessageOpt.notNotify` | `2` | Receive messages silently without triggering offline push or system notification banners (DND mode). |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.userManager.setSelfInfo(
@@ -19,12 +33,12 @@ await OpenIM.iMManager.userManager.setSelfInfo(
 );
 ```
 
-| Constant | Value | Meaning |
-| --- | --- | --- |
-| `ReceiveMessageOpt.receive` | `0` | Receive messages normally and allow offline pushes or notifications. |
-| `ReceiveMessageOpt.notReceive` | `1` | Do not receive messages or trigger offline pushes or notifications. |
-| `ReceiveMessageOpt.notNotify` | `2` | Receive messages without triggering offline pushes or notifications. |
+## Return value
 
-If the product exposes only a global Do Not Disturb switch, it should generally toggle between `receive` and `notNotify`. Because `notReceive` stops message reception, present it as a separate option with different semantics.
+A successful `Future` returns `void`, indicating that the global message reception configuration was committed to the server.
 
-An individual conversation can have its own receive option; see [Set the conversation message receive option](/sdk/flutter/conversation/managing-conversations/set-message-receive-option). A successful `Future` means only that the request completed. Reconcile the final account snapshot through `onSelfInfoUpdated` or another query; the event belongs to [Update the current user’s profile](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile).
+## State changes after the call
+
+This method alters user state. Per-conversation reception options take precedence over this global account default. To configure individual conversation rules, see [Set conversation message receive option](/sdk/flutter/conversation/managing-conversations/set-message-receive-option).
+
+When the update takes effect on the server, all active client sessions for this account receive `onSelfInfoUpdated` event notifications. Use `userID` as the merge key to update the current user's cached profile. For profile update listener implementation, see [Update self profile](/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile).

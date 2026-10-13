@@ -1,17 +1,98 @@
 ---
 title: 'Handle call events'
-description: 'OpenIM uni-app / uni-app x SDK guide for Handle call events.'
+description: 'Centrally listen for call invitations, acceptances, participants, and hang-up lifecycle changes.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/managing-calls/handle-call-events'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Your calling state layer should centrally register listeners for invitation lifecycles and participant changes. These event callbacks deliver a raw `string` payload without exposed internal schemas. Use these events as invalidation signals to re-query strongly typed invitation or room details through dedicated retrieval APIs.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+| Event | Recommended handling |
+| --- | --- |
+| `onReceiveNewInvitation` | Query and restore the active pending invitation, then display the incoming call UI. |
+| `onInviteeAccepted` | Refresh call state and proceed with the RTC media connection. |
+| `onInviteeAcceptedByOtherDevice` | Terminate the incoming call UI on this device to avoid duplicate answering. |
+| `onInviteeRejected` | Update participant status; end the invitation if all invitees have rejected. |
+| `onInviteeRejectedByOtherDevice` | Dismiss the incoming call UI on this device. |
+| `onInvitationCancelled`, `onInvitationTimeout` | Dismiss ringing state and release pre-allocated media resources. |
+| `onHangUp` | Leave the media channel and terminate the call. |
+| `onRoomParticipantConnected`, `onRoomParticipantDisconnected` | Re-query the room or notify the media engine to update the participant list. |
+| `onStreamChange` | Supported on Android and iOS as a media state change notification; omitted on HarmonyOS. |
+
+## Code example
+
+The following example treats signaling callbacks as trigger notifications. When `onReceiveNewInvitation` fires, it calls [Restore pending call invitations](/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation) to fetch strongly typed invitation data. For group calls, query [Get room by group ID](/sdk/uniapp/calling/retrieving-call-information/get-room-by-group-id) to synchronize room metadata:
+
+```uts
+import {
+  off,
+  onHangUp,
+  onInvitationCancelled,
+  onInvitationTimeout,
+  onInviteeAccepted,
+  onInviteeAcceptedByOtherDevice,
+  onInviteeRejected,
+  onInviteeRejectedByOtherDevice,
+  onReceiveNewInvitation,
+  onRoomParticipantConnected,
+  onRoomParticipantDisconnected,
+  onStreamChange,
+  signalingGetInvitationInfoStartApp,
+} from '@/uni_modules/unix-openim-sdk'
+
+const restoreIncomingInvitation = async () => {
+  const result = await signalingGetInvitationInfoStartApp({
+    userID: currentUserID,
+  })
+  if (result?.invitation?.roomID != null) {
+    showIncomingCall(result.invitation!)
+  }
+}
+
+const handleIncomingInvitation = (_payload: string) => {
+  void restoreIncomingInvitation()
+}
+
+const refreshCall = (_payload: string) => {
+  void refreshCurrentCall()
+}
+
+const finishCurrentCall = (_payload: string) => {
+  closeCallAndReleaseMedia()
+}
+
+const incomingSubscription = onReceiveNewInvitation(handleIncomingInvitation)
+const acceptedSubscription = onInviteeAccepted(refreshCall)
+const acceptedElsewhereSubscription = onInviteeAcceptedByOtherDevice(finishCurrentCall)
+const rejectedSubscription = onInviteeRejected(refreshCall)
+const rejectedElsewhereSubscription = onInviteeRejectedByOtherDevice(finishCurrentCall)
+const cancelledSubscription = onInvitationCancelled(finishCurrentCall)
+const timeoutSubscription = onInvitationTimeout(finishCurrentCall)
+const hangUpSubscription = onHangUp(finishCurrentCall)
+const participantConnectedSubscription = onRoomParticipantConnected(refreshCall)
+const participantDisconnectedSubscription = onRoomParticipantDisconnected(refreshCall)
+const streamChangeSubscription = onStreamChange(refreshCall)
+
+function removeCallListeners() {
+  off(incomingSubscription)
+  off(acceptedSubscription)
+  off(acceptedElsewhereSubscription)
+  off(rejectedSubscription)
+  off(rejectedElsewhereSubscription)
+  off(cancelledSubscription)
+  off(timeoutSubscription)
+  off(hangUpSubscription)
+  off(participantConnectedSubscription)
+  off(participantDisconnectedSubscription)
+  off(streamChangeSubscription)
+}
+```
+
+If your application relies on an agreed string serialization format within the event payloads, parse them in a dedicated adapter layer. Validate payload fields and protocol versions, merge items using `roomID` as the primary key, and fall back to query APIs if parsing fails.
+
+Unsubscribe from all call listeners when logging out, switching user accounts, or dismantling the global calling manager. For custom signaling events, refer to [Send a custom signal](/sdk/uniapp/calling/sending-custom-signals/send-a-custom-signal).

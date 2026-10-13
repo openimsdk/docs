@@ -1,17 +1,90 @@
 ---
 title: 'Receive messages'
-description: 'OpenIM HarmonyOS SDK guide for Receive messages.'
+description: 'Listen for standard, offline, and online-only messages, and merge them into conversations.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/receiving-messages/receive-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Message events deliver incremental newly arrived messages. When first opening a conversation, scrolling through pages, or refreshing after reconnecting, actively load message history. Both paths may deliver the same message; resolve the target conversation first, then deduplicate by `clientMsgID`.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnRecvNewMessageData,
+  EventOnRecvOfflineNewMessageData,
+  EventOnRecvOnlineOnlyMessageData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleNewMessage = (data: EventOnRecvNewMessageData): void => {
+  routeAndMergeMessage(data.message);
+};
+const handleOfflineMessage = (data: EventOnRecvOfflineNewMessageData): void => {
+  routeAndMergeMessage(data.message);
+};
+const handleOnlineOnlyMessage = (data: EventOnRecvOnlineOnlyMessageData): void => {
+  showTransientMessage(data.message);
+};
+
+const unsubscribeNewMessage = sdk.on(OpenIMSDKEvent.EventOnRecvNewMessage, handleNewMessage);
+const unsubscribeOfflineMessage = sdk.on(
+  OpenIMSDKEvent.EventOnRecvOfflineNewMessage,
+  handleOfflineMessage,
+);
+const unsubscribeOnlineOnlyMessage = sdk.on(
+  OpenIMSDKEvent.EventOnRecvOnlineOnlyMessage,
+  handleOnlineOnlyMessage,
+);
+
+export function removeMessageListeners(): void {
+  unsubscribeNewMessage();
+  unsubscribeOfflineMessage();
+  unsubscribeOnlineOnlyMessage();
+}
+```
+
+For direct chats, determine the counterparty using `sessionType`, `sendID`, and `recvID`; for group chats, use `groupID`. Online-only messages are ephemeral and do not persist in local history; do not use them for critical business data requiring replay.
+
+## Batch message events
+
+The SDK also exposes batch events `EventOnRecvNewMessages` and `EventOnRecvOfflineNewMessages`, which deliver `messages: IMMessage[]`. Whether batching occurs depends on underlying batch delivery mechanisms. Choose either single or batch listener setups to implement a unified deduplication pipeline, avoiding dual registration that could insert the same message twice.
+
+If your application adopts the batch approach, replace the two individual history message listeners above with the following pattern, while retaining the separate online-only listener:
+
+```ts
+import sdk, {
+  EventOnRecvNewMessagesData,
+  EventOnRecvOfflineNewMessagesData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleNewMessages = (data: EventOnRecvNewMessagesData): void => {
+  for (let index = 0; index < data.messages.length; index += 1) {
+    routeAndMergeMessage(data.messages[index]);
+  }
+};
+const handleOfflineMessages = (data: EventOnRecvOfflineNewMessagesData): void => {
+  for (let index = 0; index < data.messages.length; index += 1) {
+    routeAndMergeMessage(data.messages[index]);
+  }
+};
+
+const unsubscribeNewMessages = sdk.on(OpenIMSDKEvent.EventOnRecvNewMessages, handleNewMessages);
+const unsubscribeOfflineMessages = sdk.on(
+  OpenIMSDKEvent.EventOnRecvOfflineNewMessages,
+  handleOfflineMessages,
+);
+
+export function removeBatchMessageListeners(): void {
+  unsubscribeNewMessages();
+  unsubscribeOfflineMessages();
+}
+```
+
+Register message listeners within the global session-level state layer rather than re-registering on every chat view mounting. Clean up listeners when the user logs out or when destroying the state container.

@@ -1,17 +1,69 @@
 ---
-title: 'Report typing status'
-description: 'OpenIM HarmonyOS SDK guide for Report typing status.'
+title: 'Update typing status'
+description: 'Report the current account’s active typing status within a conversation.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/composing-messages/update-typing-status'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+## Report conversation typing status
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+Pass `focus: true` when the user begins typing, and pass `focus: false` when sending a message, blurring the input field, switching conversations, or stopping input. Typing state is transient and is never saved as a draft or message.
+
+```ts
+import sdk, { ChangeInputStatesReq } from '@openimsdk/imsdk';
+
+const startRequest: ChangeInputStatesReq = {
+  conversationID: conversationID,
+  focus: true,
+};
+await sdk.changeInputStates(startRequest);
+
+const stopRequest: ChangeInputStatesReq = {
+  conversationID: conversationID,
+  focus: false,
+};
+await sdk.changeInputStates(stopRequest);
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target conversation identifier. |
+| `focus` | `boolean` | Yes | `true` when input starts; `false` when input stops. |
+
+Throttle and deduplicate typing start calls rather than sending an update on every keystroke. Promise resolution confirms that the reporting request completed, without guaranteeing immediate UI updates across remote clients.
+
+## Send direct chat typing prompt
+
+The HarmonyOS SDK also provides `typingStatusUpdate`, a legacy single-chat typing prompt method that sends an ephemeral indicator string to a recipient user. It does not use `conversationID` and accommodates custom protocols relying on `msgTip`.
+
+```ts
+import sdk, { TypingStatusUpdateReq } from '@openimsdk/imsdk';
+
+const request: TypingStatusUpdateReq = {
+  recvID: receiverUserID,
+  msgTip: 'typing',
+};
+await sdk.typingStatusUpdate(request);
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `recvID` | `string` | Yes | Recipient user ID in a single chat. |
+| `msgTip` | `string` | Yes | Ephemeral typing prompt string. |
+
+## Return value
+
+Both methods return Promises that resolve to `void` upon server acceptance.
+
+## State changes after the call
+
+Prefer `changeInputStates` for modern multi-platform synchronized typing states; see [Receive and query typing status](/sdk/harmony/message/composing-messages/get-typing-status) for receiver handling. Avoid calling both APIs simultaneously to prevent duplicated typing indicators on receiving devices.

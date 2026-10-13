@@ -1,17 +1,42 @@
 ---
 title: 'Receive custom business messages'
-description: 'OpenIM uni-app / uni-app x SDK guide for Receive custom business messages.'
+description: 'Listen for custom application-level business notifications dispatched directly by the server.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/receiving-messages/receive-custom-business-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The custom business message event listens for arbitrary application-level notifications pushed directly by the backend server. The callback receives a raw `string` payload rather than an `OpenIMMessageItem` structure. In contrast, custom peer-to-peer chat messages created with [Create a custom message](/sdk/uniapp/message/creating-messages/create-custom-message) are delivered through the standard message events in [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages).
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Listen for custom business notifications
+
+Subscribe to backend notifications using `onRecvCustomBusinessMessage`. Parse and validate the payload before dispatching it to local business stores.
+
+```uts
+import {
+  off,
+  onRecvCustomBusinessMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleCustomBusinessMessage = (payload: string) => {
+  const businessMessage = parseAndValidateBusinessPayload(payload)
+  applyBusinessPayload(businessMessage)
+}
+
+const businessMessageSubscription =
+  onRecvCustomBusinessMessage(handleCustomBusinessMessage)
+
+function removeBusinessMessageListener() {
+  off(businessMessageSubscription)
+}
+```
+
+## State changes after the call
+
+Validate the string format, schema version, and required business identifiers before updating state. Maintain a stable notification ID in your custom protocol to deduplicate events on the client; never rely on arrival order and avoid evaluating untrusted expressions received in payloads.
+
+Unregister the listener using `removeBusinessMessageListener()` when unmounting components, logging out, or switching accounts. To establish initial application state, query authoritative business REST APIs; events serve strictly as incremental notifications.

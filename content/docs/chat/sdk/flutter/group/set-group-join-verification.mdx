@@ -1,15 +1,25 @@
 ---
 title: 'Set group join verification'
-description: 'Set verification rules for group applications and invitations with the OpenIM Flutter SDK.'
+description: 'Configure group join and invitation verification policies using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/set-group-join-verification'
 ---
+
+Configure verification rules for join requests and member invitations in a specified group. The caller's permissions are enforced by OpenIMServer:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `String` | Yes | Target group ID. |
+| `needVerification` | `GroupVerification` | Yes | Join verification policy enumeration. |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.groupManager.setGroupInfo(
@@ -20,10 +30,18 @@ await OpenIM.iMManager.groupManager.setGroupInfo(
 );
 ```
 
-| Constant | Value | Meaning |
-| --- | --- | --- |
-| `GroupVerification.applyNeedVerificationInviteDirectly` | `0` | User applications require approval; invitations from group members join directly. |
-| `GroupVerification.allNeedVerification` | `1` | Applications and invitations from regular members require approval; invitations from the owner or administrators do not. |
-| `GroupVerification.directly` | `2` | Applications and invitations both join directly. |
+`GroupVerification` enum options:
 
-After the `Future` succeeds, reconcile the final state from `onGroupInfoChanged` or a new group-profile query.
+| Enum Option | Value | Behavior |
+| --- | --- | --- |
+| `GroupVerification.applyNeedVerificationInviteDirectly` | `0` | Join requests require approval; invitations from existing members enter directly. |
+| `GroupVerification.allNeedVerification` | `1` | Both join requests and invitations require approval, unless initiated by an owner or administrator. |
+| `GroupVerification.directly` | `2` | Direct access; no approval required for requests or invitations. |
+
+## Return value
+
+A successful `Future` indicates that the verification policy has been updated on the server.
+
+## State changes after the call
+
+The server broadcasts group profile update notifications. The client updates `needVerification` on the local group record using `groupID` as the key. For complete listener integration, see [Groups overview](/sdk/flutter/group/overview-group). To recalibrate group state, call [Get specified groups info](/sdk/flutter/group/retrieving-groups/get-specified-groups-info).

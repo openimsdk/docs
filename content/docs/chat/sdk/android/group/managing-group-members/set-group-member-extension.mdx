@@ -1,28 +1,56 @@
 ---
-title: 'Set group member extra data'
-description: 'Store application-defined group member data in SetGroupMemberInfo.ex.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/managing-group-members/set-group-member-extension'
+title: "Set group member extra data"
+description: "Store application-defined group member data in SetGroupMemberInfo.ex."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/managing-group-members/set-group-member-extension"
 ---
 
-The `SetGroupMemberInfo.ex` string stores extra group member information and can contain a JSON string with additional member information.
+Store custom business extension attributes on a group member record. By setting the `ex` string field (typically a JSON string) on `SetGroupMemberInfo`, you can store application-specific metadata (such as internal duties, points, or custom tags). The server replaces the existing string entirely.
+
+## Code example
 
 ```java
 SetGroupMemberInfo update = new SetGroupMemberInfo();
-update.setGroupID(groupID);
-update.setUserID(userID);
-update.setEx("{\"duty\":\"reviewer\"}");
+update.setGroupID("group_123");
+update.setUserID("user_a");
+update.setEx("{\"duty\":\"reviewer\",\"tag\":\"expert\"}");
 
-OpenIMClient.getInstance().groupManager.setGroupMemberInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupMemberInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group member extra data updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to update group member extra data
+        }
+    }
+);
 ```
 
-A successful callback means that the extension update request completed; it does not mean that every client has updated its UI. `onGroupMemberInfoChanged` provides the updated `GroupMembersInfo`. Merge it by `groupID:userID` and replace the member's `ex`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupMemberInfo` | `SetGroupMemberInfo` | Yes | Member update object. Must specify `groupID`, member `userID`, and the new extension string `ex`. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the extension data was saved to the server.
+2. **Asynchronous event delivery**: Group members receive the `onGroupMemberInfoChanged` event delivering the updated `GroupMembersInfo`. The client should merge the updated `ex` payload into the local member cache using `groupID:userID` as the unique key.
+3. **Re-query calibration**: If member extension data diverges, call [Get group member profiles](/sdk/android/group/retrieving-group-members/get-specified-group-members-info) to refresh data from the server.
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

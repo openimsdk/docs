@@ -1,17 +1,65 @@
 ---
 title: 'Receive messages'
-description: 'OpenIM uni-app / uni-app x SDK guide for Receive messages.'
+description: 'Listen for incoming real-time, offline, and online-only messages, and merge them into conversations.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/receiving-messages/receive-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Message event subscriptions deliver newly arrived messages in real time. When first opening a conversation, scrolling upward, or reconnecting after a network disruption, query history actively using [Load older messages](/sdk/uniapp/message/retrieving-messages/load-older-messages). Because queries and events may encounter the same message instance, always determine the target conversation and deduplicate entries using `clientMsgID`.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+The `OpenIMMessageItem` struct does not contain a `conversationID` property. For single chats, identify the conversation using `sessionType`, `sendID`, and `recvID`. For group chats, identify it using `groupID`. Compute the conversation ID or look up the conversation object using SDK APIs. Never identify messages by display text or visual list offsets.
+
+## Listen for new messages
+
+The callbacks for `onRecvNewMessages` and `onRecvOfflineNewMessages` receive an `OpenIMMessageListResult | null` payload, with message items contained in `messages`. In contrast, `onRecvOnlineOnlyMessage` receives an individual `OpenIMMessageItem | null`.
+
+```uts
+import {
+  OpenIMMessageItem,
+  OpenIMMessageListResult,
+  off,
+  onRecvNewMessages,
+  onRecvOfflineNewMessages,
+  onRecvOnlineOnlyMessage,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleNewMessages = (result: OpenIMMessageListResult | null) => {
+  if (result == null) return
+  mergeMessagesByClientMsgID(result.messages)
+}
+
+const handleOfflineMessages = (result: OpenIMMessageListResult | null) => {
+  if (result == null) return
+  mergeMessagesByClientMsgID(result.messages)
+}
+
+const handleOnlineOnlyMessage = (message: OpenIMMessageItem | null) => {
+  if (message == null) return
+  showTransientMessage(message)
+}
+
+const newMessagesSubscription = onRecvNewMessages(handleNewMessages)
+const offlineMessagesSubscription = onRecvOfflineNewMessages(handleOfflineMessages)
+const onlineOnlySubscription = onRecvOnlineOnlyMessage(handleOnlineOnlyMessage)
+
+function removeMessageListeners() {
+  off(newMessagesSubscription)
+  off(offlineMessagesSubscription)
+  off(onlineOnlySubscription)
+}
+```
+
+When an application wakes from background execution, caught-up messages are typically delivered through `onRecvOfflineNewMessages`. The SDK layer handles lifecycle transitions and network reconnects automatically; UI views only need to react to these message events.
+
+Online-only messages are dispatched when the sender sets `isOnlineOnly: true`. They are not persisted to the SDK's local database and are suited for transient indicators like typing alerts. Never use online-only messages for critical business data that requires historical replay.
+
+## Merge message states
+
+Incoming message events may contain messages for conversations other than the one currently displayed. Route messages to their respective conversation containers first, then update or insert items using the composite key of target conversation plus `clientMsgID`. Real-time messages, offline batches, and historical query results must apply the exact same deduplication logic to prevent duplicate chat bubbles.
+
+For message revocation, deletion, and editing events, consult their respective guide pages. Event delivery does not indicate that history loading has concluded, and query completion does not preclude incremental incoming events.

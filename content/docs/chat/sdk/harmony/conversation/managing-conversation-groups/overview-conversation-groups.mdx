@@ -1,17 +1,117 @@
 ---
-title: 'Conversation group overview'
-description: 'OpenIM HarmonyOS SDK guide for Conversation group overview.'
+title: 'Conversation groups overview'
+description: 'Understand conversation group models, functional boundaries, and real-time synchronization in the OpenIM HarmonyOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/conversation/managing-conversation-groups/overview-conversation-groups'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Conversation groups categorize conversation records for the signed-in user, such as "Work", "Unread", or "Starred". They only manage associations between `conversationID` entries and group buckets; they do not create group chats, alter chat members, or change message recipients.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Group categories
+
+| Enum value | Numeric value | Description |
+| --- | --- | --- |
+| `ConversationGroupType.ConversationGroupTypeNormal` | `0` | Standard custom group created and maintained by the user. |
+| `ConversationGroupType.ConversationGroupTypeFilter` | `1` | Filter group maintained automatically according to SDK or server business rules. |
+| `ConversationGroupQueryType.ConversationGroupQueryAll` | `2` | Query filter flag representing all group types. Cannot be used when creating a group. |
+
+The evaluation rules for filter groups depend on your server deployment; do not synthesize artificial system groups solely by matching names on the client.
+
+## Data model
+
+The `IMConversationGroup` object represents an individual conversation group. Use `conversationGroupID` as the stable identifier when merging query snapshots and event payloads.
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `conversationGroupID` | `string` | Unique conversation group identifier. |
+| `name` | `string` | Display name of the group. |
+| `order` | `number` | Numerical sorting rank determined by application conventions. |
+| `conversationGroupType` | `ConversationGroupType` | Group type enum value. |
+| `hidden` | `boolean` | Whether the group is hidden from display. |
+| `unreadCount` | `number` | Aggregated unread message count for conversations in this group. |
+| `conversationIDs` | `string[]` | List of conversation IDs currently assigned to this group. |
+| `createTime` | `number` | Optional Unix millisecond creation timestamp. |
+| `ex` | `string` | Application-defined custom metadata string. |
+
+## Listen for conversation group events
+
+Register listeners for group creation, deletion, property changes, and member conversation adjustments. Correlate incoming updates using `conversationGroupID`, and re-query after network reconnections:
+
+## Code example
+
+```ts
+import sdk, {
+  EventOnConversationGroupAddedData,
+  EventOnConversationGroupChangedData,
+  EventOnConversationGroupDeletedData,
+  EventOnConversationGroupMemberAddedData,
+  EventOnConversationGroupMemberDeletedData,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleGroupAdded = (data: EventOnConversationGroupAddedData): void => {
+  mergeConversationGroups(data.conversationGroupList);
+};
+const handleGroupChanged = (data: EventOnConversationGroupChangedData): void => {
+  mergeConversationGroups(data.conversationGroupList);
+};
+const handleGroupDeleted = (data: EventOnConversationGroupDeletedData): void => {
+  removeConversationGroups(data.conversationGroupList);
+};
+const handleGroupMemberAdded = (data: EventOnConversationGroupMemberAddedData): void => {
+  mergeConversationGroup(data.conversationGroup, data.conversations);
+};
+const handleGroupMemberDeleted = (data: EventOnConversationGroupMemberDeletedData): void => {
+  mergeConversationGroup(data.conversationGroup, data.conversations);
+};
+
+const unsubscribeGroupAdded = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupAdded,
+  handleGroupAdded,
+);
+const unsubscribeGroupChanged = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupChanged,
+  handleGroupChanged,
+);
+const unsubscribeGroupDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupDeleted,
+  handleGroupDeleted,
+);
+const unsubscribeGroupMemberAdded = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupMemberAdded,
+  handleGroupMemberAdded,
+);
+const unsubscribeGroupMemberDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnConversationGroupMemberDeleted,
+  handleGroupMemberDeleted,
+);
+
+export function removeConversationGroupListeners(): void {
+  unsubscribeGroupAdded();
+  unsubscribeGroupChanged();
+  unsubscribeGroupDeleted();
+  unsubscribeGroupMemberAdded();
+  unsubscribeGroupMemberDeleted();
+}
+```
+
+## State changes after the call
+
+Detach all listeners using `removeConversationGroupListeners()` when the user logs out or the conversation controller unmounts. Resolving a management Promise, receiving real-time event updates, and executing a synchronization query represent three separate lifecycle phases; do not assume that a successful local request has reached every remote client.
+
+## Related operations
+
+- [Create conversation group](/sdk/harmony/conversation/managing-conversation-groups/create-conversation-group)
+- [Retrieve conversation groups](/sdk/harmony/conversation/managing-conversation-groups/get-conversation-groups)
+- [Retrieve conversations in a group](/sdk/harmony/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [Query group IDs by conversation ID](/sdk/harmony/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Update conversation group](/sdk/harmony/conversation/managing-conversation-groups/update-conversation-group)
+- [Set conversation group order](/sdk/harmony/conversation/managing-conversation-groups/set-conversation-group-order)
+- [Add conversations to groups](/sdk/harmony/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [Remove conversations from groups](/sdk/harmony/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [Delete conversation group](/sdk/harmony/conversation/managing-conversation-groups/delete-conversation-group)

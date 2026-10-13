@@ -1,17 +1,153 @@
 ---
-title: 'Authenticate and manage a session'
-description: 'OpenIM HarmonyOS SDK guide for Authenticate and manage a session.'
+title: 'Authenticate and manage session'
+description: 'Sign in the current user, handle connection and token lifecycle events, update tokens, and sign out.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/getting-started/authenticate-and-manage-session'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+After initializing the SDK, register connection and account lifecycle listeners before signing in. Sign in using matching `userID` and token credentials. The `login()` Promise resolution, the WebSocket long connection establishment, and the server data synchronization completion represent three distinct stages.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Register connection and account events
+
+Register connection lifecycle and token status callbacks using stable handler functions before logging in:
+
+## Code example
+
+```ts
+import sdk, {
+  EventOnConnectFailedData,
+  EventOnKickedOfflineData,
+  EventOnUserTokenInvalidData,
+  OpenIMSDKEmptyPayload,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const handleConnecting = (data: OpenIMSDKEmptyPayload): void => {
+  setConnectionState('connecting');
+};
+const handleConnected = (data: OpenIMSDKEmptyPayload): void => {
+  setConnectionState('connected');
+};
+const handleConnectFailed = (data: EventOnConnectFailedData): void => {
+  console.error(`OpenIM connection failed: ${data.errCode} ${data.errMsg}`);
+};
+const handleKickedOffline = (data: EventOnKickedOfflineData): void => {
+  clearCurrentSession();
+  showSignedInElsewhereDialog(data.reason);
+};
+const handleTokenExpired = (data: OpenIMSDKEmptyPayload): void => {
+  refreshOpenIMToken();
+};
+const handleTokenInvalid = (data: EventOnUserTokenInvalidData): void => {
+  clearCurrentSession();
+  showTokenInvalidMessage(data.errMsg);
+};
+
+const unsubscribeConnecting = sdk.on(OpenIMSDKEvent.EventOnConnecting, handleConnecting);
+const unsubscribeConnected = sdk.on(OpenIMSDKEvent.EventOnConnectSuccess, handleConnected);
+const unsubscribeConnectFailed = sdk.on(OpenIMSDKEvent.EventOnConnectFailed, handleConnectFailed);
+const unsubscribeKickedOffline = sdk.on(OpenIMSDKEvent.EventOnKickedOffline, handleKickedOffline);
+const unsubscribeTokenExpired = sdk.on(OpenIMSDKEvent.EventOnUserTokenExpired, handleTokenExpired);
+const unsubscribeTokenInvalid = sdk.on(OpenIMSDKEvent.EventOnUserTokenInvalid, handleTokenInvalid);
+```
+
+When multiple devices sign into the same account simultaneously under single-device concurrency policies, the earlier session receives `EventOnKickedOffline`. Upon receiving this event, clear active user state, terminate the local session, and navigate back to your sign-in view.
+
+## Sign in the current user
+
+Pass the `userID` and matching token to `login()`:
+
+```ts
+import sdk, { LoginReq } from '@openimsdk/imsdk';
+
+const request: LoginReq = {
+  userID: currentUserID,
+  token: currentToken,
+};
+
+await sdk.login(request);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `string` | Yes | The user identifier matching the token subject. |
+| `token` | `string` | Yes | Authentication token issued by your business backend. |
+
+## Return value
+
+Returns a Promise that resolves to `void` when the login request is accepted by the native SDK runtime.
+
+## State changes after the call
+
+Resolving the `login()` Promise indicates that the SDK has accepted the credentials and initiated the connection. Wait for `EventOnConnectSuccess` to confirm socket connection, followed by `EventOnSyncServerFinish` (detailed in [Event listener overview](/sdk/harmony/events/overview-events)) to confirm server data synchronization. Only after both events arrive should you query conversation lists, group directories, relationship chains, or historical messages.
+
+## Query login status
+
+Check the current authentication status before triggering business actions or restoring user interfaces:
+
+```ts
+import sdk, { GetLoginStatusResp, LoginStatus } from '@openimsdk/imsdk';
+
+const response: GetLoginStatusResp = await sdk.getLoginStatus();
+if (response.status === LoginStatus.Logged) {
+  restoreSignedInInterface();
+}
+```
+
+## Response
+
+The returned `GetLoginStatusResp` object provides the following status values:
+
+| Status | Description |
+| --- | --- |
+| `LoginStatus.LoggedOut` | No user is currently signed in. |
+| `LoginStatus.Logging` | A sign-in operation is currently in progress; avoid redundant concurrent login calls. |
+| `LoginStatus.Logged` | The user session is active; check connection and synchronization events to determine data availability. |
+| `LoginStatus.LoggingOut` | A sign-out operation is currently in progress. |
+
+## Update the authentication token
+
+When the token nears expiration, supply a newly generated token using `updateToken()`:
+
+```ts
+import sdk, { UpdateTokenReq } from '@openimsdk/imsdk';
+
+const request: UpdateTokenReq = {
+  token: await requestOpenIMTokenFromBackend(),
+};
+await sdk.updateToken(request);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `token` | `string` | Yes | The freshly issued authentication token. |
+
+## Return value
+
+Returns a Promise that resolves to `void` once the SDK updates its internal session credentials. If the previous token has already expired and the socket closed, or if the user was kicked offline, perform a clean `login()` sequence instead.
+
+## Sign out and clean up listeners
+
+Call `logout()` to terminate the session and invoke the retained unsubscribe callbacks:
+
+```ts
+await sdk.logout();
+
+unsubscribeConnecting();
+unsubscribeConnected();
+unsubscribeConnectFailed();
+unsubscribeKickedOffline();
+unsubscribeTokenExpired();
+unsubscribeTokenInvalid();
+```
+
+After `logout()` resolves, clear in-memory user caches and reset UI state. Only invoke `unInitSDK()` when terminating the application process entirely; switching accounts does not require tearing down the native runtime.

@@ -1,49 +1,66 @@
-## S3 storage migration
+## Migrate S3 object storage
 
-### Get the Latest Code
-Download the latest version of the project:
-  - The latest code includes a built-in `S3` migration tool — no separate action required.
-```shell
+When switching your OpenIMServer object storage provider (for example, migrating from MinIO to an enterprise cloud S3 provider), use the built-in `s3convert` utility to update database object references without losing existing data.
+
+### Clone the repository
+
+Clone the latest OpenIMServer repository:
+
+```bash
 git clone https://github.com/openimsdk/open-im-server.git
 cd open-im-server
 ```
 
-### Configuration File Guide
-Modify the relevant configuration files under the `config` directory as needed to complete the S3 migration configuration:
-1. Edit the `openim-rpc-third.yml` configuration file
-   - Locate and update the S3-related configuration items to match your migration requirements.
-2. About the `minio.yml` configuration file
-   - If MinIO is not actually used in your project, this file can be ignored.
-   - If needed, update the S3 configuration items according to your migration requirements.
-3. The `object.enable` field in `openim-rpc-third.yml` specifies the new S3 storage engine.
+### Update configuration files
 
-### Build the S3 Migration Tool
-1. Navigate to the tools directory:
-```shell
-cd tools/s3
-```
-2. Run the build command:
-```shell
-go build -o s3convert main.go
-```
+Modify configuration files in the `config/` directory to configure the new S3 target:
 
-### Start Migration
-To ensure stability during data migration, follow these guidelines:
-1. Preparation
-   - Stop services: It is recommended to perform migration while services are stopped to avoid data inconsistency or operation conflicts.
-   - Backup MongoDB: Back up the data in the `s3` collection to enable quick recovery in case of unexpected issues.
-2. Migration Notes
-   - The migration tool does not delete the original `S3` data but will modify related records in the `s3` collection in `MongoDB`.
-   - After migration is complete, verify data integrity to ensure all migration steps were executed correctly.
-3. Run the migration command
-   - `<config dir path>`: Specify the configuration file directory path.
-   - `<old s3 name>`: Enter the original S3 configuration name, e.g., `minio`.
-```shell
-./s3convert -config <config dir path> -name <old s3 name>
-```
-4. Example command
-If configuration files are located in the `config` directory and the original S3 name is `minio`:
-```shell
-./s3convert -config ./../../config -name minio
-```
-When you see the output `success`, the migration is complete.
+1. **Edit `openim-rpc-third.yml`:**
+   - Update the configuration block for your new S3 provider with valid credentials and endpoint URLs.
+   - Set `object.enable` to the name of the new target provider (e.g., `oss`, `cos`, `kodo`, or `aws`).
+2. **Review `minio.yml`:**
+   - If your deployment does not use MinIO, ignore this file.
+   - If migrating to or from MinIO, verify the connection parameters match the intended environment.
+
+### Compile the migration tool
+
+1. Navigate to the S3 tools directory:
+
+   ```bash
+   cd tools/s3
+   ```
+
+2. Compile the migration binary:
+
+   ```bash
+   go build -o s3convert main.go
+   ```
+
+### Execute the migration
+
+To guarantee data consistency, follow these operational best practices:
+
+1. **Pre-migration preparation:**
+   - **Stop services:** Stop OpenIMServer instances to prevent concurrent writes and race conditions during migration.
+   - **Back up MongoDB:** Create a full backup of the `s3` collection in MongoDB before executing the migration tool to allow rapid rollback if needed.
+2. **Migration behavior:**
+   - The migration utility does not delete source objects in the legacy S3 bucket; it updates corresponding object locator records in MongoDB's `s3` collection.
+   - Validate data integrity and verify file accessibility after the migration command completes.
+3. **Run the migration command:**
+
+   ```bash
+   ./s3convert -config <config-dir-path> -name <old-s3-name>
+   ```
+
+   - `<config-dir-path>`: Path to the directory containing configuration YAML files.
+   - `<old-s3-name>`: Identifier of the source S3 provider being migrated away from (e.g., `minio`).
+
+4. **Example command:**
+
+   If your configuration files reside in `../../config` and you are migrating from `minio`:
+
+   ```bash
+   ./s3convert -config ./../../config -name minio
+   ```
+
+   When the output prints `success`, the database records have been successfully updated. Restart OpenIMServer to resume message and media processing.

@@ -5,16 +5,31 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-groups/get-joined-group-list'
 ---
 
+Invoke `getJoinedGroupListWithOnSuccess:onFailure:` to retrieve a complete snapshot of all groups joined by the currently signed-in user:
+
+## Code example
+
 ```objc
-[[OIMManager manager] getJoinedGroupListWithOnSuccess:
-    ^(NSArray<OIMGroupInfo *> *groups) { [self replaceGroups:groups]; }
-    onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getJoinedGroupListWithOnSuccess:^(NSArray<OIMGroupInfo *> *groups) {
+    [self replaceGroups:groups];
+} onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"getJoinedGroupList failed: %ld %@", (long)code, message);
+}];
 ```
 
-The success callback returns every group joined by the current user, not a public group directory. Use the paginated method for a large list.
+This method requires no business parameters. If the account belongs to a large number of groups, prefer [Retrieve joined groups by page](/sdk/ios/group/retrieving-groups/get-joined-group-list-page) to avoid unbounded payloads.
+
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMGroupInfo` objects (`NSArray<OIMGroupInfo *> *`) representing all groups joined by the user.
+
+## State changes after the call
+
+1. **Snapshot query**: This query retrieves an instantaneous snapshot without triggering delegate callbacks.
+2. **Local cache sync**: The client updates or replaces its cached joined group collection using `groupID` as the primary key.
+3. **Event notification**: Subsequent group joins or departures broadcast via `onJoinedGroupAdded:` and `onJoinedGroupDeleted:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

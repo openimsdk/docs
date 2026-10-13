@@ -5,17 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-burn-duration'
 ---
 
+Configure the message destruction countdown duration for private chats using `setConversationBurnDuration:duration:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `duration` | `NSInteger` | Yes | Burn countdown interval in seconds (e.g., `30`). |
+
+## Code example
+
 ```objc
-[[OIMManager manager] setConversationBurnDuration:conversationID
-                                          duration:30
-                                         onSuccess:nil
-                                         onFailure:nil];
+[[OIMManager manager] setConversationBurnDuration:@"c2c_user1002"
+                                         duration:30
+                                        onSuccess:^(NSString * _Nullable data) {
+                                            NSLog(@"setConversationBurnDuration success");
+                                        }
+                                        onFailure:^(NSInteger code, NSString *message) {
+                                            NSLog(@"setConversationBurnDuration failed: %ld %@", (long)code, message);
+                                        }];
 ```
 
-`duration` is measured in seconds. This setting controls burn after reading in a private chat and is distinct from periodic deletion of server-side messages. After success, merge the latest state through `onConversationChanged:`.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer updated the burn-after-reading countdown duration.
+
+## State changes after the call
+
+- **Local state merge**: Merge the updated `burnDuration` property into local conversation records using `conversationID` as the entity key.
+- **Asynchronous event listening**: Linked devices observe updates via `onConversationChanged:` in `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).
+- **Feature boundary**: This setting adjusts the message destruction timer specifically for private chats; enabling or disabling private chat mode is managed in [Enable or disable burn after reading](/sdk/ios/conversation/managing-conversations/set-private-chat), and enterprise message expiration cycles are configured in [Set the server message deletion cycle](/sdk/ios/conversation/managing-conversations/set-message-destruct-time).

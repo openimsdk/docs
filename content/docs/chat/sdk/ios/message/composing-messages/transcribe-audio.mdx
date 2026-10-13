@@ -5,22 +5,45 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/composing-messages/transcribe-audio'
 ---
 
-On native iOS, prefer placing a readable sandboxed audio path in `filename`. If a path cannot be provided, place Base64-encoded audio in `data`:
+Use the underlying `OpenIMCore` C function `Open_im_sdkSpeechToText` to submit audio data or local audio files to the speech-recognition engine for transcription. On native iOS, passing an accessible file path in `filename` is preferred over providing Base64 data:
+
+## Parameters
+
+Construct a JSON request payload with the following fields:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filename` | `NSString *` | Conditional | Sandboxed absolute path to the local audio file within the application container (recommended). |
+| `data` | `NSString *` | Conditional | Base64-encoded audio data string (used when a local file path cannot be provided). `filename` and `data` are mutually exclusive. |
+
+## Code example
 
 ```objc
 NSDictionary *request = @{@"filename": audioFileURL.path};
 NSString *requestJSON = [self JSONString:request];
 CallbackProxy *callback = [[CallbackProxy alloc]
-    initWithOnSuccess:^(NSString *data) {
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        // Parse transcription JSON and display text
         [self showTranscription:[self textFromResultJSON:data]];
     }
-    onFailure:nil];
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // Handle transcription failure
+    }];
+
+Open_im_sdkSpeechToText(callback, @"", requestJSON);
 ```
 
-Pass `requestJSON` and the callback to `Open_im_sdkSpeechToText`. The success JSON has the shape `{ "text": string }`. It does not modify the source message or trigger a message event. [Check speech-recognition support](/sdk/ios/message/composing-messages/check-speech-to-text) before calling.
+## Return value
+
+The `onSuccess` callback delivers a JSON string containing the transcribed text formatted as `{"text": "transcribed text content"}`.
+
+## State changes after the call
+
+1. **Independent evaluation**: Transcription executes text recognition without mutating the original audio message model or triggering local/remote message event listeners.
+2. **Local transcript persistence**: To persist the recognized text on the local device alongside the message, save it in the message's local extension field. See [Save a local transcript](/sdk/ios/message/composing-messages/save-local-transcript).
+3. **Capability validation**: Prior to submitting audio for transcription, verify format and size limitations via [Check speech-recognition support](/sdk/ios/message/composing-messages/check-speech-to-text).

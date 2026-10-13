@@ -5,32 +5,33 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/getting-started/send-first-message'
 ---
 
-This page installs and initializes OpenIM iOS SDK, logs in, and sends the first text message. A one-to-one chat uses the target user's `recvID`; a group chat uses the target group's `groupID`.
+Learn how to install and initialize the OpenIM iOS SDK, authenticate the user session, and transmit an initial text message. Direct 1-on-1 chats route messages via the recipient's `recvID`, whereas group chats dispatch messages using the target `groupID`.
 
-## Prepare the message target
+## Prepare message targets
 
 | Scenario | Target identifier |
 | --- | --- |
-| One-to-one chat | An existing recipient user ID assigned to `recvID`. |
-| Group chat | An existing group ID assigned to `groupID`, with `recvID` set to `nil`. |
+| One-to-one chat | Existing recipient user identifier passed in `recvID`. |
+| Group chat | Existing group identifier passed in `groupID`, leaving `recvID` set to `nil`. |
 
-OpenIMServer still validates sending permission according to relationships, group state, and member permissions.
+OpenIMServer evaluates permissions against friend relationships, group member statuses, and channel mute settings prior to dispatching messages.
 
-## Get started
+## Implementation steps
 
 ### Step 1: Install the SDK
+
+Add `OpenIMSDK` to your `Podfile`:
 
 ```ruby
 pod 'OpenIMSDK'
 ```
 
-After installation, open the `.xcworkspace` and import the SDK:
+Execute `pod install`, open the generated `.xcworkspace`, and import the framework:
 
 ```objc
 @import OpenIMSDK;
@@ -38,7 +39,7 @@ After installation, open the `.xcworkspace` and import the SDK:
 
 ### Step 2: Initialize and log in
 
-Initialize the SDK with `OIMInitConfig` and wait for the connection-success callback before entering the message flow. For initialization and token handling, see [Authenticate and manage the session](/sdk/ios/getting-started/authenticate-and-manage-session).
+Initialize the SDK with `OIMInitConfig`, handle connection delegates, and authenticate with user credentials. For detailed callback setup, refer to [Authenticate and manage the session](/sdk/ios/getting-started/authenticate-and-manage-session).
 
 ```objc
 [[OIMManager manager] login:userID
@@ -49,16 +50,16 @@ Initialize the SDK with `OIMInitConfig` and wait for the connection-success call
                      }];
 ```
 
-### Step 3: Choose the target
+### Step 3: Specify the target recipient
 
 ```objc
 NSString *recvID = @"user_b";
 NSString *groupID = nil;
 ```
 
-For a group chat, set `recvID = nil` and provide the actual `groupID`.
+For group conversations, assign `recvID = nil` and provide the target `groupID`.
 
-### Step 4: Create and send a text message
+### Step 4: Create and send the text message
 
 ```objc
 OIMMessageInfo *message = [OIMManager createTextMessage:@"Hello, OpenIMSDK"];
@@ -73,14 +74,22 @@ OIMMessageInfo *message = [OIMManager createTextMessage:@"Hello, OpenIMSDK"];
                                            clientMsgID:sentMessage.clientMsgID];
                         }
                        onProgress:^(NSInteger progress) {
-                            // Text messages generally do not need visible progress.
+                            // Text messages do not require progress updates.
                         }
                         onFailure:^(NSInteger code, NSString *message) {
                             NSLog(@"OpenIMSDK send failed: %ld %@", (long)code, message);
                         }];
 ```
 
-`createTextMessage:` creates only a local `OIMMessageInfo`; it does not trigger a shared message event. The send success callback returns the sent message, which the current client merges by `clientMsgID`. The receiving client obtains it through its message delegate. Callback completion and arrival of the remote event are separate stages and should be verified independently.
+## Return value
+
+The `onSuccess` callback returns an `OIMMessageInfo` instance representing the message confirmed by the server, containing updated `serverMsgID`, `sendTime`, and delivery status flags.
+
+## State changes after the call
+
+- **Local state merge**: Invoking `createTextMessage:` creates an in-memory `OIMMessageInfo` model locally without network transmission. When `sendMessage:...` succeeds, merge the returned `OIMMessageInfo` into your local database or UI collection using `clientMsgID` as the primary key.
+- **Remote client reception**: Remote recipients receive the new message asynchronously via the `onRecvNewMessage:` delegate in `OIMAdvancedMsgListener` (see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages)).
+- **Synchronization**: Local sender confirmation and remote delivery are independent asynchronous stages. Verify message transmission on the sender device and message receipt on the recipient device separately.
 
 ## Next steps
 

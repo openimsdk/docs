@@ -1,27 +1,28 @@
 ---
 title: 'Create a conversation group'
-description: 'Create a conversation group with Open_im_sdkCreateConversationGroup.'
+description: 'Create a conversation group with OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/create-conversation-group'
 ---
 
-`Open_im_sdkCreateConversationGroup` creates a conversation group for the current user from a JSON `req`. A regular group requires at least a name. To add one conversation at creation time, also provide its `conversationID`.
+Invoke `Open_im_sdkCreateConversationGroup` to create a custom conversation group for the signed-in user. A regular group requires a name; pass a `conversationID` to add an initial conversation into the group at creation time:
 
 ## Parameters
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `name` | Yes | The group name. |
-| `order` | No | The ordering value. Define one sorting direction consistently across the product. |
-| `ex` | No | An application-defined extension string. |
-| `conversationID` | No | A conversation to add to the group immediately after creation. |
-| `conversationGroupType` | No | `0` for a regular group or `1` for a filtered group. |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | `NSString *` | Yes | Name of the conversation group. |
+| `order` | `NSNumber *` | No | Sorting order index for group display. |
+| `ex` | `NSString *` | No | Custom extension string. |
+| `conversationID` | `NSString *` | No | ID of a conversation to include immediately upon creation. |
+| `conversationGroupType` | `NSNumber *` | No | Group type (`0` for a regular custom group, `1` for a rule-filtered group). |
+
+## Code example
 
 ```objc
 #import <OpenIMSDK/CallbackProxy.h>
@@ -30,7 +31,7 @@ sourcePath: '/sdk/ios/conversation/managing-conversation-groups/create-conversat
 NSDictionary *request = @{
     @"name": @"Work",
     @"order": @100,
-    @"conversationID": conversationID,
+    @"conversationID": @"c2c_user1002",
     @"conversationGroupType": @0,
 };
 
@@ -46,14 +47,18 @@ CallbackProxy *callback = [[CallbackProxy alloc]
         [self upsertConversationGroupJSON:data];
     }
     onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showConversationGroupError:code message:message ?: @"Failed to create the conversation group"];
+        NSLog(@"CreateConversationGroup failed: %ld %@", (long)code, message);
     }];
+
+Open_im_sdkCreateConversationGroup(callback, requestJSON);
 ```
 
-Pass `callback` and `requestJSON` to `Open_im_sdkCreateConversationGroup`.
+## Return value
 
-## Result
+The `onSuccess` callback delivers a JSON string in `data` representing the newly created group. Common fields include `conversationGroupID`, `name`, `order`, `version`, `conversationGroupType`, `hidden`, `unreadCount`, and `conversationIDs`.
 
-The success callback's `data` is a JSON group object. Common fields include `conversationGroupID`, `name`, `order`, `version`, `conversationGroupType`, `hidden`, `unreadCount`, and `conversationIDs`.
+## State changes after the call
 
-Other signed-in clients or later synchronization may receive `onConversationGroupAdded:`. For the complete listener implementation, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+1. **Local state update**: The client parses the JSON response and inserts or updates the group record using `conversationGroupID` as the unique key.
+2. **Event notification**: Multi-device synchronization or subsequent changes broadcast via the `onConversationGroupAdded:` listener callback.
+3. **Re-query calibration**: For comprehensive listener configuration and data structures, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

@@ -5,11 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/sending-messages/send-message'
 ---
+
+Invoke `sendMessage:recvID:groupID:isOnlineOnly:offlinePushInfo:onProgress:onSuccess:onFailure:` on `OIMManager` to dispatch a prepared message object to a user or group conversation. For rich media messages, the SDK manages local database insertion and object storage uploads while notifying progress callbacks:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `OIMMessageInfo *` | Yes | Prepared message object created by factory methods. |
+| `recvID` | `NSString *` | Conditional | Receiver user ID for one-to-one chats. Required for single chat; pass `nil` for group messages. |
+| `groupID` | `NSString *` | Conditional | Target group ID for group chats. Required for group chat; pass `nil` for single messages. `recvID` and `groupID` are mutually exclusive. |
+| `isOnlineOnly` | `BOOL` | Yes | Whether the message is delivered to online users only. Set to `YES` to bypass offline storage and push notifications; normally set to `NO`. |
+| `offlinePushInfo` | `OIMOfflinePushInfo *` | No | Custom offline push configuration including title, description, and pass-through payload. Pass `nil` for defaults. |
+| `onProgress` | `OIMNumberCallback` | No | Upload progress callback returning values from `0` to `100`. Non-media messages do not trigger this callback. |
+| `onSuccess` | `void (^)(OIMMessageInfo *sent)` | Yes | Success callback returning the confirmed message model. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] sendMessage:message
@@ -17,13 +33,27 @@ sourcePath: '/sdk/ios/message/sending-messages/send-message'
                           groupID:nil
                      isOnlineOnly:NO
                   offlinePushInfo:nil
-                        onSuccess:^(OIMMessageInfo *sent) {
-    if (sent != nil) [messageStore upsert:sent];
-}
                        onProgress:^(NSInteger progress) {
+    // Rich media upload progress (0 to 100)
     [messageStore updateProgress:progress clientMsgID:message.clientMsgID];
 }
-                        onFailure:nil];
+                        onSuccess:^(OIMMessageInfo *sent) {
+    // Delivery succeeded; merge confirmed message by clientMsgID
+    if (sent != nil) {
+        [messageStore upsert:sent];
+    }
+}
+                        onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle message delivery failure
+}];
 ```
 
-For a one-to-one chat, provide only `recvID`; for a group chat, provide only `groupID`. An `isOnlineOnly` message is not stored in regular offline history. `offlinePushInfo` optionally configures push notifications. The message passed to the success callback may be `nil`; when it is present, merge it by `clientMsgID`. Progress, success, the receiving delegate, and a history query are separate stages.
+## Return value
+
+The `onSuccess` callback receives the confirmed `OIMMessageInfo` model returned by the server. The client merge key is `clientMsgID` (scoped to `conversationID` when organizing multi-conversation caches).
+
+## State changes after the call
+
+1. **Local write and upload**: Sending rich media initiates local database insertion, asset uploading with progress notifications, and subsequent network dispatch.
+2. **Delivery confirmation vs receipt**: Success callback confirms that the server accepted the message. Counterparty arrival notifications and history queries represent distinct synchronization stages.
+3. **Incoming message handling**: For incoming message event listeners and UI update flows, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

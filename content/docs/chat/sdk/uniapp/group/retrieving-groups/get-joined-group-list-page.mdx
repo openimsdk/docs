@@ -1,17 +1,42 @@
 ---
-title: 'Get joined groups by page'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get joined groups by page.'
+title: 'Get joined groups with pagination'
+description: 'Query groups joined by the authenticated user with pagination support.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `getJoinedGroupListPage()` to query joined groups with pagination, ideal for contact books or group selector views with large group memberships.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Pagination starting offset; pass `0` for the first page. |
+| `count` | `number` | Yes | Number of groups to fetch in this page. |
+
+## Code example
+
+```uts
+import { getJoinedGroupListPage } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getJoinedGroupListPage({
+  offset: 0,
+  count: 50,
+})
+const groups = result != null ? result.groups : []
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMGroupListResult | null` object. When non-null, `groups` contains `OpenIMGroupItem[]` objects for the requested page. Deduplicate and merge records into your view models using `groupID`. This response does not return total count or cursor tokens; when the returned array contains fewer elements than `count`, you have reached the end of the list.
+
+When loading subsequent pages, increment `offset` by the fixed count of queried records rather than the active UI list length. For group structure fields, see [Group overview](/sdk/uniapp/group/overview-group).
+
+## State changes after the call
+
+This is a read-only query that establishes a local snapshot. If group join or quit events arrive during active paging, reset the pagination offset and reload from the beginning as described in [Group overview](/sdk/uniapp/group/overview-group).

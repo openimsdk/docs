@@ -1,19 +1,20 @@
 ---
 title: 'Set friend request permissions'
-description: 'Choose how friend requests sent to the current account are handled.'
+description: 'Configure verification rules for incoming friend requests targeting the authenticated account.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-19'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/user-profile/set-friend-add-permission'
 ---
 
-Use `addFriendPermission` to choose whether requests from other users to add the current account require approval. This capability is available in the Enterprise edition.
+Configure how the server handles incoming friend applications sent by other users (such as requiring manual approval, auto-accepting, or rejecting all incoming requests). This capability belongs to the Commercial Edition.
 
-Set the value with `UserInfoReq.setAddFriendPermission()`, then call `setSelfInfo()`:
+Set the permission enum code in the user configuration request, then submit it via [Update the current user profile](/sdk/android/user/user-profile/set-self-info):
+
+## Code example
 
 ```java
 UserInfoReq request = new UserInfoReq();
@@ -23,24 +24,40 @@ OpenIMClient.getInstance().userInfoManager.setSelfInfo(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Friend request permission updated.
+            // Friend request permissions updated successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     request
 );
 ```
 
-## Permission values
+## Parameters
 
-| Enum value | Numeric value | Meaning |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `request` | `UserInfoReq` | Yes | User profile request payload containing the friend permission enum value. |
+
+### Permission modes
+
+| Enum constant | Value | Description |
 | --- | --- | --- |
-| `AddFriendPermission.Allow` | `0` | Allow requests, but require the current user to approve them. |
-| `AddFriendPermission.AllowNoReview` | `1` | Allow requests and create the friendship without approval. |
-| `AddFriendPermission.Deny` | `2` | Do not allow other users to add the current account. |
+| `AddFriendPermission.Allow` | `0` | Allows users to send friend requests, requiring manual review and approval by the recipient. |
+| `AddFriendPermission.AllowNoReview` | `1` | Automatically accepts incoming friend requests without manual approval. |
+| `AddFriendPermission.Deny` | `2` | Disallows any incoming friend requests to the account. |
 
-A successful callback means that the update request completed. This setting affects subsequent attempts to add the account; it does not remove existing friendships or process friend requests that already exist.
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server recorded the updated friend request permission.
+2. **Scope of effect**: This setting applies strictly to incoming friend requests initiated after the update. It does not alter existing friendships or auto-resolve pending friend applications.
+3. **Asynchronous event delivery**: The current account receives `OnUserListener.onSelfInfoUpdated` reflecting the updated user profile configuration.
+4. **Re-query calibration**: To review pending friend applications, see [Get received friend applications](/sdk/android/user/friend-applications/get-recv-friend-application-list).

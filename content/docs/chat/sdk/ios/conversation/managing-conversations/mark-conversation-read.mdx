@@ -5,23 +5,42 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/mark-conversation-read'
 ---
 
-Call the API after the user opens the conversation and reads the currently visible messages:
+Mark messages in a specified conversation as read using `markConversationMessageAsRead:onSuccess:onFailure:`. Invoke this method when the user enters a chat screen and reads active unread messages.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID to mark as read. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] markConversationMessageAsRead:conversationID
-                                           onSuccess:nil
-                                           onFailure:nil];
+[[OIMManager manager] markConversationMessageAsRead:@"c2c_user1002"
+                                          onSuccess:^(NSString * _Nullable data) {
+                                              NSLog(@"markConversationMessageAsRead success");
+                                          }
+                                          onFailure:^(NSInteger code, NSString *message) {
+                                              NSLog(@"markConversationMessageAsRead failed: %ld %@", (long)code, message);
+                                          }];
 ```
 
-Do not mark messages as read merely because a notification was previewed or a message arrived while the application was in the background. A successful callback means that the request has completed, not that `onConversationChanged:` has arrived. Merge the latest conversation by `conversationID` afterward, or query again if it must be confirmed immediately.
+Do not invoke this method during notification banner previews or when silent background messages arrive.
 
-In a one-to-one chat, after the current user marks the conversation as read, the other user can receive message read receipts through `onRecvC2CReadReceipt:`. This page owns that delegate. First locate the one-to-one conversation by the other user's ID, then update read state using each `clientMsgID` in the item's `msgIDList`.
+## Return value
+
+The `onSuccess` callback confirms that OpenIMServer processed the read mark.
+
+## State changes after the call
+
+- **Local unread reset**: The unread count for this conversation resets to zero, broadcasting `onConversationChanged:` in `OIMConversationListener`.
+- **Global unread reduction**: The global account-level unread count decreases, notifying listeners via `onTotalUnreadMessageCountChanged:` (see [Maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count)).
+- **C2C read receipt delivery**: In 1-on-1 direct conversations, the peer user receives read receipt events via `onRecvC2CReadReceipt:` in `OIMAdvancedMsgListener`:
 
 ```objc
 - (void)onRecvC2CReadReceipt:(NSArray<OIMReceiptInfo *> *)items {
@@ -29,4 +48,4 @@ In a one-to-one chat, after the current user marks the conversation as read, the
 }
 ```
 
-The stable listener that receives this callback must be registered with `addAdvancedMsgListener:` and removed with `removeAdvancedMsgListener:`. For the complete lifecycle, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages). In a group chat, calling this API only clears the current account's conversation unread count. For member-level receipts, see [Report group-message read status](/sdk/ios/message/managing-read-status/send-group-read-receipts).
+Locate the target conversation using the sender identity, then mark messages as read using each `clientMsgID` provided in `msgIDList`. For group message reader tracking, refer to [Send group read receipts](/sdk/ios/message/managing-read-status/send-group-read-receipts).

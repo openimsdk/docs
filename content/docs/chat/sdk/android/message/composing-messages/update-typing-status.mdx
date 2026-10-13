@@ -1,45 +1,63 @@
 ---
-title: 'Update typing status'
-description: 'Report the current conversation typing state with the Android SDK.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-17'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/composing-messages/update-typing-status'
+title: "Update typing status"
+description: "Report the current conversation typing state with the Android SDK."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/composing-messages/update-typing-status"
 ---
 
-Set `focus` to `true` when typing starts. Set it to `false` when typing ends, the input field loses focus, or the conversation screen closes.
+Report the user's typing status within a conversation. When the user starts editing text in the input box, call this method with `focus` set to `true` to signal "typing". When the user sends the message, clears the input box, blurs the input focus, or navigates away from the chat screen, call this method with `focus` set to `false` to clear the typing status immediately. Debouncing input changes is strongly recommended to avoid sending duplicate events too frequently.
+
+## Code example
 
 ```java
-conversationManager.changeInputState(
+String conversationID = "si_user_a_user_b";
+
+// Report when user starts typing
+OpenIMClient.getInstance().conversationManager.changeInputState(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The typing state has been reported
+            // Typing state reported successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // code and error describe why the report failed.
+            // Failed to report typing state
         }
     },
     conversationID,
     true
 );
+
+// Clear typing state when user stops typing or navigates away
+OpenIMClient.getInstance().conversationManager.changeInputState(
+    null,
+    conversationID,
+    false
+);
 ```
 
-Clear the state promptly when typing ends:
+## Parameters
 
-```java
-conversationManager.changeInputState(callback, conversationID, false);
-```
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. Pass `null` if no callback confirmation is needed. |
+| `conversationID` | `String` | Yes | Globally unique ID of the target conversation. |
+| `focus` | `boolean` | Yes | Whether the user is actively typing: `true` to report typing, `false` to clear typing. |
 
-Avoid repeatedly reporting the same state. A successful callback means that the report request completed.
+## Return value
 
-Other clients receive typing-state changes through `OnConversationListener.onConversationUserInputStatusChanged`. The Android SDK returns the event payload as a string, so validate the JSON before parsing it:
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the typing status was transmitted to the server. Pass `null` as the callback if confirmation is not required.
+2. **Asynchronous event delivery**: Peers in the conversation receive typing notifications through `OnConversationListener.onConversationUserInputStatusChanged`. The Android SDK delivers the event data as a JSON payload:
 
 ```java
 @Override
@@ -51,10 +69,11 @@ public void onConversationUserInputStatusChanged(String payload) {
     if (state == null || state.getConversationID() == null) {
         return;
     }
-    // state contains the conversation, user, and active typing platforms.
+    // state.getConversationID() identifies the target conversation
+    // state.getUserID() identifies the typing user
+    // state.getPlatformIDs() contains platform IDs where the user is typing
 }
 ```
 
-The callback's `conversationID`, `userID`, and `platformIDs` identify the conversation, user, and platforms on which the user is typing. `ConversationManager` can retain only one `OnConversationListener`. If the application handles other conversation events, implement their callbacks in the same listener.
-
-To query whether a specified user is currently typing, use [Retrieve typing status](/sdk/android/message/composing-messages/get-typing-status).
+Merge and display typing indicators using `state.getConversationID()` and `state.getUserID()`.
+3. **Re-query calibration**: Typing indicators are ephemeral and expire automatically after a timeout. To actively query whether a user is currently typing, see [Retrieve typing status](/sdk/android/message/composing-messages/get-typing-status).

@@ -5,20 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/managing-calls/cancel-call'
 ---
 
-Before an invitation has been answered, the caller can cancel it:
+Cancel an outgoing audio or video call invitation before the callee answers by invoking `signalingCancel:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `signalingInfo` | `OIMSignalingInfo *` | Yes | The complete signaling information object preserved when the call was initiated. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] signalingCancel:signalingInfo
-                            onSuccess:^{ [self releaseCallResources]; }
+                            onSuccess:^{
+    [self releaseCallResources];
+}
                             onFailure:^(NSInteger code, NSString * _Nullable message) {
-    [self showCallError:code message:message ?: @"Failed to cancel the invitation"];
+    [self showCallError:code message:message ?: @"Failed to cancel invitation"];
 }];
 ```
 
-Use the complete `OIMSignalingInfo` saved when the invitation was initiated. The success callback means that the cancellation signaling request completed. The app should also leave its waiting state and release media resources.
+Provide the unaltered `OIMSignalingInfo` instance saved during the initial `signalingInvite:...` or `signalingInviteInGroup:...` call.
+
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the cancellation command and broadcasted it to all invitees.
+
+## State changes after the call
+
+- **Local state teardown**: Exit the ringing wait state, dismiss the outgoing call screen, and release audio ringing resources.
+- **Remote event notification**: Invitees receive cancellation notifications via `onInvitationCancelled:` in `OIMSignalingListener`, triggering automatic dismissal of their incoming call screens (see [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events)).
+- **State merge key**: Call sessions merge state by `roomID`, combining with `userID` for participant state.

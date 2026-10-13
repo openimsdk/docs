@@ -1,17 +1,48 @@
 ---
-title: 'Get a call room token'
-description: 'OpenIM HarmonyOS SDK guide for Get a call room token.'
+title: 'Get call room credentials'
+description: 'Refresh or retrieve the media room token and gateway URL by room ID.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/retrieving-call-information/get-token-by-room-id'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Use `signalingGetTokenByRoomID()` to refresh room credentials when joining an existing room or reconnecting to a session:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, { SignalingGetTokenByRoomIDReq, SignalingGetTokenByRoomIDResp } from '@openimsdk/imsdk';
+
+const request: SignalingGetTokenByRoomIDReq = {
+  roomID: roomID,
+  userID: currentUserID,
+  participant: participant,
+};
+const response: SignalingGetTokenByRoomIDResp = await sdk.signalingGetTokenByRoomID(request);
+await mediaEngineJoin(roomID, response.token, response.liveURL);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `roomID` | `string` | Yes | Target call room identifier. |
+| `userID` | `string` | Yes | Current user ID joining or reconnecting to the room. |
+| `participant` | `SignalingParticipantMetaData` | Yes | Current user participant metadata. |
+
+## Return value
+
+Returns a Promise that resolves to a `SignalingGetTokenByRoomIDResp` object:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `token` | `string` | Fresh token for joining the RTC media session. |
+| `liveURL` | `string` | Media gateway server URL. |
+
+## State changes after the call
+
+The response returns credentials for the requested room; reuse the existing `roomID` from the request when configuring your media client. Only proceed to connect your media engine once non-empty `token` and `liveURL` values are obtained. If the query rejects, verify network connectivity and ensure the room has not already been dismantled.

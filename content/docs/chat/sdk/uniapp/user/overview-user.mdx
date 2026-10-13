@@ -1,17 +1,49 @@
 ---
 title: 'User overview'
-description: 'OpenIM uni-app / uni-app x SDK guide for User overview.'
+description: 'Understand user profiles, account-level preferences, and online status in the UniApp SDK.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
-template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+template: 'overview'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/overview-user'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The UniApp SDK identifies users using a unique `userID`. The user domain manages the authenticated account's profile, public user cards for other contacts, account-wide message reception options, friend request permissions, and real-time online presence. Relationships (friends, applications, and blacklists) belong to the separate relationship domain, while group nicknames and roles reside within the group domain.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## User data models
+
+The UTS plugin exports the following primary user data structures:
+
+| Type | Intended context | How to obtain |
+| --- | --- | --- |
+| `OpenIMUserInfo` | The currently logged-in user profile; also serves as the base structure for public cards | [Get your profile](/sdk/uniapp/user/profile/get-self-user-info), [Get user profiles](/sdk/uniapp/user/profile/get-users-info) |
+| `OpenIMPublicUserItem` | Public profile for other application users (alias of `OpenIMUserInfo`) | [Get user profiles](/sdk/uniapp/user/profile/get-users-info) |
+| `OpenIMFriendUserItem` | Friend profile including friend remarks, pinned status, and custom extension strings | Friend query APIs in the relationships domain |
+| `OpenIMBlackUserItem` | Blocked user profile stored within the current account's blacklist | Blacklist query APIs in the relationships domain |
+| `OpenIMUserStatusItem` | Aggregated online connectivity status and active client platforms for a user | Online status subscription and query APIs |
+
+A single `userID` can exist simultaneously as a public user, friend contact, blacklisted user, and group member. Render stranger profiles using `OpenIMPublicUserItem`; render contact rosters using `OpenIMFriendUserItem`; render group rosters using `OpenIMGroupMemberItem`; and display conversation headers using `showName` from the conversation object. Do not overwrite fields across distinct domains.
+
+## User profile APIs
+
+- [Get user profiles](/sdk/uniapp/user/profile/get-users-info): Batch query public profile records for other users by `userID`.
+- [Get your profile](/sdk/uniapp/user/profile/get-self-user-info): Retrieve nickname, avatar URL, extension data, and global message reception options for the active session.
+- [Update your profile](/sdk/uniapp/user/profile/set-self-info): Update nickname, avatar URL, or custom extension attributes for the authenticated user.
+- [Set global message reception](/sdk/uniapp/user/profile/set-global-message-reception): Configure account-level notification and reception behaviors.
+- [Set friend request permissions](/sdk/uniapp/user/profile/set-friend-add-permission): Choose how your account responds to incoming friend requests.
+
+## Online status APIs
+
+- [Subscribe to online status](/sdk/uniapp/user/online-status/subscribe-users-status): Subscribe to presence updates for targeted users and monitor status events.
+- [Get subscribed user status](/sdk/uniapp/user/online-status/get-subscribe-users-status): Query current presence snapshots for actively subscribed users.
+- [Unsubscribe from online status](/sdk/uniapp/user/online-status/unsubscribe-users-status): Stop tracking presence for users no longer visible in the UI.
+
+Online presence indicates whether a user maintains an active WebSocket session with OpenIMServer; it does not indicate whether they are viewing the app, a specific conversation, or a particular message. For typing indicators or business presence (such as "in a meeting"), use dedicated business signals rather than inferring state from WebSocket connectivity.
+
+## State synchronization principles
+
+Load baseline snapshots via query APIs when initializing screens, then merge incoming updates through domain events. Merge current user profiles by matching `userID`. When online status events arrive with multiple `OpenIMUserStatusItem` records, iterate and merge each item into your state by `userID`.
+
+Promise resolution, event delivery, and re-queries represent three distinct phases. After a mutation Promise resolves, update UI state via the corresponding event, or call the query API to re-calibrate immediately.

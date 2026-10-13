@@ -1,17 +1,107 @@
 ---
 title: 'Environment-specific implementation'
-description: 'OpenIM HarmonyOS SDK guide for Environment-specific implementation.'
+description: 'Install the HAR package, declare permissions, and initialize OpenIMClientSDK in a HarmonyOS project.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/getting-started/environment-specific-implementation'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM HarmonyOS SDK uses a single HAR package to support phones, tablets, and 2in1 devices. Before proceeding, complete the server, credential, and development environment setup described in [Before you start](/sdk/harmony/getting-started/before-you-start).
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Install the HAR package
+
+Copy the delivered HAR package into your application module and declare the local file dependency in the module's `oh-package.json5`. Replace `<sdk-package>.har` with the actual file name:
+
+```json5
+{
+  dependencies: {
+    '@openimsdk/imsdk': 'file:./libs/<sdk-package>.har',
+  },
+}
+```
+
+Declare the internet permission in `src/main/module.json5`:
+
+```json5
+{
+  module: {
+    requestPermissions: [{ name: 'ohos.permission.INTERNET' }],
+  },
+}
+```
+
+After modifying the HAR package or permission declarations, resync OHPM dependencies and trigger a full project build instead of relying on stale incremental artifacts.
+
+## Initialize the SDK
+
+Call `initSDK()` with your configuration before performing any chat operations:
+
+## Code example
+
+```ts
+import sdk, {
+  AppFramework,
+  HttpClientMode,
+  InitSDKReq,
+  LogLevel,
+  Platform,
+} from '@openimsdk/imsdk';
+
+const request: InitSDKReq = {
+  config: {
+    apiAddr: 'https://api.example.com',
+    wsAddr: 'wss://ws.example.com',
+    dataDir: `${filesDir}/openim/data`,
+    dbPath: `${filesDir}/openim/data`,
+    logFilePath: `${filesDir}/openim/logs`,
+    appFramework: AppFramework.Native,
+    platform: Platform.HarmonyOS,
+    logLevel: LogLevel.LevelWarn,
+    isLogStandardOutput: false,
+    StopGoroutineOnBackground: true,
+    LogRemainCount: 3,
+    diagnoseHashSalt: 'your-app-specific-diagnose-salt',
+    httpClientMode: HttpClientMode.ConnFirst,
+  },
+};
+
+await sdk.initSDK(request);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `apiAddr` | `string` | Yes | OpenIMServer HTTP API endpoint. |
+| `wsAddr` | `string` | Yes | OpenIMServer WebSocket endpoint. |
+| `dataDir`, `dbPath` | `string` | Yes | Persistent, writable internal sandbox directories for databases and cached metadata. Must remain consistent across windows in the same process. |
+| `logFilePath` | `string` | No | Directory for SDK execution logs. Defaults to the distribution's built-in log path if omitted. |
+| `appFramework` | `AppFramework` | No | Use `AppFramework.Native` for native ArkTS applications. |
+| `platform` | `Platform` | No | Use `Platform.HarmonyOS` for HarmonyOS applications. |
+| `logLevel` | `LogLevel` | No | SDK logging verbosity level. |
+| `isLogStandardOutput` | `boolean` | Yes | Whether to redirect native core logs to standard system output (`hilog`). |
+| `StopGoroutineOnBackground` | `boolean` | Yes | Pause internal background goroutines when the application enters the background. Typically `true` on phones and tablets; can be `false` on long-running 2in1 daemon processes. |
+| `LogRemainCount` | `number` | Yes | Number of rotated log files to retain locally. |
+| `diagnoseHashSalt` | `string` | Yes | Application-specific salt string used for diagnostic hashing. |
+| `httpClientMode` | `HttpClientMode` | Yes | HTTP connection strategy. Typically `HttpClientMode.ConnFirst`. |
+
+## Return value
+
+Returns a Promise that resolves to `void` upon successful initialization.
+
+Promise resolution indicates only that the native engine and database structures are ready. It does not indicate that a user is logged in or that server synchronization is complete. After initialization, verify the engine runtime via [Get SDK version](/sdk/harmony/getting-started/get-sdk-version), register connection and sync event listeners, and proceed to [Authenticate and manage session](/sdk/harmony/getting-started/authenticate-and-manage-session).
+
+## Terminate the SDK
+
+Call `unInitSDK()` only when the application process is shutting down permanently and all concurrent operations, event listeners, and active user sessions have terminated:
+
+```ts
+await sdk.logout();
+await sdk.unInitSDK();
+```
+
+Page navigation, component unmounting, or closing an individual 2in1 window must not destroy the global SDK instance. If you need to re-initialize the SDK, always await the completion of the previous `unInitSDK()` call.

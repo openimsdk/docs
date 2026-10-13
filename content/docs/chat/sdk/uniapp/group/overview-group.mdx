@@ -1,17 +1,140 @@
 ---
 title: 'Group overview'
-description: 'OpenIM uni-app / uni-app x SDK guide for Group overview.'
+description: 'Understand the relationship between group profiles, member roles, join requests, and group events.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
-template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+template: 'overview'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/overview-group'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+OpenIMSDK organizes multi-user chats, shared profiles, member rosters, and permissions through groups. When sending group messages, managing group settings, inviting members, and reviewing join applications, supply the `groupID`. In contrast, the authenticated user's conversation list entry for that group chat is identified by `conversationID`; do not conflate the two identifiers.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Core data structures
+
+| Structure | Purpose |
+| --- | --- |
+| `OpenIMGroupItem` | Group name, avatar, announcement, owner, verification mode, member count, and extension fields. |
+| `OpenIMGroupMemberItem` | A member's group-specific nickname, role level, mute status, and join metadata. |
+| `OpenIMGroupApplicationItem` | A group join application along with its current review status. |
+
+Group member role levels are evaluated using `OpenIMGroupMemberRoleNormal`, `OpenIMGroupMemberRoleAdmin`, and `OpenIMGroupMemberRoleOwner`. While the client can conditionally reveal management actions based on role, OpenIMServer authoritative verification always enforces final permissions.
+
+## Group profile fields
+
+The `OpenIMGroupItem` structure contains the following core fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | The persistent group identifier; serves as the merge key for group events. |
+| `groupName` | `string` | Display name of the group. |
+| `faceURL` | `string` | Avatar image URL for the group. |
+| `notification` | `string` | Group announcement text. |
+| `introduction` | `string` | Group description text. |
+| `ownerUserID` | `string` | The user ID of the current group owner. |
+| `creatorUserID` | `string` | The user ID of the member who created the group. |
+| `memberCount` | `number` | Member count at the time of query. |
+| `groupType` | `OpenIMGroupType` | Group type; standard working groups use `OpenIMGroupTypeWorkingGroup`. |
+| `needVerification` | `OpenIMGroupVerificationType` | Group join verification policy. |
+| `lookMemberInfo` | `OpenIMGroupAllowType` | Whether members are permitted to view fellow member profiles. |
+| `applyMemberFriend` | `OpenIMGroupAllowType` | Whether members are permitted to send friend requests to fellow members. |
+| `notificationUpdateTime` | `number` | Announcement update timestamp in Unix milliseconds. |
+| `notificationUserID` | `string` | User ID of the member who last updated the announcement. |
+| `createTime` | `number` | Group creation timestamp in Unix milliseconds. |
+| `status` | `OpenIMGroupStatus` | Group operational state (`OpenIMGroupStatusNormal`, `OpenIMGroupStatusBanned`, `OpenIMGroupStatusDismissed`, `OpenIMGroupStatusMuted`). |
+| `ex` | `string` | Custom group extension string. |
+| `attachedInfo` | `string` | Internal SDK metadata. |
+| `displayIsRead` <span className="enterprise-field-badge">Commercial</span> | `boolean \| null` | Server configuration controlling read receipt visibility; read-only from the client. |
+
+## Group configuration guides
+
+- [Create a group](/sdk/uniapp/group/create-group)
+- [Update group profile](/sdk/uniapp/group/update-group-profile)
+- [Set group announcement](/sdk/uniapp/group/set-group-announcement)
+- [Set group extension data](/sdk/uniapp/group/set-group-extension)
+- [Set group join verification](/sdk/uniapp/group/set-group-join-verification)
+- [Set member profile access](/sdk/uniapp/group/set-group-member-profile-access)
+- [Set member friend request permissions](/sdk/uniapp/group/set-group-member-friend-permission)
+- [Mute or unmute a group](/sdk/uniapp/group/change-group-mute)
+
+## Group membership and queries
+
+- [Join a group](/sdk/uniapp/group/join-group)
+- [Quit a group](/sdk/uniapp/group/quit-group)
+- [Dismiss a group](/sdk/uniapp/group/dismiss-group)
+- [Get specified group profiles](/sdk/uniapp/group/retrieving-groups/get-specified-groups-info)
+- [Get joined groups](/sdk/uniapp/group/retrieving-groups/get-joined-group-list)
+- [Get joined groups with pagination](/sdk/uniapp/group/retrieving-groups/get-joined-group-list-page)
+- [Check group membership](/sdk/uniapp/group/retrieving-groups/is-join-group)
+- [Search joined groups](/sdk/uniapp/group/retrieving-groups/search-groups)
+
+## Group join applications
+
+- [Get received group applications](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient)
+- [Get sent group applications](/sdk/uniapp/group/group-applications/get-group-application-list-as-applicant)
+- [Get unhandled group application count](/sdk/uniapp/group/group-applications/get-group-application-unhandled-count)
+- [Accept a group application](/sdk/uniapp/group/group-applications/accept-group-application)
+- [Reject a group application](/sdk/uniapp/group/group-applications/refuse-group-application)
+
+## Group members
+
+- [Get group member list](/sdk/uniapp/group/retrieving-group-members/get-group-member-list)
+- [Get specified group member info](/sdk/uniapp/group/retrieving-group-members/get-specified-group-members-info)
+- [Get user group membership](/sdk/uniapp/group/retrieving-group-members/get-users-in-group)
+- [Search group members](/sdk/uniapp/group/retrieving-group-members/search-group-members)
+- [Invite users to a group](/sdk/uniapp/group/managing-group-members/invite-user-to-group)
+- [Kick a group member](/sdk/uniapp/group/managing-group-members/kick-group-member)
+- [Set group member nickname](/sdk/uniapp/group/managing-group-members/set-group-member-nickname)
+- [Set group member role level](/sdk/uniapp/group/managing-group-members/set-group-member-role-level)
+- [Set group member avatar](/sdk/uniapp/group/managing-group-members/set-group-member-avatar)
+- [Set group member extension data](/sdk/uniapp/group/managing-group-members/set-group-member-extension)
+- [Transfer group ownership](/sdk/uniapp/group/managing-group-members/transfer-group-owner)
+- [Mute or unmute a group member](/sdk/uniapp/group/managing-group-members/change-group-member-mute)
+
+## Monitor group updates
+
+Group profile changes, join/leave transitions, and group dismissal events are centrally monitored here. The callback handlers receive an `OpenIMGroupItem | null` object; when non-null, update your cached records by matching `groupID`:
+
+```uts
+import {
+  OpenIMGroupItem,
+  off,
+  onGroupDismissed,
+  onGroupInfoChanged,
+  onJoinedGroupAdded,
+  onJoinedGroupDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleGroupChanged = (group: OpenIMGroupItem | null) => {
+  if (group == null) return
+  mergeGroup(group)
+}
+
+const handleJoinedGroupDeleted = (group: OpenIMGroupItem | null) => {
+  if (group == null) return
+  removeJoinedGroup(group.groupID)
+}
+
+const handleGroupDismissed = (group: OpenIMGroupItem | null) => {
+  if (group == null) return
+  markGroupDismissed(group.groupID)
+}
+
+const joinedGroupAddedSubscription = onJoinedGroupAdded(handleGroupChanged)
+const joinedGroupDeletedSubscription = onJoinedGroupDeleted(
+  handleJoinedGroupDeleted,
+)
+const groupInfoChangedSubscription = onGroupInfoChanged(handleGroupChanged)
+const groupDismissedSubscription = onGroupDismissed(handleGroupDismissed)
+
+function removeGroupListeners() {
+  off(joinedGroupAddedSubscription)
+  off(joinedGroupDeletedSubscription)
+  off(groupInfoChangedSubscription)
+  off(groupDismissedSubscription)
+}
+```
+
+Unsubscribe from these listeners when logging out, switching user accounts, or tearing down the group store. Promise resolution, event delivery, and state re-queries represent distinct phases; when addition or removal events occur during pagination, reset the offset and reload the list.

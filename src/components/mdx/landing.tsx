@@ -20,37 +20,37 @@ type FeatureGroup = {
 
 const landingCopy = {
   en: {
-    apiAction: 'Open API overview',
+    apiAction: 'Explore Platform API',
     apiDescription:
-      'Call Platform API from trusted backends to create users, issue login tokens, manage groups and members, and send or migrate messages.',
+      'Manage users, issue authentication tokens, oversee group lifecycles, and dispatch or migrate messages via robust server-side REST APIs.',
     apiEyebrow: 'SERVER',
     apiHeroCta: 'Start with the API overview',
     apiHeroDescription:
-      'Platform API is organized by users, groups, and messages. Configure the base URL, auth, and request conventions first, then wire each server capability.',
+      'The Platform API is structured around core resources like users, groups, and messages. Configure your base URL, auth headers, and request conventions to integrate backend capabilities.',
     apiHeroKicker: 'REST API',
     apiHeroTitle: 'Manage OpenIMServer from your backend',
     apiTitle: 'Platform API',
     featureDescription:
-      'Browse capabilities by users, conversations, groups, and messages, then open the matching SDK or Platform API guide.',
+      'Explore core capabilities across users, conversations, groups, and messages, then jump into the corresponding SDK guides or Platform API references.',
     featureEyebrow: 'CAPABILITIES',
     featureTitle: 'Features',
     featuredDescription:
-      'Follow prepare, client login, first message, and group creation guides to complete the core integration path.',
+      'Follow our step-by-step onboarding flow: prepare your environment, authenticate the client, send your first message, and create a group.',
     featuredEyebrow: 'GETTING STARTED',
     featuredTitle: 'Core integration flow',
     heroDescription:
-      'Start from OpenIMClientSDK, the OpenIMServer Platform API, sample apps, or the core integration flow to add users, conversations, groups, messages, and calling.',
+      'Accelerate your chat product development with cross-platform client SDKs, robust server APIs, production-ready demo applications, and end-to-end guides for 1-on-1 chat, group messaging, conversation management, and real-time calling.',
     heroEyebrow: 'OPENIMSDK',
     heroPrimary: 'Explore SDKs',
-    heroSecondary: 'Open Platform API',
-    heroTitle: 'Build instant messaging with OpenIMSDK',
+    heroSecondary: 'Browse Platform API',
+    heroTitle: 'Build Modern Instant Messaging with OpenIMSDK',
     sampleDescription:
-      'Browse demos and integration examples maintained by the OpenIMSDK GitHub organization to see how each platform integrates OpenIMClientSDK.',
-    sampleEyebrow: 'OPEN SOURCE',
+      'Explore official open-source demo applications and integration examples across mobile, desktop, and web platforms to jumpstart your implementation.',
+    sampleEyebrow: 'OPEN SOURCE DEMOS',
     sampleTitle: 'Sample apps',
-    sdkAction: 'Browse WASM SDK',
+    sdkAction: 'Explore WASM SDK',
     sdkDescription:
-      'Pick the client SDK for your runtime. Each entry covers users, conversations, groups, and messages, and documents platform-specific setup.',
+      'Choose the right client SDK for your runtime. Every platform offers consistent core capabilities for users, conversations, groups, and messages with native performance optimization.',
     sdkEyebrow: 'CLIENT',
     sdkTitle: 'SDKs',
   },
@@ -229,25 +229,29 @@ const featuredSamples: HomeCard[] = [
   {
     title: 'Prepare SDK integration',
     href: '/sdk/wasm/getting-started/before-you-start',
-    description: 'Prepare OpenIMServer, app credentials, a user account, and a login token.',
+    description:
+      'Set up OpenIMServer, configure application credentials, provision a user, and issue a login token.',
     meta: 'SDK',
   },
   {
     title: 'Authenticate a client',
     href: '/sdk/wasm/getting-started/authenticate-and-manage-session',
-    description: 'Initialize the SDK, log in, and handle token expiry and kick-off events.',
+    description:
+      'Initialize the client SDK, complete user login, and handle connection state and token lifecycle events.',
     meta: 'SDK',
   },
   {
     title: 'Send your first message',
     href: '/sdk/wasm/getting-started/send-first-message',
-    description: 'After prepare and login, create and send the first message from the client SDK.',
+    description:
+      'Construct and send your first one-to-one or group message using the client SDK.',
     meta: 'SDK',
   },
   {
     title: 'Create a group',
     href: '/platform-api/group/managing-groups/create-group',
-    description: 'Create a group from a trusted service and set the owner and initial members.',
+    description:
+      'Provision a chat group from your backend service, specifying group settings, the owner, and initial members.',
     meta: 'API',
   },
 ];

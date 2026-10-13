@@ -5,17 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/accept-friend-application'
 ---
 
+Accept a friend request from an applicant to establish mutual friendship using `acceptFriendApplication:handleMsg:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `NSString *` | Yes | The applicant user ID who initiated the friend request. |
+| `handleMsg` | `NSString *` | No | Optional acceptance note (e.g., `@"Accepted"`). Pass an empty string `@""` when omitted. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] acceptFriendApplication:applicantUserID
                                      handleMsg:@"Accepted"
-                                     onSuccess:nil
-                                     onFailure:nil];
+                                     onSuccess:^(NSString *data) {
+    [applicationStore markAcceptedForUserID:applicantUserID];
+}
+                                     onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"acceptFriendApplication failed: %ld %@", (long)code, message);
+}];
 ```
 
-The first argument is the applicant's user ID, and `handleMsg` is the response message. A successful callback means that the accept request has completed. The updated request status and the new friend relationship may subsequently arrive through different delegates; merge them by the request key and `userID`, respectively.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the acceptance and established mutual friendship on the server.
+
+## State changes after the call
+
+- **Local state merge**: Merge application resolution state using `userID` as the unique entity key.
+- **Application updates**: The application record updates via `onFriendApplicationAccepted:` in `OIMFriendshipListener` (see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)).
+- **Friend addition**: The new friendship record arrives via `onFriendAdded:` in `OIMFriendshipListener` (see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page)), where the client merges the new contact by `userID`.

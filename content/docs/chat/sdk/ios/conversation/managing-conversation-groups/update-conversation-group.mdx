@@ -5,36 +5,58 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/update-conversation-group'
 ---
 
-Use `Open_im_sdkUpdateConversationGroup` to modify an existing conversation group. `conversationGroupID` is required; include only the fields that this operation needs to update.
+Invoke `Open_im_sdkUpdateConversationGroup` to modify the name, custom extension string, or visibility status of an existing conversation group:
 
 ## Parameters
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `conversationGroupID` | Yes | The target conversation-group ID. |
-| `name` | No | The new group name. |
-| `ex` | No | The new application-defined extension string. |
-| `hidden` | No | Whether to hide the group. |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationGroupID` | `NSString *` | Yes | Target conversation group ID. |
+| `name` | `NSString *` | No | New conversation group name. |
+| `ex` | `NSString *` | No | New custom extension string. |
+| `hidden` | `NSNumber *` | No | Whether to hide this group in navigation interfaces (wrapped `BOOL`). |
+
+## Code example
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSDictionary *request = @{
-    @"conversationGroupID": conversationGroupID,
-    @"name": @"Priority work",
+    @"conversationGroupID": @"group_work_101",
+    @"name": @"Priority Work",
     @"hidden": @NO,
 };
+
 NSData *requestData = [NSJSONSerialization dataWithJSONObject:request options:0 error:nil];
 NSString *requestJSON = [[NSString alloc] initWithData:requestData
                                               encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        if (data == nil) {
+            return;
+        }
+        [self upsertConversationGroupJSON:data];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"UpdateConversationGroup failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkUpdateConversationGroup(callback, requestJSON);
 ```
 
-Pass your callback and `requestJSON` to `Open_im_sdkUpdateConversationGroup`.
+## Return value
 
-## Result
+The `onSuccess` callback delivers the updated group JSON string in `data`. The client updates the local cache using `conversationGroupID` as the unique identifier.
 
-The success callback's `data` is the updated group as a JSON object. Merge it by `conversationGroupID`. Other signed-in clients or later synchronization may receive `onConversationGroupChanged:`. For the complete listener, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+## State changes after the call
+
+1. **Local state update**: The client updates local group properties corresponding to `conversationGroupID`.
+2. **Event notification**: Synchronized updates across devices broadcast via the `onConversationGroupChanged:` listener callback.
+3. **Re-query calibration**: For listener registration and event handling details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

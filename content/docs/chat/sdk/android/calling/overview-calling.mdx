@@ -1,53 +1,52 @@
 ---
-title: 'Audio and video calling overview'
-description: 'Learn about Android SDK call signaling, room information, and event boundaries.'
+title: 'Calling overview'
+description: 'Understand audio and video calling signaling, room models, and event lifecycles in the OpenIM Android SDK.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/overview-calling'
 ---
 
-The Android SDK `SignalingManager` provides the signaling APIs needed to invite, accept, reject, cancel, hang up, query rooms, and synchronize call state. It coordinates participants, room information, and the call lifecycle. It does not capture camera video, play remote media, or render a call interface.
+The OpenIM Android SDK's `SignalingManager` provides the signaling pipeline required to initiate, accept, reject, cancel, and hang up calls, query room states, and synchronize call participants. It orchestrates call metadata, participant rosters, and call lifecycles, but does not capture camera frames, process audio streams, or render video views.
 
-Pass the returned `roomID`, `token`, and `liveURL` to your chosen real-time audio/video engine. Your application remains responsible for Android permissions, devices, media tracks, poor-network behavior, and UI state. The signaling APIs are not a complete real-time media SDK.
+Pass the `roomID`, `token`, and `liveURL` returned by the SDK to your chosen WebRTC or LiveKit media engine. Your application handles Android runtime permissions, audio routing, media tracks, network adaptation, and calling UI state.
 
-## Call flow
+## Calling lifecycle
 
-1. Call `signalingInvite()` for a one-to-one call or `signalingInviteInGroup()` for a group call.
-2. The invitee receives `SignalingInfo` through `onReceiveNewInvitation` and chooses to accept or reject.
-3. The invitee calls `signalingAccept()`, and both parties connect their media engine with the returned room credentials.
-4. During the call, update local state from participant, media stream, and custom signaling callbacks.
-5. The inviter can cancel a pending invitation; any participant can hang up an established call.
+1. The caller initiates a call using [Start a single call](/sdk/android/calling/managing-calls/start-single-call) or [Start a group call](/sdk/android/calling/managing-calls/start-group-call).
+2. The callee receives an incoming invitation event and accepts or rejects the call.
+3. The answering party calls [Accept a call](/sdk/android/calling/managing-calls/accept-call), and both sides connect to LiveKit or WebRTC using room credentials returned by the server.
+4. Active screens render participant lists, published tracks, and custom business signals during the call.
+5. Before connection, the caller can [Cancel a call invitation](/sdk/android/calling/managing-calls/cancel-call); after connection, any participant can [Hang up a call](/sdk/android/calling/managing-calls/hang-up-call).
 
-## Core data
+## Core data structures
 
-| Data                      | Description                                                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `SignalingInvitationInfo` | Inviter, invitees, group, room, media type, timeout, session type, and application extra data.            |
-| `SignalingInfo`           | Current operation user, original invitation, participant profiles, and optional offline push information. |
-| `SignalingCertificate`    | The `roomID`, `token`, `liveURL`, and busy user list returned by OpenIMServer.                            |
-| `RoomCallingInfo`         | A snapshot of a group's room, invitation, participants, group, and join credentials.                      |
+| Structure | Description |
+| --- | --- |
+| `SignalingInvitationInfo` | Inviter, invitees, group ID, room ID, media type, timeout, session type, and custom extension payload. |
+| `SignalingInfo` | Current operator, complete invitation data received in events, participant profiles, and optional offline push details. |
+| `SignalingCertificate` | `roomID`, `token`, `liveURL`, and busy user lists returned by OpenIMServer. |
+| `RoomCallingInfo` | Room details, active invitation, participant roster, group metadata, and access credentials queried by group ID. |
 
-Use `customData` and custom signaling for lightweight, temporary application negotiation data related to the current call. They do not provide file transfer or durable state storage.
+Use `customData` and custom signaling to exchange lightweight, transient session negotiation data. Do not use signaling channels for bulk file transfers or persistent database storage.
 
 ## State updates and event ownership
 
-For invite, accept, reject, cancel, and hang-up operations, handle both the API callback and the call listener. The API success callback means that the current signaling request completed. The listener represents incremental state observed by inviters, invitees, other devices, or room participants. They are not the same completion signal.
+Distinguish clearly between asynchronous API callbacks and real-time signaling events. An API success callback indicates that the server accepted the signaling request; participant state transitions are delivered asynchronously through event listeners.
 
-The complete invitation lifecycle, participant, hang-up, and stream listener belongs to [Handle call events](/sdk/android/calling/managing-calls/handle-call-events). Custom signaling belongs to [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal). Room, credential, and pending-invitation queries only return snapshots.
+For the centralized listener handling invitation lifecycles, room entries, exits, hang-ups, and stream updates, see [Handle call events](/sdk/android/calling/managing-calls/handle-call-events). For application-specific signals, see [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal).
 
-This overview does not register a listener. Use `roomID` as the call-state key and combine it with user ID for participant state. Query again when the current room needs to be restored or reconciled.
+The global primary key for call state is `roomID`; individual participant state is keyed by `roomID` combined with `userID`. When recovering after app restarts or network disconnections, query room APIs to calibrate local state.
 
-## Find a page by task
+## Navigation by task
 
-| Task                                 | Page                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Start a one-to-one or group call     | [Start a one-to-one call](/sdk/android/calling/managing-calls/start-single-call), [Start a group call](/sdk/android/calling/managing-calls/start-group-call)                                                                                                                                               |
-| Accept or reject an invitation       | [Accept a call](/sdk/android/calling/managing-calls/accept-call), [Reject a call](/sdk/android/calling/managing-calls/reject-call)                                                                                                                                                                         |
-| Cancel an invitation or hang up      | [Cancel a call invitation](/sdk/android/calling/managing-calls/cancel-call), [Hang up a call](/sdk/android/calling/managing-calls/hang-up-call)                                                                                                                                                            |
-| Restore a room or pending invitation | [Get a group call room](/sdk/android/calling/retrieving-call-information/get-room-by-group-id), [Get room credentials](/sdk/android/calling/retrieving-call-information/get-token-by-room-id), [Restore a pending invitation](/sdk/android/calling/retrieving-call-information/restore-pending-invitation) |
-| Handle call events and negotiation   | [Handle call events](/sdk/android/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal)                                                                                                                                     |
+| Task | Documentation page |
+| --- | --- |
+| Initiate a direct or group call | [Start a single call](/sdk/android/calling/managing-calls/start-single-call), [Start a group call](/sdk/android/calling/managing-calls/start-group-call) |
+| Accept or decline an invitation | [Accept a call](/sdk/android/calling/managing-calls/accept-call), [Reject a call](/sdk/android/calling/managing-calls/reject-call) |
+| Cancel an invitation or terminate a call | [Cancel a call invitation](/sdk/android/calling/managing-calls/cancel-call), [Hang up a call](/sdk/android/calling/managing-calls/hang-up-call) |
+| Recover room state or pending invitations | [Query group call room](/sdk/android/calling/retrieving-call-information/get-room-by-group-id), [Get call room token](/sdk/android/calling/retrieving-call-information/get-token-by-room-id), [Restore pending invitation received before launch](/sdk/android/calling/retrieving-call-information/restore-pending-invitation) |
+| Handle signaling events and custom messages | [Handle call events](/sdk/android/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/android/calling/sending-custom-signals/send-a-custom-signal) |

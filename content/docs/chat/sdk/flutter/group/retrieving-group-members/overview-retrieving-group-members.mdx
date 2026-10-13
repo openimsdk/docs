@@ -1,30 +1,34 @@
 ---
-title: 'Group member queries overview'
-description: 'Understand group-member snapshots, pagination, and incremental synchronization in the OpenIM Flutter SDK.'
+title: 'Retrieving group members overview'
+description: 'Understand group member queries, pagination, and event synchronization in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
-template: 'guide'
+template: 'overview'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members'
 ---
 
-`GroupMembersInfo` represents a group member. The same user can have a different nickname, role, and mute state in each group, so use `groupID:userID` as the unique key for both caches and event merges.
+Group member data is encapsulated in `GroupMembersInfo` objects. Because a user's in-group nickname, role level, and mute duration vary across different groups, manage local caches and merge incremental updates using the composite key `groupID:userID`.
 
-## Query entry points
+## Query operations
 
-- [Retrieve group members by page](/sdk/flutter/group/retrieving-group-members/get-group-member-list)
-- [Retrieve specified group-member profiles](/sdk/flutter/group/retrieving-group-members/get-group-members-info)
-- [Check whether users are in a group](/sdk/flutter/group/retrieving-group-members/get-users-in-group)
+- [Get group member list with pagination](/sdk/flutter/group/retrieving-group-members/get-group-member-list)
+- [Get group members info](/sdk/flutter/group/retrieving-group-members/get-group-members-info)
+- [Get users in group](/sdk/flutter/group/retrieving-group-members/get-users-in-group)
 - [Search group members](/sdk/flutter/group/retrieving-group-members/search-group-members)
-- [Retrieve the group owner and administrators](/sdk/flutter/group/retrieving-group-members/get-group-owner-and-admin)
+- [Get group owner and admin](/sdk/flutter/group/retrieving-group-members/get-group-owner-and-admin)
 
-Query APIs establish current snapshots and do not trigger group-member events. If membership changes while paging, reset pagination and reload from the first page.
+Query methods fetch snapshots of member rosters at invocation time and do not emit listener events. If membership shifts significantly during pagination, reset the offset and reload the first page.
 
 ## Member events
 
-The application's single `OnGroupListener` receives Flutter group-member events. Merge `onGroupMemberAdded`, `onGroupMemberDeleted`, and `onGroupMemberInfoChanged` idempotently by `groupID:userID`. These events may originate from another administrator or client and are not completion callbacks for a particular query or write operation.
+Group member changes are received centrally via `OnGroupListener`:
+- `onGroupMemberAdded`: New members joined the group.
+- `onGroupMemberDeleted`: Members left or were removed from the group.
+- `onGroupMemberInfoChanged`: Member attributes (role, nickname, mute state) changed.
 
-See [Events overview](/sdk/flutter/events/overview-events) for the combined listener setup and cleanup entry point.
+Merge updates idempotently using `groupID:userID`. Because events may be triggered by other users or background tasks, do not treat them as direct responses to a specific local method call.
+
+For consolidated listener configuration, see [Events overview](/sdk/flutter/events/overview-events).

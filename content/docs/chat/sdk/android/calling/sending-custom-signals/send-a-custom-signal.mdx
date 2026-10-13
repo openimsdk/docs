@@ -1,21 +1,20 @@
 ---
 title: 'Send a custom signal'
-description: 'Send and receive custom signaling data in an Android SDK call room.'
+description: 'Exchange custom, transient signaling messages within an active calling room using signalingSendCustomSignal().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/sending-custom-signals/send-a-custom-signal'
 ---
 
-Use `signalingSendCustomSignal()` to send small pieces of call-related application information to a call room, such as a raised-hand action, layout hint, or temporary state update. It is not suitable for chat content, large data, or files.
+Send lightweight, transient call-related messages within an active calling room, such as hand-raising notifications, layout switch prompts, or temporary status synchronization. This mechanism is designed for transient room coordination, not persistent chat messages or file transfers.
 
-## Send a signal
+## Code example
 
-Both `roomID` and `customInfo` are required strings. Define a stable schema and serialize structured data as JSON.
+Both `roomID` and `customInfo` are required strings. When transmitting structured payloads, serialize them to JSON:
 
 ```java
 JSONObject signal = new JSONObject();
@@ -29,7 +28,7 @@ OpenIMClient.getInstance().signalingManager.signalingSendCustomSignal(
     new OnBase<String>() {
         @Override
         public void onSuccess(String result) {
-            // The signaling request completed.
+            // Custom signal dispatched successfully.
         }
 
         @Override
@@ -42,21 +41,29 @@ OpenIMClient.getInstance().signalingManager.signalingSendCustomSignal(
 );
 ```
 
-The success callback only confirms that the send request completed; it does not mean that other participants received or processed the signal. `customInfo` can include a protocol version and a unique `eventID` so receivers can identify duplicate messages. Custom signaling is intended for lightweight, temporary call negotiation; it does not transfer or retain large files, chat history, or durable state.
+## Parameters
 
-## Receive a signal
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `roomID` | `String` | Yes | Target call room identifier. |
+| `customInfo` | `String` | Yes | Custom signal payload string, recommended to be structured JSON. |
 
-When a custom signal arrives, `OnSignalingListener.onReceiveCustomSignal` receives `CustomSignalingInfo`. Confirm that it belongs to the active room and validate its format before updating the UI.
+## Return value
+
+Upon success, `result` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server accepted and routed the custom signal; it does not guarantee that the remote peer has processed it.
+2. **Asynchronous event delivery**: Room participants receive custom signals via `OnSignalingListener.onReceiveCustomSignal`:
 
 ```java
 @Override
 public void onReceiveCustomSignal(CustomSignalingInfo info) {
-    // Check info.getRoomID(), then parse info.getCustomInfo() using your application protocol.
+    // Check info.getRoomID() before parsing info.getCustomInfo()
 }
 ```
 
-If your application needs to avoid duplicate processing, include a unique event ID in the custom signal and record processed events on the receiving side. Messages may not arrive in send order, so do not rely on arrival order to determine application state.
-
-Register `onReceiveCustomSignal` together with the other call callbacks in the listener shown in [Handle call events](/sdk/android/calling/managing-calls/handle-call-events). `SignalingManager` retains only one listener; registering another one replaces the existing call callbacks.
-
-Custom signaling is not a replayable record of durable state. After reconnecting, query the room or application data again when state needs to be reconciled.
+Include a protocol version and unique `eventID` in the payload so recipients can deduplicate incoming signals. Do not rely on delivery sequence to represent state machine transitions. Register this callback within your centralized listener in [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).
+3. **Re-query calibration**: Custom signals are transient and not replayed on reconnection. To reconcile room state after network recovery, re-query the room snapshot.

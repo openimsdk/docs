@@ -5,17 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-private-chat'
 ---
 
+Enable or disable the private chat burn-after-reading feature for a direct conversation using `setConversationPrivateChat:isPrivate:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `isPrivate` | `BOOL` | Yes | Whether to enable burn after reading. Pass `YES` to activate or `NO` to deactivate. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] setConversationPrivateChat:conversationID
-                                        isPrivate:YES
-                                        onSuccess:nil
-                                        onFailure:nil];
+[[OIMManager manager] setConversationPrivateChat:@"c2c_user1002"
+                                       isPrivate:YES
+                                       onSuccess:^(NSString * _Nullable data) {
+                                           NSLog(@"setConversationPrivateChat success");
+                                       }
+                                       onFailure:^(NSInteger code, NSString *message) {
+                                           NSLog(@"setConversationPrivateChat failed: %ld %@", (long)code, message);
+                                       }];
 ```
 
-Pass `YES` to enable burn after reading or `NO` to disable it. Set the burn-after-reading duration with the separate method; do not treat the success or event stages of the two requests as one operation. Burn after reading is distinct from periodic deletion of server-side messages.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the private chat setting request.
+
+## State changes after the call
+
+- **Local state merge**: Merge the updated `isPrivateChat` property into local conversation models using `conversationID` as the unique entity key.
+- **Asynchronous event listening**: Multi-terminal devices and local views receive updates via `onConversationChanged:` in `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).
+- **Duration configuration**: Configure the message self-destruction countdown independently using [Set the burn-after-reading duration](/sdk/ios/conversation/managing-conversations/set-burn-duration). This feature applies specifically to 1-on-1 private conversations and operates independently of [Periodically delete server-side messages](/sdk/ios/conversation/managing-conversations/set-message-destruct).

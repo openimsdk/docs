@@ -5,20 +5,65 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/update-self-profile'
 ---
 
-Retrieve the current `OIMUserInfo` first, then modify only fields owned by your profile editor, such as the nickname, avatar, or `ex`. Do not construct a new object with only a few fields set, because its default scalar values may overwrite existing data.
+Update the signed-in user's profile attributes using `setSelfInfo:onSuccess:onFailure:`. First retrieve the existing user snapshot with [Retrieve your profile](/sdk/ios/user/retrieving-and-updating-user-information/get-self-profile) and mutate only the intended fields (e.g., `nickname`, `faceURL`, or `ex`). Avoid passing an uninitialized model object, as default unassigned fields may overwrite existing profile data on the server.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userInfo` | `OIMUserInfo *` | Yes | User information object containing the modified profile fields. |
+
+## Code example
 
 ```objc
 current.nickname = nickname;
 current.faceURL = avatarURL;
-[[OIMManager manager] setSelfInfo:current onSuccess:nil onFailure:nil];
+
+[[OIMManager manager] setSelfInfo:current
+                        onSuccess:^(NSString *data) {
+    [profileStore refreshCurrentUserInfo:current];
+}
+                        onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"setSelfInfo failed: %ld %@", (long)code, message);
+}];
 ```
 
-`ex` is replaced as a complete string. Parse it and merge your application's namespace before updating it. The success callback, `onSelfInfoUpdated:`, and a subsequent query are three separate stages.
+The `ex` attribute is replaced as an entire string. Parse existing JSON metadata, update your business properties, and re-serialize the string before assigning it.
 
-This page is the sole owner of `onSelfInfoUpdated:`. Use the same stable `OIMUserListener` instance when calling `addUserListener:` and `removeUserListener:`, and replace the profile snapshot for the current account when the delegate is called.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the profile update. The local client can immediately refresh its visible view state. Multi-terminal sync and cross-device propagation are received asynchronously through the user delegate.
+
+## State changes after the call
+
+- **Local state merge**: Merge profile attributes using the authenticated user's `userID` as the unique entity key.
+- **Asynchronous event listening**: Multi-terminal devices and local caches observe updates via `onSelfInfoUpdated:` in `OIMUserListener`.
+- **Re-query calibration**: If delegate delivery fails or local cache becomes desynchronized, invoke `getSelfInfoWithOnSuccess:onFailure:` to restore an authoritative profile snapshot.
+
+```objc
+@interface ProfileStore () <OIMUserListener>
+@end
+
+@implementation ProfileStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addUserListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeUserListener:self];
+}
+
+- (void)onSelfInfoUpdated:(OIMUserInfo *)info {
+    [self updateLocalCurrentUser:info];
+}
+
+@end
+```
+
+Retain this listener instance strongly, and invoke `removeUserListener:` with the same reference when logging out or switching user accounts.

@@ -1,16 +1,18 @@
 ---
 title: 'Revoke a message'
-description: 'OpenIM React Native SDK guide for revoke a message.'
+description: 'Recall a previously sent message within the permitted time window using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-messages/revoke-a-message'
 ---
 
-Use `revokeMessage()` to revoke a sent message. Conversation members then see the message's revoked state.
+Recall a previously sent message from a conversation:
+
+Upon successful revocation, clients in the conversation update the message bubble to display a revocation placeholder (e.g., "Message was recalled").
 
 ```ts
 await OpenIMSDK.revokeMessage({
@@ -23,25 +25,35 @@ await OpenIMSDK.revokeMessage({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `string` | Yes | Conversation containing the message. |
-| `clientMsgID` | `string` | Yes | ID of the message to revoke. |
+| `conversationID` | `string` | Yes | Target conversation ID. |
+| `clientMsgID` | `string` | Yes | Client message ID of the message to revoke. |
 
-After the call completes, the revocation request has completed. The server validates which messages, senders, and time ranges are eligible.
+## Return value
 
-## Listen for message revocation
+A resolved Promise confirms that the revocation request was accepted and processed by the server. Revocation time constraints (e.g. within 2 minutes) and role permissions are validated by server policy; exceeding the limit returns an error.
 
-When a message is revoked, `OnNewRecvMessageRevoked` is emitted with `RevokedInfo`. Use its `clientMsgID` to update the message's revoked state.
+## Listen for message revocations
+
+When a message is recalled, all clients in the conversation receive the `OnNewRecvMessageRevoked` event. The callback payload contains a `RevokedInfo` object. Locate the target message by `clientMsgID` and update its display state to a recalled notice.
 
 ```ts
-function handleMessageRevoked(revokedInfo) {
-  // ...
+interface RevokedInfo {
+  clientMsgID: string;
+  revokerID: string;
+  revokerRole: number;
+  revokerNickname: string;
+  sessionType: number;
 }
 
-// Set the listener
+const handleMessageRevoked = (revokedInfo: RevokedInfo) => {
+  // Locate the message by revokedInfo.clientMsgID and update its status to revoked
+};
+
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 
-// Remove the listener
+// Unregister listener on cleanup
 OpenIMSDK.off(OpenIMEvent.OnNewRecvMessageRevoked, handleMessageRevoked);
 ```
 
-Remove the listener when the component is destroyed, the account signs out, or the account changes. To remove a message only from the current device, use [Delete a local message](/sdk/react-native/message/managing-messages/delete-local-message).
+To remove a message strictly from the local device without alerting the counterparty, use [Delete local message](/sdk/react-native/message/managing-messages/delete-local-message).

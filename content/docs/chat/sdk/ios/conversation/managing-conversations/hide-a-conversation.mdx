@@ -5,22 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/hide-a-conversation'
 ---
 
-`hideConversation:onSuccess:onFailure:` only hides the conversation entry for the signed-in user. It does not delete a one-to-one relationship, leave a group, or affect other users.
+Invoke `hideConversation:onSuccess:onFailure:` to temporarily hide a conversation entry from the chat list without removing friend relations, leaving groups, or clearing message history:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID to hide. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] hideConversation:conversationID
-                              onSuccess:nil
-                              onFailure:nil];
+[[OIMManager manager] hideConversation:@"c2c_user1002"
+                             onSuccess:^(NSString * _Nullable data) {
+                                 NSLog(@"hideConversation success");
+                             }
+                             onFailure:^(NSInteger code, NSString *message) {
+                                 NSLog(@"hideConversation failed: %ld %@", (long)code, message);
+                             }];
 ```
 
-Use this method to remove a conversation entry from the chat list temporarily. The hidden conversation may appear again after a new message arrives or synchronization completes.
+## Return value
 
-A successful callback means that the hide request has completed. The caller can immediately remove the corresponding `conversationID` from the current list, merge later changes idempotently through `onConversationChanged:`, and query the paginated list again when reconciliation is needed. For the complete delegate, see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).
+The `onSuccess` callback returns confirmation when the operation succeeds.
 
-To hide every conversation for the current account, use [Hide all conversations](/sdk/ios/conversation/managing-conversations/hide-all-conversations). Require explicit confirmation for this account-level operation; do not place it in an individual conversation's action menu.
+## State changes after the call
+
+1. **Local state removal**: The client can immediately remove the conversation row corresponding to `conversationID` from the active conversation list display.
+2. **Persistence and reappearance**: Stored messages and relationship states are retained. When a new message arrives for this conversation or during an incremental synchronization, the conversation automatically reappears in the list.
+3. **Re-query calibration**: To hide all conversations at once for the current account, refer to [Hide all conversations](/sdk/ios/conversation/managing-conversations/hide-all-conversations). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

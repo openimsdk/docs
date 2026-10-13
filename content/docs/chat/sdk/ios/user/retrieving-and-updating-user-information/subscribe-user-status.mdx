@@ -5,20 +5,62 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status'
 ---
 
+Subscribe to target users' online presence and multi-device connection statuses using `subscribeUsersStatus:onSuccess:onFailure:`. Once subscribed, the client receives real-time updates when those users log in, disconnect, or change active platforms.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | Yes | List of user IDs to subscribe to. Filter empty strings and duplicate entries, and subscribe exclusively to users currently visible on screen. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] subscribeUsersStatus:userIDs
-    onSuccess:^(NSArray<OIMUserStatusInfo *> *states) {
-        [presenceStore mergeStates:states];
-    }
-    onFailure:nil];
+                                 onSuccess:^(NSArray<OIMUserStatusInfo *> *states) {
+    [presenceStore mergeStates:states];
+}
+                                 onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"subscribeUsersStatus failed: %ld %@", (long)code, message);
+}];
 ```
 
-Remove empty and duplicate IDs, and subscribe only to users who are currently visible. The array returned on success establishes a snapshot; merge each item by `userID`.
+When users scroll out of view or when leaving the screen, invoke [Unsubscribe from user status](/sdk/ios/user/retrieving-and-updating-user-information/unsubscribe-user-status) to release subscription quotas.
 
-This page is the sole owner of `onUserStatusChanged:`. Register and remove the same stable `OIMUserListener` instance. The delegate delivers incremental updates only for subscribed users.
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMUserStatusInfo` objects capturing the initial presence state and active client platforms for all successfully subscribed users.
+
+## State changes after the call
+
+- **Local state merge**: Merge presence records into local UI collections using `userID` as the unique entity key.
+- **Asynchronous event listening**: Receive ongoing presence updates via the `onUserStatusChanged:` delegate in `OIMUserListener`.
+- **Re-query calibration**: To refresh snapshots of active subscriptions, invoke [Refresh subscribed user status](/sdk/ios/user/retrieving-and-updating-user-information/get-subscribed-user-status).
+
+```objc
+@interface PresenceStore () <OIMUserListener>
+@end
+
+@implementation PresenceStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addUserListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeUserListener:self];
+}
+
+- (void)onUserStatusChanged:(OIMUserStatusInfo *)status {
+    [self updateUserStatus:status];
+}
+
+@end
+```
+
+Retain this listener instance strongly, and invoke `removeUserListener:` when logging out or switching user accounts.

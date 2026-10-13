@@ -5,22 +5,46 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/set-global-message-reception'
 ---
 
+Configure the account-wide default message reception policy and offline push notification behavior using `setGlobalRecvMessageOpt:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `opt` | `OIMReceiveMessageOpt` | Yes | Global message reception enum option. |
+
+### Message reception options
+
+| Enum | Value | Description |
+| --- | --- | --- |
+| `OIMReceiveMessageOptReceive` | `0` | Receive messages normally and trigger offline push notifications. |
+| `OIMReceiveMessageOptNotReceive` | `1` | Block message reception entirely; suppress offline push notifications. |
+| `OIMReceiveMessageOptNotNotify` | `2` | Receive and sync messages silently; suppress offline push notifications (Do Not Disturb). |
+
+If your application provides a single "Do Not Disturb" toggle, switch between `Receive` and `NotNotify`. Present `NotReceive` with caution, as it completely stops new message delivery to the client.
+
+## Code example
+
 ```objc
 [[OIMManager manager] setGlobalRecvMessageOpt:OIMReceiveMessageOptNotNotify
-    onSuccess:nil
-    onFailure:nil];
+                                    onSuccess:^(NSString *data) {
+    [profileStore refreshGlobalRecvOpt:OIMReceiveMessageOptNotNotify];
+}
+                                    onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"setGlobalRecvMessageOpt failed: %ld %@", (long)code, message);
+}];
 ```
 
-| Enum value | Numeric value | Meaning |
-| --- | --- | --- |
-| `OIMReceiveMessageOptReceive` | `0` | Receive messages normally and allow offline push notifications. |
-| `OIMReceiveMessageOptNotReceive` | `1` | Do not receive messages or trigger offline push notifications. |
-| `OIMReceiveMessageOptNotNotify` | `2` | Receive messages without triggering offline push notifications. |
+## Return value
 
-If your product exposes only a global Do Not Disturb switch, it normally toggles between `Receive` and `NotNotify`. Because `NotReceive` stops message delivery, present it as a separate option. A successful callback means that the setting request has completed. Retrieve the current user's profile again when you need to confirm the final value.
+The `onSuccess` callback signifies that OpenIMServer updated the global reception preference.
+
+## State changes after the call
+
+- **Local state merge**: Merge setting state using the authenticated user's `userID` as the unique entity key.
+- **Verification and calibration**: When authoritative confirmation is needed, invoke [Retrieve your profile](/sdk/ios/user/retrieving-and-updating-user-information/get-self-profile) to re-query the current user's profile and inspect the updated `globalRecvMsgOpt` property.

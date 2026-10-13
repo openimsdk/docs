@@ -5,17 +5,49 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/get-pinned-messages'
 ---
 
-The success callback returns the messages currently pinned in the specified conversation.
+Query the list of messages currently pinned in a designated conversation. This method is typically invoked when entering a chat window to render the persistent pinned message banner at the top of the interface.
+
+## Code example
 
 ```java
-messageManager.getConversationPinnedMsgs(new OnBase<List<Message>>() {
-    @Override public void onSuccess(List<Message> messages) { /* messages contains pinned messages. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, conversationID);
+String conversationID = "g_group_123";
+
+OpenIMClient.getInstance().messageManager.getConversationPinnedMsgs(
+    new OnBase<List<Message>>() {
+        @Override
+        public void onSuccess(List<Message> messages) {
+            // messages contains all pinned messages in the current conversation
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle query failure
+        }
+    },
+    conversationID
+);
 ```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<Message>>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the target conversation. |
+
+## Return value
+
+Upon success, `messages` in `onSuccess` returns the list of pinned messages (`List<Message>`) for the designated conversation.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback returns a snapshot list of pinned messages. Clients should render pinned banner items using `clientMsgID` as the distinct item identifier.
+2. **Asynchronous event delivery**: This is a read-only query and does not trigger state change events. Real-time pin and unpin actions performed across participants are delivered through `OnAdvanceMsgListener.onChangedPinnedMsg`.
+3. **Re-query calibration**: If the pinned message header falls out of sync with client state, re-run `getConversationPinnedMsgs` to calibrate against local database state.
+
+To change the pinned status of a message, see [Pin or unpin a message](/sdk/android/message/managing-messages/set-message-pinned).

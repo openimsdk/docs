@@ -1,17 +1,44 @@
 ---
 title: 'Transcribe audio'
-description: 'OpenIM uni-app / uni-app x SDK guide for Transcribe audio.'
+description: 'Convert audio recordings into transcribed text using the speech-to-text service.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/composing-messages/transcribe-audio'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Audio transcription is a Commercial Edition capability. Invoke `speechToText()` with the audio filename and the audio binary encoded as a pure Base64 string. Do not pass temporary filesystem paths, `ArrayBuffer` objects, or Data URLs containing `data:*;base64,` headers.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filename` | `string` | Yes | Audio filename with an extension matching the audio format (for example, `'voice.m4a'`). |
+| `data` | `string` | Yes | Raw Base64-encoded audio payload string without data URI prefixes. |
+
+Verify that your audio adheres to format, sample rate, and size limits beforehand by invoking [Check speech-to-text availability](/sdk/uniapp/message/composing-messages/check-speech-to-text). Read recording files immediately before the OS sweeps temporary directories, or copy them to `uni.env.USER_DATA_PATH`.
+
+## Code example
+
+```uts
+import { speechToText } from '@/uni_modules/unix-openim-sdk'
+
+const result = await speechToText({
+  filename: 'voice.m4a',
+  data: audioBase64,
+})
+
+const transcript = result?.text ?? ''
+showTranscript(transcript)
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMSpeechToTextResult | null` object. The transcribed text string is located in `text`.
+
+## State changes after the call
+
+Transcription output is returned solely as the response to this call; it does not alter the original voice message or emit message events. To cache this transcription text locally on the current device, merge it into the message's `localEx` via [Set message local extension](/sdk/uniapp/message/managing-messages/set-message-local-ex).

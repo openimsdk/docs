@@ -1,17 +1,54 @@
 ---
-title: 'Apply to join a group'
-description: 'OpenIM uni-app / uni-app x SDK guide for Apply to join a group.'
+title: 'Join a group'
+description: 'Submit an application to join a group, or join directly if verification is disabled.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/join-group'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `joinGroup()` to request membership in a specified group. Whether approval is required depends on the group's `needVerification` setting, while `joinSource` records how the user discovered and joined the group.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string` | Yes | Target group identifier. |
+| `reqMsg` | `string` | Yes | Application greeting or note; pass an empty string if omitted. |
+| `joinSource` | `OpenIMGroupJoinSource` | Yes | Channel through which the user joined or applied. |
+| `ex` | `string` | No | Optional business extension string. |
+
+| Enum constant | Numeric value | Description |
+| --- | --- | --- |
+| `OpenIMGroupJoinSourceAdmin` | `1` | Added by an administrator; typically reserved for administrative workflows. |
+| `OpenIMGroupJoinSourceInvitation` | `2` | Joined via direct invitation. |
+| `OpenIMGroupJoinSourceSearch` | `3` | Joined via group search. |
+| `OpenIMGroupJoinSourceQRCode` | `4` | Joined by scanning a group QR code. |
+
+## Code example
+
+```uts
+import {
+  OpenIMGroupJoinSourceSearch,
+  joinGroup,
+} from '@/uni_modules/unix-openim-sdk'
+
+await joinGroup({
+  groupID: groupID,
+  reqMsg: 'Requesting to join the project team',
+  joinSource: OpenIMGroupJoinSourceSearch,
+})
+```
+
+## Return value
+
+The Promise resolves with `void` once the join request is submitted to OpenIMServer.
+
+## State changes after the call
+
+A resolved Promise confirms that the request reached the server. If the group enforces verification, resolution does not mean the user is an active member; membership is established only after an administrator approves the application. When approved, the client receives `onJoinedGroupAdded` and adds the group indexed by `groupID` to its joined group list. For event handling, see [Group overview](/sdk/uniapp/group/overview-group).
+
+Even if verification is disabled, rely on incoming events or re-querying [Check group membership](/sdk/uniapp/group/retrieving-groups/is-join-group) to confirm membership before unlocking messaging features.

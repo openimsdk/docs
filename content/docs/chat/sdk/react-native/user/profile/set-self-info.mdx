@@ -1,6 +1,6 @@
 ---
-title: 'Update your profile'
-description: 'Update the current user profile with the OpenIM React Native SDK.'
+title: 'Update current user profile'
+description: 'Modify profile fields such as nickname, avatar, or extensions for the authenticated user with the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/user/profile/set-self-info'
 ---
 
-Call `setSelfInfo()` to update the signed-in account's basic display profile. Pass only the `nickname`, `faceURL`, or `ex` fields that should change in this request.
+Update profile fields for the authenticated account. Supply only the attributes being modified:
 
 ```ts
 await OpenIMSDK.setSelfInfo({
@@ -20,34 +20,36 @@ await OpenIMSDK.setSelfInfo({
 });
 ```
 
-## Parameter description
+## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `nickname` | `string` | No | New nickname. |
-| `faceURL` | `string` | No | New avatar URL. |
-| `ex` | `string` | No | Extended user information. |
+| `nickname` | `string` | No | New nickname for the account. |
+| `faceURL` | `string` | No | New public avatar image URL. |
+| `ex` | `string` | No | Custom business extension string. |
 
-Pass at least one profile field that should be updated.
+Supply at least one field to update. `ex` is a string; serialize JSON if storing structured metadata.
 
-`ex` is a string. You can pass a JSON string or another business-defined format for extended user information.
+## Return value
 
-After the profile is updated, the `OnSelfInfoUpdated` event carries the updated user information.
+A resolved Promise confirms that the profile update was applied on the server.
 
-## Listen for current-user profile changes
+Mutations trigger the `OnSelfInfoUpdated` event with the updated `SelfUserInfo` payload. Reconcile local state keyed by `userID`.
 
-When the user's profile changes, `OnSelfInfoUpdated` is emitted with the updated `SelfUserInfo`:
+## Listen for user profile changes
+
+Register an event listener for `OnSelfInfoUpdated` to keep UI components in sync when profile attributes change:
 
 ```ts
-function handleSelfInfoUpdated(selfUserInfo: SelfUserInfo) {
-  // ...
-}
+const handleSelfInfoUpdated = (selfUserInfo: SelfUserInfo) => {
+  // Update local profile state using selfUserInfo.userID
+};
 
-// Add the listener
+// Register listener
 OpenIMSDK.on(OpenIMEvent.OnSelfInfoUpdated, handleSelfInfoUpdated);
 
-// Remove the listener
+// Remove listener
 OpenIMSDK.off(OpenIMEvent.OnSelfInfoUpdated, handleSelfInfoUpdated);
 ```
 
-Remove the listener when the user logs out, switches accounts, or the user state is torn down.
+Unregister this listener when the component unmounts, the user signs out, or accounts switch.

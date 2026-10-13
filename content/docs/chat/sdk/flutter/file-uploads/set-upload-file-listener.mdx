@@ -1,17 +1,29 @@
 ---
-title: 'Track file upload progress'
-description: 'Configure the Flutter SDK listener for independent file uploads.'
+title: 'Listen for file upload progress'
+description: 'Configure the standalone file upload listener in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/file-uploads/set-upload-file-listener'
 ---
 
-Configure one `OnUploadFileListener` in the shared upload state layer:
+Configure a standalone file upload listener centrally within your application upload management service:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `listener` | `OnUploadFileListener` | Yes | Upload listener instance providing file upload progress and completion callbacks. |
+
+`OnUploadFileListener` callback methods provide the following arguments:
+
+- `onUploadProgress(id, fileSize, streamSize, storageSize)`: Task ID, total file size in bytes, stream bytes read, and bytes written to storage.
+- `onComplete(id, size, url, type)`: Task ID, final file size in bytes, remote accessible URL, and storage type.
+
+## Code example
 
 ```dart
 OpenIM.iMManager.setUploadFileListener(
@@ -26,4 +38,10 @@ OpenIM.iMManager.setUploadFileListener(
 );
 ```
 
-The SDK retains only one listener, so a later value replaces the previous one, and it does not expose a removal method. When switching accounts, stop dispatching into the old state and clear the task map. Associate callbacks by the business `id`, not by file name or list position.
+## State changes after the call
+
+The Flutter SDK maintains only a single `OnUploadFileListener` instance; setting a new listener replaces the previous one. Register this listener once in your application state layer, rather than inside individual UI widgets, to prevent callbacks from being inadvertently overwritten.
+
+Callbacks identify upload jobs by the task `id`. Do not rely on file names or array indexes to map upload progress to UI items. When switching accounts or destroying the upload manager, stop forwarding events to inactive views and clear the active task registry.
+
+To initiate file uploads, refer to [Upload a file](/sdk/flutter/file-uploads/upload-file).

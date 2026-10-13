@@ -1,29 +1,45 @@
 ---
-title: 'Create a custom message'
-description: 'Use createCustomMessage to carry application-defined JSON content.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/creating-messages/create-custom-message'
+title: "Create a custom message"
+description: "Use createCustomMessage to carry application-defined JSON content."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/creating-messages/create-custom-message"
 ---
 
-Your application defines `data`, `extension`, and `description`. Receiving clients must parse them according to the same application protocol.
+Construct a custom message object carrying application-specific business payloads. By passing structured JSON data, optional extension metadata, and a fallback preview description, you can build custom interactive components such as red packets, polls, business cards, and order updates.
+
+## Code example
+
+```java
+String dataJson = "{\"action\":\"red_packet\",\"packetID\":\"rp_888\",\"amount\":100}";
+String extensionJson = "{\"theme\":\"festive\"}";
+String description = "[Received a red packet]";
+
+Message message = OpenIMClient.getInstance().messageManager.createCustomMessage(
+    dataJson,
+    extensionJson,
+    description
+);
+```
 
 ## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `data` | `String` | Yes | Custom message body, normally a validated JSON string. |
-| `extension` | `String` | Yes | Application extension data; pass an empty string when unused. |
-| `description` | `String` | Yes | Short description for notifications and conversation summaries. |
+| `data` | `String` | Yes | The primary custom payload, typically a serialized JSON string. |
+| `extension` | `String` | No | Additional business extension metadata. Pass an empty string if not needed. |
+| `description` | `String` | Yes | Summary preview text displayed in the conversation list or push notifications. |
 
-```java
-Message message = OpenIMClient.getInstance().messageManager.createCustomMessage(
-    dataJson, extensionJson, description);
-```
+## Return value
 
-The returned `Message` is only a local pending object. Sending and receiving clients should process the custom data with the agreed protocol version and field definitions and provide a fallback for unknown versions. Continue with [Send a message](/sdk/android/message/sending-messages/send-message).
+Returns the created `Message` object with `contentType` set to `MessageType.CUSTOM`.
+
+## State changes after the call
+
+1. **Local initialization**: Initializes the local `Message` structure without sending data to the server.
+2. **Schema agreement**: Senders and receivers should negotiate schema conventions and implement graceful degradation for unrecognized versions.
+3. **Transmission**: Call [Send a message](/sdk/android/message/sending-messages/send-message) to deliver the message.

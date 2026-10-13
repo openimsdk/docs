@@ -1,17 +1,91 @@
 ---
-title: 'List group members'
-description: 'OpenIM HarmonyOS SDK guide for List group members.'
+title: 'Retrieve group member list'
+description: 'Paginate and filter group members by role within a specified group.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/group/retrieving-group-members/get-group-member-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Use this method to build member rosters and optionally filter by member roles using `filter`.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string` | Yes | Target group identifier. |
+| `filter` | `GroupMemberFilter` | Yes | Member role filter criteria. |
+| `pagination.pageNumber` | `number` | Yes | Page number, starting from `1`. |
+| `pagination.showNumber` | `number` | Yes | Number of records to return per page. |
+
+## Code example
+
+```ts
+import sdk, {
+  EventOnGroupMemberAddedData,
+  EventOnGroupMemberDeletedData,
+  EventOnGroupMemberInfoChangedData,
+  GetGroupMembersReq,
+  GetGroupMembersResp,
+  GroupMemberFilter,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetGroupMembersReq = {
+  groupID: groupID,
+  filter: GroupMemberFilter.All,
+  pagination: { pageNumber: 1, showNumber: 50 },
+};
+const response: GetGroupMembersResp = await sdk.getGroupMembers(request);
+const members = response.members;
+
+const handleMemberAdded = (data: EventOnGroupMemberAddedData): void => {
+  upsertGroupMember(data.member);
+};
+const handleMemberDeleted = (data: EventOnGroupMemberDeletedData): void => {
+  removeGroupMember(data.member.groupID, data.member.userID);
+};
+const handleMemberChanged = (data: EventOnGroupMemberInfoChangedData): void => {
+  upsertGroupMember(data.member);
+};
+
+const unsubscribeMemberAdded = sdk.on(OpenIMSDKEvent.EventOnGroupMemberAdded, handleMemberAdded);
+const unsubscribeMemberDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnGroupMemberDeleted,
+  handleMemberDeleted,
+);
+const unsubscribeMemberChanged = sdk.on(
+  OpenIMSDKEvent.EventOnGroupMemberInfoChanged,
+  handleMemberChanged,
+);
+
+export function removeGroupMemberListeners(): void {
+  unsubscribeMemberAdded();
+  unsubscribeMemberDeleted();
+  unsubscribeMemberChanged();
+}
+```
+
+`GroupMemberFilter` supports filtering by all members, owner, administrators, regular members, administrators with regular members, and owner with administrators. Member records use `groupID:userID` as their stable unique key. When members are added or removed during pagination, reset the pagination state and reload from the first page.
+
+## Return value
+
+Returns a Promise resolving to `GetGroupMembersResp`. `response.members` contains an array of member records with the following primary fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID`, `userID` | `string` | Jointly uniquely identify a member record. |
+| `nickname`, `faceURL` | `string` | In-group member nickname and avatar URL. |
+| `roleLevel` | `GroupMemberRoleLevel` | Role level: ordinary member, administrator, or owner. |
+| `muteEndTime` | `number` | Mute expiration time as a Unix millisecond timestamp. |
+| `joinTime` | `number` | Member join time as a Unix millisecond timestamp. |
+| `joinSource` | `GroupJoinSource` | How the member joined the group. |
+| `inviterUserID` | `string` | User ID of the inviter. |
+| `ex` | `string` | Member custom extension string. |
+
+## State changes after the call
+
+In-group member profiles are scoped to the specific group; do not overwrite account-level user profiles with them. Call `removeGroupMemberListeners()` when logging out or disposing of the group member state layer.

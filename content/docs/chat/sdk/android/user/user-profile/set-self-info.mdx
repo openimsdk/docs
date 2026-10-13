@@ -1,17 +1,18 @@
 ---
-title: 'Update your profile'
-description: 'Use setSelfInfo() to update the nickname, avatar, or extension data of the current user.'
+title: 'Update the current user profile'
+description: 'Update the nickname, avatar, or custom extensions for the authenticated user using setSelfInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/user-profile/set-self-info'
 ---
 
-Set only the fields that must change on `UserInfoReq`.
+Update basic profile attributes for the authenticated user, including nickname, avatar URL, and custom business extension strings. Populate only the fields that require modification.
+
+## Code example
 
 ```java
 UserInfoReq request = new UserInfoReq();
@@ -23,37 +24,46 @@ OpenIMClient.getInstance().userInfoManager.setSelfInfo(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Profile update succeeded.
+            // Profile updated successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     request
 );
 ```
 
-This operation updates only the nickname, avatar, and user extension data. Add-friend permission is a separate account setting; see [Set friend request permissions](/sdk/android/user/user-profile/set-friend-add-permission).
+## Parameters
 
-A successful callback means the update request completed. `onSelfInfoUpdated(UserInfo info)` reports changes to the current user's profile.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `request` | `UserInfoReq` | Yes | Request payload holding fields to update. |
 
-## Updatable fields
+### Profile attributes
 
-| Field                 | Description                  |
-| --------------------- | ---------------------------- |
-| `nickname`            | New nickname.                |
-| `faceURL`             | New avatar URL.              |
-| `ex`                  | User extension string.        |
+| Field | Type | Description |
+| --- | --- | --- |
+| `nickname` | `String` | New display nickname to set. |
+| `faceURL` | `String` | New avatar image URL. |
+| `ex` | `String` | Custom business metadata string formatted according to application specifications. |
 
-Send only fields that should change. Account-level message reception is also a separate operation; see [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception).
+Friend request permissions and account-wide DND rules are managed independently; see [Set friend request permissions](/sdk/android/user/user-profile/set-friend-add-permission) and [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception).
 
-Receive `onSelfInfoUpdated` through `OnUserListener` when the current user's profile changes:
+## Return value
+
+The successful callback indicates that the server persisted the profile updates. The changes synchronize across all devices authenticated with the user account.
+
+## State changes after the call
+
+After updating the profile, the SDK dispatches the update via `OnUserListener`. Locate the cached profile by `userID`, merge modified properties, and refresh the UI:
 
 ```java
 @Override
 public void onSelfInfoUpdated(UserInfo info) {
-    // Handle the current user's profile change.
+    // Current user profile updated; merge local cache and refresh the UI
 }
 ```

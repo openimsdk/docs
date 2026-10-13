@@ -1,17 +1,48 @@
 ---
-title: 'Report typing status'
-description: 'OpenIM uni-app / uni-app x SDK guide for Report typing status.'
+title: 'Update typing status'
+description: 'Report whether the current user is actively typing in a conversation.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/composing-messages/update-typing-status'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `changeInputStates()` with `focus: true` when a user begins typing in the chat composer, and pass `focus: false` when they send the message, blur the input field, switch chats, or remain idle. Typing indicators are transient session states; they are not saved as message drafts or logged in history.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Identifier of the active conversation. |
+| `focus` | `boolean` | Yes | Typing focus indicator; `true` indicates active composition, and `false` indicates stopped. |
+| `userID` | `string \| null` | No | Target user ID; typically omitted or `null`, allowing the SDK to automatically default to the authenticated user. |
+
+Throttle and deduplicate typing events in your composer view model rather than triggering this method on every raw keystroke. Implement a client-side timeout fallback: if a user navigates away or network drops before `focus: false` is sent, automatically clear the indicator on recipient devices after a few seconds.
+
+## Code example
+
+```uts
+import { changeInputStates } from '@/uni_modules/unix-openim-sdk'
+
+await changeInputStates({
+  conversationID,
+  focus: true,
+})
+
+// When typing ceases or input loses focus:
+await changeInputStates({
+  conversationID,
+  focus: false,
+})
+```
+
+## Return value
+
+The Promise resolves with `void` upon successful completion.
+
+## State changes after the call
+
+Promise resolution indicates that the typing status was transmitted to the server; it does not guarantee that peer devices have rendered the typing notice. For receiving incoming typing signals and querying peer typing states, see [Get typing status](/sdk/uniapp/message/composing-messages/get-typing-status).

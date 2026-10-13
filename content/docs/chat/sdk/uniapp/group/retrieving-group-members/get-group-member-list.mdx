@@ -1,17 +1,107 @@
 ---
-title: 'List group members'
-description: 'OpenIM uni-app / uni-app x SDK guide for List group members.'
+title: 'Get group member list'
+description: 'Query group members by role and pagination offset.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/retrieving-group-members/get-group-member-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `getGroupMemberList()` to build a paginated group member roster, optionally filtering members by role level using `filter`.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `string` | Yes | Target group identifier. |
+| `filter` | `OpenIMGroupMemberFilter` | Yes | Member role filter code; see table below. |
+| `offset` | `number` | Yes | Pagination starting offset; pass `0` for the first page. |
+| `count` | `number` | Yes | Number of member records to retrieve. |
+
+| Enum constant | Numeric value | Description |
+| --- | --- | --- |
+| `OpenIMGroupMemberFilterAll` | `0` | All group members. |
+| `OpenIMGroupMemberFilterOwner` | `1` | Group owner only. |
+| `OpenIMGroupMemberFilterAdmin` | `2` | Group administrators only. |
+| `OpenIMGroupMemberFilterNormal` | `3` | Regular members only. |
+| `OpenIMGroupMemberFilterAdminAndNormal` | `4` | Administrators and regular members. |
+| `OpenIMGroupMemberFilterAdminAndOwner` | `5` | Group owner and administrators. |
+
+## Code example
+
+```uts
+import {
+  OpenIMGroupMemberFilterAll,
+  getGroupMemberList,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await getGroupMemberList({
+  groupID: groupID,
+  filter: OpenIMGroupMemberFilterAll,
+  offset: 0,
+  count: 50,
+})
+const members = result != null ? result.members : []
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMGroupMemberListResult | null` object containing `OpenIMGroupMemberItem[]` elements in `members`. Deduplicate and merge members using the composite key `groupID:userID`. When paginating, advance `offset` by the fixed batch size rather than active UI roster count.
+
+### Group member fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `groupID` | `string` | Group ID to which the member belongs. |
+| `userID` | `string` | Member user ID; forms a composite key with `groupID`. |
+| `nickname` | `string` | Group-specific display nickname. |
+| `faceURL` | `string` | Group-specific avatar URL. |
+| `roleLevel` | `OpenIMGroupMemberRole` | Member role level (`OpenIMGroupMemberRoleNormal`, `OpenIMGroupMemberRoleAdmin`, `OpenIMGroupMemberRoleOwner`). |
+| `muteEndTime` | `number` | Mute expiration timestamp in Unix milliseconds; compare with `Date.now()` to determine active mute status. |
+| `joinTime` | `number` | Member join timestamp in Unix milliseconds. |
+| `joinSource` | `OpenIMGroupJoinSource` | How the member joined the group. |
+| `inviterUserID` | `string` | User ID of the inviter; empty string if not invited. |
+| `operatorUserID` | `string` | User ID that performed the latest membership modification. |
+| `ex` | `string` | Custom member extension string. |
+| `attachedInfo` | `string` | SDK internal metadata. |
+
+Group nicknames, avatars, and mute statuses are local to the group; do not overwrite account-level user profiles with member data. The SDK does not provide a dedicated query for muted members; paginate all members and filter by `muteEndTime > Date.now()`.
+
+## Monitor member updates
+
+Group member lifecycle events are centrally observed here. The callback delivers an `OpenIMGroupMemberItem | null` object. Merge or remove records using `groupID:userID`:
+
+```uts
+import {
+  OpenIMGroupMemberItem,
+  off,
+  onGroupMemberAdded,
+  onGroupMemberDeleted,
+  onGroupMemberInfoChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const upsertMember = (member: OpenIMGroupMemberItem | null) => {
+  if (member == null) return
+  upsertGroupMember(member)
+}
+
+const deleteMember = (member: OpenIMGroupMemberItem | null) => {
+  if (member == null) return
+  removeGroupMember(member.groupID, member.userID)
+}
+
+const addedSubscription = onGroupMemberAdded(upsertMember)
+const deletedSubscription = onGroupMemberDeleted(deleteMember)
+const changedSubscription = onGroupMemberInfoChanged(upsertMember)
+
+function removeGroupMemberListeners() {
+  off(addedSubscription)
+  off(deletedSubscription)
+  off(changedSubscription)
+}
+```
+
+If member addition or deletion events occur during active pagination, reset the offset and reload from the first page. Unsubscribe when unmounting views, logging out, or switching accounts.

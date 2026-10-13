@@ -5,22 +5,41 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/managing-calls/accept-call'
 ---
 
-After receiving the complete `OIMSignalingInfo` from `onReceiveNewInvitation:`, accept the invitation:
+Accept an incoming audio or video call invitation using `signalingAccept:onSuccess:onFailure:`, passing the exact `OIMSignalingInfo` received from the incoming invitation event.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `signalingInfo` | `OIMSignalingInfo *` | Yes | The complete signaling information object delivered by the `onReceiveNewInvitation:` callback. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] signalingAccept:signalingInfo
                             onSuccess:^(OIMInvitationResultInfo * _Nullable credentials) {
-    if (credentials != nil) [self joinMediaRoom:credentials];
+    if (credentials != nil) {
+        [self joinMediaRoom:credentials];
+    }
 }
                             onFailure:^(NSInteger code, NSString * _Nullable message) {
-    [self showCallError:code message:message ?: @"Failed to accept the invitation"];
+    [self showCallError:code message:message ?: @"Failed to accept invitation"];
 }];
 ```
 
-Pass the original object received from the event; do not generate a new `roomID`. The success callback returns the credentials required to join the room. Connect to the media engine only after obtaining a valid `token` and `roomID`.
+Pass the unaltered `OIMSignalingInfo` instance received from the incoming event; never synthesize a new object or modify `roomID`.
+
+## Return value
+
+The `onSuccess` callback returns an `OIMInvitationResultInfo` instance containing the call `roomID`, authentication `token`, and streaming `liveURL`. Join the RTC media room only after receiving these valid credentials.
+
+## State changes after the call
+
+- **Local state merge**: Merge call state by `roomID` and correlate participant states with `userID`.
+- **Remote event notification**: The caller and connected participants receive the acceptance notification via `onInviteeAccepted:` in `OIMSignalingListener` (see [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events)).
+- **Multi-device sync**: Other devices logged in under the same account receive `onInviteeAcceptedByOtherDevice:` to synchronize UI state.

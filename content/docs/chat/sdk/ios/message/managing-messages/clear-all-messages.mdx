@@ -5,16 +5,36 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/clear-all-messages'
 ---
 
+Invoke `deleteAllMsgFromLocalAndSvrWithOnSuccess:onFailure:` on `OIMManager` to permanently clear all conversation history stored locally and on the server for the current account:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming message history was cleared across local and server storage. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] deleteAllMsgFromLocalAndSvrWithOnSuccess:^(NSString *data) {
+[[OIMManager manager] deleteAllMsgFromLocalAndSvrWithOnSuccess:^(NSString * _Nullable data) {
+    // Clear completed; reset local message caches and refresh conversation views
     [self resetAllMessageSnapshots];
-} onFailure:nil];
+} onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle clearing failure
+}];
 ```
 
-This is an irreversible account-level operation. Success means that messages stored locally and on the server for the current account were cleared. It does not delete copies retained by other conversation participants or prove that other signed-in devices have refreshed. Reconcile conversation summaries through delegates or a subsequent query.
+## Return value
+
+The `onSuccess` callback confirms that all local and server-side message records for the current account were deleted.
+
+## State changes after the call
+
+1. **Irreversible account-level operation**: This operation clears message records for the current logged-in account across both local SQLite storage and remote server storage. It does not delete copies stored on other conversation members' devices.
+2. **Conversation summary synchronization**: After clearing messages, update the in-memory cache and UI views. Conversation summaries and latest message previews will reflect these changes through conversation change events or subsequent conversation list queries. To clear local device storage only without touching server records, see [Clear all local messages](/sdk/ios/message/managing-messages/clear-all-local-messages).

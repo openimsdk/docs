@@ -1,17 +1,47 @@
 ---
 title: 'Set global message reception'
-description: 'OpenIM uni-app / uni-app x SDK guide for Set global message reception.'
+description: 'Configure account-level default message reception and notification options across all conversations.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/profile/set-global-message-reception'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The `globalRecvMsgOpt` property defines the account-level default message notification policy across all conversations. Because this preference is separate from display attributes like nicknames and avatars, update it independently from a dedicated settings screen.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+The `globalRecvMsgOpt` parameter accepts values of type `OpenIMMessageReceiveOption`. For account-level configuration, use the following options:
+
+| Enum constant | Numeric value | Description |
+| --- | --- | --- |
+| `OpenIMMessageReceiveOptionReceive` | `0` | Normal message reception; notifications and offline push alerts are permitted. |
+| `OpenIMMessageReceiveOptionReceiveWithoutNotification` | `2` | Messages are received silently without offline push or local notification alerts (Do Not Disturb). |
+
+Pass `OpenIMMessageReceiveOptionReceive` to disable account-wide Do Not Disturb, or `OpenIMMessageReceiveOptionReceiveWithoutNotification` to enable it. Note that `OpenIMMessageReceiveOptionDoNotReceive` is reserved for specific conversation overrides and should not be offered as an account-level setting.
+
+## Code example
+
+```uts
+import {
+  OpenIMMessageReceiveOptionReceiveWithoutNotification,
+  setSelfInfo,
+} from '@/uni_modules/unix-openim-sdk'
+
+await setSelfInfo({
+  globalRecvMsgOpt: OpenIMMessageReceiveOptionReceiveWithoutNotification,
+})
+```
+
+Conversation-level `recvMsgOpt` settings provide finer-grained overrides. When both account-level and conversation-level settings are present, the SDK evaluates them hierarchically; always display the computed state returned by the SDK or server.
+
+## Return value
+
+The Promise resolves with `void` once OpenIMServer updates the account preference.
+
+## State changes after the call
+
+A resolved Promise confirms that the server accepted the setting. It does not indicate that the profile update event has completed across all local stores. For event registration and `userID` state merging, see [Update your profile](/sdk/uniapp/user/profile/set-self-info). To re-verify current settings immediately, invoke [Get your profile](/sdk/uniapp/user/profile/get-self-user-info).

@@ -5,32 +5,31 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups'
 ---
 
-Conversation groups organize the signed-in user's conversation list. They manage relationships between `conversationID` values and groups. They do not create chat groups, modify group membership, or change message targets.
+Conversation groups categorize and organize the signed-in user's conversation list. They manage relationships between `conversationID` values and custom groups, without creating chat groups, modifying member lists, or changing message delivery targets.
 
-The iOS enterprise SDK exposes conversation-group capabilities through `OpenIMCore` Objective-C functions distributed with `OpenIMSDK`; they are not yet wrapped in high-level `OIMManager` model APIs. Requests, results, and listener payloads are JSON `NSString` values. Parse them with `NSJSONSerialization` instead of inventing an `OIMConversationGroup` class.
+The iOS SDK exposes conversation-group capabilities through `OpenIMCore` Objective-C functions distributed with `OpenIMSDK`; they are not yet wrapped in high-level `OIMManager` model classes. Requests, results, and listener payloads are JSON `NSString` values. Parse them using `NSJSONSerialization` rather than declaring custom model classes.
 
 ## Group types
 
-| Value | Purpose |
+| Value | Meaning |
 | ---: | --- |
-| `0` | A regular custom group that the user can create and manage. |
-| `1` | A group maintained by SDK or server-side filtering rules. |
-| `2` | Used to query all types; it cannot be used as a creation type. |
+| `0` | Regular custom group, created and managed manually by the user. |
+| `1` | Rule-filtered group, maintained automatically by server or SDK rules. |
+| `2` | All group types, used strictly as a query filter parameter and not for group creation. |
 
-Use `0` for ordinary user-defined categories. The rules that generate filtered groups depend on the current OpenIMServer deployment.
+Use type `0` for user-defined categories. The generation rules for filtered groups depend on backend configuration.
 
 ## Available operations
 
 - [Create a conversation group](/sdk/ios/conversation/managing-conversation-groups/create-conversation-group)
 - [Retrieve conversation groups](/sdk/ios/conversation/managing-conversation-groups/get-conversation-groups)
 - [Retrieve conversations in a group](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
-- [Retrieve the groups containing a conversation](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Retrieve group IDs containing a conversation](/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
 - [Update a conversation group](/sdk/ios/conversation/managing-conversation-groups/update-conversation-group)
 - [Set conversation-group order](/sdk/ios/conversation/managing-conversation-groups/set-conversation-group-order)
 - [Add conversations to groups](/sdk/ios/conversation/managing-conversation-groups/add-conversations-to-groups)
@@ -39,7 +38,7 @@ Use `0` for ordinary user-defined categories. The rules that generate filtered g
 
 ## Set the conversation-group listener
 
-`Open_im_sdkSetConversationGroupListener` stores only one `Open_im_sdk_callbackOnConversationGroupListener`. No public remove or unset function is available, so retain the listener in an account-scoped state layer and set it centrally once.
+`Open_im_sdkSetConversationGroupListener` maintains a single active `Open_im_sdk_callbackOnConversationGroupListener` instance. Because there is no separate unregister function, retain the listener within an account-scoped manager and initialize it once during session startup.
 
 ```objc
 #import <OpenIMSDK/CallbackProxy.h>
@@ -77,6 +76,6 @@ Use `0` for ordinary user-defined categories. The rules that generate filtered g
 @end
 ```
 
-The added, changed, and deleted payloads are JSON arrays of groups. Membership-change payloads contain `group`, `conversationIDs`, and `conversations`. Merge groups idempotently by `conversationGroupID`, and identify membership using both `conversationGroupID` and `conversationID`.
+The group added, changed, and deleted callbacks pass JSON arrays of groups. Member modification callbacks provide JSON containing `group`, `conversationIDs`, and `conversations`. Merge group state using `conversationGroupID` as the primary key, and identify member associations using composite keys of `conversationGroupID` and `conversationID`.
 
-When switching accounts, stop the old listener from dispatching updates to the UI, then replace it with the new account's complete listener. A successful call, an incremental listener update, and a newly queried snapshot are three separate stages.
+When switching accounts, stop the active listener from dispatching to UI components and register the new account's listener. Method execution completion, listener event delivery, and cache calibration queries are three distinct stages.

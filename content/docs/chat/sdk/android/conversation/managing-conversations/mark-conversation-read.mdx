@@ -1,17 +1,18 @@
 ---
 title: 'Mark a conversation as read'
-description: 'Use messageManager.markConversationMessageAsRead() to mark conversation messages as read.'
+description: 'Mark all unread messages in a conversation as read and reset the conversation unread count.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/managing-conversations/mark-conversation-read'
 ---
 
-After the user has opened and read visible messages, call `messageManager.markConversationMessageAsRead()` to mark the conversation as read. Do not mark a conversation read merely because a notification was previewed or a message arrived in the background.
+Mark all unread messages within a conversation as read when the user opens the chat screen and views incoming messages. Call this method after the messages are rendered on screen; avoid triggering it prematurely from background notifications or transient popups.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().messageManager.markConversationMessageAsRead(
@@ -19,7 +20,7 @@ OpenIMClient.getInstance().messageManager.markConversationMessageAsRead(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The request completed.
+            // Read receipt reported successfully.
         }
 
         @Override
@@ -30,6 +31,19 @@ OpenIMClient.getInstance().messageManager.markConversationMessageAsRead(
 );
 ```
 
-The callback indicates that the mark-as-read request has completed. To update the conversation list, query conversations again or receive changes through `onConversationChanged`.
+## Parameters
 
-For one-to-one chats, listen for read receipts from the peer through `OnAdvanceMsgListener.onRecvC2CReadReceipt`. See [Receive messages](/sdk/android/message/receiving-messages/receive-messages) for the message listener setup and [Message overview](/sdk/android/message/overview-message) for message callbacks and read-receipt fields.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Target conversation identifier. |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+
+## Return value
+
+The successful callback indicates that the server recorded the read receipt. The conversation unread count resets to zero locally, and the overall unread counter decrements accordingly.
+
+## State changes after the call
+
+Once the call succeeds, the SDK dispatches the `OnConversationListener.onConversationChanged` event. Locate the conversation by `conversationID` and clear its unread badge. For complete listener registration details, see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list).
+
+In direct chats, the peer receives a C2C read receipt event via `OnAdvanceMsgListener.onRecvC2CReadReceipt`. For complete message event details, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages) and [Message overview](/sdk/android/message/overview-message).

@@ -5,22 +5,51 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-avatar'
 ---
 
+Invoke `setGroupMemberInfo:onSuccess:onFailure:` with a parameter dictionary containing `faceURL` to configure a group-specific avatar for a member:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupMemberInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing member identification and updated avatar URL. |
+
+### Dictionary keys
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `userID` | `NSString *` | Yes | Target member user ID. |
+| `faceURL` | `NSString *` | Yes | New avatar URL for the member in this group. |
+
+## Code example
+
 ```objc
 NSDictionary *updates = @{
-    @"groupID": groupID,
-    @"userID": targetUserID,
-    @"faceURL": avatarURL
+    @"groupID": @"group_1001",
+    @"userID": @"user_003",
+    @"faceURL": @"https://example.com/avatar/group_user_003.png"
 };
 
 [[OIMManager manager] setGroupMemberInfo:updates
-    onSuccess:nil
-    onFailure:nil];
+                               onSuccess:^(NSString * _Nullable data) {
+                                   NSLog(@"setGroupMemberInfo avatar success");
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"setGroupMemberInfo avatar failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-A group-specific member avatar is distinct from the user's account avatar. A successful callback means that the request has completed. Reconcile the profile through `onGroupMemberInfoChanged:` or a new query, merging by `groupID:userID`.
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the avatar update.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the member's avatar attribute matching `groupID:userID`. This avatar is scoped strictly to the current group and does not change the user's global profile avatar.
+2. **Event notification**: Updated member details broadcast across active client sessions through `onGroupMemberInfoChanged:`.
+3. **Re-query calibration**: For member queries, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

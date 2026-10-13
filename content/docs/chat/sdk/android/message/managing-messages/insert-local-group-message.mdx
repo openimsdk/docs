@@ -5,27 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/insert-local-group-message'
 ---
 
-`insertGroupMessageToLocalStorage()` writes a message to a group chat on the current device. Use it for imported records or application notices that must remain local. It does not send the message or synchronize it to other devices.
+Write a pre-constructed message directly into the local SQLite database of the current device for a group conversation. This operation does not issue a network request to the server, does not dispatch messages to other group members, and does not persist to cloud storage. It is suitable for displaying group join safety notices, local event announcements, or device-specific system logs. To send an actual message to all group members across the network, call [Send a message](/sdk/android/message/sending-messages/send-message).
 
-`message` is the complete message object, `groupID` identifies the target group, and `senderUserID` is the sender shown for the inserted message.
+## Code example
 
 ```java
+String groupID = "group_123";
+String senderUserID = "user_a";
+
 OpenIMClient.getInstance().messageManager.insertGroupMessageToLocalStorage(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Re-read or update the group message list on this device.
+            // Message written to local storage, refresh group chat UI
         }
 
         @Override
         public void onError(int code, String error) {
-            // Report the local write failure.
+            // Handle insertion failure
         }
     },
     message,
@@ -34,4 +36,21 @@ OpenIMClient.getInstance().messageManager.insertGroupMessageToLocalStorage(
 );
 ```
 
-The success callback means the local write completed. This operation does not trigger a new-message event and cannot replace [Send a message](/sdk/android/message/sending-messages/send-message).
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `message` | `Message` | Yes | Pre-constructed message object (typically created via one of the `create*Message` APIs). |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+| `sender` | `String` | Yes | User ID designated as the sender of the message. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the message record was written to the local database. Insert the message into your group chat UI timeline using `clientMsgID`.
+2. **Local scope**: This is a local-only operation that does not persist to the server, does not dispatch to other group members, and does not fire `OnAdvanceMsgListener.onRecvNewMessage` events.
+3. **Re-query calibration**: The message exists only on the current device. It will not synchronize across devices logged into the same account or appear in cloud roaming history.

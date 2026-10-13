@@ -1,31 +1,70 @@
 ---
-title: 'Revoke a message'
-description: 'Revoke a sent message and handle revocation notifications received by other clients.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-17'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/managing-messages/revoke-a-message'
+title: "Revoke a message"
+description: "Revoke a sent message and handle revocation notifications received by other clients."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/managing-messages/revoke-a-message"
 ---
 
-Revoking a message causes other clients to display the original message in a revoked state. If the call fails, the error callback returns an error code and message.
+Recall a previously sent message within the allowed revocation time window. Upon successful invocation, the message in the conversation is marked as revoked, and peer clients receive an asynchronous event to replace the original message body with a revocation notice.
+
+## Code example
 
 ```java
-messageManager.revokeMessageV2(callback, conversationID, clientMsgID);
+String conversationID = "si_user_a_user_b";
+String clientMsgID = "msg_001";
+
+OpenIMClient.getInstance().messageManager.revokeMessageV2(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Revocation request processed successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to revoke message (e.g. exceeded allowed time limit)
+        }
+    },
+    conversationID,
+    clientMsgID
+);
 ```
 
-The success callback means that the revocation request completed. Other clients receive the revocation notification through `OnAdvanceMsgListener.onRecvMessageRevokedV2`.
+## Parameters
 
-`RevokedInfo` contains the `clientMsgID`, revoker, and revocation time:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the conversation containing the message. |
+| `clientMsgID` | `String` | Yes | Client message ID of the message to revoke. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## Handling message revocation events
+
+Clients across the conversation receive revocation notices through `OnAdvanceMsgListener.onRecvMessageRevokedV2`:
 
 ```java
 @Override
 public void onRecvMessageRevokedV2(RevokedInfo info) {
-    // info identifies the revoked message.
+    // Find the original message using info.getClientMsgID()
+    // Update its state to revoked and display revoker name (info.getRevokerNickname())
 }
 ```
 
-Update the matching message to a revoked state instead of deleting it from the list. `MessageManager` can retain only one `OnAdvanceMsgListener`. If the application handles other message events, implement their callbacks in the same listener. See [Events](/sdk/android/events/overview-events) for setup.
+When receiving `onRecvMessageRevokedV2`, match the targeted message using `clientMsgID` and render a revocation placeholder (e.g., "Alex revoked a message") rather than deleting the message row from the list.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server processed the revocation.
+2. **Asynchronous event delivery**: Receiving clients receive `onRecvMessageRevokedV2` with `RevokedInfo`. Update message state in-place using `clientMsgID`.
+3. **Re-query calibration**: If message states fall out of sync, reload message history via [Load older messages](/sdk/android/message/retrieving-messages/load-older-messages).
+
+For complete listener registration and lifecycle management, see [Receive messages](/sdk/android/message/receiving-messages/receive-messages).

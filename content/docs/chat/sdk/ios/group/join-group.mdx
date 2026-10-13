@@ -5,21 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/join-group'
 ---
 
+Invoke `joinGroup:reqMsg:joinSource:ex:onSuccess:onFailure:` to apply to join or directly enter a specified group:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `reqMsg` | `NSString *` | No | Application note message; pass an empty string if not required. |
+| `joinSource` | `OIMJoinType` | Yes | Origin method of joining the group, such as `OIMJoinTypeSearch`. |
+| `ex` | `NSString *` | No | Custom extension string; pass `nil` if not needed. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] joinGroup:groupID
-    reqMsg:@"I would like to join the project discussion"
-    joinSource:OIMJoinTypeSearch
-    ex:nil
-    onSuccess:^(NSString * _Nullable data) { [self showApplicationSubmitted]; }
-    onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
-    }];
+                         reqMsg:@"Applying to join the discussion group"
+                     joinSource:OIMJoinTypeSearch
+                             ex:nil
+                      onSuccess:^(NSString * _Nullable data) {
+                          NSLog(@"joinGroup success");
+                      }
+                      onFailure:^(NSInteger code, NSString *message) {
+                          NSLog(@"joinGroup failed: %ld %@", (long)code, message);
+                      }];
 ```
 
-`joinSource` can indicate an invitation, search, or QR code, but it does not determine whether approval is required. When approval is required, a successful callback means only that the application was submitted. Treat the current user as a member only after `onJoinedGroupAdded:` arrives or a new query confirms membership.
+## Return value
+
+The `onSuccess` callback returns confirmation when the request is accepted by the server.
+
+## State changes after the call
+
+1. **Direct join vs. review flow**: If the target group permits direct joining without verification, the user enters the group immediately and receives an `onJoinedGroupAdded:` event. If the group requires administrator review, `onSuccess` confirms that the application ticket has been recorded, and the user must await approval.
+2. **Event notification**: Successful group entries trigger `onJoinedGroupAdded:`. Application state tracking is documented in [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).
+3. **Re-query calibration**: For group listener lifecycle details, refer to [Groups overview](/sdk/ios/group/overview-group).

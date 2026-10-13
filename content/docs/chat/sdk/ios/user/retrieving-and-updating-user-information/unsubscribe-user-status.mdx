@@ -5,18 +5,38 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/retrieving-and-updating-user-information/unsubscribe-user-status'
 ---
 
+Cancel active presence subscriptions for specific users using `unsubscribeUsersStatus:onSuccess:onFailure:`. Invoke this method when target users scroll out of the visible screen area, when navigating away from contact views, or during account teardown.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `NSArray<NSString *> *` | Yes | List of user IDs to unsubscribe from. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] unsubscribeUsersStatus:userIDs
-    onSuccess:^(NSString *data) {
-        [presenceStore removeUserIDs:userIDs];
-    }
-    onFailure:nil];
+                                   onSuccess:^(NSString *data) {
+    [presenceStore removeUserIDs:userIDs];
+}
+                                   onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"unsubscribeUsersStatus failed: %ld %@", (long)code, message);
+}];
 ```
 
-Unsubscribe when users leave the visible range, the page closes, or the active account changes. Remove the IDs from your application's subscription set only after the call succeeds; retain them for retry if it fails. Unsubscribing from users and removing a listener are separate operations.
+Unsubscribing from specific user IDs releases server quotas; it is distinct from removing the global `OIMUserListener` delegate.
+
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer removed the specified users from the client's presence push roster. The server will cease pushing status notifications for these accounts to this client.
+
+## State changes after the call
+
+- **Local state merge**: Remove the unsubscribed users from local active presence caches using `userID` as the unique entity key.
+- **Subsequent subscriptions**: To resume monitoring these users, invoke [Subscribe to user status](/sdk/ios/user/retrieving-and-updating-user-information/subscribe-user-status).

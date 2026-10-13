@@ -1,17 +1,62 @@
 ---
-title: 'Send a custom signal'
-description: 'OpenIM HarmonyOS SDK guide for Send a custom signal.'
+title: 'Send custom signaling'
+description: 'Send lightweight business negotiation payloads within a designated call room.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/sending-custom-signals/send-a-custom-signal'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Custom signaling is designed for in-call business events such as hand-raising, layout switching notifications, or custom room status broadcasts. It is not an alternative to standard chat messages or high-throughput RTC data channels.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnReceiveCustomSignalingData,
+  OpenIMSDKEvent,
+  SignalingSendCustomSignalingReq,
+} from '@openimsdk/imsdk';
+
+const request: SignalingSendCustomSignalingReq = {
+  roomID: roomID,
+  customInfo: JSON.stringify({
+    version: 1,
+    eventID: createBusinessEventID(),
+    type: 'hand-raised',
+    userID: currentUserID,
+  }),
+};
+await sdk.signalingSendCustomSignaling(request);
+
+const handleCustomSignal = (data: EventOnReceiveCustomSignalingData): void => {
+  const signal = parseAndValidateCallSignal(data.customInfo);
+  applyCallSignal(data.roomID, signal);
+};
+const unsubscribeCustomSignal = sdk.on(
+  OpenIMSDKEvent.EventOnReceiveCustomSignaling,
+  handleCustomSignal,
+);
+
+export function removeCustomSignalListener(): void {
+  unsubscribeCustomSignal();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `roomID` | `string` | Yes | Target call room identifier. |
+| `customInfo` | `string` | Yes | Application-defined string payload (typically JSON-serialized). |
+
+## Return value
+
+Returns a Promise that resolves to `void` when the signal has been submitted to the server.
+
+## State changes after the call
+
+Promise resolution indicates that the server accepted the custom signal, not that remote participants have parsed or rendered it. Keep the `customInfo` payload concise, include a schema version and unique event ID, and avoid using signaling for persistent room state. Receivers correlate the payload by `roomID`. Detach the listener with `removeCustomSignalListener()` when navigating away from the call view.

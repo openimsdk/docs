@@ -5,19 +5,41 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/composing-messages/get-typing-status'
 ---
 
+Invoke `getInputstates:userID:onSuccess:onFailure:` on `OIMManager` to check whether a specific user is actively typing in a conversation, along with their active client platform identifiers:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `userID` | `NSString *` | Yes | User ID of the target member being queried. |
+| `onSuccess` | `void (^)(NSArray<NSNumber *> * _Nullable platformIDs)` | Yes | Success callback returning an array of active platform ID numbers. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] getInputstates:conversationID
                               userID:memberUserID
-                           onSuccess:^(NSArray<NSNumber *> *platformIDs) {
-                               [self setTyping:platformIDs.count > 0 userID:memberUserID];
-                           }
-                           onFailure:nil];
+                           onSuccess:^(NSArray<NSNumber *> * _Nullable platformIDs) {
+    // Check if member is actively typing based on platform array emptiness
+    [self setTyping:platformIDs.count > 0 userID:memberUserID];
+}
+                           onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle query failure
+}];
 ```
 
-The success callback returns a snapshot of platform IDs on which the user is still typing. The query itself does not trigger a delegate. In a group chat, do not poll every member frequently. Query important members only when opening the page, recovering a connection, or reconciling state; maintain online increments through the delegate described in [Report typing status](/sdk/ios/message/composing-messages/update-typing-status).
+## Return value
+
+The `onSuccess` callback delivers an array of platform ID numbers (`NSArray<NSNumber *> *`). A non-empty array indicates that the user is actively typing; an empty array indicates that typing has stopped.
+
+## State changes after the call
+
+1. **Snapshot nature**: This query returns an instantaneous snapshot and does not trigger typing event listeners.
+2. **Polling considerations**: Avoid frequent polling across all members in large group chats. Typically invoke this query upon entering a conversation or reconnecting to calibrate state. Subsequent live changes are pushed via the listener detailed in [Report typing status](/sdk/ios/message/composing-messages/update-typing-status).

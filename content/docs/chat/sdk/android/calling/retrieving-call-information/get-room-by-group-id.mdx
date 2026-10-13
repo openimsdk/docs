@@ -1,35 +1,52 @@
 ---
-title: 'Get a group call room'
-description: 'Use the Android SDK to retrieve an active call room by group ID.'
+title: 'Query group call room'
+description: 'Look up an ongoing call room for a specific group using signalingGetRoomByGroupID().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/retrieving-call-information/get-room-by-group-id'
 ---
 
-`signalingGetRoomByGroupID()` takes a group ID, not `roomID`, even when the call uses a custom `roomID`.
+Look up an ongoing call room by group ID. Supply the `groupID` parameter even if a custom `roomID` was assigned to the call.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().signalingManager.signalingGetRoomByGroupID(
     new OnBase<RoomCallingInfo>() {
         @Override
         public void onSuccess(RoomCallingInfo room) {
-            // room contains a snapshot of the room, invitation, and current participants.
+            // room contains room ID, original invitation, and current participant list.
         }
 
         @Override
         public void onError(int code, String error) {
-            // code and error describe why the query failed.
+            // code and error describe the failure.
         }
     },
     groupID
 );
 ```
 
-The success callback returns a `RoomCallingInfo` snapshot containing the room ID, original invitation, participants, group ID, token, and connection address.
+## Parameters
 
-When a successful result has no valid `roomID`, no usable room information was returned. The `code` and `error` in an error callback only describe the query failure; they do not establish that the group has no active call.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<RoomCallingInfo>` | Yes | Callback delivering the asynchronous operation result. |
+| `groupID` | `String` | Yes | Target group ID to query. |
+
+## Return value
+
+The successful callback returns a `RoomCallingInfo` snapshot of the active group call:
+
+- `roomID`: Call room identifier.
+- `invitation`: Original invitation payload configured at initiation.
+- `participant`: Roster and status of members currently in the room.
+- `groupID`: Target group ID.
+- `token`: Media token required to join the session.
+- `liveURL`: Media server endpoint URL.
+
+If `roomID` in the returned object is empty, no ongoing audio/video call exists in this group. This query delivers a point-in-time snapshot; track subsequent call transitions via [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

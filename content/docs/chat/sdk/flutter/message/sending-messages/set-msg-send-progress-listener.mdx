@@ -1,6 +1,6 @@
 ---
 title: 'Track message sending progress'
-description: 'Configure the Flutter listener for message sending progress.'
+description: 'Configure the Flutter listener for message sending and media upload progress.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -11,7 +11,9 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/sending-messages/set-msg-send-progress-listener'
 ---
 
-When `sendMessage()` uploads a media message, configure one sending-progress listener in your message state layer:
+When delivering local media messages (such as images, video, or audio) using [Send a message](/sdk/flutter/message/sending-messages/send-message), configure a send progress listener to receive real-time upload percentage updates:
+
+## Code example
 
 ```dart
 OpenIM.iMManager.messageManager.setMsgSendProgressListener(
@@ -23,6 +25,15 @@ OpenIM.iMManager.messageManager.setMsgSendProgressListener(
 );
 ```
 
-Use `clientMsgID` to associate progress with its message bubble. Do not match by file name or list position. Progress reaching `100` does not mean the message was sent successfully; use the `sendMessage()` Future as the final sending result.
+## Parameters
 
-The SDK does not expose a method to remove this listener. Configure only one instance and isolate state from the previous account when switching accounts. For independent avatar or business-file uploads, see [Upload a file](/sdk/flutter/file-uploads/upload-file).
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `clientMsgID` | `String` | Yes | Client message ID of the media message currently being uploaded. |
+| `progress` | `int` | Yes | Current upload progress percentage (`0` to `100`). |
+
+## State changes after the call
+
+Associate progress updates with the corresponding message bubble using `clientMsgID`; never match items by file name or list index. A progress value of `100` signifies solely that the file upload to storage has finished, not that the message has completed server-side delivery. The final delivery state is determined by the `Future` returned by [Send a message](/sdk/flutter/message/sending-messages/send-message).
+
+The SDK does not provide an API to unset this listener. Maintain a single listener instance across your application lifecycle and clear progress mappings when switching accounts. To upload standalone avatars or files outside the messaging pipeline, see [Upload a file](/sdk/flutter/file-uploads/upload-file).

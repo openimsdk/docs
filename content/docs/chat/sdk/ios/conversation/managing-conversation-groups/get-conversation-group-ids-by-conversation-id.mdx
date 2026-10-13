@@ -5,30 +5,42 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id'
 ---
 
-One conversation can belong to multiple conversation groups. Use `Open_im_sdkGetConversationGroupByConversationID` to retrieve the groups that currently contain a specified conversation.
+Invoke `Open_im_sdkGetConversationGroupByConversationID` to retrieve the list of conversation groups that contain a specified conversation. A single conversation can belong to multiple groups simultaneously:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID. |
+
+## Code example
 
 ```objc
-NSString *targetConversationID = conversationID;
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
 
 CallbackProxy *callback = [[CallbackProxy alloc]
     initWithOnSuccess:^(NSString * _Nullable data) {
         [self mergeConversationGroupsJSON:data];
     }
     onFailure:^(NSInteger code, NSString * _Nullable message) {
-        [self showConversationGroupError:code message:message ?: @"Failed to retrieve the conversation's groups"];
+        NSLog(@"GetConversationGroupByConversationID failed: %ld %@", (long)code, message);
     }];
+
+Open_im_sdkGetConversationGroupByConversationID(callback, @"c2c_user1002");
 ```
 
-Pass `callback` and `targetConversationID` to `Open_im_sdkGetConversationGroupByConversationID`.
+## Return value
 
-## Result
+The `onSuccess` callback delivers a JSON array string in `data` representing complete group objects containing this conversation (rather than a list of ID strings alone).
 
-The success callback's `data` is a JSON array of complete group objects, not an array of group-ID strings. This differs from the WASM SDK's `getConversationGroupIDsByConversationID()`.
+## State changes after the call
 
-The query does not trigger the conversation-group listener. For incremental relationship updates, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+1. **Snapshot query**: This method retrieves an instantaneous membership snapshot and does not trigger asynchronous listener callbacks.
+2. **Event notification**: Membership modifications broadcast via `onConversationGroupMemberAdded:` and `onConversationGroupMemberDeleted:`.
+3. **Re-query calibration**: For listener integration details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

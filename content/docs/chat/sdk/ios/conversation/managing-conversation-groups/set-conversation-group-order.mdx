@@ -5,33 +5,52 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/set-conversation-group-order'
 ---
 
-Use `Open_im_sdkSetConversationGroupOrder` to update the order of multiple conversation groups. Its argument is a JSON array of group-order objects.
+Invoke `Open_im_sdkSetConversationGroupOrder` to update display ordering indexes for multiple conversation groups in a batch:
 
 ## Parameters
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `conversationGroupID` | Yes | The conversation-group ID. |
-| `order` | Yes | The new ordering value. Define one sorting direction consistently across the product. |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationGroupID` | `NSString *` | Yes | Target conversation group ID within each order entry. |
+| `order` | `NSNumber *` | Yes | New numeric ordering index. |
+
+## Code example
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSArray *orders = @[
-    @{ @"conversationGroupID": firstGroupID, @"order": @100 },
-    @{ @"conversationGroupID": secondGroupID, @"order": @200 },
+    @{ @"conversationGroupID": @"group_work_101", @"order": @100 },
+    @{ @"conversationGroupID": @"group_life_102", @"order": @200 },
 ];
+
 NSData *requestData = [NSJSONSerialization dataWithJSONObject:orders options:0 error:nil];
 NSString *requestJSON = [[NSString alloc] initWithData:requestData
                                               encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        NSLog(@"SetConversationGroupOrder success");
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"SetConversationGroupOrder failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkSetConversationGroupOrder(callback, requestJSON);
 ```
 
-Pass your callback and `requestJSON` to `Open_im_sdkSetConversationGroupOrder`.
+## Return value
 
-## Result
+The `onSuccess` callback returns confirmation when the ordering request is completed.
 
-A successful callback means that the reorder request has completed; do not depend on generic placeholder data. Reconcile the result through `onConversationGroupChanged:` or a subsequent query. For the complete listener, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+## State changes after the call
+
+1. **Local state update**: The client updates the `order` property for matching groups keyed by `conversationGroupID` and re-sorts the group list.
+2. **Event notification**: Group property changes broadcast via the `onConversationGroupChanged:` listener callback across client sessions.
+3. **Re-query calibration**: For listener integration details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

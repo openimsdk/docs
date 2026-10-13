@@ -1,22 +1,41 @@
 ---
 title: 'Create an image message from a URL'
-description: 'Create an image message from previously uploaded image information with OpenIM iOS SDK.'
+description: 'Create an image message from a previously uploaded URL with OpenIM iOS SDK.'
 product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/creating-messages/create-image-message-by-url'
 ---
 
+When the application has already uploaded image assets to object storage and possesses remote URLs, invoke `createImageMessageByURL:sourcePicture:bigPicture:snapshotPicture:` on `OIMMessageInfo` to construct an image message object directly without redundant uploads by the SDK:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sourcePath` | `NSString *` | Yes | Local source path. Pass an empty string `@""` when referencing remote resources directly. |
+| `sourcePicture` | `OIMPictureInfo *` | Yes | Original image metadata object containing remote URL, dimensions, and file size. |
+| `bigPicture` | `OIMPictureInfo *` | Yes | High-resolution image metadata object. |
+| `snapshotPicture` | `OIMPictureInfo *` | Yes | Thumbnail image metadata object. |
+
+## Code example
+
 ```objc
 OIMMessageInfo *message =
     [OIMMessageInfo createImageMessageByURL:@""
-                               sourcePicture:source
-                                  bigPicture:big
-                             snapshotPicture:snapshot];
+                              sourcePicture:source
+                                 bigPicture:big
+                            snapshotPicture:snapshot];
 ```
 
-The URLs, sizes, widths, and heights of all three `OIMPictureInfo` objects must come from actual upload results. When only remote resources are available, pass an empty string as the first local source path. Send the result with `sendMessageNotOss:...`.
+## Return value
+
+Returns an initialized `OIMMessageInfo` model populated with the remote image information. The URLs, dimensions, and file sizes across all three `OIMPictureInfo` objects must represent valid remote assets.
+
+## State changes after the call
+
+1. **Local memory instantiation**: This method constructs an in-memory message object without writing to the local database or initiating network requests.
+2. **Subsequent dispatch**: Because media assets are already uploaded, deliver the message by calling [Send a message without SDK-managed upload](/sdk/ios/message/sending-messages/send-message-not-oss). If you want the SDK to handle local file upload automatically, use [Create an image message from a local path](/sdk/ios/message/creating-messages/create-image-message-from-full-path).

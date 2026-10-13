@@ -1,22 +1,25 @@
 ---
 title: 'Set conversation message reception'
-description: 'Use setConversationRecvMessageOpt() to set message reception and notification behavior for one conversation.'
+description: 'Configure message reception and offline notification behavior for a specific conversation.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/managing-conversations/set-message-receive-option'
 ---
+
+Configure message reception and do-not-disturb (DND) modes for a specific conversation, such as standard alerts, silent reception without push alerts, or blocking messages entirely.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().conversationManager.setConversationRecvMessageOpt(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The request completed.
+            // Reception option updated.
         }
 
         @Override
@@ -29,10 +32,26 @@ OpenIMClient.getInstance().conversationManager.setConversationRecvMessageOpt(
 );
 ```
 
-| Value | Meaning                                                       |
-| ----- | ------------------------------------------------------------- |
-| `0`   | Receive messages and allow notifications.                     |
-| `1`   | Do not receive messages from this conversation or notify.     |
-| `2`   | Receive messages from this conversation without notification. |
+## Parameters
 
-The account default is documented in [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception). Conversation list changes for this setting can be received through `onConversationChanged`; see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list) for listener setup.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `conversationID` | `String` | Yes | Target conversation identifier. |
+| `opt` | `int` | Yes | Message reception mode integer code. |
+
+### Message reception modes
+
+| Enum constant | Value | Description |
+| --- | --- | --- |
+| `ReceiveMessageOpt.Normal` | `0` | Receive messages normally with local alerts and offline push notifications. |
+| `ReceiveMessageOpt.NotReceive` | `1` | Reject incoming messages for this conversation entirely without notifications. |
+| `ReceiveMessageOpt.NotNotify` | `2` | Receive messages and display them in the chat list, but suppress sound, badge alerts, and offline push notifications (Do Not Disturb). |
+
+## Return value
+
+The successful callback indicates that the server recorded the updated reception option. The setting synchronizes across all active sessions belonging to the user.
+
+## State changes after the call
+
+Once the option takes effect, the SDK triggers the `OnConversationListener.onConversationChanged` event. When your listener receives this event, locate the conversation by `conversationID`, update its `recvMsgOpt` property, and adjust DND indicator icons in the UI. For complete listener registration details, see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list). To configure account-wide notification preferences, see [Set global message reception](/sdk/android/user/user-profile/set-global-message-reception).

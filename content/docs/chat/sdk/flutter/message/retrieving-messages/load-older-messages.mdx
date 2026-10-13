@@ -1,6 +1,6 @@
 ---
-title: 'Load message history'
-description: "Use the Flutter SDK to page through a conversation's message history."
+title: 'Load older message history'
+description: "Use the Flutter SDK to page backward through a conversation's historical messages."
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -11,7 +11,18 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/retrieving-messages/load-older-messages'
 ---
 
-Omit `startMsg` on the first page. When the user continues scrolling upward, use the earliest complete `Message` currently loaded as the cursor.
+Page backward through historical chat records in a conversation as the user scrolls upward:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Target conversation ID. |
+| `startMsg` | `Message?` | No | Starting cursor message. Pass `null` for the first page; pass the earliest loaded message for subsequent pages. |
+| `count` | `int` | Yes | Number of messages to retrieve in this batch. |
+| `viewType` | `int?` | No | History view type, defaulting to normal history (`GetHistoryViewType.history`). |
+
+## Code example
 
 ```dart
 final page = await OpenIM.iMManager.messageManager
@@ -25,4 +36,12 @@ final page = await OpenIM.iMManager.messageManager
 prependMessages(page.messageList ?? const <Message>[]);
 ```
 
-The method returns `AdvancedMessage`. Stop paging when the list is empty and `isEnd == true`. Flutter uses a complete message rather than a string ID as the boundary, but the list must still be deduplicated by non-empty `clientMsgID` values. A query does not trigger the new-message listener.
+## Return value
+
+Returns a `Future` resolving to an advanced message pagination object (`AdvancedMessage`). The `messageList` field contains the retrieved batch of messages, and `isEnd` indicates whether the earliest historical message has been reached.
+
+When `isEnd == true`, no earlier historical records remain in local storage or on the server; stop further upward paging requests.
+
+## State changes after the call
+
+This query retrieves a point-in-time snapshot and does not trigger new-message event callbacks. Deduplicate local message lists strictly using non-empty `clientMsgID` values. To page forward toward newer messages from a search result or quote anchor, see [Load newer message history](/sdk/flutter/message/retrieving-messages/load-newer-messages) and [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id).

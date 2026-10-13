@@ -1,17 +1,59 @@
 ---
-title: 'Create an image message from a URL'
-description: 'OpenIM HarmonyOS SDK guide for Create an image message from a URL.'
+title: 'Create image message from URL'
+description: 'Create an image message from pre-uploaded image resource metadata.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/creating-messages/create-image-message-by-url'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Original, high-resolution, and thumbnail variants can reference different URLs. Reuse identical metadata only when all three images actually share the same asset.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  CreateImageMessageByURLReq,
+  CreateImageMessageResp,
+  PictureBaseInfo,
+} from '@openimsdk/imsdk';
+
+const picture: PictureBaseInfo = {
+  uuid: uploaded.uuid,
+  type: 'image/jpeg',
+  size: uploaded.size,
+  width: 1280,
+  height: 720,
+  url: uploaded.url,
+};
+const request: CreateImageMessageByURLReq = {
+  sourcePicture: picture,
+  bigPicture: picture,
+  snapshotPicture: picture,
+};
+const response: CreateImageMessageResp = await sdk.createImageMessageByURL(request);
+const message = response.message;
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sourcePicture` | `PictureBaseInfo` | Yes | Original image metadata including URL, dimensions, and size. |
+| `bigPicture` | `PictureBaseInfo` | Yes | High-resolution or compressed image variant metadata. |
+| `snapshotPicture` | `PictureBaseInfo` | Yes | Thumbnail image metadata. |
+
+## Return value
+
+Returns a Promise resolving to `CreateImageMessageResp`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `message` | `IMMessage` | Locally instantiated image message object referencing remote URLs. |
+
+## State changes after the call
+
+URL, MIME type, size, and dimensions must originate from verified upload responses. `sourcePath`, `bigPath`, and `snapshotPath` inside `PictureBaseInfo` are optional and only needed if retaining local paths. Call [Send message](/sdk/harmony/message/sending-messages/send-message) after creation; the SDK automatically recognizes pre-existing remote asset URLs.

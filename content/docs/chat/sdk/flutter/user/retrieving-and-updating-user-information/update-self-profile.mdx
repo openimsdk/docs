@@ -1,28 +1,57 @@
 ---
-title: 'Update the current user’s profile'
-description: 'Update the current user’s nickname, avatar, and extension data with the OpenIM Flutter SDK.'
+title: 'Update self profile'
+description: 'Update the nickname, avatar, and custom extensions of the currently logged-in user using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/retrieving-and-updating-user-information/update-self-profile'
 ---
 
-Pass only the `nickname`, `faceURL`, or `ex` values that actually changed:
+Modify the nickname, avatar URL, or custom business extensions of the currently logged-in user:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `nickname` | `String?` | No | New user display nickname. Providing a trimmed non-empty string is recommended. |
+| `faceURL` | `String?` | No | Full remote URL of the user's new avatar image. |
+| `ex` | `String?` | No | Custom business extension string. Passing a new value overwrites existing extension text without automatically merging JSON properties. |
+
+Supply only the fields that are being modified; omitted fields retain their existing values on the server.
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.userManager.setSelfInfo(
-  nickname: nickname?.trim(),
-  faceURL: faceURL,
-  ex: mergedExtra,
+  nickname: 'New Nickname',
+  faceURL: 'https://example.com/avatar.png',
+  ex: '{"customTheme":"dark"}',
 );
 ```
 
-`ex` is a complete string value. Read and parse the current value, then merge your application's namespace before writing it. Future completion, a reconciliation query, and `onSelfInfoUpdated` are three separate stages.
+## Return value
 
-Although `globalRecvMsgOpt` is also written through `setSelfInfo()`, it is an account-level message policy. See [Set the global message receive option](/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception) for its enum values and usage boundaries.
+A successful `Future` returns `void`, indicating that the profile update request was accepted and applied by the server.
 
-This page is the sole owner of `onSelfInfoUpdated`. Combine the callback into the application's single `OnUserListener`; see [Events overview](/sdk/flutter/events/overview-events) for listener setup.
+## State changes after the call
+
+This method alters user profile state. Future completion represents request processing; it is distinct from event delivery across other client devices.
+
+While `globalRecvMsgOpt` belongs to the same user profile data structure, it controls account-wide notification policies and should be managed via its dedicated method; see [Set global message reception](/sdk/flutter/user/retrieving-and-updating-user-information/set-global-message-reception).
+
+## Listen for self profile updates
+
+Handle profile modifications centrally. When the server completes the update, all active client sessions for this account receive `onSelfInfoUpdated` event notifications. Use `userID` as the key to update cached user profile state:
+
+```dart
+void handleSelfInfoUpdated(UserInfo info) {
+  mergeSelfInfo(info);
+}
+```
+
+The Flutter SDK maintains a single `OnUserListener` instance inside `UserManager`. Configure this callback inside the consolidated application entry point described in [Events overview](/sdk/flutter/events/overview-events).
+
+To fetch the full profile snapshot from scratch, see [Get self profile](/sdk/flutter/user/retrieving-and-updating-user-information/get-self-profile).

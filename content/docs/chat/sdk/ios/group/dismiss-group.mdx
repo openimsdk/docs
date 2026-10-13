@@ -5,18 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/dismiss-group'
 ---
 
+Invoke `dismissGroup:onSuccess:onFailure:` to permanently dissolve a specified group (only the group owner has permission to perform this action):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID to dismiss. Only the group owner has permission. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] dismissGroup:groupID
-    onSuccess:^(NSString * _Nullable data) { [self showDismissed]; }
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"dismissGroup success");
+    }
     onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
+        NSLog(@"dismissGroup failed: %ld %@", (long)code, message);
     }];
 ```
 
-Only the group owner can dismiss a group. A successful callback means that the request has completed. Use `onGroupDismissed:` to synchronize other views and clients. Dismissing a group is different from deleting or hiding a conversation.
+## Return value
+
+The `onSuccess` callback returns confirmation when the server completes group dissolution.
+
+## State changes after the call
+
+1. **Entity dissolution**: Dissolving a group permanently destroys the group entity on the server, which is fundamentally distinct from locally hiding or deleting a conversation entry.
+2. **Event notification**: All members of the group across devices receive the `onGroupDismissed:` listener callback, removing the group row and disabling message composition.
+3. **Re-query calibration**: For group listener lifecycle details, refer to [Groups overview](/sdk/ios/group/overview-group).

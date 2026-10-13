@@ -5,20 +5,50 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members'
 ---
 
-Key the group-member cache by `groupID:userID`. This section provides APIs for pagination, specified members, membership checks, administrative roles, and search.
+The group member module maintains user associations within a group, including member roles (owner, administrator, regular member), group-specific nicknames, and individual muting configurations. In client state management, the composite identifier `groupID:userID` serves as the primary key for member deduplication and cache updates.
+
+## Member query operations
+
+The iOS SDK provides several query interfaces across different dimensions:
+
+- [Retrieve group members by page](/sdk/ios/group/retrieving-group-members/get-group-member-list): Filter members by role and load the roster with pagination.
+- [Retrieve the group owner and administrators](/sdk/ios/group/retrieving-group-members/get-group-member-owner-and-admin): Rapidly fetch group management accounts without traversing the entire member roster.
+- [Retrieve specified group-member profiles](/sdk/ios/group/retrieving-group-members/get-specified-group-members-info): Query member cards and profile snapshots for known user IDs in a batch.
+- [Search group members](/sdk/ios/group/retrieving-group-members/search-group-members): Search group members by user ID or group nickname keywords.
+- [Check users’ group membership](/sdk/ios/group/retrieving-group-members/get-users-in-group): Verify whether candidate users belong to the group without fetching complete profiles.
+
+## Member event listeners
+
+When members join, leave, are removed, or change their profiles, the SDK dispatches delegate callbacks defined in `OIMGroupListener`:
 
 ```objc
-- (void)startMemberEvents { [[OIMManager callbacker] addGroupListener:self]; }
-- (void)stopMemberEvents { [[OIMManager callbacker] removeGroupListener:self]; }
-- (void)onGroupMemberAdded:(OIMGroupMemberInfo *)item { [self upsertMember:item]; }
-- (void)onGroupMemberDeleted:(OIMGroupMemberInfo *)item { [self removeMember:item]; }
-- (void)onGroupMemberInfoChanged:(OIMGroupMemberInfo *)item { [self upsertMember:item]; }
+- (void)startMemberEvents {
+    [[OIMManager callbacker] addGroupListener:self];
+}
+
+- (void)stopMemberEvents {
+    [[OIMManager callbacker] removeGroupListener:self];
+}
+
+- (void)onGroupMemberAdded:(OIMGroupMemberInfo *)item {
+    // New member joined; merge into the local list keyed by groupID:userID
+    [self upsertMember:item];
+}
+
+- (void)onGroupMemberDeleted:(OIMGroupMemberInfo *)item {
+    // Member left or was removed; delete from local cache keyed by groupID:userID
+    [self removeMember:item];
+}
+
+- (void)onGroupMemberInfoChanged:(OIMGroupMemberInfo *)item {
+    // Member role, group nickname, or mute status changed; update locally
+    [self upsertMember:item];
+}
 ```
 
-If members are added or removed while pagination is in progress, rebuild the snapshot from the first page.
+Retain a stable listener object reference and pass the same instance when registering or removing listeners. If member change events arrive during paginated loading, reset `offset` to 0 and re-query the list to prevent index drift and display inconsistencies.

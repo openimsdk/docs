@@ -5,11 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/set-group-member-friend-permission'
 ---
+
+Invoke `setGroupInfoDictionary:onSuccess:onFailure:` to configure whether group members can initiate friend requests to other members directly from the group:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing the target `groupID` and friend addition permissions. |
+
+### Friend permission options
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMAllowTypeAllowed` | `0` | Members can send friend requests to fellow group members. |
+| `OIMAllowTypeNotAllowed` | `1` | Members are prohibited from initiating friend requests within this group. |
+
+## Code example
 
 ```objc
 NSDictionary *changes = @{
@@ -18,10 +34,20 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"setGroupInfoDictionary success");
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        NSLog(@"setGroupInfoDictionary failed: %ld %@", (long)code, message);
+    }];
 ```
 
-`OIMAllowTypeAllowed` has the value `0` and allows friend requests. `OIMAllowTypeNotAllowed` has the value `1` and denies them. This field does not control whether member profiles are visible.
+## Return value
 
-After the success callback, reconcile the final state through `onGroupInfoChanged:` or a new query.
+The `onSuccess` callback returns confirmation when the server accepts the friend permission configuration.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the local cached group's `applyMemberFriend` property matching `groupID`.
+2. **Event notification**: Group members receive an updated `OIMGroupInfo` object through the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: This setting only restricts friend application initiation. To prevent members from viewing other profiles entirely, refer to [Set access to member profiles](/sdk/ios/group/set-group-member-profile-access). For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

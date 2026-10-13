@@ -5,21 +5,42 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/delete-friend-requests'
 ---
 
-Each `DeleteFriendRequest` must contain both the applicant's and recipient's user IDs.
+Batch-delete historical friend application records using `deleteFriendRequests:onSuccess:onFailure:`. Deleting application history cleans up request logs without mutating or terminating established friend relationships.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `friendRequests` | `NSArray<DeleteFriendRequest *> *` | Yes | List of `DeleteFriendRequest` objects to delete. Each item must supply both `fromUserID` and `toUserID`. |
+
+## Code example
 
 ```objc
 DeleteFriendRequest *request =
     [[DeleteFriendRequest alloc] initWithFromUserID:application.fromUserID
                                           toUserID:application.toUserID];
+
 [[OIMManager manager] deleteFriendRequests:@[request]
-                                 onSuccess:nil
-                                 onFailure:nil];
+                                 onSuccess:^(NSString *data) {
+    [applicationStore removeApplicationForFromUserID:application.fromUserID
+                                            toUserID:application.toUserID];
+}
+                                 onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"deleteFriendRequests failed: %ld %@", (long)code, message);
+}];
 ```
 
-A successful callback means that the delete request has completed. It does not create or remove a friend relationship. Other clients may still merge the incremental update through the friend-request deletion delegate. Reset pagination and query again when reconciliation is needed.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer deleted the specified application records.
+
+## State changes after the call
+
+- **Local state merge**: Remove matching application records from local UI collections using `fromUserID:toUserID` as the composite key.
+- **Asynchronous event listening**: Multi-terminal devices synchronize the deletion via `onFriendApplicationDeleted:` in `OIMFriendshipListener` (see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)).
+- **Relationship boundary**: This operation only clears pending or archived application logs; it does not alter actual friendship relationships.

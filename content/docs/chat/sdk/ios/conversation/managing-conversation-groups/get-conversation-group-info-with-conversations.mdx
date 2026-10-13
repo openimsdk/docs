@@ -5,36 +5,56 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations'
 ---
 
-Use `Open_im_sdkGetConversationGroupInfoWithConversations` to retrieve a conversation group together with the current page of its conversation details.
+Invoke `Open_im_sdkGetConversationGroupInfoWithConversations` to retrieve detailed information for a specified conversation group and its contained conversations with pagination:
 
 ## Parameters
 
-| Field | Required | Description |
-| --- | --- | --- |
-| `conversationGroupID` | Yes | The conversation-group ID. |
-| `pagination.pageNumber` | Yes | The page number, starting at `1`. |
-| `pagination.showNumber` | Yes | The number of items per page. |
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationGroupID` | `NSString *` | Yes | Target conversation group ID. |
+| `pagination.pageNumber` | `NSInteger` | Yes | Page index, starting from `1`. |
+| `pagination.showNumber` | `NSInteger` | Yes | Page size (number of conversations per page). |
+
+## Code example
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSDictionary *request = @{
-    @"conversationGroupID": conversationGroupID,
+    @"conversationGroupID": @"group_work_101",
     @"pagination": @{ @"pageNumber": @1, @"showNumber": @20 },
 };
+
 NSData *requestData = [NSJSONSerialization dataWithJSONObject:request options:0 error:nil];
 NSString *requestJSON = [[NSString alloc] initWithData:requestData
                                               encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        if (data == nil) {
+            return;
+        }
+        [self handleGroupConversationsPageJSON:data];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"GetConversationGroupInfoWithConversations failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkGetConversationGroupInfoWithConversations(callback, requestJSON);
 ```
 
-Pass your callback and `requestJSON` to `Open_im_sdkGetConversationGroupInfoWithConversations`.
+## Return value
 
-## Result
+The `onSuccess` callback delivers a JSON string in `data` containing `group` (group metadata), `conversationElems` (conversation objects for the requested page), and `isEnd` (boolean indicating whether the end of the list has been reached).
 
-The response JSON provides `group`, the current page's `conversationElems`, and `isEnd`; it does not contain `conversationTotal`. Determine when pagination has finished from `isEnd`.
+## State changes after the call
 
-This query does not trigger the conversation-group listener. If changes occur during pagination, query again afterward to reconcile the snapshot.
+1. **Snapshot query**: This method queries a point-in-time snapshot and does not trigger listener callbacks.
+2. **Pagination state**: Use `isEnd` to determine whether more pages should be loaded.
+3. **Event notification**: Changes to group membership broadcast through `onConversationGroupMemberAdded:` and `onConversationGroupMemberDeleted:`. For listener handling, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

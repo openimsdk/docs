@@ -1,73 +1,75 @@
-## Components
+## Monitoring architecture
 
-| Component | Purpose | Deployment |
+| Component | Purpose | Deployment method |
 | --- | --- | --- |
-| Prometheus | Collects and stores metrics | Enable manually |
-| Alertmanager | Manages and sends alerts | Enable manually |
-| Grafana | Displays monitoring dashboards | Enable manually |
-| node-exporter | Collects node and server metrics | Enable manually |
+| Prometheus | Collects and stores OpenIMServer time-series metrics | Enabled manually via profile |
+| Alertmanager | Deduplicates, groups, and routes operational alerts | Enabled manually via profile |
+| Grafana | Visualizes metrics through customizable dashboards | Enabled manually via profile |
+| node-exporter | Collects host-level system metrics (CPU, RAM, disk, network) | Enabled manually via profile |
 
-## Start monitoring
+## Start the monitoring stack
 
-### Start the components
+### Start containers with Docker Compose
 
-OpenIMServer uses Prometheus, Alertmanager, Grafana, and node-exporter for monitoring and alerting. A regular `docker compose up -d` does **not** start them. Enable the monitoring profile with:
+OpenIMServer uses Prometheus, Alertmanager, Grafana, and node-exporter for infrastructure and application observability. Standard `docker compose up -d` invocations **do not** start these services by default. Explicitly enable the `m` (monitoring) profile:
 
-```sh
+```bash
 docker compose --profile m up -d
 ```
 
-> This procedure does not apply to Windows. To enable monitoring on Windows, update the network mode and port mappings for the monitoring services in `docker-compose.yml`, then replace `127.0.0.1` in `prometheus.yml` with the private-network IP.
+> **Windows deployments:** This Compose profile relies on host networking suitable for Linux. When running under Windows Docker Desktop, adjust the network mode and port forwarding in `docker-compose.yml`, and replace `127.0.0.1` scrape targets in `prometheus.yml` with your host machine's LAN IP address.
 
-### Import OpenIMServer metrics into Grafana
+### Import OpenIMServer dashboards into Grafana
 
 #### Sign in to Grafana
 
-Sign in to the admin console, select data monitoring in the left navigation, then sign in to Grafana with the default username `admin` and password `admin`.
+1. Log in to the OpenIM Admin Console, then select **Data Monitoring** in the left sidebar.
+2. Sign in to Grafana using the default credentials (`admin` / `admin`).
+3. Alternatively, navigate directly to `http://your_ip:13000` in your browser (replace `your_ip` with your server host IP).
 
-You can also open `your_ip:13000` directly, replacing `your_ip` with the deployment server IP.
+![Grafana login page](/assets/guides/gettingStarted/assets/login1.png)
 
-![Grafana login](/assets/guides/gettingStarted/assets/login1.png)
+#### Add Prometheus as a data source
 
-#### Add a Prometheus data source
+1. In the Grafana left navigation menu, open **Connections > Add new connection**.
+2. Search for **Prometheus** and select it.
+3. In the Prometheus server URL field, enter `http://your_ip:19090` (where `19090` is the Prometheus default port).
+4. Click **Save & test** to confirm connectivity.
 
-In the left navigation, open `Connections/Add new connection`, search for `prometheus`, and add the data source. Enter `http://your_ip:19090` as the Prometheus URL (`19090` is the default port), then select **Save and Test**.
+![Add Prometheus data source](/assets/guides/gettingStarted/assets/database.png)
 
-![Add a Prometheus data source](/assets/guides/gettingStarted/assets/database.png)
+![Configure Prometheus data source](/assets/guides/gettingStarted/assets/database2.png)
 
-![Configure the Prometheus data source](/assets/guides/gettingStarted/assets/database2.png)
+#### Import the OpenIMServer dashboard
 
-#### Import the dashboard
+1. Navigate to **Dashboards**, click **New**, and select **Import**.
 
-Open `Dashboards`, select **Create Dashboard**, and then select **Import dashboard**.
+![Create Grafana dashboard](/assets/guides/gettingStarted/assets/dashboard.png)
 
-![Create a Grafana dashboard](/assets/guides/gettingStarted/assets/dashboard.png)
+2. Import the OpenIMServer dashboard using either method:
+   - Copy the raw JSON from [Demo.json](https://github.com/openimsdk/open-im-server/tree/main/config/grafana-template/Demo.json) and paste it into **Import via dashboard JSON model**.
+   - Click **Upload dashboard JSON file** and select `open-im-server/config/grafana-template/Demo.json`.
+3. Click **Load**.
 
-Import the default OpenIMServer dashboard in either of these ways:
+![Load OpenIMServer dashboard](/assets/guides/gettingStarted/assets/dashboard2.png)
 
-1. Copy the contents of [Demo.json](https://github.com/openimsdk/open-im-server/tree/main/config/grafana-template/Demo.json) into `Import via dashboard JSON model`.
-2. Select `Upload dashboard JSON file` and upload `open-im-server/config/grafana-template/Demo.json`.
-
-Select **Load**.
-
-![Load the OpenIMServer dashboard](/assets/guides/gettingStarted/assets/dashboard2.png)
-
-Select the data source you just added, then select **Import**.
+4. Select the Prometheus data source created in the previous step, then click **Import**.
 
 ![OpenIMServer metrics dashboard](/assets/guides/gettingStarted/assets/dashboard3.png)
 
-The main OpenIMServer monitoring metrics are now configured.
+OpenIMServer core performance metrics and service statuses are now visualized.
 
-### Import node-exporter metrics into Grafana
+### Import node-exporter host metrics
 
-Open `Dashboard`, then select **Import** from the **New** menu.
+1. Open **Dashboards**, click **New**, and select **Import**.
 
-![Import a dashboard](/assets/guides/gettingStarted/assets/dashboard4.png)
+![Import node-exporter dashboard](/assets/guides/gettingStarted/assets/dashboard4.png)
 
-Enter `1860` in `Grafana.com dashboard URL or ID`, select **Load**, and then select **Import**.
+2. Enter dashboard ID `1860` into **Grafana.com dashboard URL or ID**, then click **Load**.
+3. Select your Prometheus data source and click **Import**.
 
 ![Load dashboard 1860](/assets/guides/gettingStarted/assets/dashboard5.png)
 
-The node-exporter metrics appear in the imported dashboard.
+Once imported, host-level metrics including CPU utilization, memory pressure, disk I/O, and network throughput are displayed:
 
 ![node-exporter metrics](/assets/guides/gettingStarted/assets/dashboard6.png)

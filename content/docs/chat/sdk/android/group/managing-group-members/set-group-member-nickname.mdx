@@ -1,28 +1,56 @@
 ---
-title: 'Update a group nickname'
-description: 'Use SetGroupMemberInfo.nickname to update a member’s display name in a group.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/managing-group-members/set-group-member-nickname'
+title: "Update a group nickname"
+description: "Use SetGroupMemberInfo.nickname to update a member’s display name in a group."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/managing-group-members/set-group-member-nickname"
 ---
 
-All group member profile changes use `setGroupMemberInfo()`. Set the `groupID`, `userID`, and `nickname` in the request.
+Update a member's display nickname (in-group business card) within a specified group. This display name applies only within the group and does not modify the user's global profile nickname.
+
+## Code example
 
 ```java
 SetGroupMemberInfo update = new SetGroupMemberInfo();
-update.setGroupID(groupID);
-update.setUserID(userID);
-update.setNickname("Lin");
+update.setGroupID("group_123");
+update.setUserID("user_a");
+update.setNickname("Alex");
 
-OpenIMClient.getInstance().groupManager.setGroupMemberInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupMemberInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group member nickname updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to update group member nickname
+        }
+    }
+);
 ```
 
-After the update succeeds, receive the member profile change notification through `onGroupMemberInfoChanged` as described in [Group overview](/sdk/android/group/overview-group).
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupMemberInfo` | `SetGroupMemberInfo` | Yes | Member update object. Must specify `groupID`, member `userID`, and the new in-group `nickname`. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the nickname change was committed on the server.
+2. **Asynchronous event delivery**: Members in the group receive the `onGroupMemberInfoChanged` event delivering the updated `GroupMembersInfo`. The client should merge the updated nickname into the cached member record using `groupID:userID` as the unique key.
+3. **Re-query calibration**: If member caches fall out of sync, call [Get group member profiles](/sdk/android/group/retrieving-group-members/get-specified-group-members-info) to reload the latest member attributes.
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

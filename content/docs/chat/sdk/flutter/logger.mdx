@@ -1,21 +1,32 @@
 ---
-title: 'Logging'
-description: 'Configure OpenIM Flutter SDK logs, write application diagnostics, and upload logs.'
+title: 'Logger'
+description: 'Configure OpenIM Flutter SDK logging, write diagnostic entries, and upload logs to the server.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/logger'
 ---
 
-OpenIM Flutter SDK logs help diagnose initialization, connection, and business API issues. Initialization parameters control the log level, standard output, and log file path.
+The OpenIM Flutter SDK logging system assists in diagnosing SDK initialization issues, WebSocket connection errors, and business API failures. Configure the log level, standard output, and custom log file path during SDK initialization. You can also write application diagnostic entries into the SDK log buffer and upload local logs to the server on demand.
 
-## Configure logging during initialization
+## Initialize logging configuration
 
-The Flutter SDK configures logging in `initSDK()`, not in `login()`.
+Configure the logging strategy during SDK initialization rather than at sign-in time.
+
+### Parameters
+
+Specify the following logging parameters when calling `initSDK`:
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `logLevel` | `int` | No | Numeric SDK logging level. Lower numbers generate more detailed logs. Defaults to `6`. |
+| `isLogStandardOutput` | `bool` | No | Whether to print logs synchronously to the system console or debug terminal. |
+| `logFilePath` | `String?` | No | Custom local file path for storing logs. Must reside in a writable application sandbox directory on the target platform. |
+
+### Code example
 
 ```dart
 import 'dart:io';
@@ -36,17 +47,24 @@ await OpenIM.iMManager.initSDK(
 );
 ```
 
-This example targets Flutter on Android and iOS. Use `IMPlatform.android` on Android and `IMPlatform.ios` on iOS; do not hard-code the Android value into an iOS build.
+Pass `IMPlatform.android` when running on Android and `IMPlatform.ios` on iOS.
 
-| Parameter             | Description                                                                                 |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `logLevel`            | Numeric SDK log level. The default is `6`.                                      |
-| `isLogStandardOutput` | Whether to write to platform-standard logs.                                    |
-| `logFilePath`         | Optional log-file path in a directory writable by the application.             |
+## Write custom diagnostic logs
 
-More detailed levels produce more log output. Log directories are subject to platform file permissions and lifecycle rules.
+Record critical business exceptions or debug traces directly into the SDK's local log system so that application events correlate with underlying SDK diagnostics:
 
-## Write and upload logs
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `logLevel` | `int` | No | Numeric log level for this entry. |
+| `file` | `String` | Yes | File name or module identifier where the log is generated. |
+| `line` | `int` | Yes | Source line number triggering the log. |
+| `msgs` | `String` | Yes | Main descriptive log message. |
+| `err` | `String?` | No | Caught error string or stack trace. |
+| `keyAndValues` | `List<dynamic>?` | No | Structured key-value pairs arranged alternately (for example, `['key1', 'val1']`). |
+
+### Code example
 
 ```dart
 await OpenIM.iMManager.logs(
@@ -59,7 +77,21 @@ await OpenIM.iMManager.logs(
 );
 ```
 
-Listen for upload progress and call `uploadLogs()`:
+### Return value
+
+A successful `Future` returns `void`, indicating that the log entry has been written to the local log buffer.
+
+## Listen and upload logs
+
+When a user initiates feedback or when remote troubleshooting is required, upload the local log files to the server:
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ex` | `String?` | No | Reason for uploading or supplementary business diagnostic remarks. |
+
+### Code example
 
 ```dart
 OpenIM.iMManager.setUploadLogsListener(
@@ -73,6 +105,8 @@ OpenIM.iMManager.setUploadLogsListener(
 await OpenIM.iMManager.uploadLogs(ex: 'user initiated diagnostics');
 ```
 
-`setUploadLogsListener()` stores a manager-level singleton listener, so a later call replaces the earlier one. The SDK does not expose a remove or unset API. Configure it once in the application's shared SDK binding layer and dispatch progress from there to the active UI. On account switch, clear application-level subscriptions and the previous account's upload state.
+### Return value
 
-A successful `uploadLogs()` Future means that the upload request completed.
+A successful `Future` returns `void`, indicating that the log upload operation was initiated and completed the transfer.
+
+The SDK maintains a single `OnUploadLogsListener` instance; setting a new listener overwrites the previous one. Register this listener once within a centralized diagnostics service and dispatch progress to UI components. Clear pending upload tasks when switching accounts.

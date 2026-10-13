@@ -1,49 +1,18 @@
 ---
-title: 'Start a one-to-one call'
-description: 'Start a one-to-one audio or video call with the Android SDK.'
+title: 'Start a single call'
+description: 'Initiate a direct audio or video call and acquire room credentials using signalingInvite().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/managing-calls/start-single-call'
 ---
 
-`signalingInvite()` starts a one-to-one call. The Android SDK handles call signaling; your application must connect a real-time audio/video engine with the returned room credentials.
+Initiate a direct audio or video call. The OpenIM Android SDK handles signaling negotiation and room state synchronization; once room credentials are returned, connect to your real-time audio/video media engine.
 
-## Parameters
-
-Call signature:
-
-```java
-signalingInvite(OnBase<SignalingCertificate> callback, SignalingInfo info)
-```
-
-The table covers the public fields of Android `SignalingInfo` and its nested objects. When starting a call, populate `invitation` and, optionally, `offlinePushInfo`. `participant` and the top-level `userID` are used when signaling data is received and normally do not need to be set by the caller.
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `invitation` | `SignalingInvitationInfo` | Yes | The call invitation. |
-| `invitation.inviterUserID` | `String` | Yes | The inviter; pass the current signed-in user ID. |
-| `invitation.inviteeUserIDList` | `List<String>` | Yes | The invitees; for a one-to-one call, include only the other user. |
-| `invitation.groupID` | `String` | Yes | Group ID. Pass an empty string for a one-to-one call. |
-| `invitation.roomID` | `String` | Yes | The call's unique room identifier and the primary key for subsequent state. |
-| `invitation.timeout` | `long` | Yes | Invitation timeout in seconds. |
-| `invitation.mediaType` | `String` | Yes | The application-defined media type, typically `audio` or `video`. |
-| `invitation.sessionType` | `int` | Yes | Use `ConversationType.SINGLE_CHAT` for one-to-one calls and `ConversationType.SUPER_GROUP_CHAT` for group calls. |
-| `invitation.platformID` | `int` | Yes | The current client platform; pass `Platform.ANDROID`. |
-| `invitation.customData` | `String` | No | Application extra data carried with the invitation. |
-| `invitation.initiateTime` | `long` | No | The invitation start time. It is normally maintained by the signaling flow and does not need to be set manually. |
-| `offlinePushInfo` | `OfflinePushInfo` | No | Push content used when the invitee is offline. |
-| `offlinePushInfo.title` | `String` | Conditionally required | Push title; required when `offlinePushInfo` is provided. |
-| `offlinePushInfo.desc` | `String` | Conditionally required | Push body; required when `offlinePushInfo` is provided. |
-| `offlinePushInfo.ex` | `String` | Conditionally required | Push extension string; pass an empty string when there is no content. |
-| `offlinePushInfo.iOSPushSound` | `String` | Conditionally required | iOS push sound; required when `offlinePushInfo` is provided. |
-| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditionally required | Whether to update the iOS badge; required when `offlinePushInfo` is provided. |
-| `participant` | `ParticipantMeta` | No | User, group, or group-member details for a participant; normally omitted when starting an invitation. |
-| `userID` | `String` | No | User associated with the current signaling action; normally omitted when starting an invitation. |
+## Code example
 
 ```java
 SignalingInvitationInfo invitation = new SignalingInvitationInfo();
@@ -65,7 +34,7 @@ OpenIMClient.getInstance().signalingManager.signalingInvite(
     new OnBase<SignalingCertificate>() {
         @Override
         public void onSuccess(SignalingCertificate credentials) {
-            // credentials provides the roomID, token, and liveURL for joining a media room.
+            // credentials provides roomID, token, and liveURL to join the media room.
         }
 
         @Override
@@ -77,6 +46,49 @@ OpenIMClient.getInstance().signalingManager.signalingInvite(
 );
 ```
 
-The success callback returns `SignalingCertificate`. `roomID` identifies the media room, `token` is a short-lived join credential, `liveURL` is the media service address, and `busyLineUserIDList` contains busy users.
+## Parameters
 
-Connect the media engine only after receiving a valid `token` and `roomID`. API success does not mean the invitee accepted; merge subsequent state through [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).
+Calling method:
+
+```java
+signalingInvite(OnBase<SignalingCertificate> callback, SignalingInfo info)
+```
+
+The parameters below represent public properties on Android's `SignalingInfo` and its nested objects. When initiating a call, populate `invitation` and optional `offlinePushInfo`; `participant` and top-level `userID` are typically populated in incoming event payloads rather than outgoing invitations.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `SignalingInvitationInfo` | Yes | Call invitation payload. |
+| `invitation.inviterUserID` | `String` | Yes | Inviter user ID; pass the authenticated user ID. |
+| `invitation.inviteeUserIDList` | `List<String>` | Yes | Callee user list; contains exactly one peer user ID in direct calls. |
+| `invitation.groupID` | `String` | Yes | Target group ID; pass an empty string `""` for direct calls. |
+| `invitation.roomID` | `String` | Yes | Unique room identifier used to track and merge call state. |
+| `invitation.timeout` | `long` | Yes | Invitation timeout interval in seconds. |
+| `invitation.mediaType` | `String` | Yes | Media stream type, conventionally `"audio"` or `"video"`. |
+| `invitation.sessionType` | `int` | Yes | Set `ConversationType.SINGLE_CHAT` for direct calls, or `ConversationType.SUPER_GROUP_CHAT` for group calls. |
+| `invitation.platformID` | `int` | Yes | Current client platform identifier; pass `Platform.ANDROID`. |
+| `invitation.customData` | `String` | No | Custom business metadata string attached to the invitation. |
+| `invitation.initiateTime` | `long` | No | Timestamp when the invitation was initiated. Managed automatically by the signaling layer. |
+| `offlinePushInfo` | `OfflinePushInfo` | No | Push notification payload delivered when invitees are offline. |
+| `offlinePushInfo.title` | `String` | Conditional | Notification title; required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.desc` | `String` | Conditional | Notification body text; required when `offlinePushInfo` is provided. |
+| `offlinePushInfo.ex` | `String` | Conditional | Extension string attached to push payload; pass `""` if not needed. |
+| `offlinePushInfo.iOSPushSound` | `String` | Conditional | Sound resource for iOS push notifications; required when providing push info. |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditional | Whether to badge iOS app icons; required when providing push info. |
+| `participant` | `ParticipantMeta` | No | Participant profile metadata; omit when sending invitations. |
+| `userID` | `String` | No | User ID associated with the operation; omit when sending invitations. |
+
+## Return value
+
+Upon success, `credentials` in `onSuccess` returns a `SignalingCertificate` object containing:
+
+- `roomID`: Unique global identifier of the call room.
+- `token`: Authentication token used to join the media room.
+- `liveURL`: Media server endpoint URL.
+- `busyLineUserIDList`: List of busy user IDs if the target is already engaged in another call.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the signaling request succeeded and room credentials were acquired. It does not indicate that the remote peer has answered or joined media streams.
+2. **Asynchronous event delivery**: Both caller and callee track subsequent call events (such as answer, reject, cancel, or timeout) through `OnSignalingListener`. Track the overall call using `roomID` and monitor participant transitions using `roomID:userID`.
+3. **Media connection**: Connect to the real-time audio/video engine only after obtaining a valid `token` and `roomID`. For real-time updates regarding participant entries and stream states, see [Handle call events](/sdk/android/calling/managing-calls/handle-call-events).

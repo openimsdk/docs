@@ -5,13 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/sending-messages/send-message-not-oss'
 ---
 
-Use `sendMessageNotOss:...` when your application has already uploaded the resource and created a URL-based media message. This avoids entering the SDK's object-storage upload flow again.
+Invoke `sendMessageNotOss:recvID:groupID:isOnlineOnly:offlinePushInfo:onProgress:onSuccess:onFailure:` on `OIMManager` when your application has already uploaded images, audio, video, or files to external storage and built a message using a URL factory method. This dispatches the message directly without triggering SDK-managed upload flows:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `urlMessage` | `OIMMessageInfo *` | Yes | Prepared message object already containing remote resource URLs. |
+| `recvID` | `NSString *` | Conditional | Receiver user ID for one-to-one chats. Required for single chat; pass `nil` for group messages. |
+| `groupID` | `NSString *` | Conditional | Target group ID for group chats. Required for group chat; pass `nil` for single messages. `recvID` and `groupID` are mutually exclusive. |
+| `isOnlineOnly` | `BOOL` | Yes | Whether the message is delivered to online users only. Set to `YES` to bypass offline storage and push notifications; normally set to `NO`. |
+| `offlinePushInfo` | `OIMOfflinePushInfo *` | No | Custom offline push configuration including title, description, and pass-through payload. Pass `nil` for defaults. |
+| `onProgress` | `OIMNumberCallback` | No | Progress callback. Typically pass `nil` because resources are already uploaded. |
+| `onSuccess` | `void (^)(OIMMessageInfo *sent)` | Yes | Success callback returning the confirmed message model. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] sendMessageNotOss:urlMessage
@@ -19,11 +33,24 @@ Use `sendMessageNotOss:...` when your application has already uploaded the resou
                                 groupID:nil
                            isOnlineOnly:NO
                         offlinePushInfo:nil
-                              onSuccess:^(OIMMessageInfo *sent) {
-    if (sent != nil) [messageStore upsert:sent];
-}
                              onProgress:nil
-                              onFailure:nil];
+                              onSuccess:^(OIMMessageInfo *sent) {
+    // Delivery succeeded; merge confirmed message by clientMsgID
+    if (sent != nil) {
+        [messageStore upsert:sent];
+    }
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle message delivery failure
+}];
 ```
 
-One-to-one and group targets are mutually exclusive. Resource URLs, sizes, media types, dimensions, and durations must come from actual upload results. Handle the success callback and the remote receiving delegate as separate stages.
+## Return value
+
+The `onSuccess` callback receives the confirmed `OIMMessageInfo` model returned by the server. The client merge key is `clientMsgID` (scoped to `conversationID` when organizing multi-conversation caches).
+
+## State changes after the call
+
+1. **Bypassing storage uploads**: The SDK performs local record insertion and direct network dispatch without uploading media assets.
+2. **Metadata verification**: Ensure that the asset URLs, file sizes, MIME types, dimensions, and playback durations inside `urlMessage` represent valid remote resources.
+3. **Incoming message handling**: For incoming message event listeners and UI update flows, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

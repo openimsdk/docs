@@ -11,6 +11,17 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/composing-messages/update-typing-status'
 ---
 
+Report typing indicators when a user focuses on the input field or starts typing, and clear the state when losing focus or stopping input:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Target conversation ID. |
+| `focus` | `bool` | Yes | Typing state: `true` indicates active typing; `false` indicates stopped typing or lost focus. |
+
+## Code example
+
 ```dart
 await OpenIM.iMManager.conversationManager.changeInputStates(
   conversationID: conversationID,
@@ -18,6 +29,12 @@ await OpenIM.iMManager.conversationManager.changeInputStates(
 );
 ```
 
-Pass `true` when typing begins. Pass `false` after sending, losing focus, switching conversations, or stopping input. Typing status does not save a draft or add an item to the message list. Throttle and deduplicate the start signal. Future completion does not mean that a remote UI has already updated. Do not use the deprecated `typingStatusUpdate()`, which throws `UnimplementedError`.
+We recommend throttling and debouncing keystrokes on the client to avoid sending excessive network requests. Pass `false` promptly when sending a message, switching conversations, or blurring the input field.
 
-`onInputStatusChanged` is the event owned by this page. Add it to the single `OnConversationListener` and replace each `platformIDs` snapshot by `conversationID:userID`. See [Event overview](/sdk/flutter/events/overview-events) for the listener configuration entry point.
+## Return value
+
+`Future` completion indicates that the server accepted the typing status report, but does not guarantee the peer client received or rendered it. Typing status is transient signaling: it does not persist to database storage and does not create draft records.
+
+## State changes after the call
+
+Typing notifications arrive via the `onInputStatusChanged` callback in `OnConversationListener`. When the counterparty's typing state updates, merge and replace the user's active platform array `platformIDs` keyed by `conversationID:userID`. For global listener registration and lifecycle management, see [Events overview](/sdk/flutter/events/overview-events).

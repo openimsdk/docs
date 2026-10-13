@@ -5,13 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/search-friends'
 ---
 
-`searchFriends:onSuccess:onFailure:` accepts an `OIMSearchFriendsParam`. Clear the search results immediately when the keyword is empty.
+Search local friend records matching specified keywords using `searchFriends:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `param` | `OIMSearchFriendsParam *` | Yes | Search parameter object specifying keywords and matching scopes. If keywords are empty, clear search UI results immediately. |
+
+### Search parameter attributes (`OIMSearchFriendsParam`)
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `keywordList` | `NSArray<NSString *> *` | Yes | List of search keyword strings. |
+| `isSearchUserID` | `BOOL` | No | Whether to match keywords against user IDs. |
+| `isSearchNickname` | `BOOL` | No | Whether to match keywords against friend nicknames. |
+| `isSearchRemark` | `BOOL` | No | Whether to match keywords against friend remarks. |
+
+## Code example
 
 ```objc
 OIMSearchFriendsParam *param = [OIMSearchFriendsParam new];
@@ -24,7 +40,16 @@ param.isSearchRemark = YES;
                            onSuccess:^(NSArray<OIMSearchFriendsInfo *> *items) {
                                [searchStore replaceResults:items];
                            }
-                           onFailure:nil];
+                           onFailure:^(NSInteger code, NSString *message) {
+                               NSLog(@"searchFriends failed: %ld %@", (long)code, message);
+                           }];
 ```
 
-The success callback returns a search snapshot. Do not use it to overwrite the complete friend list. The query does not trigger a friendship delegate.
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMSearchFriendsInfo` matching the search criteria.
+
+## State changes after the call
+
+- **Local state merge**: Search results form an isolated, ephemeral result set; do not overwrite the primary contact directory cache.
+- **Snapshot query**: Friend searches capture a local database snapshot and do not emit friendship delegate events.

@@ -1,17 +1,81 @@
 ---
 title: 'Get user profiles'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get user profiles.'
+description: 'Batch query public account-level profiles for application users by userID.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/profile/get-users-info'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `getUsersInfo()` to batch retrieve public account-level profiles for specified `userID` values. This method is ideal for rendering stranger profile cards, contact search results, or message sender information.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+If your application supports searching users by nickname, phone number, organization, or email address, execute that search on your business backend first, then pass the resolved candidate `userID` array to the SDK. The SDK queries public profiles strictly by user ID.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `string[]` | Yes | An array of OpenIM user IDs to retrieve. |
+
+Deduplicate and filter out empty strings before calling this method, and paginate or chunk requests based on your UI requirements.
+
+## Code example
+
+```uts
+import { getUsersInfo } from '@/uni_modules/unix-openim-sdk'
+
+const userIDs = ['user_a', 'user_b']
+const result = await getUsersInfo(userIDs)
+const users = result?.users ?? []
+
+users.forEach((user) => {
+  usersByID.set(user.userID, user)
+})
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMUserListResult | null` object. When non-null, the `users` array contains `OpenIMUserInfo[]` objects (`OpenIMPublicUserItem` is a type alias for this structure).
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | OpenIM user ID. |
+| `nickname` | `string` | Public account-level display nickname. |
+| `faceURL` | `string` | Public avatar image URL. |
+| `ex` | `string` | Custom extension string formatted according to your application rules. |
+| `createTime` | `number \| null` | Account creation timestamp in Unix milliseconds. |
+| `attachedInfo` | `string \| null` | Additional SDK internal metadata. |
+| `globalRecvMsgOpt` | `OpenIMMessageReceiveOption \| null` | Account-level message reception option for this user. This is private to the user and should not be displayed on stranger profile cards. |
+| `addFriendPermission` <span className="enterprise-field-badge">Commercial</span> | `OpenIMAddFriendPermission \| null` | Account-level friend request policy. Consume only when relevant to business logic; do not display on general cards. |
+
+The returned array might not contain entries for all requested IDs if some users do not exist. Map results using the returned `userID` property rather than relying on array indices.
+
+## Refresh user profiles
+
+Re-invoke this API when opening profile dialogs, performing manual pull-to-refresh actions, reconnecting to the network, or receiving push notifications that user records have changed. The UTS plugin does not broadcast a universal profile change event for arbitrary public users. Updates to the authenticated user's profile are handled via [Update your profile](/sdk/uniapp/user/profile/set-self-info).
+
+In friend rosters, prefer `OpenIMFriendUserItem` returned by friend APIs, which includes friend remarks and relationship data. In group rosters, use `OpenIMGroupMemberItem`, which reflects group-specific nicknames and member roles. Do not overwrite friend remarks or group nicknames with public account nicknames.
+
+## Search and retrieve contacts
+
+A typical workflow searches via your backend before loading profiles through the SDK:
+
+```uts
+async function loadFriendCandidates(keyword: string) {
+  const userIDs = await searchUserIDsFromBackend(keyword)
+  if (userIDs.length == 0) return []
+
+  const result = await getUsersInfo(userIDs)
+  return result?.users ?? []
+}
+```
+
+If your UI only supports exact user ID lookups, pass the user input directly as a `userID`. Perform fuzzy queries and attribute filtering on your server.
+
+## Next steps
+
+- [Get your profile](/sdk/uniapp/user/profile/get-self-user-info)
+- [Update your profile](/sdk/uniapp/user/profile/set-self-info)

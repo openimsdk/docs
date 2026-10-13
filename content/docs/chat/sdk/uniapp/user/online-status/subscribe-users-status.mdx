@@ -1,17 +1,93 @@
 ---
 title: 'Subscribe to online status'
-description: 'OpenIM uni-app / uni-app x SDK guide for Subscribe to online status.'
+description: 'Subscribe to presence updates for targeted users and monitor subsequent status transitions.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/online-status/subscribe-users-status'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Online presence indicates whether a user maintains an active connection to OpenIMServer; it does not indicate whether they are viewing the application, reading a conversation, or interacting with a specific message. Subscribe only to users currently visible on screen or strictly required by active views. An account can subscribe to a maximum of 3,000 users simultaneously.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `string[]` | Yes | An array of user IDs to subscribe to. |
+
+Filter out empty strings and duplicates before calling `subscribeUsersStatus()`. Never attempt to subscribe to an entire enterprise user directory at once.
+
+## Code example
+
+```uts
+import {
+  getSubscribeUsersStatus,
+  subscribeUsersStatus,
+} from '@/uni_modules/unix-openim-sdk'
+
+const visibleUserIDs = ['user_a', 'user_b']
+
+await subscribeUsersStatus(visibleUserIDs)
+
+const current = await getSubscribeUsersStatus()
+const states = current?.statuses ?? []
+states.forEach((state) => {
+  presenceByUserID.set(state.userID, state)
+})
+```
+
+## Return value
+
+The Promise resolves with a string operation confirmation rather than the immediate presence list. After subscribing, invoke [Get subscribed user status](/sdk/uniapp/user/online-status/get-subscribe-users-status) to establish baseline presence records, then update your cache as events arrive.
+
+## Presence data structure
+
+The `OpenIMUserStatusItem` object contains the following properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | The user ID associated with this status record; use this as the primary cache key. |
+| `status` | `OpenIMOnlineState` | Aggregated connectivity state. Check against `OpenIMOnlineStateOnline` or `OpenIMOnlineStateOffline`. |
+| `platformIDs` | `OpenIMPlatform[]` | List of platform identifiers where this user currently maintains active sessions. |
+
+The `status` field represents aggregated connectivity across all devices. When displaying per-platform indicators (such as mobile or desktop icons), inspect `platformIDs` and compare values against SDK constants like `OpenIMPlatformAndroid`, `OpenIMPlatformIOS`, or `OpenIMPlatformHarmony`.
+
+## Monitor presence changes
+
+Register `onUserStatusChanged` to observe real-time presence changes. The callback receives an `OpenIMUserStatusListResult | null` object containing one or more user status entries. Iterate through `statuses` and merge each record by `userID`:
+
+```uts
+import {
+  OpenIMUserStatusListResult,
+  off,
+  onUserStatusChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleUserStatusChanged = (
+  result: OpenIMUserStatusListResult | null,
+) => {
+  if (result == null) return
+
+  result.statuses.forEach((state) => {
+    presenceByUserID.set(state.userID, state)
+  })
+}
+
+const userStatusSubscription = onUserStatusChanged(
+  handleUserStatusChanged,
+)
+
+function removeUserStatusListener() {
+  off(userStatusSubscription)
+}
+```
+
+Unsubscribe from this listener when logging out, switching accounts, or tearing down the presence manager. When pagination changes or contacts leave the viewport, unsubscribe those users to prevent your subscription set from growing unboundedly.
+
+## Next steps
+
+- [Get subscribed user status](/sdk/uniapp/user/online-status/get-subscribe-users-status)
+- [Unsubscribe from online status](/sdk/uniapp/user/online-status/unsubscribe-users-status)

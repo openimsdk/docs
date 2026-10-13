@@ -5,17 +5,38 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/refuse-friend-application'
 ---
 
+Decline an incoming friend application using `refuseFriendApplication:handleMsg:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `NSString *` | Yes | The applicant user ID whose request is being rejected. |
+| `handleMsg` | `NSString *` | No | Optional rejection note. Pass an empty string `@""` when omitted. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] refuseFriendApplication:applicantUserID
                                      handleMsg:@"Not adding contacts at this time"
-                                     onSuccess:nil
-                                     onFailure:nil];
+                                     onSuccess:^(NSString *data) {
+    [applicationStore markRejectedForUserID:applicantUserID];
+}
+                                     onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"refuseFriendApplication failed: %ld %@", (long)code, message);
+}];
 ```
 
-The first argument is the applicant's user ID, and `handleMsg` is the response message. A successful callback means that the reject request has completed. The request update may arrive afterward. For the complete synchronization rules, see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient).
+## Return value
+
+The `onSuccess` callback confirms that OpenIMServer processed the rejection command.
+
+## State changes after the call
+
+- **Local state merge**: Merge rejection status into the application list using `userID` as the unique entity key.
+- **Asynchronous event listening**: Linked client devices and the applicant receive rejection notifications via `onFriendApplicationRejected:` in `OIMFriendshipListener` (see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)).

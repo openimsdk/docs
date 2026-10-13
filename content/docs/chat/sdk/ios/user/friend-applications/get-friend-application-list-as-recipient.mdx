@@ -5,29 +5,52 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient'
 ---
+
+Retrieve friend requests received by the current user with pagination using `getFriendApplicationListAsRecipientWithReq:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `GetFriendApplicationListAsRecipientReq *` | Yes | Request object configuring status filters and pagination limits. |
+
+### Request attributes (`GetFriendApplicationListAsRecipientReq`)
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `handleResults` | `NSArray<NSNumber *> *` | No | Status filter list. Pass `@[@(OIMApplicationStatusNormal)]` to query pending, unhandled applications. |
+| `offset` | `NSInteger` | Yes | Pagination starting offset. Pass `0` for the first page. |
+| `count` | `NSInteger` | Yes | Number of request items to fetch per page. |
+
+## Code example
 
 ```objc
 GetFriendApplicationListAsRecipientReq *req = [GetFriendApplicationListAsRecipientReq new];
 req.handleResults = @[@(OIMApplicationStatusNormal)];
 req.offset = 0;
 req.count = 20;
+
 [[OIMManager manager] getFriendApplicationListAsRecipientWithReq:req
                                                        onSuccess:^(NSArray<OIMFriendApplication *> *items) {
                                                            [requestStore replaceReceived:items];
                                                        }
-                                                       onFailure:nil];
+                                                       onFailure:^(NSInteger code, NSString *message) {
+                                                           NSLog(@"getFriendApplicationListAsRecipient failed: %ld %@", (long)code, message);
+                                                       }];
 ```
 
-`handleResults` filters requests by pending, accepted, or rejected status. `offset` and `count` control pagination. The success callback returns the current page snapshot. Merge records by `fromUserID:toUserID`. The query does not trigger a friend-request delegate.
+## Return value
 
-## Synchronize friend-request changes
+The `onSuccess` callback returns an `NSArray<OIMFriendApplication *> *` containing received application records for the requested page.
 
-This page is the sole owner of the complete handlers for `onFriendApplicationAdded:`, `onFriendApplicationAccepted:`, `onFriendApplicationRejected:`, and `onFriendApplicationDeleted:`:
+## State changes after the call
+
+- **Local state merge**: Merge friend application records using `fromUserID:toUserID` or `fromUserID` as the unique entity key.
+- **Asynchronous event listening**: Observe incoming, accepted, rejected, or deleted friend applications via the `OIMFriendshipListener` protocol.
 
 ```objc
 - (void)onFriendApplicationAdded:(OIMFriendApplication *)item {
@@ -47,4 +70,4 @@ This page is the sole owner of the complete handlers for `onFriendApplicationAdd
 }
 ```
 
-Implement these methods on your application's single, stable `OIMFriendshipListener` instance. For the registration and removal lifecycle, see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page). Route a record to the received or sent list according to whether the current user is its `toUserID`. A successful callback, a friend-request delegate, a friendship delegate, and a reconciliation query are separate stages.
+Implement these callbacks in your primary `OIMFriendshipListener` instance (see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page)). Filter records into the incoming or outgoing application list based on whether `toUserID` matches the current logged-in user.

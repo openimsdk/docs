@@ -5,11 +5,24 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/creating-messages/create-video-message-by-url'
 ---
+
+When the application has already uploaded video files and thumbnail snapshots to object storage and holds remote URLs, invoke `createVideoMessageByURL:videoType:duration:size:snapshot:` on `OIMMessageInfo` to construct a video message object directly without redundant uploads by the SDK:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `videoURL` | `NSString *` | Yes | Accessible remote URL of the uploaded video file. |
+| `videoType` | `NSString *` | Yes | Video MIME type (e.g. `video/mp4`). |
+| `duration` | `NSInteger` | Yes | Video playback duration in seconds. |
+| `size` | `NSInteger` | Yes | Actual size of the video file in bytes. |
+| `snapshot` | `NSString *` | Yes | Accessible remote URL of the uploaded thumbnail snapshot image. |
+
+## Code example
 
 ```objc
 OIMMessageInfo *message =
@@ -20,4 +33,11 @@ OIMMessageInfo *message =
                                    snapshot:snapshotURL];
 ```
 
-The video URL, media type, duration in seconds, size in bytes, and snapshot URL must come from actual upload results. Send the returned object with `sendMessageNotOss:...`.
+## Return value
+
+Returns an initialized `OIMMessageInfo` model populated with the remote video and snapshot URLs. The passed URL, duration, file size, and snapshot URL must represent valid remote assets.
+
+## State changes after the call
+
+1. **Local memory instantiation**: This method builds an in-memory message object without saving records to local storage or making network requests.
+2. **Subsequent dispatch**: Because the media files are already hosted externally, deliver the message by calling [Send a message without SDK-managed upload](/sdk/ios/message/sending-messages/send-message-not-oss). If you want the SDK to handle local video file and snapshot uploading, use [Create a video message from a local path](/sdk/ios/message/creating-messages/create-video-message-from-full-path).

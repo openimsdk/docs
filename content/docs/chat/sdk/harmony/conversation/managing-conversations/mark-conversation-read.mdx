@@ -1,17 +1,53 @@
 ---
-title: 'Mark a conversation as read'
-description: 'OpenIM HarmonyOS SDK guide for Mark a conversation as read.'
+title: 'Mark conversation as read'
+description: 'Mark all received messages in a designated conversation as read.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/conversation/managing-conversations/mark-conversation-read'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke this method only after the user actively views the message history; do not prematurely clear unread badges during background push notifications or preview popups:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnRecvC2CReadReceiptData,
+  MarkConversationMessageAsReadReq,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: MarkConversationMessageAsReadReq = {
+  conversationID: conversationID,
+};
+await sdk.markConversationMessageAsRead(request);
+
+const handleC2CReceipt = (data: EventOnRecvC2CReadReceiptData): void => {
+  for (let index = 0; index < data.msgReceiptList.length; index += 1) {
+    mergeC2CReadReceipt(data.msgReceiptList[index]);
+  }
+};
+const unsubscribeReceipt = sdk.on(OpenIMSDKEvent.EventOnRecvC2CReadReceipt, handleC2CReceipt);
+
+export function removeC2CReadReceiptListener(): void {
+  unsubscribeReceipt();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target conversation identifier. |
+
+## Return value
+
+Returns a Promise that resolves to `void` when the read receipt is submitted.
+
+## State changes after the call
+
+Resolving the Promise marks the conversation as read locally. The SDK emits `EventOnConversationChanged` to update the conversation's unread counter; match the item by `conversationID` to reset badges, as shown in [Retrieve conversation list](/sdk/harmony/conversation/retrieving-conversations/retrieve-conversation-list). In direct chats, the remote peer receives `EventOnRecvC2CReadReceipt` to update checkmark indicators for sent messages. Group read receipts are handled separately via [Send group read receipts](/sdk/harmony/message/managing-read-status/send-group-read-receipts). Remove the receipt listener with `removeC2CReadReceiptListener()` on logout.

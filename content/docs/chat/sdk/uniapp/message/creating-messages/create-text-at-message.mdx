@@ -1,17 +1,67 @@
 ---
 title: 'Create an @ message'
-description: 'OpenIM uni-app / uni-app x SDK guide for Create an @ message.'
+description: 'Construct an @ mention text message for group conversations.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/creating-messages/create-text-at-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `createTextAtMessage()` to create an `@` mention text message for group chats. Keep the visible text in `text` synchronized with the identifiers listed in `atUserIDList`, using stable user IDs rather than nicknames to track mentioned members.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | Yes | Message text content including `@` display text. |
+| `atUserIDList` | `string[]` | Yes | Array of mentioned user IDs or the mention-all tag token. |
+| `atUsersInfo` | `OpenIMAtUsersInfoItem[]` | No | Array of objects mapping user IDs to their group nicknames. |
+| `quoteMessage` | `OpenIMMessageItem` | No | Original message to quote if creating a combined mention-and-reply message. |
+
+## Code example
+
+```uts
+import { createTextAtMessage } from '@/uni_modules/unix-openim-sdk'
+
+const message = await createTextAtMessage({
+  text: '@Alex please review',
+  atUserIDList: ['user_a'],
+  atUsersInfo: [{
+    atUserID: 'user_a',
+    groupNickname: 'Alex',
+  }],
+})
+if (message == null) return
+```
+
+## Mention all group members
+
+Never hardcode the mention-all string in application logic. Invoke `getAtAllTag()` to retrieve the authoritative token configured for your SDK, and place `result.tag` into both `text` and `atUserIDList`:
+
+```uts
+import {
+  createTextAtMessage,
+  getAtAllTag,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await getAtAllTag()
+if (result == null || result.tag.length == 0) return
+
+const message = await createTextAtMessage({
+  text: result.tag + ' Please review the announcement',
+  atUserIDList: [result.tag],
+})
+```
+
+`getAtAllTag()` retrieves the tag token only; it does not construct or transmit messages.
+
+## Return value
+
+The Promise resolves with an `OpenIMMessageItem | null` object.
+
+## State changes after the call
+
+Creating an `@` message generates a local object without triggering new message events or altering conversation unread counters. Pass the created message to [Send a message](/sdk/uniapp/message/sending-messages/send-message), specifying the target `groupID`. Track the message lifecycle in your UI state using `clientMsgID`.

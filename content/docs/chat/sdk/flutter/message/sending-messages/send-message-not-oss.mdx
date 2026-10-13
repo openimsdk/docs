@@ -11,6 +11,20 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/sending-messages/send-message-not-oss'
 ---
 
+Send media messages (such as images, audio, video, or files) that already contain remote resource URLs, bypassing the SDK's internal OSS upload pipeline:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `Message` | Yes | The prepared message object constructed using a URL-based factory method. |
+| `userID` | `String?` | Required for single chat | Recipient user ID in direct chats. Omit when sending group messages. |
+| `groupID` | `String?` | Required for group chat | Target group ID in group chats. Omit when sending direct messages. |
+| `offlinePushInfo` | `OfflinePushInfo?` | No | Custom offline push notification settings (title, description, and passthrough data). |
+| `isOnlineOnly` | `bool` | No | Whether the message is online-only; defaults to `false`. |
+
+## Code example
+
 ```dart
 final sent = await OpenIM.iMManager.messageManager.sendMessageNotOss(
   message: urlMessage,
@@ -19,4 +33,12 @@ final sent = await OpenIM.iMManager.messageManager.sendMessageNotOss(
 );
 ```
 
-Use this method only for URL-based media messages so the resource does not enter the SDK upload flow again. One-to-one and group targets are mutually exclusive. Future completion and delivery to a remote listener are separate stages.
+Set only `userID` for direct chats, and set only `groupID` for group chats. These target parameters are mutually exclusive.
+
+## Return value
+
+Returns a `Future` resolving to the server-confirmed `Message` object. Update the local message list using its non-empty `clientMsgID`.
+
+## State changes after the call
+
+This method is designed for messages whose media files have already been uploaded by external services; the SDK does not perform secondary uploads on media assets. If media files exist only on the local device and require SDK uploading, use [Send a message](/sdk/flutter/message/sending-messages/send-message). For corresponding URL message factory methods, see [Create an image message from URLs](/sdk/flutter/message/creating-messages/create-image-message-by-url), [Create an audio message from a URL](/sdk/flutter/message/creating-messages/create-sound-message-by-url), [Create a video message from URLs](/sdk/flutter/message/creating-messages/create-video-message-by-url), and [Create a file message from a URL](/sdk/flutter/message/creating-messages/create-file-message-by-url).

@@ -5,19 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/add-friend'
 ---
 
+Dispatch a friend request to a target user using `addFriend:reqMessage:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `NSString *` | Yes | Target recipient user ID. |
+| `reqMessage` | `NSString *` | No | Optional verification note or message. Pass an empty string `@""` when omitted. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] addFriend:@"user_b"
                      reqMessage:@"Hi, I'm Alex"
-                      onSuccess:nil
-                      onFailure:nil];
+                      onSuccess:^(NSString *data) {
+    [applicationStore markSentToUserID:@"user_b"];
+}
+                      onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"addFriend failed: %ld %@", (long)code, message);
+}];
 ```
 
-The first argument is the recipient's user ID, and `reqMessage` is the optional request message. Pass an empty string when no message is needed. A successful callback means only that the server has accepted the request; it does not mean that the users are already friends.
+## Return value
 
-For incremental friend-request updates, see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient).
+The `onSuccess` callback confirms only that OpenIMServer accepted and routed the application; it does not indicate that the recipient accepted or that a friend relationship has formed.
+
+## State changes after the call
+
+- **Local state merge**: Record the pending outgoing request using `userID` as the unique entity key.
+- **Outgoing history**: To inspect all dispatched requests, invoke [Retrieve sent friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-applicant).
+- **Asynchronous event listening**: When the recipient accepts or rejects the request, the sender receives notification callbacks through `OIMFriendshipListener` (see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)).

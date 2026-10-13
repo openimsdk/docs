@@ -1,17 +1,18 @@
 ---
-title: 'Restore an invitation received before startup'
-description: 'Use the Flutter SDK to restore an unhandled call invitation during application startup.'
+title: 'Restore pending invitations'
+description: 'Restore unhandled call invitations upon app launch using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/retrieving-call-information/restore-pending-invitation'
 ---
 
-This method takes no business parameters and returns the `SignalingInfo` that needs to be restored at startup:
+When the app launches, re-authenticates, or recovers from missed push notifications, call this method to retrieve any pending, still-valid call invitations:
+
+## Code example
 
 ```dart
 final info = await OpenIM.iMManager.signalingManager
@@ -22,4 +23,14 @@ if (info.invitation?.roomID?.isNotEmpty == true) {
 }
 ```
 
-Every returned field can be empty. The query establishes only the current snapshot. After restoring it, continue handling cancellation, timeout, acceptance, and hang-up listeners.
+## Return value
+
+A successful `Future` returns a `SignalingInfo` object containing pending call invitations and offline push metadata available at launch.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `userID` | `String?` | Operator user ID. |
+| `invitation` | `InvitationInfo?` | Pending invitation details. If `roomID` is empty, no recoverable call exists. |
+| `offlinePushInfo` | `OfflinePushInfo?` | Offline push notification payload. |
+
+This query returns only invitations that remain active when the application starts; if `roomID` is null or empty, dismiss any stale incoming call interfaces. After restoring an incoming call, continue monitoring timeout, cancellation, acceptance, and hang-up callbacks in [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events).

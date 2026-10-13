@@ -1,44 +1,44 @@
-## Deploy the server
+## Deploy the server backend
 
-Complete either [Docker Compose deployment](./docker-compose) or [Source deployment](./source).
+First complete server deployment using either [Docker Compose deployment](./docker-compose) or [Source deployment](./source).
 
-## Open ports
+## Open network ports
 
-Follow [Ports and network](./network) to allow only the ports required for your domain and TLS configuration.
+Allow the required inbound network ports according to [Ports and network](./network), depending on whether you use a domain name and SSL certificates.
 
-## Verify PC Web
+## Verify PC Web client
 
-Open `http://your_server_ip:11001` in a browser, where `your_server_ip` is the address of the server hosting the frontend.
+Open `http://your_server_ip:11001` in your browser, where `your_server_ip` is the IP address of the server hosting the frontend service.
 
 ![PC Web interface](/assets/guides/gettingStarted/assets/pc-web.png)
 
-If you do not have a test account, select the registration action on the login page, complete registration, and return to sign in. With the default configuration, verification code `666666` is available from `verifyCode.superCode` in `chat/config/chat-rpc-chat.yml`. If self-registration is disabled or the configuration was changed, use an actual test account and code.
+If you do not have a test account, click "Register Now" on the login page, follow the prompts to register, and return to log in. Under default configurations, you can use the super verification code `666666`, defined by `verifyCode.superCode` in `chat/config/chat-rpc-chat.yml`. If your deployment has disabled self-registration or modified the configuration, use an actual test account and verification code.
 
-Skip this step when only the server was deployed without a frontend.
+If you only deployed the server components without the web frontend, skip this step.
 
 ## Verify service processes
 
-For Docker Compose:
+Docker Compose deployment:
 
 ```bash
 docker ps | grep -E 'openim-server|openim-chat'
 ```
 
-Containers may initially report `health: starting`. Wait `20-30s` and confirm they become `healthy` before testing APIs.
+Containers may temporarily report `health: starting` during startup. Wait `20-30s` to confirm they transition to `healthy` before testing APIs.
 
-For source deployments:
+Source deployment:
 
 ```bash
-# Run in open-im-server
+# Execute in open-im-server directory
 mage check
 
-# Run in chat
+# Execute in chat directory
 mage check
 ```
 
-## Verify domains and gateways
+## Verify domain and gateway routing
 
-With a domain and TLS, call real endpoints to confirm the OpenIMServer and ChatServer routes:
+When deploying with a domain and SSL certificates, invoke real endpoints to verify that OpenIMServer and ChatServer reverse proxies are routing correctly:
 
 ```bash
 curl -sS -X POST "https://your_domain/api/auth/get_admin_token" \
@@ -54,24 +54,24 @@ curl -sS -X POST "https://your_domain/chat/application/latest_version" \
   -d '{}'
 ```
 
-A JSON response containing a business error usually still proves that the reverse-proxy path is connected.
+Even if an endpoint returns a business error code, a valid JSON response confirms that the reverse proxy forwarding path is functioning properly.
 
-Test the WebSocket gateway with any WebSocket client:
+Verify the WebSocket gateway using any WebSocket client:
 
 ```text
 wss://your_domain/msg_gateway
 ```
 
-In production, route traffic through port `443` and initialize OpenIMClientSDK with:
+In production, route all client traffic through port `443`. Configure OpenIMClientSDK with the following endpoints:
 
 ```text
 apiAddr: https://your_domain/api
 wsAddr: wss://your_domain/msg_gateway
 ```
 
-## Verify a deployment without a domain
+## Verify deployments without a domain
 
-Use the server IP and default ports:
+When running without a domain name or SSL, connect directly using the server IP and default service ports:
 
 ```bash
 curl -sS -X POST "http://your_server_ip:10002/auth/get_admin_token" \
@@ -87,4 +87,4 @@ curl -sS -X POST "http://your_server_ip:10008/application/latest_version" \
   -d '{}'
 ```
 
-ChatServer POST endpoints also require the `operationID` header; omitting it returns a parameter error.
+ChatServer POST endpoints also require the `operationID` header; requests omitting this header will fail with parameter errors.

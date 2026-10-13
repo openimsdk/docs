@@ -1,16 +1,18 @@
 ---
-title: 'Delete all messages from a user in a group chat'
-description: 'OpenIM React Native SDK guide for delete all messages from a user in a group chat.'
+title: 'Delete all messages of a user in a group'
+description: 'Delete all message history sent by a specific user in a group conversation using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/managing-messages/delete-user-messages'
 ---
 
-Use `deleteUserAllMessagesInConv()` to delete all messages from a specified user in a group conversation.
+Delete all historical messages posted by a specific user within a group conversation:
+
+This administrative action is typically initiated by group owners or managers to moderate chat logs and remove spam or abusive content.
 
 ```ts
 await OpenIMSDK.deleteUserAllMessagesInConv({
@@ -24,30 +26,37 @@ await OpenIMSDK.deleteUserAllMessagesInConv({
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `conversationID` | `string` | Yes | Target group conversation ID. |
-| `userID` | `string` | Yes | User whose messages are deleted. |
+| `userID` | `string` | Yes | Target user ID whose messages will be deleted. |
 
-This is a group-management operation. After it completes, the deletion request has completed; the server validates permissions.
+## Return value
 
-## Listen for deletion of a user's messages
+A resolved Promise confirms that the deletion request was validated and executed on the server. Permissions are enforced according to group roles; invoking this method without administrative privileges returns an error.
 
-After deletion, `OnDeleteUserAllMsgsInConv` is emitted with `conversationID` and `userID`. Use them to remove that user's messages from the target conversation.
+## Listen for user message deletions
+
+When a user's messages are removed from a group, the SDK emits the `OnDeleteUserAllMsgsInConv` event. The callback payload provides the target `conversationID` and `userID`. Locate the active conversation and filter out all messages sent by `userID`.
 
 ```ts
-function handleUserMessagesDeleted(data) {
-  // ...
+interface DeleteUserAllMsgsData {
+  conversationID: string;
+  userID: string;
 }
 
-// Set the listener
+const handleUserMessagesDeleted = (data: DeleteUserAllMsgsData) => {
+  // Locate the target conversation by data.conversationID and filter out messages from data.userID
+};
+
+// Register listener
 OpenIMSDK.on(
   OpenIMEvent.OnDeleteUserAllMsgsInConv,
   handleUserMessagesDeleted,
 );
 
-// Remove the listener
+// Unregister listener on cleanup
 OpenIMSDK.off(
   OpenIMEvent.OnDeleteUserAllMsgsInConv,
   handleUserMessagesDeleted,
 );
 ```
 
-Remove the listener when the component is destroyed, the account signs out, or the account changes.
+Always unregister listeners using identical function references when unmounting components or signing out.

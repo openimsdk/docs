@@ -1,17 +1,69 @@
 ---
-title: 'Start a one-to-one call'
-description: 'OpenIM uni-app / uni-app x SDK guide for Start a one-to-one call.'
+title: 'Start a single call'
+description: 'Initiate a one-on-one audio or video call invitation to a specific user.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/managing-calls/start-single-call'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `signalingInvite()` to initiate a direct one-on-one audio or video call to a target user. Generate a unique `roomID` for each call session, and retain the invitation payload in local state for subsequent cancellation or hang-up operations.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `OpenIMSignalingInvitationInfo` | Yes | The signaling invitation configuration object. |
+| `invitation.inviterUserID` | `string` | Recommended | The user ID of the caller initiating the invitation. |
+| `invitation.inviteeUserIDList` | `string[]` | Yes | An array containing exactly one recipient user ID for direct calls. |
+| `invitation.groupID` | `string` | Recommended | An empty string for direct calls. |
+| `invitation.roomID` | `string` | Yes | A unique room identifier generated for this call session. |
+| `invitation.timeout` | `number` | Yes | Ringing timeout duration in seconds. |
+| `invitation.mediaType` | `string` | Yes | Media type agreed upon by your application, such as `'audio'` or `'video'`. |
+| `invitation.sessionType` | `OpenIMSessionType` | Yes | Supply `OpenIMSessionTypeSingle` for one-on-one calls. |
+| `invitation.platformID` | `OpenIMPlatform` | Recommended | Current platform constant matching the one used during `initSDK()`. |
+| `invitation.customData` | `string` | No | Optional business payload string attached to the invitation. |
+| `offlinePushInfo` | `OpenIMSignalingOfflinePushInfo` | No | Offline push notification configuration for offline invitees. |
+
+## Code example
+
+```uts
+import {
+  OpenIMSessionTypeSingle,
+  signalingInvite,
+} from '@/uni_modules/unix-openim-sdk'
+
+const invitation = {
+  inviterUserID: currentUserID,
+  inviteeUserIDList: [peerUserID],
+  customData: JSON.stringify({ source: 'contact-card' }),
+  groupID: '',
+  roomID: createCallRoomID(),
+  timeout: 30,
+  mediaType: 'video',
+  sessionType: OpenIMSessionTypeSingle,
+  platformID: currentOpenIMPlatform,
+}
+
+const result = await signalingInvite({
+  invitation,
+  offlinePushInfo: {
+    title: 'Video call',
+    desc: 'You received a video call invitation',
+    ex: '',
+    iOSPushSound: 'default',
+    iOSBadgeCount: true,
+  },
+})
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMSignalingInviteResult | null` object. A non-null result provides `invitation`, `roomID`, `token`, `liveURL`, and `busyLineUserIDList`. Join your media engine room only after receiving valid `roomID` and `token` credentials.
+
+## State changes after the call
+
+A resolved Promise indicates that the signaling invitation was delivered to OpenIMServer and room credentials were generated; it does not mean the callee has answered. Track the call session state using `roomID` as the primary key. For incoming callee responses and participant lifecycle updates, see [Handle call events](/sdk/uniapp/calling/managing-calls/handle-call-events).

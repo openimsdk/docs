@@ -1,29 +1,61 @@
 ---
 title: 'Set group join verification'
-description: 'Configure verification rules for group applications and invitations through GroupInfo.needVerification.'
+description: 'Configure approval policies for joining and inviting members to a group using setGroupInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/set-group-join-verification'
 ---
 
-Set the verification mode in `GroupInfo.needVerification`, then call `setGroupInfo()`. Use one of the `GroupVerification` constants: `APPLY_NEED_VERIFICATION_INVITE_DIRECTLY`, `ALL_NEED_VERIFICATION`, or `DIRECTLY`.
+Configure the join verification policy for a group. Group owners and administrators can set the `needVerification` property on `GroupInfo` to govern whether direct join requests or member invitations require administrative review.
+
+## Code example
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
+update.setGroupID("group_123");
 update.setNeedVerification(GroupVerification.ALL_NEED_VERIFICATION);
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Join verification updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle update failure
+        }
+    }
+);
 ```
 
-This setting applies to subsequent join requests. It does not accept or reject existing applications.
+## Verification modes
 
-A successful callback means that the setting request completed; it does not mean that every client has updated its UI. `onGroupInfoChanged` provides the updated `GroupInfo`. Merge the verification setting by `groupID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+Use the constants defined in `GroupVerification`:
+
+| Enum constant | Value | Description |
+| --- | --- | --- |
+| `DIRECTLY` | `0` | Direct join; anyone who requests to join or is invited enters the group immediately. |
+| `APPLY_NEED_VERIFICATION_INVITE_DIRECTLY` | `1` | Direct join requests require administrative approval, whereas member invitations add invitees immediately. |
+| `ALL_NEED_VERIFICATION` | `2` | All join paths require administrative approval, including both direct applications and invitations. |
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | Yes | Group entity holding the target `groupID` and the updated `needVerification` mode. |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+
+## Return value
+
+The successful callback confirms that the verification rule was updated on the server.
+
+## State changes after the call
+
+A successful callback confirms that the server persisted the new join verification policy. The rule applies strictly to requests submitted after the update; it does not auto-resolve or discard existing pending applications. Group members receive the `onGroupInfoChanged(GroupInfo group)` event via `OnGroupListener`. Merge the updated policy into your local cache using `groupID`. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

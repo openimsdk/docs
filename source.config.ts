@@ -29,6 +29,10 @@ export default defineConfig({
         light: 'github-dark',
         dark: 'github-dark',
       },
+      langAlias: {
+        uts: 'typescript',
+      },
+      fallbackLanguage: 'plaintext',
     },
   },
 });

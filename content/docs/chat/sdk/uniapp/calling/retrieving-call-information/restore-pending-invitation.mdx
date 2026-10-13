@@ -1,17 +1,45 @@
 ---
-title: 'Restore a pending call invitation'
-description: 'OpenIM uni-app / uni-app x SDK guide for Restore a pending call invitation.'
+title: 'Restore pending call invitations'
+description: 'Query active, pending call invitations when your app launches or returns to the foreground.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/calling/retrieving-call-information/restore-pending-invitation'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Query whether the current account has any active, pending audio or video call invitations. This method provides strongly typed, complete invitation records upon cold start, when returning from the background, or following receipt of an incoming call notification.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `string` | No | The current logged-in user ID. |
+
+The parameter object can be omitted. When providing `userID`, pass the currently authenticated user's ID. Do not query invitations on behalf of other users.
+
+## Code example
+
+```uts
+import {
+  signalingGetInvitationInfoStartApp,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await signalingGetInvitationInfoStartApp({
+  userID: currentUserID,
+})
+
+if (result?.invitation?.roomID != null) {
+  restoreIncomingCall(result.invitation!)
+}
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMSignalingGetInvitationInfoStartAppResult | null` object containing an `invitation` property of type `OpenIMSignalingInvitationInfo | null`. If no valid invitation is returned, clear any stale incoming call views indexed by `roomID` to prevent reuse of outdated room state.
+
+## State changes after the call
+
+This is a read-only query that checks current invitation state without accepting, rejecting, or generating events. After restoring incoming call UI, continue listening for cancellations, timeouts, remote answers, and hang-up notifications as described in [Handle call events](/sdk/uniapp/calling/managing-calls/handle-call-events).

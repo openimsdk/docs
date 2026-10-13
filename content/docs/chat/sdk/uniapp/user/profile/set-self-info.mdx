@@ -1,17 +1,72 @@
 ---
 title: 'Update your profile'
-description: 'OpenIM uni-app / uni-app x SDK guide for Update your profile.'
+description: 'Update the nickname, avatar URL, or account-level extension string of the authenticated user.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/profile/set-self-info'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `setSelfInfo()` to update display attributes for the currently logged-in user. Pass only the properties being modified (`nickname`, `faceURL`, or `ex`); avoid accidentally overriding account-level policy fields when saving a nickname or avatar.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `nickname` | `string \| null` | No | New account-level display nickname. |
+| `faceURL` | `string \| null` | No | New account-level avatar URL. |
+| `ex` | `string \| null` | No | New custom extension string; completely overwrites the previous value. |
+
+Supply at least one field to update.
+
+## Code example
+
+```uts
+import { setSelfInfo } from '@/uni_modules/unix-openim-sdk'
+
+await setSelfInfo({
+  nickname: nickname.trim(),
+  faceURL,
+  ex: mergedExtra,
+})
+```
+
+The `ex` property stores an opaque string. The SDK does not perform JSON patching. When multiple application modules share this attribute, read the current profile, merge changes into your application namespace, and submit the entire serialized string.
+
+Account-level policy fields are documented in dedicated guides: refer to [Set global message reception](/sdk/uniapp/user/profile/set-global-message-reception) for notification preferences and [Set friend request permissions](/sdk/uniapp/user/profile/set-friend-add-permission) for friend authorization policies. Submit these settings from their dedicated preference screens.
+
+## Return value
+
+The Promise resolves with `void` once OpenIMServer accepts the profile modification request.
+
+## State changes after the call
+
+A resolved Promise confirms that the profile update was accepted by OpenIMServer. It does not indicate that the profile update event has propagated to other devices or clients. To synchronize state immediately, await the event callback or call [Get your profile](/sdk/uniapp/user/profile/get-self-user-info) to re-calibrate.
+
+## Monitor profile updates
+
+Register the `onSelfInfoUpdated` event to observe profile changes for the active account. The callback delivers an updated `OpenIMUserInfo | null` object. When non-null, replace the cached profile matching `userID`:
+
+```uts
+import {
+  OpenIMUserInfo,
+  off,
+  onSelfInfoUpdated,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleSelfInfoUpdated = (user: OpenIMUserInfo | null) => {
+  if (user == null) return
+  setCurrentUser(user)
+}
+
+const selfInfoSubscription = onSelfInfoUpdated(handleSelfInfoUpdated)
+
+function removeSelfInfoListener() {
+  off(selfInfoSubscription)
+}
+```
+
+Unsubscribe from this listener when logging out, switching accounts, or tearing down the user store to prevent duplicate event execution.

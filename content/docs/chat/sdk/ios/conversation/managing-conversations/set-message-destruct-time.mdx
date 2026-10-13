@@ -5,17 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-message-destruct-time'
 ---
 
+Invoke `setConversationMsgDestructTime:msgDestructTime:onSuccess:onFailure:` to configure the periodic retention cycle for messages stored on the server for a specified conversation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation ID. |
+| `msgDestructTime` | `NSInteger` | Yes | Duration before messages are deleted on the server, specified in seconds. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] setConversationMsgDestructTime:conversationID
-                                     msgDestructTime:destructTime
-                                         onSuccess:nil
-                                         onFailure:nil];
+[[OIMManager manager] setConversationMsgDestructTime:@"c2c_user1002"
+                                     msgDestructTime:86400
+                                           onSuccess:^(NSString * _Nullable data) {
+                                               NSLog(@"setConversationMsgDestructTime success");
+                                           }
+                                           onFailure:^(NSInteger code, NSString *message) {
+                                               NSLog(@"setConversationMsgDestructTime failed: %ld %@", (long)code, message);
+                                           }];
 ```
 
-`msgDestructTime` is the periodic deletion interval for server-side messages. Confirm its precise timing semantics against your server policy. Enable or disable the feature through the separate switch method. After success, read the latest snapshot from `OIMConversationInfo.msgDestructTime`.
+## Return value
+
+The `onSuccess` callback returns confirmation when the operation succeeds.
+
+## State changes after the call
+
+1. **Local state update**: The conversation's `msgDestructTime` attribute is updated locally and synchronized with the backend.
+2. **Event notification**: Updated conversation properties are broadcast via the `onConversationChanged:` delegate callback. Match items by `conversationID` to refresh local cache and settings displays.
+3. **Re-query calibration**: This property defines the time interval before server messages are pruned. Whether automatic destruction is active depends on the toggle configured in [Periodically delete server-side messages](/sdk/ios/conversation/managing-conversations/set-message-destruct). For conversation listener setup, refer to [Retrieve conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).

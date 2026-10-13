@@ -5,24 +5,23 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/modify-a-message'
 ---
 
-`modifyMessageWithConversationID:message:onSuccess:onFailure:` changes the content of an existing message in a conversation. It differs from [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message) and [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message): deletion controls whether the current account can still see a message, revocation displays a revoked state to conversation participants, and modification replaces the content and synchronizes it to other clients.
+Invoke `modifyMessageWithConversationID:message:onSuccess:onFailure:` on `OIMManager` to edit the content of a previously sent message in a conversation. This differs from [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message) and [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message): deletion controls visibility for the current account, revocation displays a placeholder indicating the message was recalled, and modification updates the body content across all devices.
 
-## Modify message content
-
-The selector accepts the message's `conversationID` and the complete modified `OIMMessageInfo`.
-
-### Parameters
+## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `NSString *` | Yes | The ID of the conversation containing the message. |
-| `message` | `OIMMessageInfo *` | Yes | The complete modified message; it must retain the original `clientMsgID`. |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `message` | `OIMMessageInfo *` | Yes | Complete modified message model. Must preserve the original `clientMsgID` and routing attributes. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the modification request was accepted. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `errorMessage`. |
+
+## Code example
 
 ```objc
 if (message.textElem == nil || editedText.length == 0) {
@@ -34,29 +33,27 @@ message.textElem.content = editedText;
 
 [[OIMManager manager]
     modifyMessageWithConversationID:conversationID
-    message:message
-    onSuccess:^(NSString * _Nullable data) {
+                            message:message
+                          onSuccess:^(NSString * _Nullable data) {
+        // Modification accepted; update local UI bubble
         [self replaceMessage:message
               conversationID:conversationID
-                  clientMsgID:message.clientMsgID];
+                 clientMsgID:message.clientMsgID];
     }
-    onFailure:^(NSInteger code, NSString * _Nullable errorMessage) {
+                          onFailure:^(NSInteger code, NSString * _Nullable errorMessage) {
+        // Roll back edited text on failure
         message.textElem.content = previousText;
-        [self showModifyError:code message:errorMessage ?: @"Failed to modify the message"];
+        [self showModifyError:code message:errorMessage ?: @"Failed to modify message"];
     }];
 ```
 
-This method is not a partial update. Start from the current complete message and change only the intended content, preserving `clientMsgID`, routing, sender, time, and all other elements. OpenIMServer validates the permitted sender, time window, and message types. If the call fails, restore the original content or query again; do not retain a local-only edit.
+## Return value
 
-## Result
-
-The success callback's `NSString *` is not the modified message object. Success means that the current modification request has completed. The caller can optimistically display the submitted complete message by `clientMsgID`, then reconcile it through a modification event or a new query.
-
-Success does not mean that every client UI has already updated. Other clients receive the modified `OIMMessageInfo` through `onMessageModified:`.
+The `onSuccess` callback confirms that the modification request was accepted by the server. The callback string is not the updated message object; client state is merged using `clientMsgID` (scoped to `conversationID`).
 
 ## Listen for message modifications
 
-This page is the sole owner of `onMessageModified:`. It belongs to the application's registered `OIMAdvancedMsgListener`:
+When other members or other logged-in clients receive an edited message, the SDK dispatches the update via `onMessageModified:` in `OIMAdvancedMsgListener`:
 
 ```objc
 - (void)onMessageModified:(OIMMessageInfo *)message {
@@ -65,18 +62,15 @@ This page is the sole owner of `onMessageModified:`. It belongs to the applicati
     }
 
     NSString *conversationID = [self conversationIDForMessage:message];
+    // Replace cached message by clientMsgID
     [self replaceMessage:message
           conversationID:conversationID
-              clientMsgID:message.clientMsgID];
+             clientMsgID:message.clientMsgID];
 }
 ```
 
-The event carries one complete modified `OIMMessageInfo`. Replace the original by `clientMsgID`, and derive its conversation from `sessionType`, `sendID`, `recvID`, and `groupID`. Do not match by array position or displayed text. For strong listener retention, registration, and removal, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).
+## State changes after the call
 
-## Related pages
-
-- [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message)
-- [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message)
-- [Send a message](/sdk/ios/message/sending-messages/send-message)
-- [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id)
-- [Receive messages](/sdk/ios/message/receiving-messages/receive-messages)
+1. **Full model replacement**: Message modification is not an incremental field patch. Start from the complete existing `OIMMessageInfo` instance and update only the target content property while strictly preserving `clientMsgID`, conversation type, sender, send time, and other elements.
+2. **Server policy validation**: The server verifies editor permissions, editable time windows, and supported message types. If modification fails, restore the original content rather than leaving an unconfirmed local edit in the UI.
+3. **Multi-client synchronization**: Calling the API and receiving `onMessageModified:` across other clients are distinct phases. For listener registration and lifecycle details, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

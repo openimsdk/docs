@@ -5,21 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/composing-messages/save-local-transcript'
 ---
 
-`OIMSoundElem` has no transcript property. Parse the existing `localEx`, merge the transcript into your application's namespace, and then save it:
+Audio message models (`OIMSoundElem`) do not possess built-in properties for storing transcript text. To persist and display transcribed text for a voice message on the current device, save the transcript payload into the message's local extension field (`localEx`):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the target audio message. |
+| `localEx` | `NSString *` | Yes | Local extension JSON string containing the transcript data. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the local record was updated. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
 
 ```objc
 NSString *localEx = [self mergeTranscript:transcript intoLocalEx:message.localEx];
 [[OIMManager manager] setMessageLocalEx:conversationID
-    clientMsgID:message.clientMsgID
-    localEx:localEx
-    onSuccess:nil
-    onFailure:nil];
+                            clientMsgID:message.clientMsgID
+                                localEx:localEx
+                              onSuccess:^(NSString * _Nullable data) {
+    // Local extension saved; refresh message bubble UI
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle save failure
+}];
 ```
 
-If the existing value is not a valid JSON object, stop or migrate it according to the product's policy; do not overwrite it silently. Success modifies the current device only. It does not synchronize the transcript to another user or device or trigger a message event.
+## Return value
+
+The `onSuccess` callback confirms that the local SQLite database record was updated on the current device.
+
+## State changes after the call
+
+1. **Local-only persistence**: Updating `localEx` mutates only the local database record on the current device. It is not synchronized to remote servers or other client devices, and does not trigger remote message events. The client merge key is `clientMsgID` scoped to `conversationID`.
+2. **Namespace safety**: Merge the transcript under a distinct key (e.g. `transcript`) within existing JSON data rather than overwriting other custom local properties. For general local extension updates, see [Set a message’s local extension](/sdk/ios/message/managing-messages/set-message-local-ex). For transcription workflows, see [Transcribe audio](/sdk/ios/message/composing-messages/transcribe-audio).

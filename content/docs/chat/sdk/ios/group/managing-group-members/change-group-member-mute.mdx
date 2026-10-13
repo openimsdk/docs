@@ -5,22 +5,41 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/change-group-member-mute'
 ---
 
-Provide `groupID`, `userID`, and `mutedSeconds` in seconds. Pass `0` to unmute the member. A successful callback means that the server completed the setting request. Use `OIMGroupMemberInfo.muteEndTime` as the final state.
+Invoke `changeGroupMemberMute:userID:mutedSeconds:onSuccess:onFailure:` to mute or unmute a specified group member for a given duration (restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `userID` | `NSString *` | Yes | Target member user ID. |
+| `mutedSeconds` | `NSInteger` | Yes | Duration of mute in seconds. Pass `0` to unmute the member. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] changeGroupMemberMute:groupID
-  userID:targetUserID
-  mutedSeconds:3600
-  onSuccess:^(NSString * _Nullable data) { [self showMuted]; }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] changeGroupMemberMute:@"group_1001"
+                                     userID:@"user_003"
+                               mutedSeconds:3600
+                                  onSuccess:^(NSString * _Nullable data) {
+                                      NSLog(@"changeGroupMemberMute success");
+                                  }
+                                  onFailure:^(NSInteger code, NSString *message) {
+                                      NSLog(@"changeGroupMemberMute failed: %ld %@", (long)code, message);
+                                  }];
 ```
 
-Merge member changes from `onGroupMemberInfoChanged:` by `groupID:userID`.
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the mute configuration.
+
+## State changes after the call
+
+1. **Local state update**: The member model's `muteEndTime` property is updated to reflect the Unix timestamp when muting expires.
+2. **Event notification**: Updated member details broadcast across active client sessions through `onGroupMemberInfoChanged:`. The client merges state using `groupID:userID`.
+3. **Re-query calibration**: To mute all regular members in the group simultaneously, refer to [Mute or unmute the entire group](/sdk/ios/group/change-group-mute). For member queries, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

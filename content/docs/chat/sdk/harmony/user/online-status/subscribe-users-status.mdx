@@ -1,17 +1,65 @@
 ---
-title: 'Subscribe to online status'
-description: 'OpenIM HarmonyOS SDK guide for Subscribe to online status.'
+title: 'Subscribe to user online status'
+description: 'Subscribe to online platform presence for specific users and handle real-time status transitions.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/user/online-status/subscribe-users-status'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Online status indicates whether a user maintains an active connection to OpenIMServer; it does not indicate whether they are currently viewing a particular conversation or foreground app window. Subscribe only to users currently visible on the screen, and keep the total active subscription count under 3,000 users per account:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnUserOnlineStatusChangedData,
+  OpenIMSDKEvent,
+  SubscribeUsersOnlineStatusReq,
+  SubscribeUsersOnlineStatusResp,
+} from '@openimsdk/imsdk';
+
+const request: SubscribeUsersOnlineStatusReq = {
+  userIDs: ['user_a', 'user_b'],
+};
+const response: SubscribeUsersOnlineStatusResp = await sdk.subscribeUsersOnlineStatus(request);
+
+for (let index = 0; index < response.status.length; index += 1) {
+  const state = response.status[index];
+  presenceByUserID.set(state.userID, state.platforms);
+}
+
+const handleStatusChanged = (data: EventOnUserOnlineStatusChangedData): void => {
+  presenceByUserID.set(data.userID, data.platforms);
+};
+const unsubscribeStatusEvent = sdk.on(
+  OpenIMSDKEvent.EventOnUserOnlineStatusChanged,
+  handleStatusChanged,
+);
+
+export function removeOnlineStatusListener(): void {
+  unsubscribeStatusEvent();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `string[]` | Yes | List of user IDs to subscribe to. Limit to active UI contacts. |
+
+## Return value
+
+Returns a Promise that resolves to a `SubscribeUsersOnlineStatusResp` object containing initial presence states:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | Monitored user identifier. |
+| `platforms` | `Platform[]` | Array of platforms where the user is currently connected. Empty if offline. |
+
+## State changes after the call
+
+Resolving the Promise yields the current online platform snapshot. Incremental online/offline status changes arrive via `EventOnUserOnlineStatusChanged`; update your state map by `userID`. Detach the listener with `removeOnlineStatusListener()` upon sign-out. When views unmount and presence for those users is no longer needed, call [Unsubscribe from user online status](/sdk/harmony/user/online-status/unsubscribe-users-status) to release server subscription quotas.

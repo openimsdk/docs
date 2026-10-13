@@ -1,17 +1,61 @@
 ---
-title: 'Load message history in reverse'
-description: 'OpenIM HarmonyOS SDK guide for Load message history in reverse.'
+title: 'Load newer messages'
+description: 'Paginate forward chronologically towards newer messages from an anchor message.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/retrieving-messages/load-newer-messages'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When navigating into a chat from search results or replied quotes and needing to fetch records newer than the anchor, set `isReverse: true`. This is a historical fetch method, not a real-time message listener.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  ErrorCode,
+  GetHistoryMessageListReq,
+  GetHistoryMessageListResp,
+  ViewType,
+} from '@openimsdk/imsdk';
+
+const request: GetHistoryMessageListReq = {
+  conversationID: conversationID,
+  startClientMsgID: anchorMessage.clientMsgID,
+  count: 30,
+  isReverse: true,
+  viewType: ViewType.ViewHistory,
+};
+const response: GetHistoryMessageListResp = await sdk.getHistoryMessageList(request);
+if (response.errCode === ErrorCode.NoError) {
+  appendMessages(response.messageList);
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target conversation identifier. |
+| `startClientMsgID` | `string` | Yes | Client message ID of the anchor message. |
+| `count` | `number` | Yes | Number of messages to retrieve. |
+| `isReverse` | `boolean` | Yes | Pass `true` for reverse pagination towards newer messages. |
+| `viewType` | `ViewType` | Yes | Message view mode, typically `ViewType.ViewHistory`. |
+
+## Return value
+
+Returns a Promise resolving to `GetHistoryMessageListResp`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `errCode` | `ErrorCode` | SDK error code enum value (`ErrorCode.NoError` indicates success). |
+| `errMsg` | `string` | Error description if `errCode` is non-zero. |
+| `messageList` | `IMMessage[]` | Array of newer messages retrieved. |
+| `isEnd` | `boolean` | `true` if no newer historical messages exist. |
+
+## State changes after the call
+
+The anchor message must have a valid `clientMsgID`. When continuing pagination, advance the anchor to the latest received message; `isEnd` signals whether the newest boundary of synchronized history has been reached. Avoid alternating directions simultaneously on the same viewport boundary, and deduplicate by stable ID when appending to timeline feeds.

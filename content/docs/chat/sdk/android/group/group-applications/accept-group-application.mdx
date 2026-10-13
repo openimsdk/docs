@@ -1,23 +1,61 @@
 ---
-title: 'Accept a group application'
-description: 'Use the Android SDK to accept a user’s application to join a group.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/group-applications/accept-group-application'
+title: "Accept a group application"
+description: "Use the Android SDK to accept a user’s application to join a group."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/group-applications/accept-group-application"
 ---
 
-Pass the application's `groupID`, the applicant's `userID`, and a handling message. The current user must have permission to approve the application.
+Group owners and administrators can accept an applicant's request to join a group. To process the request, provide the target group ID, the applicant's user ID, and an optional processing note.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.acceptGroupApplication(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID, applicantUserID, "Welcome to the group");
+String groupID = "group_123";
+String applicantUserID = "user_applicant";
+String handleMsg = "Welcome to the group";
+
+OpenIMClient.getInstance().groupManager.acceptGroupApplication(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group application accepted successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to accept group application
+        }
+    },
+    groupID,
+    applicantUserID,
+    handleMsg
+);
 ```
 
-A successful callback means that the approval request completed; it does not mean that both the application and member events have arrived. `onGroupApplicationAccepted` provides the updated `GroupApplicationInfo`, and `onGroupMemberAdded` provides the new `GroupMembersInfo`. Merge both by `groupID:userID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+| `applicantUserID` | `String` | Yes | User ID of the applicant requesting to join. |
+| `handleMsg` | `String` | No | Optional note or explanation for accepting the request. Pass an empty string if not needed. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server has processed the approval and updated the application state.
+2. **Asynchronous event delivery**: The SDK triggers synchronization events across affected clients:
+   - `onGroupApplicationAccepted`: Delivers the updated `GroupApplicationInfo`. The client should merge or update the application record using `groupID:userID` as the unique key.
+   - `onGroupMemberAdded`: Delivers the new `GroupMembersInfo` object. The client should add the applicant to the local group member cache using `groupID:userID` as the unique key.
+3. **Re-query calibration**: If application state or member list counts diverge after intermittent network conditions, call `getJoinedGroupListPage()`, `getGroupMemberList()`, or `getGroupApplicationListAsRecipient()` to reconcile local state with the server.
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

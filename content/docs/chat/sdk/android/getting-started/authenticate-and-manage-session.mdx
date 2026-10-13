@@ -1,32 +1,31 @@
 ---
 title: 'Authenticate and manage a session'
-description: 'Initialize OpenIM Android SDK, log in, inspect login state, handle connection callbacks, and sign out the current account.'
+description: 'Initialize the OpenIM Android SDK, log in, monitor connection status, handle session lifecycle callbacks, and log out.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/getting-started/authenticate-and-manage-session'
 ---
 
-OpenIM Android SDK uses `initSDK()` to initialize the local runtime and `login()` to establish the current user's session. Complete the service, user, and token preparation in [Before you start](/sdk/android/getting-started/before-you-start), then add dependencies and permissions as described in [Integrate for Android](/sdk/android/getting-started/environment-specific-implementation).
+The OpenIM Android SDK initializes the local runtime environment and establishes a user session to connect to instant messaging services. Before starting authentication, verify that you completed the server, user credentials, and token preparations listed in [Before you start](/sdk/android/getting-started/before-you-start), and configured dependencies and permissions according to [Integrate for Android](/sdk/android/getting-started/environment-specific-implementation).
 
-The complete flow is:
+The complete session flow is as follows:
 
-1. Create a stable `OnConnListener` in an application-level session component.
-2. Call `initSDK()` and confirm that it returns `true`.
-3. Register message, user, relationship, conversation, group, and call-signaling listeners before login.
-4. Obtain the matching `userID` and token from the application backend, then call `login()`.
-5. Wait separately for login success and `onConnectSuccess()` before enabling operations that require the persistent connection.
-6. On sign-out or account switching, call `logout()` and then clear application state owned by the current account.
+1. Create a stable connection listener (`OnConnListener`) within an application-scoped session component.
+2. Initialize the SDK runtime environment and confirm that initialization succeeds.
+3. Configure domain-specific event listeners centrally before authenticating.
+4. Retrieve the `userID` and authentication token from your business backend and call `login()`.
+5. Wait for both the login callback to succeed and the persistent connection callback (`onConnectSuccess`) to fire before executing operations that require connectivity.
+6. Log out when switching accounts or signing out, and clean up application-level state after the callback completes.
 
-The `apiAddr`, `wsAddr`, `userID`, and `token` used below come from application configuration or the application backend.
+The `apiAddr`, `wsAddr`, `userID`, and `token` parameters referenced below are provided by your application configuration or business backend.
 
-## Initialize and handle the connection lifecycle
+## Initialize and handle connection lifecycle
 
-During the `Application` lifecycle, create the data directory, initialize the SDK, and provide the connection listener. The application can use these callbacks to maintain its current connection state.
+Create the local data directory, initialize the SDK, and register the connection listener within your `Application` lifecycle:
 
 ```java
 import android.app.Application;
@@ -54,32 +53,32 @@ config.isLogStandardOutput = false;
 OnConnListener connectionListener = new OnConnListener() {
     @Override
     public void onConnecting() {
-        // The connection is being established.
+        // Connection establishment is in progress.
     }
 
     @Override
     public void onConnectSuccess() {
-        // Continue with operations that require a connection.
+        // The connection is ready. Resume operations that depend on connectivity.
     }
 
     @Override
     public void onConnectFailed(long code, String error) {
-        // Handle the connection failure using code and error.
+        // Handle connection failure using code and error.
     }
 
     @Override
     public void onKickedOffline() {
-        // Clear the current account state and prompt the user to sign in again.
+        // Clean up current session state and prompt the user to re-authenticate.
     }
 
     @Override
     public void onUserTokenExpired() {
-        // Obtain a new token and sign in again.
+        // Acquire a new token from your backend and re-authenticate.
     }
 
     @Override
     public void onUserTokenInvalid(String reason) {
-        // Clear the current account state and prompt the user to sign in again.
+        // Clean up current session state and prompt the user to re-authenticate.
     }
 };
 
@@ -94,93 +93,99 @@ if (!initialized) {
 }
 ```
 
-A `true` return value means that the local SDK runtime initialized successfully. `OnConnListener` starts reporting persistent-connection state after `login()` is called.
+The `initSDK()` method returns `true` when the local SDK runtime initializes successfully. Connection callbacks on `OnConnListener` begin reporting persistent connection state after you call `login()`.
 
-| Field                 | Type          | Description                                                               |
-| --------------------- | ------------- | ------------------------------------------------------------------------- |
-| `application`         | `Application` | Application-level context that owns the SDK lifecycle.                    |
-| `apiAddr`             | `String`      | OpenIMServer HTTP API endpoint.                                           |
-| `wsAddr`              | `String`      | OpenIMServer WebSocket endpoint.                                          |
-| `dataDirectory`       | `File`        | Application-private persistent directory for the SDK database and logs.   |
-| `config.logLevel`     | `int`         | A `LogLevel` constant that controls SDK log verbosity.                    |
-| `isLogStandardOutput` | `boolean`     | Whether SDK logs are emitted to the standard log stream.                  |
+| Field | Type | Description |
+| --- | --- | --- |
+| `application` | `Application` | The application-level Context holding the SDK lifecycle. |
+| `apiAddr` | `String` | The OpenIMServer HTTP API URL. |
+| `wsAddr` | `String` | The OpenIMServer WebSocket URL. |
+| `dataDirectory` | `File` | The persistent private app directory used for SDK SQLite databases and logs. |
+| `config.logLevel` | `int` | Sets the logging verbosity using `LogLevel` constants. |
+| `isLogStandardOutput` | `boolean` | Determines whether the SDK prints logs to standard output. |
 
-Initialize the SDK only once in `Application` or an application-level session component. The SDK wrapper handles application lifecycle and network changes, so business screens do not need duplicate low-level runtime listeners.
+Initialize the SDK once in your `Application` class or an application-scoped session manager. The Android SDK wrapper automatically manages app foreground/background transitions and network connectivity changes.
 
-## Register business listeners before login
+## Register listeners before logging in
 
-Listener registration uses set semantics, so a later call replaces the previous listener. Create stable listener instances in an application-level event dispatcher and forward events to screen state. For centralized listener registration, replacement behavior, and lifecycle guidance, see [Event overview](/sdk/android/events/overview-events).
+SDK listener registration methods follow setter semantics, where each call replaces the previous listener. Create long-lived listeners in an application-level event manager, and then dispatch events to your presentation layers. For listener registration patterns, lifecycle rules, and listener replacement behaviors, see [Event overview](/sdk/android/events/overview-events).
 
-The SDK does not expose remove or unset methods. During sign-out or account switching, the application event dispatcher must stop delivering callbacks to state owned by the previous account and replace the complete listener set before the next login.
+The SDK does not expose remove or unset methods. When signing out or switching accounts, stop dispatching callbacks to views belonging to the previous account, and register new listeners for the incoming user account before calling `login()`.
 
-## Log in the current user
+## Sign in the current user
+
+Authenticate the user using `login()`:
 
 ```java
 OpenIMClient.getInstance().login(new OnBase<String>() {
     @Override
     public void onError(int code, String error) {
-        // Handle the login failure using code and error.
+        // Handle login failure using code and error.
     }
 
     @Override
     public void onSuccess(String data) {
-        // The login call has completed.
+        // The authentication request succeeded.
     }
 }, userID, token);
 ```
 
-The successful `login()` callback means that the current login call completed. `OnConnListener.onConnectSuccess()` means that the persistent connection is available. Handle these as separate stages. Do not call `login()` concurrently or infer both states from only one callback.
+A successful `onSuccess` callback indicates that the authentication request succeeded on the server. The `onConnectSuccess` callback indicates that the persistent WebSocket connection has been established. Although authentication is typically followed immediately by connection establishment, do not launch concurrent login attempts, and do not assume that authentication alone means real-time data synchronization has completed.
 
-## Inspect login state
+## Query login status
+
+Check the local login status and retrieve the active user ID:
 
 ```java
 int loginStatus = OpenIMClient.getInstance().getLoginStatus();
 
 if (loginStatus == LoginStatus.Logged) {
     String currentUserID = OpenIMClient.getInstance().getLoginUserID();
-    // currentUserID is the current logged-in user ID.
+    // currentUserID is the authenticated user ID.
 }
 ```
 
-| State                 | Description                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------ |
-| `LoginStatus.Logout`  | The SDK is not logged in.                                                            |
-| `LoginStatus.Logging` | Login is in progress; do not start another login concurrently.                       |
-| `LoginStatus.Logged`  | The SDK is logged in. Persistent-connection state still comes from `OnConnListener`. |
+| Status | Description |
+| --- | --- |
+| `LoginStatus.Logout` | The SDK is currently logged out. |
+| `LoginStatus.Logging` | Authentication is currently in progress. Avoid triggering concurrent login calls. |
+| `LoginStatus.Logged` | The SDK is logged in. Monitor `OnConnListener` for real-time network connectivity. |
 
-`getLoginStatus()` and `getLoginUserID()` return local SDK snapshots and do not trigger connection callbacks. Sign out the previous account before logging in with a different account.
+`getLoginStatus()` and `getLoginUserID()` read cached session state stored locally in the SDK and do not trigger network requests or connection callbacks. When switching users, log out of the existing session first rather than calling `login()` directly with new credentials.
 
-## Handle token failure and forced logout
+## Handle token expiration and kick-offline events
 
-After `onUserTokenExpired()` or `onUserTokenInvalid()`, obtain new credentials for the current user from the application backend, then sign in again or enter the application's sign-in flow. `onKickedOffline()` indicates that the account was forced offline by another device or the server; it is distinct from an explicit user sign-out.
+When `onUserTokenExpired` or `onUserTokenInvalid` fires, request a fresh authentication token from your business backend and re-authenticate. The `onKickedOffline` callback indicates that another client session or an administrative action revoked the active session, which is distinct from an explicit client logout.
 
-These callbacks apply to the current logged-in account. Before switching accounts, stop asynchronous work and screen subscriptions for the previous account, then clear its state.
+These callbacks are scoped to the active session. When switching accounts, cancel background tasks and UI subscriptions associated with the previous user before proceeding.
 
-## Sign out and release the SDK
+## Log out and release SDK resources
+
+Terminate the active session:
 
 ```java
 OpenIMClient.getInstance().logout(new OnBase<String>() {
     @Override
     public void onError(int code, String error) {
-        // Handle the sign-out failure using code and error.
+        // Handle logout failure using code and error.
     }
 
     @Override
     public void onSuccess(String data) {
-        // The login session has signed out.
+        // The session has terminated successfully.
     }
 });
 ```
 
-Successful completion means that the current SDK login session has signed out. Clear application state after the success callback. For account switching, wait for the previous logout before calling `login()` for the next account.
+A successful logout callback confirms that the local session has ended and the server connection is closed. Clean up application-level user state after `onSuccess` fires. When switching users, wait for logout completion before initiating login for the new account.
 
-When the application will no longer use the SDK, release the runtime with:
+When the application terminates or no longer requires the SDK, release the runtime environment:
 
 ```java
 OpenIMClient.getInstance().unInit();
 ```
 
-`unInit()` is not a replacement for `logout()` and must not run when an ordinary screen is destroyed.
+`unInit()` tears down the SDK runtime environment. Do not use it as a substitute for logging out, and do not call it when destroying individual activities or fragments.
 
 ## Next steps
 

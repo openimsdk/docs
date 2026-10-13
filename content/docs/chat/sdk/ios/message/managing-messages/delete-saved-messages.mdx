@@ -5,20 +5,58 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/delete-saved-messages'
 ---
 
+Invoke `deleteMessages:clientMsgID:isSync:onSuccess:onFailure:` on `OIMManager` to delete multiple historical messages from a single conversation in one batch, with optional cross-device synchronization for the current account:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSArray<NSString *> *` | Yes | Array of client message IDs to delete. All specified IDs must belong to the same conversation. |
+| `isSync` | `BOOL` | Yes | Whether to synchronize the deletion status to the current account's other online devices. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming batch deletion. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] deleteMessages:conversationID
-    clientMsgID:selectedClientMsgIDs
-    isSync:YES
-    onSuccess:nil
-    onFailure:nil];
+                         clientMsgID:selectedClientMsgIDs
+                              isSync:YES
+                           onSuccess:^(NSString * _Nullable data) {
+    // Local deletion succeeded; remove items from UI
+    [self removeMessagesByIDs:selectedClientMsgIDs];
+}
+                           onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle batch deletion failure
+}];
 ```
 
-All message IDs must belong to the same conversation. `isSync` controls whether the deletion should synchronize to the current account's other clients; it does not mean that other conversation participants deleted their copies.
+## Return value
 
-This page owns `onMsgDeleted:`. Remove messages idempotently by their routing information and `clientMsgID`; an event may originate from another client. For stable listener registration and removal, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).
+The `onSuccess` callback confirms that the batch deletion request completed.
+
+## Listen for message deletion events
+
+When the current account deletes messages on another device with `isSync` enabled, the SDK notifies the local client via `onMsgDeleted:` in `OIMAdvancedMsgListener`:
+
+```objc
+- (void)onMsgDeleted:(OIMMessageInfo *)message {
+    if (message.clientMsgID.length == 0) {
+        return;
+    }
+    // Remove the message idempotently from local data sources by clientMsgID
+    [self removeMessageByClientMsgID:message.clientMsgID];
+}
+```
+
+## State changes after the call
+
+1. **Account-scoped deletion**: Deleting messages removes them for the current account only; counterparty copies remain unaffected.
+2. **Client merge key**: The merge key is `clientMsgID` (scoped to `conversationID`). Remove items idempotently from local caches upon callback success or when receiving `onMsgDeleted:`.
+3. **Single message deletion**: For deleting a single message, see [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message). For full listener setup, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

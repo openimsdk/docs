@@ -1,17 +1,53 @@
 ---
-title: 'Accept a call'
-description: 'OpenIM HarmonyOS SDK guide for Accept a call.'
+title: 'Accept call'
+description: 'Accept an incoming call invitation and retrieve room credentials.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/managing-calls/accept-call'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Pass the original, complete `invitation` object received in incoming events or recovered during cold starts. Do not construct a partial invitation payload with only `roomID`.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, { Platform, SignalingAcceptReq, SignalingAcceptResp } from '@openimsdk/imsdk';
+
+const request: SignalingAcceptReq = {
+  invitation: invitation,
+  offlinePush: offlinePush,
+  participant: participant,
+  opUserPlatformID: Platform.HarmonyOS,
+  userID: invitation.inviterUserID,
+};
+const response: SignalingAcceptResp = await sdk.signalingAccept(request);
+await mediaEngineJoin(response.roomID, response.token, response.liveURL);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `invitation` | `SignalingInvitationInfo` | Yes | Complete invitation object originally delivered by incoming call events. |
+| `offlinePush` | `OfflinePushInfo` | Yes | Push notification configuration for offline participants. |
+| `participant` | `SignalingParticipantMetaData` | Yes | User metadata of the accepting participant. |
+| `opUserPlatformID` | `Platform` | Yes | Platform identifier of the accepting device (`Platform.HarmonyOS`). |
+| `userID` | `string` | Yes | User ID of the inviter receiving the accept signal. |
+
+## Return value
+
+Returns a Promise that resolves to a `SignalingAcceptResp` object:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `roomID` | `string` | The active room identifier. |
+| `token` | `string` | Authentication token for entering the RTC media room. |
+| `liveURL` | `string` | Media stream server address. |
+
+## State changes after the call
+
+Resolving the Promise confirms that the acceptance signal was accepted by the server and returned room credentials. It does not establish media track connections; feed the credentials into your media engine to join the room. Track ongoing call and participant states using `roomID` and `userID`. For event handling across participants, see [Handle call events](/sdk/harmony/calling/managing-calls/handle-call-events).

@@ -5,24 +5,36 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-09-01'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/set-app-badge'
 ---
 
-Use `setAppBadge:onSuccess:onFailure:` to report the total unread message count currently shown by the app to the SDK.
+Invoke `setAppBadge:onSuccess:onFailure:` to report the application's overall unread message count to the SDK, synchronizing badge numbers with the server and push notification services:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `count` | `NSInteger` | Yes | The aggregate total unread message count across the entire application (non-negative integer). Pass the global unread count rather than a single conversation's count. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] setAppBadge:totalUnreadCount
                         onSuccess:^(NSString * _Nullable data) {
-                            // The SDK accepted the badge count.
+                            NSLog(@"setAppBadge success");
                         }
                         onFailure:^(NSInteger code, NSString * _Nullable msg) {
-                            // Handle the error as needed.
+                            NSLog(@"setAppBadge failed: %ld %@", (long)code, msg);
                         }];
 ```
 
-`totalUnreadCount` should be a non-negative integer. Update it when the total unread count changes, after login synchronization, or after clearing unread messages. Do not use the unread count of a single conversation as the app-wide badge count.
+## Return value
 
-The success callback only means that the SDK accepted the badge value; it does not change the local unread count of any conversation. If the app displays a badge on its Home Screen icon, update the system UI through the appropriate iOS notification and badge APIs as well. See [Retrieve and maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count) for querying and tracking the count.
+The `onSuccess` callback returns confirmation when the SDK successfully records the badge count.
+
+## State changes after the call
+
+1. **Push service synchronization**: This call updates badge metadata for backend push delivery; it does not alter conversation-level unread records. To update the app icon badge on the iOS home screen, pair this call with Apple's user notification framework.
+2. **Re-query calibration**: For unread counter calculation and listener maintenance, refer to [Retrieve and maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count).

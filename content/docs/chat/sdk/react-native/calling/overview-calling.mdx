@@ -1,50 +1,50 @@
 ---
 title: 'Audio and video calling overview'
-description: 'OpenIM React Native SDK guide for audio and video calling.'
+description: 'Understand OpenIM React Native SDK RTC signaling, room credentials, and call event boundaries.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/calling/overview-calling'
 ---
 
-OpenIM React Native SDK provides calling signaling APIs for starting and handling call invitations, querying room information, and synchronizing call state. It handles call business signaling only; it does not capture or play audio and video, connect to media rooms, or render call UI.
+The OpenIM React Native SDK provides real-time calling signaling APIs to initiate and handle call invitations, query room information, and synchronize call states. The SDK exclusively manages RTC signaling workflows; it does not capture or render audio/video media tracks, manage media network sockets, or draw in-call UI components.
 
-After starting or accepting a call, the SDK returns room credentials such as `roomID`, `token`, and `liveURL`. The application passes these credentials to a real-time audio and video media engine to join the call room, and handles device permissions, media tracks, weak-network strategy, and UI state itself.
+When initiating or accepting a call, the SDK returns room credentials including `roomID`, `token`, and `liveURL`. Feed these credentials into your real-time audio/video media engine (such as LiveKit, WebRTC, or TRTC) to join the media room, while managing local device permissions, audio routing, and UI rendering directly in your application.
 
-## Call flow
+## Call workflow
 
-1. Call `signalingInvite()` to start a one-to-one call, or `signalingInviteInGroup()` to start a group call.
-2. Invitees receive the call invitation through `OnReceiveNewInvitation` and choose whether to accept or reject it.
-3. After accepting, call `signalingAccept()` and use the returned room credentials to join the call room.
-4. During the call, update the call UI based on invitation status, participant status, media-stream status, and custom signals.
-5. The inviter can cancel an invitation that has not connected; call participants can hang up an established call.
+1. Initiate a direct call via [Start a one-to-one call](/sdk/react-native/calling/managing-calls/start-single-call), or a multi-party call via [Start a group call](/sdk/react-native/calling/managing-calls/start-group-call).
+2. The invitee receives the call invitation through the `OnReceiveNewInvitation` event, choosing either to [Accept a call](/sdk/react-native/calling/managing-calls/accept-call) or [Reject a call](/sdk/react-native/calling/managing-calls/reject-call).
+3. Upon accepting, retrieve the room credentials (`roomID`, `token`, and `liveURL`) to connect the media engine.
+4. During an active call, update the UI according to invitation state, participant state, media stream state, and custom signals.
+5. The caller can cancel an unanswered call via [Cancel a call invitation](/sdk/react-native/calling/managing-calls/cancel-call); any participant can terminate an active call via [Hang up a call](/sdk/react-native/calling/managing-calls/hang-up-call).
 
-## Core data
+## Core data structures
 
-| Data | Description |
+| Structure | Description |
 | --- | --- |
-| `RtcInvite` | Call invitation containing the inviter, invitees, group, room, media type, timeout, and session type. |
-| `RtcInviteResults` | The `roomID`, `token`, and `liveURL` returned after starting or accepting a call, or querying room credentials. |
-| `CallingRoomData` | Room ID, invitation information, and participant information returned when querying by group. |
-| `OnReceiveNewInvitationPayload` | Event parameter for a received call invitation, containing `invitation`, optional `offlinePushInfo`, and participant information. |
+| `RtcInvite` | Call invitation object containing inviter, invitees, group ID, room ID, media type, timeout, and session type. |
+| `RtcInviteResults` | Room credentials (`roomID`, `token`, and `liveURL`) returned upon initiating, accepting, or querying a call room. |
+| `CallingRoomData` | Room ID, active invitation, and participant profiles returned when querying by group ID. |
+| `OnReceiveNewInvitationPayload` | Event payload received on incoming invitations, containing `invitation`, optional `offlinePushInfo`, and participant details. |
 
-`customData` and custom signals are both application-defined strings. Use JSON or another format required by the application protocol.
+Both `customData` and custom signaling payloads are arbitrary business strings. You can pass JSON strings or custom serialized formats based on your application protocol.
 
-## Call state
+## Call state reconciliation
 
-After calling the start, accept, reject, cancel, or hang-up API, update the UI for the current action from the corresponding result. Call state from other users or devices is received through events. Use `roomID` to distinguish calls; use both `roomID` and `userID` to distinguish participant state.
+After invoking initiate, accept, reject, cancel, or hang-up APIs, update the local screen state based on the method result. State changes from other users or devices arrive via push events. When reconciling call state in local storage or state managers, always use `roomID` as the primary identifier for the call room, and combine `roomID:userID` to manage individual participant states.
 
-For invitation lifecycle, participant room-entry and room-exit, and media-stream listeners, see [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events). For custom-signal listeners, see [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal).
+For invitation lifecycles, participant room changes, and media stream events, see [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events). For application-level signaling, see [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal).
 
 ## Browse by task
 
-| Task | Page |
+| Task | Guide |
 | --- | --- |
-| Start a one-to-one or group call | [Start a one-to-one call](/sdk/react-native/calling/managing-calls/start-single-call), [Start a group call](/sdk/react-native/calling/managing-calls/start-group-call) |
-| Accept or reject an invitation | [Accept a call](/sdk/react-native/calling/managing-calls/accept-call), [Reject a call](/sdk/react-native/calling/managing-calls/reject-call) |
-| Cancel an invitation or hang up a call | [Cancel a call invitation](/sdk/react-native/calling/managing-calls/cancel-call), [Hang up a call](/sdk/react-native/calling/managing-calls/hang-up-call) |
-| Query a room or restore a pending invitation | [Get a group call room](/sdk/react-native/calling/retrieving-call-information/get-room-by-group-id), [Get room credentials](/sdk/react-native/calling/retrieving-call-information/get-token-by-room-id), [Restore a pending invitation](/sdk/react-native/calling/retrieving-call-information/restore-pending-invitation) |
-| Handle events and custom signals | [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal) |
+| Initiate calls | [Start a one-to-one call](/sdk/react-native/calling/managing-calls/start-single-call), [Start a group call](/sdk/react-native/calling/managing-calls/start-group-call) |
+| Respond to invitations | [Accept a call](/sdk/react-native/calling/managing-calls/accept-call), [Reject a call](/sdk/react-native/calling/managing-calls/reject-call) |
+| End or cancel calls | [Cancel a call invitation](/sdk/react-native/calling/managing-calls/cancel-call), [Hang up a call](/sdk/react-native/calling/managing-calls/hang-up-call) |
+| Query room information & restore state | [Get a group call room](/sdk/react-native/calling/retrieving-call-information/get-room-by-group-id), [Get room credentials](/sdk/react-native/calling/retrieving-call-information/get-token-by-room-id), [Restore a pending invitation](/sdk/react-native/calling/retrieving-call-information/restore-pending-invitation) |
+| Listen to events & custom signals | [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events), [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal) |

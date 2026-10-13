@@ -1,6 +1,6 @@
 ---
 title: 'Logging'
-description: 'Configure OpenIM React Native SDK logging, write diagnostic information, and upload logs.'
+description: 'Configure OpenIM React Native SDK logging, write diagnostic information, and upload logs to the server.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
@@ -11,11 +11,11 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/logger'
 ---
 
-OpenIM React Native SDK logs help diagnose initialization, connection, and business API problems. Development and staging environments can use more detailed logs. Production should reduce the log level and avoid recording tokens, complete message bodies, raw file URLs, call room credentials, or private user fields.
+OpenIM React Native SDK logs help troubleshoot initialization, connection, and business API issues. Development and staging environments can use verbose logs. Production applications should lower the log level and avoid recording tokens, full message content, raw file URLs, call room credentials, or sensitive user fields.
 
 ## Configure logging during initialization
 
-Configure the logging options when calling `initSDK()`. For `apiAddr`, `wsAddr`, `dataDir`, and the initialization and sign-in flow, see [Authenticate and manage a session](/sdk/react-native/getting-started/authenticate-and-manage-session).
+Configure logging options when invoking the SDK initialization method. For complete details on server endpoints, storage paths, and the sign-in workflow, see [Authenticate and manage a session](/sdk/react-native/getting-started/authenticate-and-manage-session).
 
 ```ts
 await OpenIMSDK.initSDK({
@@ -28,17 +28,19 @@ await OpenIMSDK.initSDK({
 });
 ```
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `logFilePath` | `string` | SDK log directory in an application-writable path. |
-| `logLevel` | `LogLevel` | Log verbosity: `Debug`, `Info`, `Warn`, `Error`, `Fatal`, or `Panic`. |
-| `isLogStandardOutput` | `boolean` | Whether SDK logs are written to the platform standard log. Enable it for development diagnostics. |
+### Parameters
 
-Use `LogLevel.Debug` for development diagnostics. Production applications usually use `LogLevel.Warn` or `LogLevel.Error` and disable unnecessary standard output.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `logFilePath` | `string` | Yes | Local directory for SDK log files, located within the application's writable sandbox. |
+| `logLevel` | `LogLevel` | No | Log output verbosity level: `Debug`, `Info`, `Warn`, `Error`, `Fatal`, or `Panic`. |
+| `isLogStandardOutput` | `boolean` | No | Whether to print underlying SDK logs to the system console. Recommended during development. |
+
+Use `LogLevel.Debug` in development and testing environments. Set `logLevel` to `LogLevel.Warn` or `LogLevel.Error` in production, and disable standard console output to optimize performance.
 
 ## Write application logs
 
-Call `logs()` to write business diagnostic information to the SDK log:
+Append application-level diagnostic information directly to the SDK logging pipeline to facilitate unified log extraction and troubleshooting:
 
 ```ts
 await OpenIMSDK.logs({
@@ -56,20 +58,22 @@ await OpenIMSDK.logs({
 });
 ```
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `logLevel` | `number` | Log level for this entry. |
-| `file` | `string` | File or module name at the call site. |
-| `line` | `number` | Line number at the call site. |
-| `msgs` | `string` | Short business action or diagnostic description. |
-| `err` | `string` | Error information; pass an empty string when there is no error. |
-| `keyAndValue` | `string[]` | Additional diagnostic fields passed as key and value pairs. |
+### Parameters
 
-Use `keyAndValue` only for non-sensitive identifiers needed for diagnosis, such as `conversationID`, `clientMsgID`, `groupID`, or `roomID`.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `logLevel` | `number` | Yes | Log level for this specific entry. |
+| `file` | `string` | Yes | Source file name or module name where the log originated. |
+| `line` | `number` | Yes | Line number in the source file. |
+| `msgs` | `string` | Yes | Brief description of the business action or diagnosis. |
+| `err` | `string` | Yes | Error message string. Pass an empty string `""` if no error occurred. |
+| `keyAndValue` | `string[]` | No | Additional diagnostic key-value pairs passed as paired entries: `[key1, val1, key2, val2]`. |
+
+Use `keyAndValue` only for necessary troubleshooting identifiers (such as `conversationID`, `clientMsgID`, or `groupID`). Never record sensitive credentials such as tokens or plaintext passwords.
 
 ## Upload logs
 
-When a user actively submits diagnostic logs, call `uploadLogs()` to upload the client logs:
+When a user encounters an issue or triggers an in-app "Report Log" diagnostic action, call this method to package client logs and upload them to the server:
 
 ```ts
 await OpenIMSDK.uploadLogs({
@@ -79,10 +83,14 @@ await OpenIMSDK.uploadLogs({
 });
 ```
 
+### Parameters
+
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `line` | `number` | Yes | Number of log lines to read for this upload. |
-| `cancelID` | `string` | No | Identifier for this upload. |
-| `ex` | `string` | No | Additional diagnostic description; it must not contain credentials or private data. |
+| `line` | `number` | Yes | Maximum number of log lines to extract for this upload. |
+| `cancelID` | `string` | No | Unique identifier for the upload task, used to cancel the upload if needed. |
+| `ex` | `string` | No | Additional business diagnostic notes. Do not include sensitive data. |
 
-When the call returns, the log upload request has completed. Before uploading, explain the log collection scope to the user and follow privacy and compliance requirements.
+## Return value
+
+A successful Promise resolution indicates that the log upload task was submitted and processed by the server. Prior to uploading, inform the user about the scope of data collected and ensure compliance with relevant privacy regulations.

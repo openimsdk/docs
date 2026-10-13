@@ -5,34 +5,35 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/events/overview-events'
 ---
 
-The OpenIM iOS SDK defines listener protocols by domain. Add and remove listeners through `[OIMManager callbacker]`, and keep a strong reference to each listener in your application state layer because the callbacker holds weak references to them.
+The OpenIM iOS SDK defines listener protocols segmented by functional domain. Add and remove listeners through `[OIMManager callbacker]`. Retain a strong reference to each listener instance within your application state management layer, as `OIMCallbacker` maintains only weak references to registered delegates.
 
 ## Registration lifecycle
 
-| Event scope | Protocol | Canonical page |
+| Event scope | Protocol | Related documentation |
 | --- | --- | --- |
-| Connection and token | Connection blocks passed during initialization | [Authenticate and manage a session](/sdk/ios/getting-started/authenticate-and-manage-session) |
-| User, friend, and blocklist | `OIMUserListener`, `OIMFriendshipListener` | [Users overview](/sdk/ios/user/overview-user) |
+| Connection and token | Connection callbacks passed during initialization | [Authenticate and manage the session](/sdk/ios/getting-started/authenticate-and-manage-session) |
+| User, friend, and blacklist | `OIMUserListener`, `OIMFriendshipListener` | [User overview](/sdk/ios/user/overview-user) |
 | Conversations and synchronization | `OIMConversationListener` | [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list) |
 | Conversation groups | `Open_im_sdk_callbackOnConversationGroupListener` | [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups) |
-| Groups and group members | `OIMGroupListener` | [Groups overview](/sdk/ios/group/overview-group) |
+| Groups and group members | `OIMGroupListener` | [Group overview](/sdk/ios/group/overview-group) |
 | Messages | `OIMAdvancedMsgListener` | [Receive messages](/sdk/ios/message/receiving-messages/receive-messages) |
 | Custom business notifications | `OIMCustomBusinessListener` | [Receive custom business messages](/sdk/ios/message/receiving-messages/custom-business-listener) |
-| Audio and video calls | `OIMSignalingListener` | [Call events](/sdk/ios/calling/managing-calls/handle-call-events) |
+| Audio and video calls | `OIMSignalingListener` | [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events) |
 
-Register application-level listeners after `initSDK` succeeds and before `login`. Do not add them again every time a view renders or appears. When the user logs out or switches accounts, or when the state layer is destroyed, call the corresponding `remove...Listener:` method with the same instance.
+Register application-level listeners after `initSDKWithConfig:...` succeeds and prior to initiating `login:token:...`. Avoid re-registering listeners on view transition or rendering cycles. When logging out, switching user accounts, or tearing down the state controller, invoke the matching `remove...Listener:` method with the retained listener instance.
 
-Conversation groups are an exception. OpenIMCore uses `Open_im_sdkSetConversationGroupListener` to set a single `Open_im_sdk_callbackOnConversationGroupListener`. It does not go through `[OIMManager callbacker]` and is not an `OIMCallbacker` listener that can be added repeatedly. The conversation state layer should retain this callback object for the SDK lifecycle and set it only once. For the complete callback and JSON payloads, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+Conversation group events follow a dedicated mechanism: OpenIMCore configures a single `Open_im_sdk_callbackOnConversationGroupListener` via `Open_im_sdkSetConversationGroupListener`. It bypasses `[OIMManager callbacker]` and cannot be registered incrementally. Retain this callback object within the conversation manager for the duration of the session and configure it once during startup. Refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups) for detailed JSON payloads and callback contracts.
 
 ## Listen for initial synchronization
 
-The synchronization lifecycle belongs to `OIMConversationListener`. This page is the canonical implementation page for its four synchronization callbacks:
+Data synchronization lifecycle callbacks reside within the `OIMConversationListener` protocol. Implement the four core synchronization methods to track server state synchronization:
+
+## Code example
 
 ```objc
 @interface SDKSyncStore () <OIMConversationListener>
@@ -68,6 +69,6 @@ The synchronization lifecycle belongs to `OIMConversationListener`. This page is
 @end
 ```
 
-When `reInstall` is `YES`, synchronization follows a local database rebuild and generally requires a more comprehensive loading state. `onSyncServerProgress:` reports the current progress. After synchronization finishes, query the snapshots needed by the current UI again, then continue merging subsequent increments from each domain listener.
+When `reInstall` evaluates to `YES`, synchronization follows a local database rebuild, indicating that complete state restoration is underway. Track synchronization progress with `onSyncServerProgress:`. Once synchronization finishes, re-query initial data snapshots required by visible views, and subsequently process incremental updates dispatched by domain listeners.
 
-A synchronization event is not the success callback of a query API and has no business-entity merge key. Handle synchronization completion, snapshot queries, and subsequent event increments as separate stages. Isolate their state by the current SDK instance and logged-in user.
+Synchronization events operate independently of query API callbacks and carry no business entity merge keys. Process synchronization completion, query snapshot fetching, and subsequent real-time event merges as distinct operational phases, scoping data strictly by user account.

@@ -5,17 +5,42 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/delete-saved-message'
 ---
 
+Invoke `deleteMessage:clientMsgID:onSuccess:onFailure:` on `OIMManager` to delete a single historical message in a specified conversation for the current logged-in user:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the message to delete. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming deletion request completion. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] deleteMessage:conversationID
-    clientMsgID:clientMsgID
-    onSuccess:nil
-    onFailure:nil];
+                        clientMsgID:clientMsgID
+                          onSuccess:^(NSString * _Nullable data) {
+    // Deletion succeeded; remove message bubble from local UI
+    [self removeMessageFromUI:clientMsgID];
+}
+                          onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle deletion failure
+}];
 ```
 
-Success means that the request to delete the message from the current device and the current account's server-side storage has completed. This method has no multi-device synchronization switch, does not delete copies retained by other participants, and does not display a revocation notice. Use the corresponding dedicated page when messages must be deleted in batches or synchronized across the current account's clients.
+## Return value
+
+The `onSuccess` callback confirms that the deletion request was processed for the current account.
+
+## State changes after the call
+
+1. **Current account visibility**: This operation removes the message from the current account's local storage and server records. It does not delete copies held by other conversation participants and does not render a "message revoked" placeholder.
+2. **Client merge key**: The merge key is `clientMsgID` (scoped to `conversationID` when managing multi-conversation stores).
+3. **Revocation vs batch deletion**: If you need to retract a message so that all members see a revocation notice, see [Revoke a message](/sdk/ios/message/managing-messages/revoke-a-message). To delete multiple messages simultaneously or synchronize deletion across multiple devices of the current account, see [Delete messages in batches](/sdk/ios/message/managing-messages/delete-saved-messages).

@@ -11,6 +11,17 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/managing-messages/delete-saved-message'
 ---
 
+Delete a single historical message for the current account from both the local database and the server:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | ID of the conversation containing the message. |
+| `clientMsgID` | `String` | Yes | Target client message ID to delete. |
+
+## Code example
+
 ```dart
 await OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(
   conversationID: conversationID,
@@ -18,6 +29,12 @@ await OpenIM.iMManager.messageManager.deleteMessageFromLocalAndSvr(
 );
 ```
 
-Future completion does not mean that copies on other devices or held by other members have been deleted, and this operation is not a recall. The Flutter SDK does not expose a batch synchronized-deletion API.
+## Return value
 
-`onMsgDeleted` is the event owned by this page. Add it to the application's single `OnAdvancedMsgListener`. Because Flutter's `Message` has no `conversationID`, resolve the message route first, then remove it idempotently by `conversationID:clientMsgID`. See [Event overview](/sdk/flutter/events/overview-events) for the listener configuration entry point.
+`Future` completion indicates that the message has been deleted from both the server and local storage for the current account. Remove the message from the UI list immediately using the composite key `conversationID:clientMsgID`.
+
+This operation removes message history only for the current user across logged-in sessions; it does not delete copies stored on other conversation members' devices and does not constitute a message recall.
+
+## State changes after the call
+
+Message deletion events are delivered through the `onMsgDeleted` callback in `OnAdvancedMsgListener`. When the current user deletes a message from another client, this callback notifies the active device. Because Flutter's `Message` model does not contain a `conversationID` property, resolve the conversation routing first, then remove the message idempotently using `conversationID:clientMsgID`. For global listener registration, see [Events overview](/sdk/flutter/events/overview-events). To revoke a message for all members with a tombstone prompt, see [Revoke a message](/sdk/flutter/message/managing-messages/revoke-a-message).

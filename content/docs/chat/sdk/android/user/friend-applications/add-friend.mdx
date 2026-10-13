@@ -1,27 +1,30 @@
 ---
-title: 'Send a friend request'
-description: 'Use addFriend() to send a friend request to a specified user.'
+title: 'Send a friend application'
+description: 'Initiate a friend request to a target user with an optional verification message using addFriend().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/friend-applications/add-friend'
 ---
+
+Send a friend request to a specified user along with an optional verification greeting.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().friendshipManager.addFriend(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Friend request sent successfully.
+            // Friend request sent successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     "user_b",
@@ -29,6 +32,20 @@ OpenIMClient.getInstance().friendshipManager.addFriend(
 );
 ```
 
-The second argument is the recipient's `userID`, and the third argument is the request message. A successful callback means the server received the request, not that the recipient accepted it. The target ID cannot be empty. Let a trusted application backend handle lookup by nickname, phone number, or other private fields.
+## Parameters
 
-Receive friend request changes through `OnFriendshipListener`, as documented in [Get received friend requests](/sdk/android/user/friend-applications/get-recv-friend-application-list).
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `userID` | `String` | Yes | Target user ID of the application recipient. |
+| `reqMsg` | `String` | No | Optional greeting or verification note attached to the application. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server recorded and dispatched the friend application; it does not indicate that the recipient has accepted it. If the recipient configured automatic approval without verification, friendship establishes immediately.
+2. **Asynchronous event delivery**: The recipient receives `OnFriendshipListener.onFriendApplicationAdded`, delivering the new application info to merge using `userID`. If auto-accepted, both sides receive `onFriendAdded`.
+3. **Re-query calibration**: The sender can inspect pending outgoing requests using [Get sent friend applications](/sdk/android/user/friend-applications/get-send-friend-application-list). Track friend application updates across screens using `userID` as the unique identifier.

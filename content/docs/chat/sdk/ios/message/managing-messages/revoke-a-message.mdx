@@ -5,27 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/revoke-a-message'
 ---
 
-When other conversation participants should see that a message was revoked, call `revokeMessage:clientMsgID:onSuccess:onFailure:` rather than substituting a regular deletion. Deletion affects visibility for the current account only; see [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message). To retain the message while changing its content, use [Modify a message](/sdk/ios/message/managing-messages/modify-a-message).
+When other conversation participants should see that a message was revoked, invoke `revokeMessage:clientMsgID:onSuccess:onFailure:` on `OIMManager` rather than substituting a regular deletion. Deletion affects visibility for the current account only; see [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message). To retain the message while changing its content, use [Modify a message](/sdk/ios/message/managing-messages/modify-a-message).
 
-## Revoke one message
-
-### Parameters
+## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `NSString *` | Yes | The ID of the conversation containing the message. |
-| `clientMsgID` | `NSString *` | Yes | The ID of the message to revoke. |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the message to revoke. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the revocation request completed. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `message`. |
+
+## Code example
 
 ```objc
 [[OIMManager manager] revokeMessage:conversationID
                         clientMsgID:clientMsgID
                           onSuccess:^(NSString * _Nullable data) {
+    // Revocation succeeded; update message bubble to revoked state in local UI
     [self markMessageRevoked:clientMsgID conversationID:conversationID];
 }
                           onFailure:^(NSInteger code, NSString * _Nullable message) {
@@ -33,24 +35,25 @@ When other conversation participants should see that a message was revoked, call
 }];
 ```
 
-After success, the caller can immediately update the matching `clientMsgID` in the current list to a revoked state. OpenIMServer validates the permitted sender, time window, and message types. If the call fails, do not leave a local-only revoked state in the UI.
+## Return value
 
-## Result
-
-A successful callback means that the current revocation request has completed; it does not mean that every client UI has already updated. Other clients merge the revocation event incrementally. After a connection recovery or new login, message synchronization and history queries reconcile the state again.
+The `onSuccess` callback confirms that the revocation request was processed by the server. The client merge key is `clientMsgID` (scoped to `conversationID`).
 
 ## Receive revocation events
 
-This page owns `onRecvMessageRevoked:`. Implement it on the application's existing `OIMAdvancedMsgListener`:
+When another member or another logged-in device revokes a message, the SDK notifies the client via `onRecvMessageRevoked:` in `OIMAdvancedMsgListener`:
 
 ```objc
 - (void)onRecvMessageRevoked:(OIMMessageRevokedInfo *)revokedInfo {
+    if (revokedInfo == nil) {
+        return;
+    }
     [self markMessageRevokedByClientMsgID:revokedInfo.clientMsgID
                               sessionType:revokedInfo.sessionType];
 }
 ```
 
-When using the closure form on `OIMCallbacker`, the `OIMRevokedCallback` argument is nullable and must be checked first:
+When using block callbacks on `OIMCallbacker`, the `revokedInfo` argument may be `nil` and must be validated before processing:
 
 ```objc
 OIMRevokedCallback handleMessageRevoked =
@@ -63,14 +66,8 @@ OIMRevokedCallback handleMessageRevoked =
 };
 ```
 
-`OIMMessageRevokedInfo` does not contain `conversationID`. Locate the cached original message by `clientMsgID`, then combine its conversation with the event's `sessionType` to update the revoked state. Do not remove a message by array position. Retain the listener strongly, register it with `addAdvancedMsgListener:`, and remove the same instance with `removeAdvancedMsgListener:`. See [Receive messages](/sdk/ios/message/receiving-messages/receive-messages) for the complete setup.
+## State changes after the call
 
-The successful call, event arrival on another client, and reloading history are three separate stages.
-
-## Related pages
-
-- [Delete a message](/sdk/ios/message/managing-messages/delete-saved-message)
-- [Modify a message](/sdk/ios/message/managing-messages/modify-a-message)
-- [Send a message](/sdk/ios/message/sending-messages/send-message)
-- [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id)
-- [Receive messages](/sdk/ios/message/receiving-messages/receive-messages)
+1. **Permissions and validation**: The server enforces permission checks, time window restrictions, and eligible message types for revocation. Do not mutate the UI to a revoked state if the call fails.
+2. **Context resolution**: Because `OIMMessageRevokedInfo` does not provide `conversationID`, locate the cached original message by `clientMsgID`, then combine its conversation with the event's `sessionType` to update the bubble display.
+3. **Synchronization phases**: The successful call, event arrival on remote devices, and reloading history are three distinct operational stages. For complete listener lifecycle details, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

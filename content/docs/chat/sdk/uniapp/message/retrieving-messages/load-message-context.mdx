@@ -1,17 +1,50 @@
 ---
 title: 'Load message context'
-description: 'OpenIM uni-app / uni-app x SDK guide for Load message context.'
+description: 'Retrieve surrounding messages before and after an anchor message.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/retrieving-messages/load-message-context'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When navigating into a conversation context from search results, quoted message clicks, or deep links, invoke `fetchSurroundingMessages()` to load adjacent messages preceding and following an anchor message simultaneously.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `startMessage` | `OpenIMMessageItem` | Yes | Fully populated anchor message object. |
+| `viewType` | `OpenIMMessageViewType` | Yes | Use `OpenIMMessageViewTypeHistory` for chat timeline contexts. |
+| `before` | `number` | Yes | Maximum number of messages to fetch before the anchor. |
+| `after` | `number` | Yes | Maximum number of messages to fetch after the anchor. |
+
+## Code example
+
+```uts
+import {
+  OpenIMMessageViewTypeHistory,
+  fetchSurroundingMessages,
+} from '@/uni_modules/unix-openim-sdk'
+
+const result = await fetchSurroundingMessages({
+  startMessage: targetMessage,
+  viewType: OpenIMMessageViewTypeHistory,
+  before: 20,
+  after: 20,
+})
+
+if (result != null) {
+  renderMessages(result.messages)
+}
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMFetchSurroundingMessagesResult | null` object. Retrieved context messages are stored in `messages` (`OpenIMMessageItem[]`). The total count may be less than `before + after` if the anchor is close to the beginning or end of history, or if intervening messages were deleted.
+
+## State changes after the call
+
+The anchor `startMessage` must be a valid `OpenIMMessageItem` instance obtained from a query or message event; do not supply hand-crafted partial objects. Merge the surrounding messages into your view model using `clientMsgID`. If you need to retrieve the anchor message item first, see [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id). This call is a local read-only query and does not emit message events.

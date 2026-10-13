@@ -1,43 +1,40 @@
 ---
-title: 'Send a message'
-description: 'Use sendMessage to send a Message to a one-to-one or group conversation.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/sending-messages/send-message'
+title: "Send a message"
+description: "Use sendMessage to send a Message to a one-to-one or group conversation."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/sending-messages/send-message"
 ---
 
-`sendMessage()` sends a previously created `Message`. Set only `recvUid` for a one-to-one chat or only `recvGid` for a group chat. `OnMsgSendCallback` reports success, failure, and media upload progress separately.
+Transmit a previously constructed `Message` object to a single chat (C2C) or group chat. For single chat, specify the recipient user ID (`recvUid`) and pass `null` for `recvGid`. For group chat, specify the target group ID (`recvGid`) and pass `null` for `recvUid`. These two parameters are mutually exclusive. The `OnMsgSendCallback` provides granular callbacks for upload progress, success, and delivery failure.
 
-## Parameters
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `message` | `Message` | Yes | Pending message returned by a creation method. |
-| `recvUid` | `String` | Conditionally required | Recipient user ID for a one-to-one message; leave empty for a group message. |
-| `recvGid` | `String` | Conditionally required | Group ID for a group message; leave empty for a one-to-one message. |
-| `offlinePushInfo` | `OfflinePushInfo` | Yes | Offline-push configuration; pass an empty object when no custom content is needed. |
+## Code example
 
 ```java
+String peerUserID = "user_b";
+OfflinePushInfo offlinePushInfo = new OfflinePushInfo();
+offlinePushInfo.setTitle("New Message Notification");
+offlinePushInfo.setDesc("You received a new message. Tap to view.");
+
 OpenIMClient.getInstance().messageManager.sendMessage(
     new OnMsgSendCallback() {
         @Override
         public void onProgress(long progress) {
-            // Update media upload progress.
+            // progress indicates media upload percentage (0-100)
         }
 
         @Override
         public void onSuccess(Message sentMessage) {
-            // Replace the pending item by clientMsgID.
+            // Message sent successfully, update local state using sentMessage.getClientMsgID()
         }
 
         @Override
         public void onError(int code, String error) {
-            // Mark the item as failed and allow retry.
+            // Mark message delivery failed in UI and provide retry option
         }
     },
     message,
@@ -47,6 +44,22 @@ OpenIMClient.getInstance().messageManager.sendMessage(
 );
 ```
 
-## Result
+## Parameters
 
-The success callback provides the sent `Message`, including server-assigned identifiers, timestamps, and send state. It means this request completed, not that the recipient has already received the message. The recipient uses [Receive messages](/sdk/android/message/receiving-messages/receive-messages).
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `callback` | `OnMsgSendCallback` | Yes | Lifecycle callback for message transmission (progress, success, error). |
+| `message` | `Message` | Yes | The message object to transmit, created by the corresponding factory method. |
+| `recvUid` | `String` | Conditional | Recipient user ID for single chat. Must be `null` when sending to a group. |
+| `recvGid` | `String` | Conditional | Target group ID for group chat. Must be `null` when sending to a single user. |
+| `offlinePushInfo` | `OfflinePushInfo` | No | Custom offline push notification payload. Pass `null` for default push configuration. |
+
+## Return value
+
+Upon success, `onSuccess` returns the transmitted `Message` object. Key populated attributes include `serverMsgID`, timestamp `sendTime`, and updated status `status`.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the server accepted and stored the message. The client should update the message status in the UI from "sending" to "sent" using `clientMsgID`.
+2. **Asynchronous event delivery**: Delivery to recipient devices occurs asynchronously. The receiving client receives the message through `OnAdvanceMsgListener.onRecvNewMessage`.
+3. **Re-query calibration**: If delivery status is uncertain due to network timeout or client disconnection, query message history via [Load older messages](/sdk/android/message/retrieving-messages/load-older-messages) to verify whether the message was persisted.

@@ -1,22 +1,52 @@
 ---
 title: 'Subscribe to user status'
-description: 'Subscribe to the online status of visible users with the OpenIM Flutter SDK.'
+description: 'Subscribe to real-time online presence status for specified users using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/retrieving-and-updating-user-information/subscribe-user-status'
 ---
 
+Subscribe to real-time presence changes for specified target users and retrieve their initial presence snapshot:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `List<String>` | Yes | List of user IDs whose online status should be subscribed to. Deduplicate and filter out empty strings; subscribe only to users currently visible on screen. |
+
+## Code example
+
 ```dart
-final states =
-    await OpenIM.iMManager.userManager.subscribeUsersStatus(targetUserIDs);
-mergePresence(states);
+final states = await OpenIM.iMManager.userManager.subscribeUsersStatus(
+  ['user_a', 'user_b'],
+);
 ```
 
-Remove empty and duplicate IDs, and subscribe only to users currently visible in the UI. The `Future` returns the initial `List<UserStatusInfo>` snapshot; merge it by `userID`.
+## Return value
 
-This page is the sole owner of `onUserStatusChanged`. Combine it into the application's single `OnUserListener`. When the user logs out or switches accounts, the application event dispatcher must isolate callbacks from the previous account.
+A successful `Future` returns a list of presence status snapshots for the target users at the moment of subscription (`List<UserStatusInfo>`).
+
+Core fields of each `UserStatusInfo`:
+- `userID`: Unique user identifier; acts as the primary key for state lookup and merging.
+- `status`: Integer representing presence state.
+- `detailPlatformStatus`: List of platform presence details (iOS, Android, Web, Desktop, etc.).
+
+Merge these snapshot records into your local presence cache using `userID`.
+
+## Listen for presence status updates
+
+Handle presence transitions centrally. When a subscribed user's presence changes (connecting, disconnecting, or changing active platforms), the SDK delivers updates through the `onUserStatusChanged` callback:
+
+```dart
+void handleUserStatusChanged(UserStatusInfo info) {
+  mergePresence(info);
+}
+```
+
+The Flutter SDK maintains a single `OnUserListener` instance inside `UserManager`. Configure this callback inside the consolidated application entry point described in [Events overview](/sdk/flutter/events/overview-events).
+
+When widgets are disposed or users scroll out of the visible viewport, invoke [Unsubscribe from user status](/sdk/flutter/user/retrieving-and-updating-user-information/unsubscribe-user-status) to release subscription resources.

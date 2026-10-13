@@ -1,40 +1,41 @@
 ---
-title: 'Integrate for each runtime'
-description: 'Initialize OpenIMClientSDK in Android and iOS Flutter apps and handle mobile runtime boundaries.'
+title: 'Environment-specific implementation'
+description: 'Initialize OpenIMClientSDK in Android and iOS Flutter apps and manage mobile runtime boundaries.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/getting-started/environment-specific-implementation'
 ---
 
-## Choose the runtime
+## Runtime selection
 
-`flutter_openim_sdk` supports Flutter apps on Android and iOS. Both platforms use the same Dart managers, models, and listeners, but differ in platform ID, data directory, permissions, background lifecycle, and build configuration.
+The `flutter_openim_sdk` package targets Android and iOS Flutter applications. Both platforms share identical Dart managers, data models, and listener contracts, but require platform-specific platform IDs, storage directories, permissions, background execution policies, and native build configurations.
 
-| Runtime | `platformID` | Main considerations |
+| Runtime | `platformID` | Primary considerations |
 | --- | --- | --- |
-| Android | `IMPlatform.android` | Network permission, application data directory, background restrictions, and push configuration. |
-| iOS | `IMPlatform.ios` | Network policy, application sandbox directory, background modes, and push configuration. |
+| Android | `IMPlatform.android` | Network permissions, private storage directory, battery optimization rules, and notification push setup. |
+| iOS | `IMPlatform.ios` | App Transport Security (ATS) policies, app sandbox directories, background execution modes, and APNs integration. |
 
-Use the corresponding SDK for web, desktop, and mini-program environments. Do not infer that this Flutter package supports a runtime merely because `IMPlatform` defines another numeric value.
+For Web, desktop, and Mini-Programs, use their respective dedicated SDKs. Do not assume Flutter support on those runtimes solely because other constants exist in the `IMPlatform` enum.
 
 ## Install dependencies
 
-Install the SDK and add `path_provider` to obtain the app documents directory:
+Add the SDK along with `path_provider` to access the application documents directory:
 
 ```bash
 flutter pub add flutter_openim_sdk path_provider
 ```
 
-This command selects the latest compatible versions for the current project and updates `pubspec.yaml`. Commit the dependency lockfile in team projects. After upgrading dependencies, verify initialization and connection behavior separately on Android and iOS.
+This command resolves the latest compatible versions and records them in `pubspec.yaml`. Commit your lockfile to source control. After upgrading dependencies, independently verify the initialization and connection lifecycles on both Android and iOS devices.
 
 ## Initialize the SDK
 
-Reuse `OpenIM.iMManager` throughout one application process. Prepare a persistent data directory, select the platform enum for the actual operating system, and pass a connection-lifecycle listener to `initSDK()`.
+Reuse a single instance of `OpenIM.iMManager` across your application process. Obtain a persistent writable documents directory, select the appropriate platform identifier, and provide the connection listener during initialization.
+
+### Code example
 
 ```dart
 import 'dart:io';
@@ -75,55 +76,57 @@ Future<bool> initializeOpenIM({
 }
 ```
 
-### Parameters
+## Parameters
 
-| Field | Type | Required | Description |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `platformID` | `int` | Yes | Use `IMPlatform.android` on Android and `IMPlatform.ios` on iOS. |
-| `apiAddr` | `String` | Yes | The OpenIMServer HTTP API address. |
-| `wsAddr` | `String` | Yes | The OpenIMServer WebSocket address. |
-| `dataDir` | `String` | Yes | An application sandbox directory used by the SDK database and logs. |
-| `listener` | `OnConnectListener` | Yes | Listener for connection, token, and forced-sign-out events. |
-| `logLevel` | `int` | No | SDK log level. The default is `6`. |
-| `isNeedEncryption` | `bool` | No | Whether to enable SDK data encryption. The default is `false`. |
-| `isCompression` | `bool` | No | Whether to enable compression. The default is `false`. |
-| `isLogStandardOutput` | `bool` | No | Whether to write SDK logs to standard output. |
-| `logFilePath` | `String?` | No | A custom log directory. If omitted, SDK configuration determines the location. |
+| `platformID` | `int` | Yes | Platform identifier. Pass `IMPlatform.android` for Android, and `IMPlatform.ios` for iOS. |
+| `apiAddr` | `String` | Yes | OpenIMServer HTTP API endpoint. |
+| `wsAddr` | `String` | Yes | OpenIMServer WebSocket endpoint. |
+| `dataDir` | `String` | Yes | App sandbox directory for local SQLite databases and logs. |
+| `listener` | `OnConnectListener` | Yes | Listener for connection state transitions, token expiration, and kick-out events. |
+| `logLevel` | `int` | No | Numeric SDK logging level. Defaults to `6`. |
+| `isNeedEncryption` | `bool` | No | Whether to enable local database encryption. Defaults to `false`. |
+| `isCompression` | `bool` | No | Whether to compress network payloads. Defaults to `false`. |
+| `isLogStandardOutput` | `bool` | No | Whether to print SDK logs to standard output. |
+| `logFilePath` | `String?` | No | Custom log file path. When omitted, the SDK creates logs inside `dataDir`. |
 
-A successful initialization `Future` means only that the SDK initialization call completed. After login, use `onConnectSuccess` to determine when connection-dependent business APIs are available.
+## Return value
+
+A successful `Future` returns a boolean indicating whether the underlying native core was initialized. WebSocket readiness after login is signaled exclusively through the `OnConnectListener.onConnectSuccess` event.
 
 ## Android and iOS boundaries
 
 ### Android
 
-- Make sure the manifest permits network access, and store SDK data in an app-private directory.
-- An Android emulator cannot use `localhost` to reach the development computer.
-- Background availability and push delivery depend on both Android system policy and the app's push integration.
+- Ensure `AndroidManifest.xml` includes `<uses-permission android:name="android.permission.INTERNET"/>` and store SDK data in internal app storage.
+- When running on an Android emulator, do not use `localhost` to refer to the host workstation.
+- Process retention and push message delivery depend on system battery policies and OEM-specific background restrictions.
 
 ### iOS
 
-- Use a persistent directory inside the application sandbox; do not write into the app bundle.
-- HTTPS and WSS endpoints require valid certificates. App Transport Security settings affect iOS network access.
-- Test push delivery and background restoration on physical devices because simulator behavior differs.
+- Store database and cache files strictly within the writable application sandbox; never attempt to write to the app bundle.
+- Configure App Transport Security (ATS) exceptions if connecting to non-HTTPS/WSS staging endpoints. Production deployments require valid TLS certificates.
+- Physical devices, background fetch modes, and simulators exhibit different lifecycle characteristics; verify each independently.
 
-## Lifecycle and cleanup
+## Lifecycle and teardown
 
-The Flutter SDK does not expose Dart methods for reporting network status or foreground and background transitions. When the app resumes, rely on the connection listener and query the snapshots required by the current page again. When the application no longer uses the SDK, call:
+The Flutter SDK does not expose manual network status or foreground/background lifecycle reporting methods. When the app resumes, rely on `OnConnectListener` callbacks to determine connection status, and re-query fresh snapshots for visible screens. When releasing SDK resources completely, invoke:
 
 ```dart
 OpenIM.iMManager.unInitSDK();
 ```
 
-`unInitSDK()` is not the same as signing the user out. When switching accounts, wait for `logout()` to finish, clear application state for the previous account, and then log in with the new account.
+Uninitialization is not equivalent to signing out. When switching user accounts, await `logout()`, clear user-specific UI state, and then log in with the new credentials.
 
 ## Verification and troubleshooting
 
-- Verify initialization, login, and `onConnectSuccess` at least once on both Android and iOS.
-- Confirm on a physical device that the HTTP, WebSocket, and media resource addresses are reachable.
-- After terminating the process, backgrounding the app, or disconnecting and restoring the network, verify that connection state and page snapshots recover correctly.
-- Do not initialize the SDK in multiple widgets or repeatedly replace the global listener.
+- Verify initialization, login, and `onConnectSuccess` on at least one physical Android and iOS device.
+- Verify that HTTP, WebSocket, and media storage URLs are reachable from external networks.
+- Test app process termination, backgrounding, and network disconnections to confirm automatic reconnection and screen recovery.
+- Avoid re-initializing the SDK or swapping the global listener across multiple Widgets.
 
 ## Next steps
 
-- [Authenticate and manage a session](/sdk/flutter/getting-started/authenticate-and-manage-session)
+- [Authenticate and manage session](/sdk/flutter/getting-started/authenticate-and-manage-session)
 - [Send your first message](/sdk/flutter/getting-started/send-first-message)

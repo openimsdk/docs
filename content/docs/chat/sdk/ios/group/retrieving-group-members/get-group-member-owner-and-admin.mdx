@@ -5,22 +5,36 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-group-members/get-group-member-owner-and-admin'
 ---
 
-Pass the target `groupID` to the selector. The success callback returns the owner and administrators as `OIMGroupMemberInfo` objects without requiring the complete member list.
+Invoke `getGroupMemberOwnerAndAdmin:onSuccess:onFailure:` to quickly query the group owner and all administrators:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] getGroupMemberOwnerAndAdmin:groupID
-  onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
-    [self replaceOwnerAndAdmins:members];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] getGroupMemberOwnerAndAdmin:@"group_1001"
+                                        onSuccess:^(NSArray<OIMGroupMemberInfo *> *members) {
+                                            [self replaceOwnerAndAdmins:members];
+                                        }
+                                        onFailure:^(NSInteger code, NSString *message) {
+                                            NSLog(@"getGroupMemberOwnerAndAdmin failed: %ld %@", (long)code, message);
+                                        }];
 ```
 
-Merge role changes from `onGroupMemberInfoChanged:` by `groupID:userID`.
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMGroupMemberInfo` models (`NSArray<OIMGroupMemberInfo *> *`) containing the group owner and all active administrators.
+
+## State changes after the call
+
+1. **Management snapshot**: This method provides a direct way to render the group administration team without traversing or paginating through the full member roster.
+2. **Event notification**: Role changes and ownership transfers broadcast via `onGroupMemberInfoChanged:`. The client updates the corresponding member record matching `groupID:userID`. For listener setup, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

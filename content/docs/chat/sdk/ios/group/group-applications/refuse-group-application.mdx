@@ -5,17 +5,40 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/group-applications/refuse-group-application'
 ---
 
+Invoke `refuseGroupApplication:fromUserId:handleMsg:onSuccess:onFailure:` to reject a specified group application (restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `fromUserId` | `NSString *` | Yes | User ID of the applicant. |
+| `handleMsg` | `NSString *` | No | Rejection explanation or remark. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] refuseGroupApplication:application.groupID
-  fromUserId:application.userID handleMsg:@"Not approved at this time"
-  onSuccess:^(NSString * _Nullable data) { [self showHandled]; }
-  onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] refuseGroupApplication:@"group_1001"
+                                  fromUserId:@"user_003"
+                                   handleMsg:@"Application requirements not met"
+                                   onSuccess:^(NSString * _Nullable data) {
+                                       NSLog(@"refuseGroupApplication success");
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"refuseGroupApplication failed: %ld %@", (long)code, message);
+                                   }];
 ```
 
-A successful callback means that the rejection request has completed. `onGroupApplicationRejected:` may arrive afterward; merge it by `groupID:userID`.
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the rejection.
+
+## State changes after the call
+
+1. **Application status update**: The rejection event broadcasts across connected clients via the `onGroupApplicationRejected:` listener callback. The client matches records by `groupID:userID` and updates the entry status to rejected.
+2. **Re-query calibration**: For listener integration and list updates, refer to [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).

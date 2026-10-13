@@ -5,11 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/retrieving-messages/find-messages-by-id'
 ---
+
+By specifying a list of conversation IDs and client message IDs, invoke `findMessageList:onSuccess:onFailure:` on `OIMManager` to locate specific historical messages stored locally:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `paramList` | `NSArray<OIMFindMessageListParam *> *` | Yes | Array of search criteria models. Supports querying across multiple conversations in a single request. |
+
+### Properties of OIMFindMessageListParam
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgIDList` | `NSArray<NSString *> *` | Yes | Array of client message IDs (`clientMsgID`) to look up. |
+
+## Code example
 
 ```objc
 OIMFindMessageListParam *query = [OIMFindMessageListParam new];
@@ -17,12 +33,26 @@ query.conversationID = conversationID;
 query.clientMsgIDList = @[clientMsgID];
 
 [[OIMManager manager] findMessageList:@[query]
-    onSuccess:^(OIMSearchResultInfo *result) {
+    onSuccess:^(OIMSearchResultInfo * _Nullable result) {
         OIMSearchResultItemInfo *item = result.findResultItems.firstObject;
         OIMMessageInfo *message = item.messageList.firstObject;
-        if (message != nil) [self openMessage:message conversationID:item.conversationID];
+        if (message != nil) {
+            [self openMessage:message conversationID:item.conversationID];
+        }
     }
-    onFailure:nil];
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // Handle lookup failure
+    }];
 ```
 
-The success result may be `nil`. It may also contain no match if the local cache has not synchronized yet, the message was deleted, or the ID does not exist. One call can contain criteria for multiple conversations. Do not assume that input and response arrays correspond positionally; match results by `conversationID` and `clientMsgID`. The query itself does not trigger a message delegate.
+## Return value
+
+The `onSuccess` callback delivers an `OIMSearchResultInfo` model containing:
+
+- `totalCount`: Total number of matching messages found across all queried conversations.
+- `findResultItems`: Array of conversation results (`NSArray<OIMSearchResultItemInfo *> *`). Each item includes `conversationID` and its corresponding `messageList`.
+
+## State changes after the call
+
+1. **Local cache reading**: This method only queries the local storage database and does not trigger incoming message listeners.
+2. **Missing or deleted records**: If the local database is not yet synchronized, the message was deleted, or the specified IDs do not exist, the message list will not contain those records. Always match retrieved messages by `conversationID` and `clientMsgID` rather than relying on index positions.

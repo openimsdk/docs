@@ -1,17 +1,66 @@
 ---
 title: 'Create an image message from a URL'
-description: 'OpenIM uni-app / uni-app x SDK guide for Create an image message from a URL.'
+description: 'Construct a pending image message from existing remote image URLs and metadata.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/creating-messages/create-image-message-by-url'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `createImageMessageByURL()` when image files have already been uploaded to your application server or content delivery network, avoiding the SDK's built-in file upload workflow.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sourcePath` | `string` | No | Original local file path; pass an empty string `""` when only remote URLs exist. |
+| `sourcePicture` | `OpenIMPicture` | Yes | Information regarding the original high-resolution image asset. |
+| `bigPicture` | `OpenIMPicture` | Yes | Information regarding the display preview image asset. |
+| `snapshotPicture` | `OpenIMPicture` | Yes | Information regarding the thumbnail preview image asset. |
+
+Each `OpenIMPicture` object contains the following fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | `string` | Unique asset identifier returned by the upload service. |
+| `type` | `string` | MIME type of the image (for example, `'image/jpeg'`). |
+| `size` | `number` | File size in bytes. |
+| `width` | `number` | Image width in pixels. |
+| `height` | `number` | Image height in pixels. |
+| `url` | `string` | Publicly accessible remote URL of the image. |
+
+## Code example
+
+```uts
+import { createImageMessageByURL } from '@/uni_modules/unix-openim-sdk'
+
+const picture = {
+  uuid: uploaded.uuid,
+  type: 'image/jpeg',
+  size: uploaded.size,
+  width: 1280,
+  height: 720,
+  url: uploaded.url,
+}
+
+const message = await createImageMessageByURL({
+  sourcePath: '',
+  sourcePicture: picture,
+  bigPicture: picture,
+  snapshotPicture: picture,
+})
+if (message == null) return
+```
+
+All dimensions, sizes, and URLs must reflect actual server upload responses.
+
+## Return value
+
+The Promise resolves with an `OpenIMMessageItem | null` object.
+
+## State changes after the call
+
+Pass the returned message item to [Send a non-OSS message](/sdk/uniapp/message/sending-messages/send-message-not-oss) to transmit the payload without re-uploading the file. Track message state using `clientMsgID`.

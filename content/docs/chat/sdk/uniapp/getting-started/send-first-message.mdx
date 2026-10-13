@@ -1,17 +1,107 @@
 ---
 title: 'Send your first message'
-description: 'OpenIM uni-app / uni-app x SDK guide for Send your first message.'
+description: 'Verify sending and receiving one-on-one and group text messages in uni-app and uni-app x.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/getting-started/send-first-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Send your first text message in a uni-app or uni-app x application to verify direct and group messaging pipelines. Before proceeding, complete the environment setup in [Before you start](/sdk/uniapp/getting-started/before-you-start) and authenticate following [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session).
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+OpenIM messages can be sent to individual users or groups. Direct messages specify the recipient user via `recvID`, while group messages specify the target group via `groupID`.
+
+## Prepare target identifiers
+
+| Conversation type | Target identifier requirements |
+| --- | --- |
+| Direct (one-on-one) | An existing recipient user ID passed as `recvID`, with `groupID` set to an empty string. |
+| Group | An existing group ID passed as `groupID`, with `recvID` set to an empty string. |
+
+Sending your first message validates your complete integration pipeline. Before sending:
+
+- Ensure the direct chat recipient user exists and server permissions permit communication.
+- Ensure the target group exists, the current user is an active member, and group speaking privileges are not muted.
+- Verify that your client received `onConnectSuccess`, rather than relying solely on the resolved `login()` Promise.
+
+## Import messaging APIs
+
+Import messaging methods from the plugin root:
+
+```uts
+import {
+  createTextMessage,
+  sendMessage,
+} from '@/uni_modules/unix-openim-sdk'
+```
+
+## Send a direct message
+
+Sending a message involves two steps: construct an unsent `OpenIMMessageItem` with [Create a text message](/sdk/uniapp/message/creating-messages/create-text-message), then pass that item and the target identifier to [Send a message](/sdk/uniapp/message/sending-messages/send-message):
+
+```uts
+async function sendFirstDirectMessage() {
+  const message = await createTextMessage('Hello, OpenIM')
+  if (message == null) return
+
+  const sentMessage = await sendMessage({
+    message,
+    recvID: 'user_b',
+    groupID: '',
+    offlinePushInfo: null,
+    isOnlineOnly: false,
+  })
+
+  appendOutgoingMessage(sentMessage)
+}
+```
+
+Replace `user_b` with a valid recipient user ID. Do not pass user nicknames, phone numbers, or the current user's own `userID` as `recvID`.
+
+## Send a group message
+
+When sending to a group, set `groupID` and leave `recvID` empty:
+
+```uts
+async function sendFirstGroupMessage() {
+  const message = await createTextMessage('Hello everyone')
+  if (message == null) return
+
+  const sentMessage = await sendMessage({
+    message,
+    recvID: '',
+    groupID: 'group_123',
+    offlinePushInfo: null,
+    isOnlineOnly: false,
+  })
+
+  appendOutgoingMessage(sentMessage)
+}
+```
+
+Replace `group_123` with a valid OpenIM group ID. You can reuse an existing group or create one via the admin console, backend APIs, or SDK group methods.
+
+## Understand send results
+
+[Create a text message](/sdk/uniapp/message/creating-messages/create-text-message) returns an uncommitted message object locally. If it returns `null`, do not call `sendMessage()`. Creating a message does not transmit data over the network or trigger message events.
+
+[Send a message](/sdk/uniapp/message/sending-messages/send-message) returns the updated `OpenIMMessageItem`. Resolution indicates the message has been committed and persisted by OpenIMServer. The sender can locate the message in local state using `clientMsgID` and mark its status as sent. The recipient client receives the message through real-time message events. Verify both sending and receiving sides during integration.
+
+If sending fails, the Promise rejects with an error containing `errCode` and `errMsg`. Inspect the error details alongside OpenIMServer logs to troubleshoot.
+
+## Verification checklist
+
+1. Confirm the return status and `clientMsgID` on the sending client.
+2. Verify receipt of the message event on a second logged-in client. Determine the `conversationID` from the message payload and merge it into your active conversation view.
+3. Test both direct and group conversations.
+4. Simulate network disconnections and reconnections to verify automatic recovery and message replay.
+
+For event registration, listener cleanup, and conversation merging rules, see [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages).
+
+## Next steps
+
+- [Authenticate and manage a session](/sdk/uniapp/getting-started/authenticate-and-manage-session)
+- [Integrate by project and platform](/sdk/uniapp/getting-started/environment-specific-implementation)

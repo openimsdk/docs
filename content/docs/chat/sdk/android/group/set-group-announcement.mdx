@@ -1,29 +1,51 @@
 ---
-title: 'Publish a group announcement'
-description: 'Publish or update a group announcement through GroupInfo.notification.'
+title: 'Set group announcement'
+description: 'Publish or update announcement text for a specific group using setGroupInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/set-group-announcement'
 ---
 
-Create a `GroupInfo` containing the `groupID` and `notification`, then call `setGroupInfo()`.
+Publish or update the announcement text for a specific group. Assign the target `groupID` and the updated `notification` string in the `GroupInfo` object. Once persisted, the server automatically updates the announcement author ID and timestamp.
+
+## Code example
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
-update.setNotification("Release review starts at 20:00 tonight.");
+update.setGroupID("group_123");
+update.setNotification("Release deployment confirmation tonight at 20:00.");
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group announcement updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle update failure
+        }
+    }
+);
 ```
 
-The update time and author are stored in the `GroupInfo` fields `notificationUpdateTime` and `notificationUserID`. Query the group profile when you need to read them.
+## Parameters
 
-A successful callback means that the announcement update request completed; it does not mean that every client has updated its UI. `onGroupInfoChanged` provides the updated `GroupInfo`. Merge the announcement and group profile by `groupID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | Yes | Group entity holding the target `groupID` and the updated `notification` text. |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+
+## Return value
+
+The successful callback confirms that the announcement was persisted on the server.
+
+## State changes after the call
+
+After the announcement is updated, online group members receive the `onGroupInfoChanged(GroupInfo group)` event via `OnGroupListener`. The updated `GroupInfo` payload contains the new `notification` text, `notificationUpdateTime`, and `notificationUserID`. Merge these properties into your local cache using `groupID`. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

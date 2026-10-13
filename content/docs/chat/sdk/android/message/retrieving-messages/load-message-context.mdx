@@ -1,50 +1,61 @@
 ---
-title: 'Load message context'
-description: 'Retrieve messages before and after a specified message with the Android SDK.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-17'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/retrieving-messages/load-message-context'
+title: "Load message context"
+description: "Retrieve messages before and after a specified message with the Android SDK."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/retrieving-messages/load-message-context"
 ---
 
-When navigating from a search result or referenced message into its chat context, use the `Message` already retrieved as the anchor.
+Retrieve context messages surrounding a designated anchor message in both earlier and later directions simultaneously. This is commonly used when jumping into a chat from global search results, quoted replies, or push notifications to reconstruct the surrounding conversation thread.
 
-## Parameters
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | Yes | ID of the conversation containing the anchor message. |
-| `startMsg` | `Message` | Yes | Previously retrieved anchor message. |
-| `type` | `ViewType` | Yes | Context type. Use `ViewType.History` for a referenced message and `ViewType.Search` for a search result. |
-| `before` | `int` | Yes | Maximum number of messages to retrieve before the anchor. |
-| `after` | `int` | Yes | Maximum number of messages to retrieve after the anchor. |
+## Code example
 
 ```java
-messageManager.fetchSurroundingMessages(
+String conversationID = "si_user_a_user_b";
+int before = 20; // Number of earlier messages to load
+int after = 20;  // Number of later messages to load
+
+OpenIMClient.getInstance().messageManager.fetchSurroundingMessages(
     new OnBase<Messages>() {
         @Override
         public void onSuccess(Messages messages) {
             List<Message> surrounding = messages.getData();
-            // surrounding contains the target message and its context.
+            // surrounding contains the target anchor message and surrounding context messages
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the failure
+            // Failed to load surrounding messages
         }
     },
     conversationID,
     targetMessage,
     ViewType.Search,
-    20,
-    20
+    before,
+    after
 );
 ```
 
-In the success callback, `messages.getData()` is the list retrieved before and after the anchor. For message fields, see [Message overview](/sdk/android/message/overview-message).
+## Parameters
 
-`before` and `after` independently limit the number of messages on either side. The result can contain fewer messages than requested when the anchor is near a history boundary or some messages have been deleted. If the message must first be located, see [Find messages by ID](/sdk/android/message/retrieving-messages/find-messages-by-id).
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<Messages>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | Yes | Globally unique ID of the conversation containing the anchor message. |
+| `startMsg` | `Message` | Yes | Anchor message object used as the center reference point. |
+| `type` | `ViewType` | Yes | Context query view type: pass `ViewType.History` when jumping from quotes, or `ViewType.Search` when jumping from search. |
+| `before` | `int` | Yes | Maximum number of messages to retrieve before (earlier than) the anchor. |
+| `after` | `int` | Yes | Maximum number of messages to retrieve after (later than) the anchor. |
+
+## Return value
+
+Upon success, `onSuccess` returns a list of context messages (`List<Message>`), including the anchor message itself.
+
+## State changes after the call
+
+1. **Snapshot retrieval**: This is a read-only query that loads point-in-time message records without altering message delivery states.
+2. **UI positioning**: Populate the chat timeline and scroll to the anchor message, using `clientMsgID` for deduplication and focus highlighting.

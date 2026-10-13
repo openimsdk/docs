@@ -5,20 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/retrieving-conversations/get-conversations-by-id'
 ---
 
-When you already have a set of `conversationID` values, retrieve their latest conversation snapshots in one call:
+Batch-retrieve conversation snapshots for a list of conversation identifiers using `getMultipleConversation:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationIDs` | `NSArray<NSString *> *` | Yes | List of conversation IDs to retrieve. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] getMultipleConversation:conversationIDs
+[[OIMManager manager] getMultipleConversation:@[@"c2c_user1001", @"group_group2001"]
                                     onSuccess:^(NSArray<OIMConversationInfo *> *items) {
                                         [conversationStore mergeByConversationID:items ?: @[]];
                                     }
-                                    onFailure:nil];
+                                    onFailure:^(NSInteger code, NSString *message) {
+                                        NSLog(@"getMultipleConversation failed: %ld %@", (long)code, message);
+                                    }];
 ```
 
-The array passed to the success callback is nullable. Treat an ID with no matching result as a missing record; do not assume that response items correspond positionally to every requested ID. The query itself does not trigger a delegate.
+## Return value
+
+The `onSuccess` callback delivers an `NSArray<OIMConversationInfo *> *` containing the matching conversation objects. If none of the requested IDs exist, an empty array is returned.
+
+If certain requested conversations have not yet been created, the returned array will omit those entries. The order of elements in the response array is not guaranteed to align positionally with the input list.
+
+## State changes after the call
+
+- **Local state merge**: Merge returned records into local conversation collections using `conversationID` as the unique entity key.
+- **Snapshot query**: This query establishes an instantaneous point-in-time snapshot and does not emit conversation delegate events.
+- **Ongoing synchronization**: Real-time property updates for these conversations continue to arrive via `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).

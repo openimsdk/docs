@@ -1,12 +1,12 @@
-This guide builds and runs OpenIMServer and ChatServer from stable releases in a single-node production environment. OpenIMServer and its external components run on the same machine, although some components may be replaced with managed cloud services.
+This guide explains how to compile and run OpenIMServer and ChatServer from stable release source code in a single-host production environment. OpenIMServer and external backing dependencies are co-located on the same host, with select components optionally replaceable by cloud services.
 
-## Prepare the environment and external components
+## Prepare environment and external components
 
-First confirm the system, hardware, and software requirements in [Environment and components](./components).
+First confirm the operating system, hardware, and software prerequisites in [Environment and components](./components).
 
-### Get OpenIMServer
+### Obtain OpenIMServer
 
-Deploy the latest official release tag marked with the green **Latest** badge on GitHub Releases. Do not use `main` or alpha, beta, rc, or other prerelease versions in production.
+Deploy using the latest official release tag marked with the green **Latest** badge on GitHub Releases. Never deploy the `main` branch or alpha, beta, rc, or other pre-release versions into production.
 
 ```bash
 git clone https://github.com/openimsdk/open-im-server && cd open-im-server
@@ -16,15 +16,15 @@ git checkout "$LATEST_STABLE_TAG"
 echo "using open-im-server stable release tag: $LATEST_STABLE_TAG"
 ```
 
-Run all subsequent OpenIMServer commands from the repository root.
+Execute all subsequent OpenIMServer commands from the repository root directory.
 
 ### Deploy external components with Docker Compose
 
-Make sure `docker` and `docker compose` are available, then configure the dependencies:
+Ensure `docker` and `docker compose` are available, then complete the following configuration steps:
 
-1. If MongoDB, Redis, Kafka, MinIO, or Etcd already runs locally, or you plan to use a managed service, comment out that component in `docker-compose.yml`. Etcd does not support a managed cloud service.
-2. Change the default component usernames and passwords.
-3. Set `DATA_DIR` in `.env` so component data is stored on a disk with sufficient capacity.
+1. If MongoDB, Redis, Kafka, MinIO, or Etcd are already running locally, or if you plan to use managed cloud services, comment out the corresponding services in `docker-compose.yml`. Note that managed cloud services are not supported for Etcd.
+2. Change the default usernames and passwords for all backing components.
+3. Update `DATA_DIR` in `.env` to store external component data on a disk volume with adequate capacity.
 
 | Component | Configuration in `docker-compose.yml` |
 | --- | --- |
@@ -38,20 +38,20 @@ Make sure `docker` and `docker compose` are available, then configure the depend
 docker compose up -d
 ```
 
-The current `open-im-server/docker-compose.yml` also starts `openim-web-front` and `openim-admin-front`. Adjust the Compose file first if you only need the dependencies.
+Currently, `open-im-server/docker-compose.yml` also starts `openim-web-front` and `openim-admin-front` in addition to the external dependencies. If you only require the backing services, adjust the Compose file before starting.
 
 ### Initialization requirements for self-hosted components or cloud services
 
 | Storage component | Initialization requirement |
 | --- | --- |
-| MongoDB | Create the `openim_v3` database in advance |
-| Kafka | Create `toRedis`, `toMongo`, `toPush`, and `toOfflinePush` in advance, with 8 partitions per topic |
+| MongoDB | Pre-create the `openim_v3` database |
+| Kafka | Pre-create 4 topics: `toRedis`, `toMongo`, `toPush`, and `toOfflinePush`, each configured with 8 partitions |
 
 ## Build and start OpenIMServer
 
-`bootstrap.sh` attempts to install Mage, but a working Go environment must already be present. Confirm that `go version` succeeds before continuing.
+`bootstrap.sh` attempts to install Mage, but a functional Go environment must already be present on the host. Verify that `go version` succeeds before proceeding.
 
-Within mainland China, you can configure a Go module proxy:
+In mainland China network environments, configure a Go module proxy:
 
 ```bash
 go env -w GO111MODULE=on
@@ -64,25 +64,25 @@ Run initialization once:
 bash bootstrap.sh
 ```
 
-Build the server:
+Compile:
 
 ```bash
 mage
 ```
 
-### Configure OpenIMServer
+### Update OpenIMServer basic configuration
 
 | Configuration | File |
 | --- | --- |
-| Kafka username, password, and address | `config/kafka.yml` |
-| Redis password and address | `config/redis.yml` |
-| MinIO username, password, address, and public address | `config/minio.yml` |
+| Kafka username, password, and endpoints | `config/kafka.yml` |
+| Redis password and endpoints | `config/redis.yml` |
+| MinIO credentials, internal endpoints, and external address | `config/minio.yml` |
 | S3 cloud storage credentials | `config/openim-rpc-third.yml` |
-| Etcd username, password, and address | `config/discovery.yml` |
-| MongoDB username, password, and address | `config/mongodb.yml` |
+| Etcd username, password, and endpoints | `config/discovery.yml` |
+| MongoDB username, password, and endpoints | `config/mongodb.yml` |
 | OpenIMServer `secret` | `config/share.yml` |
 
-The `externalAddress` in `config/minio.yml` must be a public IP or domain path that clients can access. Otherwise, image and file messages cannot be opened correctly.
+The `externalAddress` setting in `config/minio.yml` must be a public IP or domain path accessible by client devices; otherwise, image and file messages cannot be retrieved.
 
 ### Manage OpenIMServer services
 
@@ -90,13 +90,13 @@ The `externalAddress` in `config/minio.yml` must be a public IP or domain path t
 | --- | --- |
 | Start in the background | `nohup mage start >> _output/logs/openim.log 2>&1 &` |
 | Stop | `mage stop` |
-| Check | `mage check` |
+| Check health | `mage check` |
 
-After the first start, wait `20-30s` before running `mage check` or API verification so transient startup connection failures are not mistaken for a final failure.
+After the initial startup, wait `20-30s` before running `mage check` or API verification so transient startup connection attempts are not mistaken for permanent errors.
 
 ## Build and start ChatServer
 
-You can omit ChatServer if you already have an account system. If you need it, pin an official release tag compatible with the OpenIMServer version you tested:
+If you already operate an existing user authentication system, ChatServer is optional. When ChatServer is needed, pin the official release tag matching your OpenIMServer version:
 
 ```bash
 git clone https://github.com/openimsdk/chat && cd chat
@@ -106,19 +106,19 @@ git checkout "$LATEST_STABLE_TAG"
 echo "using chat stable release tag: $LATEST_STABLE_TAG"
 ```
 
-Build from the ChatServer repository root:
+Compile from the ChatServer repository root:
 
 ```bash
 mage
 ```
 
-### Configure ChatServer
+### Update ChatServer basic configuration
 
 | Configuration | File |
 | --- | --- |
-| Redis username, password, and address | `config/redis.yml` |
-| Etcd username, password, and address | `config/discovery.yml` |
-| MongoDB username, password, and address | `config/mongodb.yml` |
+| Redis username, password, and endpoints | `config/redis.yml` |
+| Etcd username, password, and endpoints | `config/discovery.yml` |
+| MongoDB username, password, and endpoints | `config/mongodb.yml` |
 | OpenIMServer `secret` | `config/share.yml` |
 | ChatServer `secret` | `config/chat-rpc-admin.yml` |
 
@@ -128,25 +128,25 @@ mage
 | --- | --- |
 | Start in the background | `nohup mage start >> _output/logs/chat.log 2>&1 &` |
 | Stop | `mage stop` |
-| Check | `mage check` |
+| Check health | `mage check` |
 
-ChatServer depends on OpenIMServer. Confirm that OpenIMServer passes `mage check`, then start ChatServer and wait `20-30s` before verifying the `10008` and `10009` APIs.
+ChatServer depends directly on OpenIMServer. Verify that OpenIMServer passes `mage check` first, then launch ChatServer and wait `20-30s` before testing ports `10008` and `10009`.
 
 ## Configuration and optional capabilities
 
-- For both repositories, use `config/README_zh_CN.md` from the checked-out version as the complete configuration reference.
-- GeTui: obtain an `AppID`, `AppKey`, and `MasterSecret`, then integrate the service.
-- Firebase: configure `fcm.filepath` in `config/openim-push.yml`.
-- Monitoring and alerting: see [Monitoring and alerting](../operations/monitoring).
+- Comprehensive configuration guides for both repositories are maintained in `config/README_zh_CN.md` within the checked-out source code.
+- GeTui: Obtain `AppID`, `AppKey`, and `MasterSecret` before integrating.
+- Firebase: Configure `fcm.filepath` in `config/openim-push.yml`.
+- Monitoring and alerting: Refer to [Monitoring and alerting](../operations/monitoring).
 
-## Change service instance counts
+## Adjust service instance counts
 
-In `start-config.yml`, you can change the number of instances in `serviceBinaries` for every service except `openim-msggateway` and `openim-api`. For those two services, the instance count must match the number of ports in the corresponding configuration file. Restart the services after making changes.
+Under `serviceBinaries` in `start-config.yml`, instance counts can be scaled directly for all services except `openim-msggateway` and `openim-api`. For `openim-msggateway` and `openim-api`, the instance count must strictly equal the number of listening ports defined in their respective configuration files. Restart services after modifying these values.
 
-## Pre-production checklist
+## Pre-launch checklist
 
-1. Change the default OpenIMServer and ChatServer `secret` values to combinations of letters and digits at least eight characters long, and store them securely.
-2. Without a domain, configure the firewall and client addresses according to [Ports and network](./network).
-3. With a domain, use [Domain configuration](./domain) to provide unified API, WebSocket, and object storage entry points.
-4. Prepare recovery and verification procedures according to [Production checks](./production).
-5. Complete process, API, and WebSocket checks in [Deployment verification](./verification).
+1. Update default `secret` tokens in OpenIMServer and ChatServer to alphanumeric combinations of at least 8 characters and store them securely.
+2. If deploying without a domain name, configure firewalls and client connection addresses per [Ports and network](./network).
+3. If deploying with a domain name, unify API, WebSocket, and object storage ingress per [Domain configuration](./domain).
+4. Prepare disaster recovery and verification workflows according to [Production checks](./production).
+5. Complete process, API, and WebSocket validations as detailed in [Deployment verification](./verification).

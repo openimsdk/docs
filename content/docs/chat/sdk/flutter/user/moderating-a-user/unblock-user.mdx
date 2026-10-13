@@ -1,20 +1,48 @@
 ---
 title: 'Unblock a user'
-description: 'Remove a user from the current account’s blocklist with the OpenIM Flutter SDK.'
+description: 'Remove a specified user from the current user blocklist using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/moderating-a-user/unblock-user'
 ---
 
+Remove a specified user from the currently signed-in user's blocklist:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `String` | Yes | Target user ID to remove from the blocklist. |
+
+## Code example
+
 ```dart
 await OpenIM.iMManager.friendshipManager.removeBlacklist(
-  userID: targetUserID,
+  userID: 'user_123',
 );
 ```
 
-A successful `Future` does not mean the event has already arrived. This page owns `onBlackDeleted`. Include it in the application's single `OnFriendshipListener`, and remove the record from the blocklist by its non-empty `userID`. Reconcile the complete snapshot through the existing blocklist page.
+## Return value
+
+A successful `Future` returns `void`, indicating that the unblock request was processed by the server and removed from local storage.
+
+## State changes after the call
+
+This method alters relationship states. Once the unblock operation completes, the user regains the ability to send single-chat messages to the current user.
+
+## Listen for unblock events
+
+Handle unblock events centrally. When the removal is processed on the server, connected client sessions receive `onBlackDeleted` event notifications. Use `userID` as the key to remove the entry from local blocklist stores:
+
+```dart
+void handleBlackDeleted(BlacklistInfo info) {
+  final userID = info.userID;
+  if (userID != null) removeBlockedUser(userID);
+}
+```
+
+The Flutter SDK maintains a single `OnFriendshipListener` instance inside `FriendshipManager`. Register this handler through the application-wide entry point described in [Events overview](/sdk/flutter/events/overview-events). To recalibrate the full blocklist snapshot, see [Retrieve a list of blocked users](/sdk/flutter/user/moderating-a-user/retrieve-a-list-of-blocked-users).

@@ -5,16 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friends/delete-friend'
 ---
 
+Remove a friendship relationship between the authenticated user and a target contact using `deleteFriend:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `friendUserID` | `NSString *` | Yes | Target friend user ID to delete. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] deleteFriend:@"user_b"
-                         onSuccess:nil
-                         onFailure:nil];
+                         onSuccess:^(NSString *data) {
+    [friendStore removeUserID:@"user_b"];
+}
+                         onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"deleteFriend failed: %ld %@", (long)code, message);
+}];
 ```
 
-A successful callback means that the request has completed. `onFriendDeleted:` subsequently removes the record by `userID`. For the complete delegate implementation, see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page).
+## Return value
+
+The `onSuccess` callback confirms that OpenIMServer processed the friend removal request.
+
+## State changes after the call
+
+- **Local state merge**: Remove the deleted contact from local friend lists using `userID` as the unique entity key.
+- **Asynchronous event listening**: Linked client devices and the former friend receive deletion notifications via `onFriendDeleted:` in `OIMFriendshipListener` (see [Retrieve the friend list by page](/sdk/ios/user/friends/get-friend-list-page)).
+- **Verification**: To verify current friendship status, invoke [Check friendship status](/sdk/ios/user/friends/check-friend).

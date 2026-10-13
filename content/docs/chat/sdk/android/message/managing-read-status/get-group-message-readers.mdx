@@ -5,41 +5,66 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-read-status/get-group-message-readers'
 ---
 
-## Parameters
+Retrieve the list of group members who have or have not read a designated group message using pagination. A filter condition separates read from unread members, making this method ideal for rendering read receipt lists on message detail screens.
 
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `conversationID` | `String` | Yes | ID of the group conversation. |
-| `clientMsgID` | `String` | Yes | ID of the message whose reader list to query. |
-| `filter` | `int` | Yes | Pass `0` for members who have read the message or `1` for members who have not read it. |
-| `offset` | `int` | Yes | Pagination offset. Pass `0` for the first page. |
-| `count` | `int` | Yes | Maximum number of members to retrieve. |
+## Code example
 
 ```java
-messageManager.getGroupMessageReaderList(
+String conversationID = "g_group_123";
+String clientMsgID = "msg_001";
+int filter = 0; // 0: query members who read; 1: query members who have not read
+int offset = 0;
+int count = 50;
+
+OpenIMClient.getInstance().messageManager.getGroupMessageReaderList(
     conversationID,
     clientMsgID,
-    0,
-    0,
-    50,
+    filter,
+    offset,
+    count,
     new OnBase<List<GroupMembersInfo>>() {
         @Override
         public void onSuccess(List<GroupMembersInfo> members) {
-            // members contains the profiles of members who read the message.
+            // members contains member profile information
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the failure
+            // Handle query failure
         }
     }
 );
 ```
 
-The success callback returns the current page of `GroupMembersInfo` objects. For field descriptions, see [List group members](/sdk/android/group/retrieving-group-members/get-group-member-list). Continue paging when the complete list is required.
+## Filter options
+
+| Filter value | Description |
+| --- | --- |
+| `0` | Query group members who have read the message. |
+| `1` | Query group members who have not yet read the message. |
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Globally unique ID of the target group conversation. |
+| `clientMsgID` | `String` | Yes | Client message ID of the target message to query. |
+| `filter` | `int` | Yes | Read status filter: `0` for read members, `1` for unread members. |
+| `offset` | `int` | Yes | Starting pagination offset index (`0` for the initial request). |
+| `count` | `int` | Yes | Maximum number of records to retrieve in this page. |
+| `base` | `OnBase<List<GroupMembersInfo>>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `members` in `onSuccess` returns `List<GroupMembersInfo>`. Each entry contains group member details including `nickname`, `faceURL`, `roleLevel`, and `userID`. For property definitions, see [Get group members](/sdk/android/group/retrieving-group-members/get-group-member-list).
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback returns a snapshot of group member records matching the filter. Render or append the member list using `userID` as the unique identifier.
+2. **Asynchronous event delivery**: This query does not trigger state change events. New read receipts from other members arrive through `OnAdvanceMsgListener.onRecvGroupMessageReadReceipt`. For details, see [Report group messages as read](/sdk/android/message/managing-read-status/send-group-read-receipts).
+3. **Pagination continuation**: If the returned list size matches `count`, increment `offset` by `count` to fetch the next page. A return count less than `count` indicates the end of the list.

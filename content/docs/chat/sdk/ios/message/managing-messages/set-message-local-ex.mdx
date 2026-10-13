@@ -5,18 +5,42 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/set-message-local-ex'
 ---
 
+Invoke `setMessageLocalEx:clientMsgID:localEx:onSuccess:onFailure:` on `OIMManager` to store or update custom business metadata (`localEx`) on a message in the local SQLite database. This field is scoped strictly to the current device and is commonly used for audio playback states, media download flags, or speech-to-text transcripts:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the target message. |
+| `localEx` | `NSString *` | Yes | Custom extension string (typically in JSON format). |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the local record was updated. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] setMessageLocalEx:conversationID
                             clientMsgID:message.clientMsgID
                                 localEx:@"{\"downloaded\":true}"
-                              onSuccess:nil
-                              onFailure:nil];
+                              onSuccess:^(NSString * _Nullable data) {
+    // Local extension updated successfully
+}
+                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle update failure
+}];
 ```
 
-`localEx` is replaced as a complete string in the current device's local database only. It is not synchronized to other devices and does not trigger the new-message delegate. To preserve existing fields, parse and merge them in the application before updating.
+## Return value
+
+The `onSuccess` callback confirms that `localEx` was updated in the device's local database.
+
+## State changes after the call
+
+1. **Local-only persistence**: This operation modifies local device storage only. It does not send network updates to the server, does not notify other devices or users, and does not trigger incoming message listeners (`onRecvNewMessage:`).
+2. **Full replacement**: The method performs a complete string replacement of `localEx`. To preserve existing properties, parse the current `localEx` JSON, merge new keys into it, and write back the consolidated string. For an example saving speech transcription text, see [Save a local transcript](/sdk/ios/message/composing-messages/save-local-transcript).

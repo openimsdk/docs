@@ -5,18 +5,40 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/get-pinned-messages'
 ---
 
+Invoke `getConversationPinnedMsgWithConversationID:onSuccess:onFailure:` on `OIMManager` to retrieve a list of currently pinned messages in a specified conversation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `onSuccess` | `void (^)(NSArray<OIMMessageInfo *> * _Nullable messages)` | Yes | Success callback returning an array of pinned message models. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] getConversationPinnedMsgWithConversationID:conversationID
-    onSuccess:^(NSArray<OIMMessageInfo *> *messages) {
-        [self replacePinnedMessages:messages ?: @[] conversationID:conversationID];
-    }
-    onFailure:nil];
+                                                       onSuccess:^(NSArray<OIMMessageInfo *> * _Nullable messages) {
+    // Render or refresh the pinned messages banner at the top of the conversation view
+    [self replacePinnedMessages:messages ?: @[] conversationID:conversationID];
+}
+                                                       onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle query failure
+}];
 ```
 
-The success array contains messages only; it does not include the pin time or operator. The query itself does not trigger an event. Deduplicate by `clientMsgID`. Detailed changes are synchronized through the delegate owned by [Pin or unpin a message](/sdk/ios/message/managing-messages/set-message-pinned).
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMMessageInfo` models representing pinned messages. The array contains message entities only, without pin timestamps or operator metadata.
+
+## State changes after the call
+
+1. **Snapshot querying**: This query establishes an instantaneous snapshot of pinned messages and does not trigger pin event listeners.
+2. **Client merge key**: The merge key is `clientMsgID` scoped to `conversationID`.
+3. **Live updates**: Real-time additions or removals of pinned messages are delivered via the listener documented in [Pin or unpin a message](/sdk/ios/message/managing-messages/set-message-pinned).

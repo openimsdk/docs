@@ -1,6 +1,6 @@
 ---
-title: 'Recall a message'
-description: 'Recall a sent message and handle recall notifications received by other clients.'
+title: 'Revoke a message'
+description: 'Revoke a sent message and handle revocation notifications received by other clients.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -11,11 +11,18 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/managing-messages/revoke-a-message'
 ---
 
-Recalling a message causes other clients to display the original message in a recalled state. OpenIMServer validates the message state, operator, and allowed recall window.
+Revoking a message causes all conversation members to display the original message in a revoked state. OpenIM Server validates the message status, operator permissions, and the allowed revocation time window.
 
-If you only need to remove a message for the current account, use [Delete a message](/sdk/flutter/message/managing-messages/delete-saved-message) instead of recall. To change the content of a sent message, use [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message).
+If you only need to remove a message from the current account's view, use [Delete saved messages](/sdk/flutter/message/managing-messages/delete-saved-message) instead of revoking it. To change the content of an existing message, use [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message).
 
-## Recall one message
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | ID of the conversation containing the message. Flutter's `Message` model does not contain this field. |
+| `clientMsgID` | `String` | Yes | Target client message ID to revoke. |
+
+## Code example
 
 ```dart
 final clientMsgID = message.clientMsgID;
@@ -29,7 +36,17 @@ await OpenIM.iMManager.messageManager.revokeMessage(
 );
 ```
 
-Flutter's `Message` has no `conversationID` field, so the call site must use the ID retained by the current message screen or route. If only an event or query result is available, derive the route with the helper on [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages), then confirm it through `getConversationIDBySessionType()`.
+Flutter's `Message` model does not contain a `conversationID` field; the call site must supply the `conversationID` maintained by the current conversation context. If you only hold a message object from an event, resolve the route as shown in [Receive messages](/sdk/flutter/message/receiving-messages/receive-messages) and obtain the conversation ID using the conversation ID helper.
+
+## Return value
+
+`Future` completion indicates that the server has processed the revocation request. The active client should immediately update the matching message bubble in place to a "revoked" state using the composite key `conversationID:clientMsgID`.
+
+`Future` completion does not guarantee that event notifications have arrived at all clients. If server-side validation indicates that the message does not exist or the revocation time limit has expired, the call throws an error. Show the error to the user and keep the original message visible; do not mark the message as revoked locally when the request fails.
+
+## State changes after the call
+
+Message revocation events are handled through the `onNewRecvMessageRevoked` callback in `OnAdvancedMsgListener`. The callback provides a `RevokedInfo` payload. Update the local message bubble in place using the composite key `conversationID:clientMsgID`:
 
 ```dart
 void handleMessageRevoked(RevokedInfo info) {
@@ -42,19 +59,11 @@ void handleMessageRevoked(RevokedInfo info) {
 }
 ```
 
-`onNewRecvMessageRevoked` carries `RevokedInfo`, including the `clientMsgID`, operator, and time. First resolve the owning `conversationID` from the current account's message index, then update by `conversationID:clientMsgID`. Do not replace a message by list position. Add this function to the application's single `OnAdvancedMsgListener`; see [Event overview](/sdk/flutter/events/overview-events) for setup.
+We recommend transforming the revoked message into an in-place tombstone notice (such as "You revoked a message" or "A message was revoked") rather than deleting the item entirely from the UI list. This maintains chat timeline continuity and prevents UI layout jumps when subsequently fetching historical message batches. Register this handler in the application's single `OnAdvancedMsgListener`; for global configuration, see [Events overview](/sdk/flutter/events/overview-events).
 
-On the receiving side, update the matching bubble to a recalled state instead of deleting it from the list. This preserves the message timeline and recall notice and prevents the original content from reappearing when a later history snapshot includes it.
+## Related guides
 
-## Result
-
-Future completion means that the server completed the recall request; it does not mean that every client has received its event. The caller can update the bubble under the same `conversationID:clientMsgID`, while other clients merge the recall increment through the callback.
-
-If the message does not exist or cannot be recalled, preserve its original state and show the error. Do not leave a local-only recall notice. Re-query the history snapshot when reconciliation is needed. Future completion, recall-callback delivery, and query-based reconciliation are three distinct stages.
-
-## Related pages
-
-- [Delete a message](/sdk/flutter/message/managing-messages/delete-saved-message)
+- [Delete saved messages](/sdk/flutter/message/managing-messages/delete-saved-message)
 - [Modify a message](/sdk/flutter/message/managing-messages/modify-a-message)
 - [Send a message](/sdk/flutter/message/sending-messages/send-message)
 - [Locate messages by ID](/sdk/flutter/message/retrieving-messages/locate-messages-by-id)

@@ -1,17 +1,18 @@
 ---
 title: 'Unsubscribe from user status'
-description: 'Use unsubscribeOnlineUsersStatus to cancel online-status subscriptions for specified users.'
+description: 'Cancel presence subscriptions for specified users to stop receiving real-time status updates.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/online-status/unsubscribe-users-online-status'
 ---
 
-Cancel online-status subscriptions when users leave the visible range, the screen closes, or the account changes. Remove empty and duplicate IDs before making the call.
+Cancel active presence subscriptions when users scroll out of view, screens are destroyed, or accounts switch. This avoids processing extraneous status broadcast events.
+
+## Code example
 
 ```java
 List<String> userIDs = Arrays.asList("user_a", "user_b");
@@ -20,18 +21,31 @@ OpenIMClient.getInstance().userInfoManager.unsubscribeOnlineUsersStatus(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Unsubscription succeeded.
+            // Unsubscription confirmed
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     userIDs
 );
 ```
 
-A successful callback means that the unsubscribe request completed.
+## Parameters
 
-Call [Subscribe to user online status](/sdk/android/user/online-status/subscribe-users-online-status) when those users need to be tracked again.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `userIDs` | `List<String>` | Yes | List of target user IDs to unsubscribe from. Remove empty strings and duplicates before calling. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the server has stopped broadcasting status transitions for the specified users to this client session.
+2. **Local cache management**: Clear corresponding `userID` entries from your local presence cache according to your application requirements.
+3. **Resubscription**: To resume receiving real-time presence events, call [Subscribe to user status](/sdk/android/user/online-status/subscribe-users-online-status).

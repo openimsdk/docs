@@ -1,17 +1,112 @@
 ---
 title: 'Message overview'
-description: 'OpenIM uni-app / uni-app x SDK guide for Message overview.'
+description: 'Understand message creation, transmission, reception, querying, and lifecycle synchronization workflows.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
-template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+template: 'overview'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/message/overview-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM UniApp SDK represents each message record using the `OpenIMMessageItem` interface. Message transmission operates in two distinct phases: first, construct an outgoing message data object using the appropriate creation method, and then transmit that object to a target user or group. Message creation methods do not send data over the network; likewise, Promise resolution from a send invocation does not guarantee that other devices have rendered the incoming message.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+In message lists, locate individual messages using their owning conversation and `clientMsgID`. The `conversationID` is derived from the active conversation context, query filter, search result, or event payload, rather than being an intrinsic property of `OpenIMMessageItem`.
+
+## Message processing phases
+
+| Phase | Core operations | Description |
+| --- | --- | --- |
+| Create | Invoke the corresponding message creation method | Returns an `OpenIMMessageItem` or `null`. Generates the local message data structure without transmitting data or triggering new message events. |
+| Send | Invoke [Send a message](/sdk/uniapp/message/sending-messages/send-message) or [Send a non-OSS message](/sdk/uniapp/message/sending-messages/send-message-not-oss) | Supply `recvID` for single chats, or `groupID` for group chats; pass an empty string `""` for the unneeded target field. |
+| Receive | Listen for incoming message events | Identify the destination conversation and merge items by `clientMsgID`; ignore duplicate event deliveries. |
+| Query | Load message history, search, or look up by ID | Retrieves messages stored locally at the time of invocation without emitting message events. |
+| Update | Delete, revoke, edit, pin, or report read receipts | Manage Promise resolution, incoming update events, and state re-queries independently. |
+
+For local image, audio, video, and file media, [Send a message](/sdk/uniapp/message/sending-messages/send-message) handles automated upload to storage before message transmission. If assets are already uploaded to your business server and possess public remote URLs, create URL-based message items and transmit them via [Send a non-OSS message](/sdk/uniapp/message/sending-messages/send-message-not-oss) to bypass duplicate file uploads.
+
+## Common message fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `clientMsgID` | `string \| null` | Client-generated message ID used for list deduplication and state tracking; verify existence in created objects. |
+| `serverMsgID` | `string \| null` | Server-assigned message ID; null or empty while pending or if sending failed. |
+| `sessionType` | `OpenIMSessionType` | Chat session type, such as single chat or group chat. |
+| `sendID` | `string \| null` | User ID of the message sender. |
+| `recvID` | `string \| null` | Recipient user ID for single chats; empty string in group chats. |
+| `groupID` | `string \| null` | Target group ID for group chats; empty string in single chats. |
+| `msgFrom` | `number` | Message origin indicator. |
+| `contentType` | `OpenIMMessageType` | Message content type enum, determining which element field contains the payload. |
+| `createTime` | `number` | Timestamp when the message object was created locally, in Unix milliseconds. |
+| `sendTime` | `number` | Timestamp when the message was sent, in Unix milliseconds. |
+| `seq` | `number` | Authoritative sequence number assigned by OpenIMServer; absent before transmission succeeds. |
+| `senderPlatformID` | `OpenIMPlatform` | Operating platform constant of the sender device. |
+| `senderNickname` | `string \| null` | Sender nickname recorded in the message snapshot. |
+| `senderFaceUrl` | `string \| null` | Sender avatar URL recorded in the message snapshot. |
+| `status` | `OpenIMMessageStatus` | Message dispatch status (sending, success, or failed). |
+| `isRead` | `boolean` | Read receipt status at the time of receipt or query. |
+| `offlinePush` | `OpenIMOfflinePush \| null` | Offline push notification configuration applied to this message. |
+| `content` | `string \| null` | Serialized message body preserved by the SDK; prefer rendering the dedicated element property. |
+| `attachedInfo` | `string \| null` | SDK internal auxiliary string; parse only according to confirmed business protocols. |
+| `ex` | `string \| null` | Custom extension string synchronized with other participants across all clients. |
+| `localEx` | `string \| null` | Extension string preserved exclusively in the local database of the current device. |
+
+The message body resides in the dedicated element property matching `contentType`:
+
+| Content payload | Dedicated property |
+| --- | --- |
+| Text | `textElem` |
+| Image, audio, video, file | `pictureElem`, `soundElem`, `videoElem`, `fileElem` |
+| `@` mentions, quote replies | `atTextElem`, `quoteElem` |
+| Merged forward, custom | `mergeElem`, `customElem` |
+| Contact card, location, face | `cardElem`, `locationElem`, `faceElem` |
+| Advanced text, typing status | `advancedTextElem`, `typingElem` |
+| System notifications, auxiliary state | `notificationElem`, `attachedInfoElem` |
+
+The constants `OpenIMMessageTypeUserCommandAdded`, `OpenIMMessageTypeUserCommandDeleted`, and `OpenIMMessageTypeUserCommandUpdated` are `OpenIMMessageType` values used to recognize UserCommand business notifications. They are identified by evaluating `contentType`, not through separate event names.
+
+Never evaluate message identity using display strings, array indices, or paginated list offsets. Always merge message states using `conversationID:clientMsgID`. Write device-specific display flags to `localEx`, while using `ex` or message payloads for business data that must synchronize across participants.
+
+## Message operation guides
+
+- [Create a text message](/sdk/uniapp/message/creating-messages/create-text-message)
+- [Create an @ message](/sdk/uniapp/message/creating-messages/create-text-at-message)
+- [Create a custom message](/sdk/uniapp/message/creating-messages/create-custom-message)
+- [Create an image message from a local file](/sdk/uniapp/message/creating-messages/create-image-message-by-file)
+- [Create an image message from a URL](/sdk/uniapp/message/creating-messages/create-image-message-by-url)
+- [Create an audio message from a local file](/sdk/uniapp/message/creating-messages/create-sound-message-by-file)
+- [Create an audio message from a URL](/sdk/uniapp/message/creating-messages/create-sound-message-by-url)
+- [Create a video message from a local file](/sdk/uniapp/message/creating-messages/create-video-message-by-file)
+- [Create a video message from a URL](/sdk/uniapp/message/creating-messages/create-video-message-by-url)
+- [Create a file message from a local file](/sdk/uniapp/message/creating-messages/create-file-message-by-file)
+- [Create a file message from a URL](/sdk/uniapp/message/creating-messages/create-file-message-by-url)
+- [Create a card message](/sdk/uniapp/message/creating-messages/create-card-message)
+- [Create a location message](/sdk/uniapp/message/creating-messages/create-location-message)
+- [Create a face message](/sdk/uniapp/message/creating-messages/create-face-message)
+- [Create a quote message](/sdk/uniapp/message/creating-messages/create-quote-message)
+- [Create a Markdown message](/sdk/uniapp/message/creating-messages/create-markdown-message)
+- [Create a forward message](/sdk/uniapp/message/creating-messages/create-forward-message)
+- [Create a merger message](/sdk/uniapp/message/creating-messages/create-merger-message)
+- [Send a message](/sdk/uniapp/message/sending-messages/send-message)
+- [Send a non-OSS message](/sdk/uniapp/message/sending-messages/send-message-not-oss)
+- [Receive messages](/sdk/uniapp/message/receiving-messages/receive-messages)
+- [Receive custom business messages](/sdk/uniapp/message/receiving-messages/receive-custom-business-messages)
+- [Load older messages](/sdk/uniapp/message/retrieving-messages/load-older-messages)
+- [Load newer messages](/sdk/uniapp/message/retrieving-messages/load-newer-messages)
+- [Find messages by ID](/sdk/uniapp/message/retrieving-messages/find-messages-by-id)
+- [Load message context](/sdk/uniapp/message/retrieving-messages/load-message-context)
+- [Search messages](/sdk/uniapp/message/searching-messages/search-messages)
+- [Update typing status](/sdk/uniapp/message/composing-messages/update-typing-status)
+- [Get typing status](/sdk/uniapp/message/composing-messages/get-typing-status)
+- [Check speech-to-text availability](/sdk/uniapp/message/composing-messages/check-speech-to-text)
+- [Transcribe audio](/sdk/uniapp/message/composing-messages/transcribe-audio)
+- [Save local transcript](/sdk/uniapp/message/composing-messages/save-local-transcript)
+- [Modify a message](/sdk/uniapp/message/managing-messages/modify-a-message)
+- [Revoke a message](/sdk/uniapp/message/managing-messages/revoke-a-message)
+- [Delete saved messages](/sdk/uniapp/message/managing-messages/delete-saved-messages)
+- [Set message local extension](/sdk/uniapp/message/managing-messages/set-message-local-ex)
+- [Get pinned messages](/sdk/uniapp/message/managing-messages/get-pinned-messages)
+- [Send group read receipts](/sdk/uniapp/message/managing-read-status/send-group-read-receipts)
+
+Message creation and read-only query operations return the snapshot result of that single call without triggering shared message events. For state-modifying actions, Promise resolution, event notification, and re-querying current data represent three distinct and decoupled execution phases.

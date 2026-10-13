@@ -1,17 +1,106 @@
 ---
-title: 'Get the conversation list'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get the conversation list.'
+title: 'Retrieve conversation list'
+description: 'Query the authenticated user’s conversation list with pagination and listen for ongoing conversation updates.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/retrieving-conversations/retrieve-conversation-list'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The conversation list belongs to the currently authenticated account. Load conversation items using pagination to avoid memory and rendering bottlenecks associated with fetching the entire database at once. Begin the first page at `offset: 0` and increment the offset by the cumulative number of items fetched so far.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Starting pagination offset; supply `0` for the first page. |
+| `count` | `number` | Yes | Maximum number of conversations to retrieve in this page. |
+
+## Code example
+
+```uts
+import { getConversationListSplit } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getConversationListSplit({
+  offset: 0,
+  count: 50,
+})
+const conversations = result?.conversations ?? []
+mergeConversations(conversations)
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMConversationListResult | null` object. The retrieved page items are stored in `conversations` (`OpenIMConversationItem[]`). Deduplicate and merge items into your application state using `conversationID`. When the returned array contains fewer items than `count`, the end of the cached conversation list has been reached. Upon re-login, account switching, or manual pull-to-refresh, clear local paginated state and query again starting from offset 0.
+
+## Conversation fields
+
+The `OpenIMConversationItem` object consolidates target identification, list rendering metadata, and account-specific conversation configuration:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationID` | `string` | Stable unique conversation identifier; serves as the primary key for queries and event merging. |
+| `conversationType` | `OpenIMSessionType` | Session type, such as single chat (`OpenIMSessionTypeSingle`) or group chat (`OpenIMSessionTypeWriteGroup`). |
+| `userID` | `string \| null` | Peer user ID in a single chat; empty string or null in group chats. |
+| `groupID` | `string \| null` | Target group ID in a group chat; empty string or null in single chats. |
+| `showName` | `string` | Display name of the conversation for UI rendering. |
+| `faceURL` | `string` | Avatar image URL of the conversation. |
+| `latestMsg` | `string \| null` | Serialized JSON string of the latest message, or null if no displayable message exists. |
+| `latestMsgSendTime` | `number` | Send timestamp of the latest message in Unix milliseconds. |
+| `unreadCount` | `number` | Total unread message count for the authenticated account in this conversation. |
+| `recvMsgOpt` | `OpenIMMessageReceiveOption` | Message receive option, such as normal reception, muting, or suppressing notifications. |
+| `groupAtType` | `OpenIMGroupMentionType` | Group `@` mention status; not applicable to single chats. |
+| `draftText` | `string` | Locally saved message draft string. |
+| `draftTextTime` | `number` | Timestamp when the draft was last updated, in Unix milliseconds. |
+| `isPinned` | `boolean` | Whether the conversation is pinned to the top of the list. |
+| `isMarked` <span className="enterprise-field-badge">Commercial</span> | `boolean \| null` | Whether the authenticated user marked this conversation. Marked conversations are grouped into built-in tag views. |
+| `remark` <span className="enterprise-field-badge">Commercial</span> | `string \| null` | Custom alias remark set for this conversation by the authenticated user; null if unset. |
+| `isPrivateChat` <span className="enterprise-field-badge">Commercial</span> | `boolean` | Whether burn-after-reading private chat mode is enabled. |
+| `burnDuration` <span className="enterprise-field-badge">Commercial</span> | `number` | Private chat burn-after-reading countdown duration in seconds. |
+| `isMsgDestruct` <span className="enterprise-field-badge">Commercial</span> | `boolean` | Whether periodic server-side message self-destruction is enabled. |
+| `msgDestructTime` <span className="enterprise-field-badge">Commercial</span> | `number` | Server-side message destruction interval in seconds. |
+| `isNotInGroup` | `boolean` | Indicates whether the current account is no longer a member of the group. |
+| `updateUnreadCountTime` | `number` | Timestamp when the unread count was last updated, in Unix milliseconds. |
+| `minSeq` | `number` | Smallest synchronized message sequence number in this conversation. |
+| `maxSeq` | `number` | Largest synchronized message sequence number in this conversation. |
+| `ex` | `string` | Custom extension string attached to the conversation record. |
+| `attachedInfo` | `string` | SDK internal auxiliary string; parse only according to confirmed business protocols. |
+
+Render conversation titles and avatars with `showName` and `faceURL`. When contact or group details change, refresh them through profile event listeners or re-queries; never compute conversation IDs from display names.
+
+## State changes after the call
+
+New conversations and incremental updates are synchronized via event subscriptions. Both events deliver an `OpenIMConversationListResult | null` payload containing one or more updated conversations; iterate over `conversations` and merge updates by `conversationID`.
+
+```uts
+import {
+  OpenIMConversationListResult,
+  off,
+  onConversationChanged,
+  onNewConversation,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleConversationUpdates = (
+  result: OpenIMConversationListResult | null,
+) => {
+  if (result == null) return
+  mergeConversations(result.conversations)
+}
+
+const newConversationSubscription = onNewConversation(
+  handleConversationUpdates,
+)
+const conversationChangedSubscription = onConversationChanged(
+  handleConversationUpdates,
+)
+
+function removeConversationListListeners() {
+  off(newConversationSubscription)
+  off(conversationChangedSubscription)
+}
+```
+
+Invoke `removeConversationListListeners()` when the component unmounts, or when logging out or switching accounts. Do not substitute the joined group list for the conversation list: a user may belong to groups that have not yet generated a conversation item, and historical conversation entries may persist even after leaving a group.

@@ -5,30 +5,53 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/add-conversations-to-groups'
 ---
 
-Use `Open_im_sdkAddConversationsToGroups` to add one or more conversations to one or more conversation groups. It only creates relationships; it does not create conversations or change message targets.
+Invoke `Open_im_sdkAddConversationsToGroups` to associate one or more conversations with specified conversation groups in a batch. This operation establishes group associations only; it does not alter conversation data or message delivery:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationIDs` | `NSArray<NSString *> *` | Yes | List of conversation IDs to add into the groups. |
+| `conversationGroupIDs` | `NSArray<NSString *> *` | Yes | List of target conversation group IDs. |
+
+## Code example
 
 ```objc
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
 NSData *conversationData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"c2c_user1002"] options:0 error:nil];
 NSString *conversationIDsJSON =
     [[NSString alloc] initWithData:conversationData encoding:NSUTF8StringEncoding];
 
 NSData *groupData =
-    [NSJSONSerialization dataWithJSONObject:@[conversationGroupID] options:0 error:nil];
+    [NSJSONSerialization dataWithJSONObject:@[@"group_work_101"] options:0 error:nil];
 NSString *groupIDsJSON =
     [[NSString alloc] initWithData:groupData encoding:NSUTF8StringEncoding];
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        NSLog(@"AddConversationsToGroups success");
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"AddConversationsToGroups failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkAddConversationsToGroups(callback, conversationIDsJSON, groupIDsJSON);
 ```
 
-Pass your callback, `conversationIDsJSON`, and `groupIDsJSON` to `Open_im_sdkAddConversationsToGroups`. Both JSON arrays are required, and the conversation array must not be empty.
+## Return value
 
-## Result
+The `onSuccess` callback returns confirmation when the association request completes successfully.
 
-A successful callback means that the relationship request has completed. It does not return updated group objects or mean that the listener has arrived on every client.
+## State changes after the call
 
-The related incremental update is `onConversationGroupMemberAdded:`. For the complete handler, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+1. **Local state update**: The client updates local membership records keyed by composite identifiers (`conversationGroupID` and `conversationID`).
+2. **Event notification**: Active client sessions receive notifications through the `onConversationGroupMemberAdded:` listener callback.
+3. **Re-query calibration**: For listener integration details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

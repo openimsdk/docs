@@ -1,17 +1,51 @@
 ---
-title: 'Get members who read a group message'
-description: 'OpenIM HarmonyOS SDK guide for Get members who read a group message.'
+title: 'Get group message readers'
+description: 'Paginate read or unread member status for a specific group message.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/managing-read-status/get-group-message-readers'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Locates the target group message using `conversationID` and `clientMsgID`.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, { GetGroupMessageReaderListReq, GetGroupMessageReaderListResp } from '@openimsdk/imsdk';
+
+const request: GetGroupMessageReaderListReq = {
+  conversationID: conversationID,
+  clientMsgID: message.clientMsgID,
+  filter: 0,
+  offset: 0,
+  count: 50,
+};
+const response: GetGroupMessageReaderListResp = await sdk.getGroupMessageReaderList(request);
+const readers = response.readers;
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `string` | Yes | Target conversation identifier. |
+| `clientMsgID` | `string` | Yes | Client message identifier of the target group message. |
+| `filter` | `number` | Yes | `0` for read members; `1` for unread members. |
+| `offset` | `number` | Yes | Starting offset index for pagination. |
+| `count` | `number` | Yes | Number of records to return. |
+
+## Return value
+
+Returns a Promise resolving to `GetGroupMessageReaderListResp`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `readers` | `GroupMessageReader[]` | Array of member items matching the filter. |
+
+## State changes after the call
+
+Pass `filter: 0` to query members who have read the message, or `1` for unread members. Clients deduplicate items by `groupID:userID`. This method uses offset-based pagination; when the returned item count is less than `count`, the end of the list has been reached. This is a read-only query that does not fire receipt events. To report group message read receipts, see [Send group message read receipts](/sdk/harmony/message/managing-read-status/send-group-read-receipts).

@@ -5,20 +5,45 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/insert-local-single-message'
 ---
 
+Invoke `insertSingleMessageToLocalStorage:recvID:sendID:onSuccess:onFailure:` on `OIMManager` to write a custom message record (such as a local system prompt, security alert, or placeholder) directly into the local one-to-one conversation database without sending it over the network:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `OIMMessageInfo *` | Yes | Prepared message model to be inserted locally. |
+| `recvID` | `NSString *` | Yes | Recipient user ID for the one-to-one chat. |
+| `sendID` | `NSString *` | Yes | Sender user ID for the one-to-one chat. |
+| `onSuccess` | `void (^)(OIMMessageInfo * _Nullable stored)` | Yes | Success callback returning the locally persisted message model. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] insertSingleMessageToLocalStorage:message
-    recvID:targetUserID
-    sendID:currentUserID
-    onSuccess:^(OIMMessageInfo *stored) {
-        if (stored != nil) [self upsertMessage:stored];
+                                                 recvID:targetUserID
+                                                 sendID:currentUserID
+                                              onSuccess:^(OIMMessageInfo * _Nullable stored) {
+    // Local insertion succeeded; update conversation message list
+    if (stored != nil) {
+        [self upsertMessage:stored];
     }
-    onFailure:nil];
+}
+                                              onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle insertion failure
+}];
 ```
 
-The success result may be `nil`; merge it by `clientMsgID` only when present. This method modifies the current device only. It does not trigger the new-message delegate or notify another user or device.
+## Return value
+
+The `onSuccess` callback delivers the locally stored `OIMMessageInfo` model. When non-nil, merge it into the conversation message cache using `clientMsgID` (scoped to `conversationID`).
+
+## State changes after the call
+
+1. **Local-only persistence**: This operation modifies local device storage only. It does not send network requests to the server, does not notify the counterparty, and does not trigger incoming message listeners (`onRecvNewMessage:`).
+2. **Group chat insertion**: To insert a local message into a group conversation, see [Insert a local group message](/sdk/ios/message/managing-messages/insert-local-group-message).

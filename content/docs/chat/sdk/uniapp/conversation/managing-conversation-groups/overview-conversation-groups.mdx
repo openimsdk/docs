@@ -1,17 +1,98 @@
 ---
 title: 'Conversation group overview'
-description: 'OpenIM uni-app / uni-app x SDK guide for Conversation group overview.'
+description: 'Understand conversation group models, capabilities, and event synchronization workflows.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
-template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+template: 'overview'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/managing-conversation-groups/overview-conversation-groups'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Conversation groups (tabs / custom categories) are a Commercial Edition feature used to organize the authenticated user's conversation list into segmented categories such as "Work", "Unread", or "Follow-up". A conversation group manages the mapping between a category and a collection of `conversationID` entries; it does not create chat groups, invite members, or change message destinations.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Group types
+
+Creating and querying conversation groups use different enums and values:
+
+| Enum value | Numeric value | Description |
+| --- | --- | --- |
+| `OpenIMConversationGroupTypeNormal` | `0` | Standard custom conversation group created and managed by the user (corresponds to `OpenIMConversationGroupQueryTypeNormal` during queries). |
+| `OpenIMConversationGroupTypeFilter` | `1` | Filtered group maintained by server or SDK rules (corresponds to `OpenIMConversationGroupQueryTypeFilter` during queries). |
+| `OpenIMConversationGroupQueryTypeAll` | `2` | Used strictly when querying all group types; cannot be passed when creating groups. |
+
+When creating a group, `conversationGroupType` accepts `0 | 1`; when querying groups, pass `0 | 1 | 2`. Filtered group rules depend on your server deployment; do not fabricate synthetic system groups on the client based solely on name strings.
+
+## Group data fields
+
+The `OpenIMConversationGroupItem` structure represents a conversation category. Fields may be null; always check for existence before accessing, and use `conversationGroupID` as the stable merge key:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `conversationGroupID` | `string \| null` | Unique identifier of the conversation group. |
+| `name` | `string \| null` | Display name of the group. |
+| `order` | `number \| null` | Sequence order index; sorting criteria is defined by application convention. |
+| `conversationGroupType` | `OpenIMConversationGroupQueryType \| null` | Conversation group category type. |
+| `hidden` | `boolean \| null` | Whether the group tab is hidden. |
+| `unreadCount` | `number \| null` | Aggregate unread count across all conversations within this group at query time. |
+| `conversationIDs` | `string[] \| null` | Array of conversation IDs currently assigned to this group. |
+| `createTime` | `number \| null` | Creation timestamp in Unix milliseconds. |
+| `ex` | `string \| null` | Custom application extension string. |
+
+## Available operations
+
+- [Create a conversation group](/sdk/uniapp/conversation/managing-conversation-groups/create-conversation-group)
+- [Get conversation groups](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-groups)
+- [Get conversations in a group](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations)
+- [Get groups for a conversation](/sdk/uniapp/conversation/managing-conversation-groups/get-conversation-group-ids-by-conversation-id)
+- [Update a conversation group](/sdk/uniapp/conversation/managing-conversation-groups/update-conversation-group)
+- [Reorder conversation groups](/sdk/uniapp/conversation/managing-conversation-groups/set-conversation-group-order)
+- [Add conversations to groups](/sdk/uniapp/conversation/managing-conversation-groups/add-conversations-to-groups)
+- [Remove conversations from groups](/sdk/uniapp/conversation/managing-conversation-groups/remove-conversations-from-groups)
+- [Delete a conversation group](/sdk/uniapp/conversation/managing-conversation-groups/delete-conversation-group)
+
+## Listen for group changes
+
+Subscribe centrally to the five conversation group lifecycle events. All five callbacks receive a `string` signal payload. Treat these events as invalidation triggers to re-query the latest group data and merge updates using `conversationGroupID`.
+
+```uts
+import {
+  off,
+  onConversationGroupAdded,
+  onConversationGroupChanged,
+  onConversationGroupDeleted,
+  onConversationGroupMemberAdded,
+  onConversationGroupMemberDeleted,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleConversationGroupRefresh = (_payload: string) => {
+  reloadConversationGroups()
+}
+
+const groupAddedSubscription = onConversationGroupAdded(
+  handleConversationGroupRefresh,
+)
+const groupChangedSubscription = onConversationGroupChanged(
+  handleConversationGroupRefresh,
+)
+const groupDeletedSubscription = onConversationGroupDeleted(
+  handleConversationGroupRefresh,
+)
+const groupMemberAddedSubscription = onConversationGroupMemberAdded(
+  handleConversationGroupRefresh,
+)
+const groupMemberDeletedSubscription = onConversationGroupMemberDeleted(
+  handleConversationGroupRefresh,
+)
+
+function removeConversationGroupListeners() {
+  off(groupAddedSubscription)
+  off(groupChangedSubscription)
+  off(groupDeletedSubscription)
+  off(groupMemberAddedSubscription)
+  off(groupMemberDeletedSubscription)
+}
+```
+
+Debounce or coalesce query requests triggered by these events to avoid redundant database lookups under burst event conditions. Unregister the listeners when unmounting components, logging out, or destroying the conversation group state controller.

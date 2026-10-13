@@ -1,23 +1,49 @@
 ---
 title: 'Dismiss a group'
-description: 'Use the Android SDK to dismiss a group owned by the current user.'
+description: 'Disband a specified group and terminate all member sessions using dismissGroup().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/dismiss-group'
 ---
 
-`dismissGroup()` dismisses the specified group and is available only to its owner.
+Disband a specified group as the group owner. Once dismissed, all members are evicted from the group, new messages cannot be sent, and the group cannot be restored.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.dismissGroup(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID);
+String groupID = "group_123";
+
+OpenIMClient.getInstance().groupManager.dismissGroup(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group dismissed successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle failure
+        }
+    },
+    groupID
+);
 ```
 
-A successful callback means that the dismissal request completed; it does not mean that every client has updated its UI. `onGroupDismissed` provides the dismissed group's `GroupInfo`. Use its `groupID` to close the conversation and remove the group state. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `groupID` | `String` | Yes | Target group ID to dismiss. Only the group owner can execute this action. |
+
+## Return value
+
+The successful callback confirms that the group dismissal was completed on the server.
+
+## State changes after the call
+
+Group members receive the `onGroupDismissed(GroupInfo group)` event via `OnGroupListener`. Use `groupID` to flag the group as dissolved in local storage, disable the message composer in the chat interface, and update the group roster. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

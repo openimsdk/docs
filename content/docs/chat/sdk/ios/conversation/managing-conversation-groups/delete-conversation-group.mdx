@@ -5,22 +5,42 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversation-groups/delete-conversation-group'
 ---
 
-Use `Open_im_sdkDeleteConversationGroup` to delete a specified conversation group and its conversation relationships. This operation does not delete the conversations or their messages.
+Invoke `Open_im_sdkDeleteConversationGroup` to delete a specified conversation group and its member associations. This operation only removes the group categorization; it does not delete any underlying conversations or chat messages:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationGroupID` | `NSString *` | Yes | Target conversation group ID to delete. |
+
+## Code example
 
 ```objc
-NSString *groupIDToDelete = conversationGroupID;
+#import <OpenIMSDK/CallbackProxy.h>
+@import OpenIMCore;
+
+CallbackProxy *callback = [[CallbackProxy alloc]
+    initWithOnSuccess:^(NSString * _Nullable data) {
+        [self removeConversationGroupByID:@"group_work_101"];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable message) {
+        NSLog(@"DeleteConversationGroup failed: %ld %@", (long)code, message);
+    }];
+
+Open_im_sdkDeleteConversationGroup(callback, @"group_work_101");
 ```
 
-Pass your callback and `groupIDToDelete` to `Open_im_sdkDeleteConversationGroup`. This argument is a `conversationGroupID`, not an OpenIM chat-group ID.
+## Return value
 
-## Result
+The `onSuccess` callback returns confirmation when the conversation group is successfully deleted.
 
-A successful callback means that the delete request has completed; do not depend on generic placeholder data. You can remove the local group by `conversationGroupID` immediately, then reconcile through `onConversationGroupDeleted:` or a subsequent query.
+## State changes after the call
 
-For the complete listener, see [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).
+1. **Local state removal**: The client removes the group record keyed by `conversationGroupID` from local storage and group navigation interfaces.
+2. **Event notification**: Other connected client sessions receive notification through the `onConversationGroupDeleted:` listener callback.
+3. **Data preservation**: Deleting a group does not affect conversations or historical chat history. For listener lifecycle details, refer to [Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups).

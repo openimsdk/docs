@@ -1,24 +1,25 @@
 ---
 title: 'Set a conversation draft'
-description: 'Use setConversationDraft() to save a conversation draft.'
+description: 'Save or clear unsent draft text locally for a conversation.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-07'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/conversation/managing-conversations/set-conversation-draft'
 ---
 
-Save the draft when a chat is left, the conversation changes, or editor content changes. Maintain editor state locally and debounce intermediate saves; submit the newest value before leaving the page.
+Save unsent draft text when the user leaves a chat screen, switches conversations, or modifies input contents. Debounce frequent text changes while the user is typing, and commit the final draft immediately when navigating away.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().conversationManager.setConversationDraft(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The request completed.
+            // Draft saved successfully.
         }
 
         @Override
@@ -31,4 +32,18 @@ OpenIMClient.getInstance().conversationManager.setConversationDraft(
 );
 ```
 
-Pass an empty string to clear the draft. Conversation list changes can be received through `onConversationChanged`.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `conversationID` | `String` | Yes | Target conversation identifier. |
+| `draftText` | `String` | Yes | Draft text content. Pass an empty string `""` to clear the draft. |
+
+## Return value
+
+The successful callback indicates that the draft was saved to local conversation storage. Drafts are persisted exclusively on the local device and do not synchronize to other devices or clients.
+
+## State changes after the call
+
+Saving or clearing a draft triggers the `OnConversationListener.onConversationChanged` event. Locate the conversation by `conversationID` and update its `draftText` and `draftTextTime` fields. For complete listener registration details, see [Get the conversation list](/sdk/android/conversation/retrieving-conversations/retrieve-conversation-list).

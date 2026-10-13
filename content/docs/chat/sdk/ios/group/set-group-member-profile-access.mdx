@@ -5,11 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/set-group-member-profile-access'
 ---
+
+Invoke `setGroupInfoDictionary:onSuccess:onFailure:` to configure whether regular group members can inspect profiles of other members in the group:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing the target `groupID` and profile access permissions. |
+
+### Access permission options
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMAllowTypeAllowed` | `0` | Members can view profiles of other group members. |
+| `OIMAllowTypeNotAllowed` | `1` | Regular members cannot view profiles of other group members. |
+
+## Code example
 
 ```objc
 NSDictionary *changes = @{
@@ -18,10 +34,20 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"setGroupInfoDictionary success");
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        NSLog(@"setGroupInfoDictionary failed: %ld %@", (long)code, message);
+    }];
 ```
 
-`OIMAllowTypeAllowed` has the value `0` and allows access. `OIMAllowTypeNotAllowed` has the value `1` and denies access. This setting is independent of permission to add friends from within a group.
+## Return value
 
-After the success callback, reconcile the final state through `onGroupInfoChanged:` or a new query.
+The `onSuccess` callback returns confirmation when the server accepts the profile access configuration.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the local cached group's `lookMemberInfo` property matching `groupID`.
+2. **Event notification**: Group members receive an updated `OIMGroupInfo` object through the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: This setting is independent from friend addition permissions. To restrict adding friends within the group, refer to [Set permission to add friends from a group](/sdk/ios/group/set-group-member-friend-permission). For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

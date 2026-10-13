@@ -1,17 +1,33 @@
 ---
-title: 'Start a one-to-one call'
-description: 'Use the Flutter SDK to start a one-to-one audio or video call.'
+title: 'Start a single call'
+description: 'Initiate a one-to-one audio or video call invitation to a specified user.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/calling/managing-calls/start-single-call'
 ---
 
-`signalingInvite()` starts a one-to-one call. The SDK manages signaling state; the application must still use the returned credentials to connect its real-time audio/video media engine.
+Initiate a one-to-one call invitation to an individual recipient. The OpenIM SDK manages the signaling channel and call lifecycle; your app connects to your RTC media engine using the returned credentials:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `info` | `SignalingInfo` | Yes | Call signaling initiation object containing the operator's `userID`, `invitation`, and optional `offlinePushInfo`. |
+
+Core fields of `invitation`:
+- `inviterUserID`: Initiator user ID.
+- `inviteeUserIDList`: List containing exactly one recipient user ID.
+- `groupID`: Pass an empty string `''` for single-chat calls.
+- `roomID`: Call room ID. Generate a globally unique ID per call session.
+- `timeout`: Call timeout in seconds.
+- `mediaType`: Media type (for example, `'video'` or `'audio'`).
+- `sessionType`: Session type; pass `ConversationType.single` for single-chat calls.
+
+## Code example
 
 ```dart
 final info = SignalingInfo(
@@ -33,4 +49,17 @@ final credentials = await OpenIM.iMManager.signalingManager
     .signalingInvite(info: info);
 ```
 
-For a one-to-one call, pass an empty string as `groupID` and include only the peer in `inviteeUserIDList`. The Future returns `SignalingCertificate`. Connect the media room only after obtaining a valid `token` and `roomID`. Success does not mean that the invitee has answered.
+## Return value
+
+A successful `Future` returns a `SignalingCertificate` object containing credentials for entering the media room.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `token` | `String?` | Room authentication token required by the media engine. |
+| `roomID` | `String?` | Target call room ID. |
+| `liveURL` | `String?` | Live media streaming server URL. |
+| `busyLineUserIDList` | `List<String>?` | List of user IDs currently busy on another line. |
+
+## State changes after the call
+
+A successful call indicates that the invitation signal has been dispatched. It does not mean the recipient has answered. The client creates a local calling state mapped to `roomID` and awaits acceptance, rejection, or timeout events (see [Handle call events](/sdk/flutter/calling/managing-calls/handle-call-events) for complete event handling).

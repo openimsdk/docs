@@ -5,20 +5,46 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/friend-applications/get-friend-application-unhandled-count'
 ---
 
+Query the count of pending, unhandled friend requests received after a specified timestamp using `getFriendApplicationUnhandledCount:onSuccess:onFailure:`. Use this count to render badge counts or unread indicator dots on contact tabs.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `GetFriendApplicationUnhandledCountReq *` | Yes | Request object specifying the cutoff timestamp. |
+
+### Request attributes (`GetFriendApplicationUnhandledCountReq`)
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `time` | `NSInteger` | Yes | Millisecond timestamp. Typically pass the timestamp when the user last viewed the friend requests view. |
+
+## Code example
+
 ```objc
 GetFriendApplicationUnhandledCountReq *req = [GetFriendApplicationUnhandledCountReq new];
 req.time = lastViewedAt;
+
 [[OIMManager manager] getFriendApplicationUnhandledCount:req
                                                onSuccess:^(NSInteger count) {
                                                    [requestStore setUnhandledCount:count];
                                                }
-                                               onFailure:nil];
+                                               onFailure:^(NSInteger code, NSString *message) {
+                                                   NSLog(@"getFriendApplicationUnhandledCount failed: %ld %@", (long)code, message);
+                                               }];
 ```
 
-`time` is normally the time when the user last viewed the friend-request list. The success callback returns a snapshot of the number of matching unhandled requests after that time. The query itself does not trigger a friend-request delegate.
+## Return value
+
+The `onSuccess` callback delivers an integer `count` representing the total number of unhandled friend requests received after `req.time`.
+
+## State changes after the call
+
+- **Local badge updates**: Render or update tab badge indicators with the returned count.
+- **Snapshot query**: This query establishes an instantaneous point-in-time snapshot and does not emit delegate callbacks.
+- **Real-time increments**: As new incoming friend requests arrive, increment the badge count dynamically via `onFriendApplicationAdded:` in `OIMFriendshipListener` (see [Retrieve received friend requests](/sdk/ios/user/friend-applications/get-friend-application-list-as-recipient)).

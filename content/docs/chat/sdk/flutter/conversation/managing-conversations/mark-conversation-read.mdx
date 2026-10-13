@@ -1,17 +1,24 @@
 ---
-title: 'Mark a conversation as read'
-description: 'Mark messages in a specified conversation as read with the OpenIM Flutter SDK.'
+title: 'Mark conversation as read'
+description: 'Mark messages in a specified conversation as read using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/managing-conversations/mark-conversation-read'
 ---
 
-Call this method after the user opens a conversation and finishes reading the currently visible messages:
+When a user enters a chat screen and views messages, call this method to clear the unread counter for that conversation:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Target conversation ID. |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.conversationManager.markConversationMessageAsRead(
@@ -19,9 +26,17 @@ await OpenIM.iMManager.conversationManager.markConversationMessageAsRead(
 );
 ```
 
-Do not mark messages as read merely because the app previewed a notification or received a message in the background. A successful `Future` means that the request completed, not that `onConversationChanged` has already arrived. Merge the latest `ConversationInfo` by `conversationID`; query the conversation again when immediate confirmation is required.
+## Return value
 
-For a one-to-one chat, after the current user marks the conversation as read, the other participant can receive message read receipts through `onRecvC2CReadReceipt`. This page owns that callback. For each `ReadReceiptInfo`, first validate that `sessionType` is one-to-one and `userID` is non-empty. Resolve `conversationID` from the other user's ID, then update read state for each non-empty `clientMsgID` in `msgIDList`.
+A successful `Future` indicates that the mark-as-read request reached the server. The client should immediately reset the local conversation's `unreadCount` to 0.
+
+## State changes after the call
+
+The SDK subsequently emits conversation change notifications. The client updates the conversation item using `conversationID` as the merge key. For complete listener integration, see [Retrieve conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list).
+
+## Single-chat C2C read receipts
+
+In single-chat conversations, marking a conversation as read causes the counterparty to receive a read receipt notification via `OnAdvancedMsgListener.onRecvC2CReadReceipt`. When handling this callback, identify the corresponding `conversationID` from the counterparty's `userID` and update the read status of messages matching `clientMsgID` in `msgIDList`:
 
 ```dart
 void handleC2CReadReceipts(List<ReadReceiptInfo> items) {
@@ -31,4 +46,4 @@ void handleC2CReadReceipts(List<ReadReceiptInfo> items) {
 }
 ```
 
-Pass `handleC2CReadReceipts` to `onRecvC2CReadReceipt` in the application's single `OnAdvancedMsgListener`. See [Events overview](/sdk/flutter/events/overview-events) for centralized listener setup. The Flutter SDK does not provide member-level group-message read receipts.
+For centralized listener registration, see [Events overview](/sdk/flutter/events/overview-events). The Flutter SDK does not provide member-level read receipts for group chats.

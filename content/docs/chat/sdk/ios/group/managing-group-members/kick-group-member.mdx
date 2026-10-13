@@ -5,22 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/kick-group-member'
 ---
 
-Provide `groupID`, a removal reason, and an array of user IDs. This selector cannot remove the group owner. A successful callback means that the request has completed. Reconcile the member list through `onGroupMemberDeleted:` or a new query.
+Invoke `kickGroupMember:reason:usersID:onSuccess:onFailure:` to remove one or more specified members from a group (administrators cannot remove the owner or fellow administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `reason` | `NSString *` | No | Removal explanation or reason. |
+| `usersID` | `NSArray<NSString *> *` | Yes | List of member user IDs to remove. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] kickGroupMember:groupID
-  reason:@"Removed from the project discussion"
-  usersID:@[targetUserID]
-  onSuccess:^(NSArray<OIMGroupInviteResult *> *results) {
-    [self handleKickResults:results];
-  }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] kickGroupMember:@"group_1001"
+                               reason:@"Violation of group guidelines"
+                              usersID:@[@"user_003"]
+                            onSuccess:^(NSArray<OIMGroupInviteResult *> *results) {
+                                for (OIMGroupInviteResult *item in results) {
+                                    NSLog(@"kicked user: %@, result: %ld", item.userID, (long)item.result);
+                                }
+                            }
+                            onFailure:^(NSInteger code, NSString *message) {
+                                NSLog(@"kickGroupMember failed: %ld %@", (long)code, message);
+                            }];
 ```
+
+## Return value
+
+The `onSuccess` callback delivers an array of member removal outcomes (`NSArray<OIMGroupInviteResult *> *`).
+
+## State changes after the call
+
+1. **Local state removal**: The client removes member records corresponding to `groupID:userID` from local storage and displays.
+2. **Event notification**: Connected group members receive the `onGroupMemberDeleted:` listener callback.
+3. **Re-query calibration**: For member queries and listener integration, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

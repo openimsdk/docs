@@ -1,17 +1,54 @@
 ---
-title: 'Get user profiles'
-description: 'OpenIM HarmonyOS SDK guide for Get user profiles.'
+title: 'Retrieve user profiles'
+description: 'Batch query public account profiles for a list of user IDs.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/user/profile/get-users-info'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Batch querying user profiles is ideal for stranger profile cards, contact recommendations, or message sender headers. This method queries explicitly by `userID`; if you need to search users by phone number, nickname, organization, or email, perform that lookup on your business backend to obtain candidate `userID` lists first:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, { GetUsersInfoReq, GetUsersInfoResp } from '@openimsdk/imsdk';
+
+const request: GetUsersInfoReq = {
+  userIDs: ['user_a', 'user_b'],
+};
+const response: GetUsersInfoResp = await sdk.getUsersInfo(request);
+
+for (let index = 0; index < response.users.length; index += 1) {
+  const user = response.users[index];
+  usersByID.set(user.userID, user);
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userIDs` | `string[]` | Yes | List of user IDs to retrieve. Deduplicate and remove empty values before calling. |
+
+## Return value
+
+Returns a Promise that resolves to a `GetUsersInfoResp` object containing `users: IMUser[]`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | Unique user identifier. |
+| `nickname` | `string` | Public account-level nickname. |
+| `faceURL` | `string` | Avatar URL. |
+| `ex` | `string` | Custom metadata extension string. |
+| `createTime` | `number` | Account creation timestamp in Unix milliseconds. |
+| `globalRecvMsgOpt` | `GlobalRecvMsgOpt` | Account message reception preference. |
+| `attached` | `string` | Additional engine metadata. |
+| `addFriendPermission` | `AddFriendPermission` | Friend request verification policy. |
+
+## State changes after the call
+
+The returned array may not match the order of input IDs; map records by `userID`. When rendering user profiles, maintain separate fields for account nickname, friend remark, group member nickname, and conversation display name rather than overriding one with another. This query does not trigger events; re-query when updated snapshots are required.

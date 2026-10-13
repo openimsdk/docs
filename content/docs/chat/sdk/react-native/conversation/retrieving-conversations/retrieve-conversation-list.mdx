@@ -1,6 +1,6 @@
 ---
-title: 'Retrieve the conversation list'
-description: "Retrieve the current user's conversation list with pagination."
+title: 'Retrieve conversation list'
+description: 'Paginate and retrieve the conversation list for the current account using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
@@ -10,7 +10,7 @@ platform: 'react-native'
 sourcePath: '/sdk/react-native/conversation/retrieving-conversations/retrieve-conversation-list'
 ---
 
-Use `getConversationListSplit()` to retrieve the conversation list page by page.
+Paginate and load local conversation records for the authenticated user with `getConversationListSplit()` to establish the initial list snapshot:
 
 ```ts
 const conversations = await OpenIMSDK.getConversationListSplit({
@@ -23,63 +23,65 @@ const conversations = await OpenIMSDK.getConversationListSplit({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `offset` | `number` | Yes | Pagination offset. Use `0` for the first page and increase it by the number of items already requested. |
-| `count` | `number` | Yes | Number of conversations to request. |
+| `offset` | `number` | Yes | Pagination offset index. Pass `0` for the initial page, then increment by the accumulated count. |
+| `count` | `number` | Yes | Maximum number of conversations to retrieve per batch. |
 
-## Return result
+## Return value
 
-The call returns the current page as `ConversationItem[]`. When fewer than `count` items are returned, the current list has reached its end.
+Resolves to an array of `ConversationItem[]` for the requested page. When the returned array length is less than `count`, the end of the list has been reached.
 
-### Conversation fields
+### Conversation properties
 
-`ConversationItem` contains the chat target, list presentation data, and settings for the current account:
+A `ConversationItem` object includes display attributes, unread counters, and account-specific preferences:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `conversationID` | `string` | Conversation ID. |
-| `conversationType` | `SessionType` | Conversation type, such as one-to-one or group. |
-| `userID` | `string` | The other user's ID in a one-to-one conversation; usually empty for group conversations. |
-| `groupID` | `string` | Group ID for a group conversation; usually empty for one-to-one conversations. |
+| `conversationID` | `string` | Primary conversation identifier. |
+| `conversationType` | `SessionType` | Conversation type: single or group chat. |
+| `userID` | `string` | Target user ID in single chats; empty string in group chats. |
+| `groupID` | `string` | Target group ID in group chats; empty string in single chats. |
 | `showName` | `string` | Display name of the conversation. |
-| `faceURL` | `string` | Display avatar URL of the conversation. |
-| `recvMsgOpt` | `MessageReceiveOptType` | Message reception setting for the conversation. |
-| `unreadCount` | `number` | Number of unread messages in the conversation. |
-| `groupAtType` | `GroupAtType` | Mention status for a group conversation; not used for one-to-one conversations. |
-| `latestMsg` | `string` | JSON-serialized content of the latest message. |
-| `latestMsgSendTime` | `number` | Time when the latest message was sent. |
-| `draftText` | `string` | Draft saved on the current device. |
-| `draftTextTime` | `number` | Time when the draft was updated. |
-| `isPrivateChat` | `boolean` | Whether burn-after-reading is enabled for the one-to-one conversation. |
-| `burnDuration` | `number` | Burn-after-reading duration for the one-to-one conversation. |
-| `isMsgDestruct` | `boolean` | Whether scheduled server-side message deletion is enabled. |
-| `msgDestructTime` | `number` | Server-side message deletion period. |
-| `isPinned` | `boolean` | Whether the conversation is pinned. |
-| `isMarked` <span className="enterprise-field-badge">Enterprise</span> | `boolean` | Whether the conversation is marked. |
-| `isNotInGroup` | `boolean` | Whether the current account is no longer in the group. |
-| `attachedInfo` | `string` | Additional information attached by the SDK. |
-| `ex` | `string` (optional) | Conversation extension string. |
-| `remark` <span className="enterprise-field-badge">Enterprise</span> | `string` (optional) | Conversation remark. |
+| `faceURL` | `string` | Avatar image URL for the conversation. |
+| `recvMsgOpt` | `MessageReceiveOptType` | Notification receive options for this conversation. |
+| `unreadCount` | `number` | Total unread message count in this conversation. |
+| `groupAtType` | `GroupAtType` | Group `@` mention status; not used in single chats. |
+| `latestMsg` | `string` | Serialized JSON string of the most recent message. |
+| `latestMsgSendTime` | `number` | Send timestamp of the latest message in Unix milliseconds. |
+| `draftText` | `string` | Local message draft saved on this device. |
+| `draftTextTime` | `number` | Timestamp when the draft was last updated. |
+| `isPrivateChat` | `boolean` | Whether private chat (burn-after-reading) is enabled. |
+| `burnDuration` | `number` | Burn-after-reading countdown duration in seconds. |
+| `isMsgDestruct` | `boolean` | Whether server message destruction is enabled. |
+| `msgDestructTime` | `number` | Automated server message destruction period in seconds. |
+| `isPinned` | `boolean` | Whether the conversation is pinned to the top. |
+| `isMarked` <span className="enterprise-field-badge">Commercial</span> | `boolean` | Whether the conversation is marked. |
+| `isNotInGroup` | `boolean` | Whether the current user is no longer a member of this group. |
+| `attachedInfo` | `string` | SDK internal metadata. |
+| `ex` | `string` (optional) | Custom business extension string. |
+| `remark` <span className="enterprise-field-badge">Commercial</span> | `string` (optional) | Custom conversation remark for the current user. |
 
-When loading multiple pages, deduplicate them by `conversationID`. Start again from `offset: 0` when refreshing the list.
+When accumulating paginated results, always deduplicate and merge records using `conversationID` as the primary key. When refreshing the list, re-query from `offset: 0`.
 
 ## Listen for conversation changes
 
-`OnNewConversation` is emitted when a conversation is created. `OnConversationChanged` is emitted when an existing conversation changes. Both callbacks receive `ConversationItem[]`.
+The SDK triggers `OnNewConversation` when a new conversation entry is created, and `OnConversationChanged` when an existing conversation mutates (such as new message arrival, unread counter changes, draft updates, or pin toggle). Both event payloads provide `ConversationItem[]`. Reconcile incoming incremental items into your state keyed by `conversationID`.
 
 ```ts
 function handleNewConversation(conversations: ConversationItem[]) {
-  // ...
+  // Merge new conversations into UI state
 }
 
 function handleConversationChanged(conversations: ConversationItem[]) {
-  // ...
+  // Update existing conversation entries by conversationID
 }
 
+// Register listeners
 OpenIMSDK.on(OpenIMEvent.OnNewConversation, handleNewConversation);
 OpenIMSDK.on(OpenIMEvent.OnConversationChanged, handleConversationChanged);
 
+// Remove listeners
 OpenIMSDK.off(OpenIMEvent.OnNewConversation, handleNewConversation);
 OpenIMSDK.off(OpenIMEvent.OnConversationChanged, handleConversationChanged);
 ```
 
-Remove the listeners when logging out, switching accounts, or tearing down the conversation-list state.
+Unregister these listeners when the user logs out, switches accounts, or the conversation list unmounts.

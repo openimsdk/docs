@@ -5,13 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/retrieving-messages/load-newer-messages'
 ---
 
-When messages after an anchor need to be filled in, use the reverse selector with the same `OIMGetAdvancedHistoryMessageListParam` model:
+When navigating to a specific message via search results, notifications, or reply references, invoke `getAdvancedHistoryMessageListReverse:onSuccess:onFailure:` on `OIMManager` to load newer messages chronologically forward from that anchor message:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `opts` | `OIMGetAdvancedHistoryMessageListParam *` | Yes | Query configuration parameters object. |
+
+### Properties of OIMGetAdvancedHistoryMessageListParam
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `startClientMsgID` | `NSString *` | Yes | Anchor message's `clientMsgID`. The SDK retrieves pages of newer messages starting after this message. |
+| `count` | `NSInteger` | Yes | Maximum number of messages to retrieve per page. |
+| `viewType` | `OIMGetHistoryViewType` | Yes | History query view type (typically `OIMGetHistoryViewTypeHistory`). |
+
+## Code example
 
 ```objc
 OIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];
@@ -21,10 +37,24 @@ param.count = 20;
 param.viewType = OIMGetHistoryViewTypeHistory;
 
 [[OIMManager manager] getAdvancedHistoryMessageListReverse:param
-                                                 onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {
-                                                     [self appendMessages:result.messageList ?: @[]];
-                                                 }
-                                                 onFailure:nil];
+    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo * _Nullable result) {
+        // Append retrieved newer messages to the bottom of the list
+        [self appendMessages:result.messageList ?: @[]];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // Handle retrieval failure
+    }];
 ```
 
-Do not arbitrarily alternate directions at the same scroll boundary. The success callback and new-message delegate are separate stages. Merge results by `conversationID:clientMsgID`.
+## Return value
+
+The `onSuccess` callback delivers an `OIMGetAdvancedHistoryMessageListInfo` instance containing:
+
+- `messageList`: Array of retrieved messages sorted in ascending chronological order (`NSArray<OIMMessageInfo *> *`).
+- `isEnd`: Boolean indicating whether the newest message boundary in the conversation has been reached.
+- `lastMinSeq`: Minimum sequence number in the current retrieved chunk.
+
+## State changes after the call
+
+1. **Snapshot loading**: Reverse pagination retrieves existing message snapshots on demand and does not trigger incoming message listeners.
+2. **Scroll state coordination**: Avoid mixing forward and backward pagination arbitrarily at the same scroll boundary. Deduplicate messages using `clientMsgID` scoped to `conversationID`. For standard backward history queries, see [Load message history](/sdk/ios/message/retrieving-messages/load-older-messages).

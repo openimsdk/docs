@@ -1,15 +1,34 @@
 ---
-title: 'Set or remove an administrator'
-description: 'Set or remove a group administrator with the OpenIM Flutter SDK.'
+title: 'Set group member role level'
+description: 'Promote or demote group administrators using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/managing-group-members/set-group-member-role-level'
 ---
+
+A group owner can promote regular members to administrators or demote administrators back to regular members:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `String` | Yes | Target group ID. |
+| `userID` | `String` | Yes | Target member user ID. |
+| `roleLevel` | `int` | Yes | Role level integer from the role level enum table below. |
+
+### Role level enumeration
+
+| Enum Option | Value | Behavior |
+| --- | --- | --- |
+| `GroupRoleLevel.member` | `20` | Regular member (pass this value to demote an administrator). |
+| `GroupRoleLevel.admin` | `60` | Group administrator (pass this value to promote a member). |
+| `GroupRoleLevel.owner` | `100` | Group owner (read-only identifier; cannot be assigned via this API; use [Transfer group owner](/sdk/flutter/group/managing-group-members/transfer-group-owner) to change ownership). |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.groupManager.setGroupMemberInfo(
@@ -21,6 +40,10 @@ await OpenIM.iMManager.groupManager.setGroupMemberInfo(
 );
 ```
 
-Pass `GroupRoleLevel.admin` to make the member an administrator and `GroupRoleLevel.member` to remove that role. Their values are `60` and `20`; `owner` is `100`. `owner` only identifies the owner role and cannot transfer ownership through this field. Use [Transfer group ownership](/sdk/flutter/group/managing-group-members/transfer-group-owner).
+## Return value
 
-After the `Future` succeeds, merge `onGroupMemberInfoChanged` by `groupID:userID`. See [Group member queries overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).
+A successful `Future` indicates that the member role level was updated on the server.
+
+## State changes after the call
+
+Connected clients in the group receive member profile update events. The client updates the local member record and permissions using `groupID:userID` as the key. For complete listener integration, see [Retrieving group members overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).

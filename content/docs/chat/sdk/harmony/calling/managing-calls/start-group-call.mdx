@@ -1,17 +1,64 @@
 ---
-title: 'Start a group call'
-description: 'OpenIM HarmonyOS SDK guide for Start a group call.'
+title: 'Start group call'
+description: 'Invite designated group members to join an audio or video call.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/calling/managing-calls/start-group-call'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+A group call invitation targets only the explicit user IDs listed in `inviteeUserIDList`; specifying `groupID` does not automatically invite all members in the group. Always generate a unique `roomID` for each call rather than reusing the group identifier.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  Platform,
+  SessionType,
+  SignalingInvitationInfo,
+  SignalingInviteInGroupReq,
+  SignalingInviteInGroupResp,
+  SignalingMediaType,
+} from '@openimsdk/imsdk';
+
+const invitation: SignalingInvitationInfo = {
+  inviterUserID: currentUserID,
+  inviteeUserIDList: selectedMemberIDs,
+  customData: JSON.stringify({ source: 'group-call' }),
+  groupID: groupID,
+  roomID: createCallRoomID(),
+  timeout: 30,
+  mediaType: SignalingMediaType.SignalingMediaTypeVideo,
+  platformID: Platform.HarmonyOS,
+  sessionType: SessionType.WriteGroup,
+  initiateTime: Date.now(),
+  busyLineUserIDList: [],
+};
+const request: SignalingInviteInGroupReq = {
+  userID: primaryInviteeUserID,
+  invitation: invitation,
+  offlinePush: offlinePush,
+  participant: participant,
+};
+const response: SignalingInviteInGroupResp = await sdk.signalingInviteInGroup(request);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `string` | Yes | Primary invitee user ID. Must also appear in `inviteeUserIDList`. |
+| `invitation` | `SignalingInvitationInfo` | Yes | Invitation object containing room ID, group ID, media type, timeout, and the invitee ID list. |
+| `offlinePush` | `OfflinePushInfo` | Yes | Offline push configuration for offline recipients. |
+| `participant` | `SignalingParticipantMetaData` | Yes | Profile information of the calling participant. |
+
+## Return value
+
+Returns a Promise that resolves to a `SignalingInviteInGroupResp` containing `roomID`, `token`, `liveURL`, and `busyLineUserIDList`.
+
+## State changes after the call
+
+Exclude the initiator, empty strings, and duplicate IDs from `inviteeUserIDList`. Any invitees listed in `busyLineUserIDList` do not block invitations from reaching other members. Resolving the Promise indicates that signaling invites were delivered to the server; it does not indicate that any group members have joined the room. Track the active call session using `roomID`, and monitor participant joins, rejects, and timeouts via [Handle call events](/sdk/harmony/calling/managing-calls/handle-call-events).

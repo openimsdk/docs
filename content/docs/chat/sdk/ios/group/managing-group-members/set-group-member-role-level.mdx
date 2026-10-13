@@ -5,20 +5,48 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-role-level'
 ---
 
-Pass `OIMGroupMemberRoleAdmin` to make the user an administrator or `OIMGroupMemberRoleMember` to remove administrator status. Do not set Owner directly as a substitute for transferring ownership. Handle the success callback and `onGroupMemberInfoChanged:` separately.
+Invoke `setGroupMemberRoleLevel:userID:roleLevel:onSuccess:onFailure:` to promote a regular member to administrator or demote an administrator to a regular member (only the group owner has permission to perform this action):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `userID` | `NSString *` | Yes | Target member user ID. |
+| `roleLevel` | `OIMGroupMemberRole` | Yes | Desired role level enumeration. |
+
+### Role level enumeration
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMGroupMemberRoleMember` | `20` | Regular member (used to remove administrator status). |
+| `OIMGroupMemberRoleAdmin` | `60` | Administrator (used to grant administrator privileges). |
+
+## Code example
 
 ```objc
-[[OIMManager manager] setGroupMemberRoleLevel:groupID
-  userID:targetUserID
-  roleLevel:OIMGroupMemberRoleAdmin
-  onSuccess:^(NSString * _Nullable data) { [self showSaved]; }
-  onFailure:^(NSInteger code, NSString *message) {
-    [self showErrorCode:code message:message];
-  }];
+[[OIMManager manager] setGroupMemberRoleLevel:@"group_1001"
+                                      userID:@"user_002"
+                                   roleLevel:OIMGroupMemberRoleAdmin
+                                   onSuccess:^(NSString * _Nullable data) {
+                                       NSLog(@"setGroupMemberRoleLevel success");
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"setGroupMemberRoleLevel failed: %ld %@", (long)code, message);
+                                   }];
 ```
+
+## Return value
+
+The `onSuccess` callback returns confirmation when the server accepts the role change.
+
+## State changes after the call
+
+1. **Role update restrictions**: Group ownership cannot be modified using this method; to transfer ownership, call [Transfer group ownership](/sdk/ios/group/managing-group-members/transfer-group-owner).
+2. **Event notification**: Role changes broadcast across active clients via `onGroupMemberInfoChanged:`. The client updates the member's role attribute matching `groupID:userID`.
+3. **Re-query calibration**: For administration queries, refer to [Retrieve the group owner and administrators](/sdk/ios/group/retrieving-group-members/get-group-member-owner-and-admin).

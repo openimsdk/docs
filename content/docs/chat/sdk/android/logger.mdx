@@ -1,21 +1,20 @@
 ---
 title: 'Logging'
-description: 'Configure Android SDK logging, write application logs, and upload logs.'
+description: 'Configure OpenIM Android SDK logging, record application diagnostic events, and upload logs for debugging.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/logger'
 ---
 
-OpenIM Android SDK logs help diagnose initialization, connection, and business API problems. Initialization options control the log level, standard output, and log directory.
+OpenIM Android SDK logging helps diagnose initialization issues, connection drops, and API failures. You can customize the log level, standard output redirection, and log directory within your initialization configuration.
 
-## Configure logging during initialization
+## Configure logging on initialization
 
-Configure logging when calling `initSDK()`:
+Configure logging options when initializing the SDK:
 
 ```java
 File dataDirectory = new File(application.getFilesDir(), "openim");
@@ -37,17 +36,17 @@ boolean initialized = OpenIMClient.getInstance().initSDK(
 );
 ```
 
-| Field                 | Description                                                                                                                                     |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `logLevel`            | Controls verbosity with a `LogLevel` constant. Available values include `DebugWithSQL`, `Debug`, `Info`, `Warn`, `Error`, `Panic`, and `Fatal`. |
-| `isLogStandardOutput` | Writes SDK logs to Android standard output when enabled.                                                                                         |
-| `logFilePath`         | Optional log directory, which must be writable by the application.                                                                               |
+| Field | Description |
+| --- | --- |
+| `logLevel` | Uses `LogLevel` constants to control verbosity. Options include `DebugWithSQL`, `Debug`, `Info`, `Warn`, `Error`, `Panic`, and `Fatal`. |
+| `isLogStandardOutput` | Determines whether the SDK prints log output to Android logcat. |
+| `logFilePath` | Optional log storage directory, which must reside within writable application storage. |
 
-`DebugWithSQL` includes database diagnostic details. `Debug`, `Info`, `Warn`, and `Error` progressively reduce the amount of output. Select the level that matches the current diagnostic scope.
+`DebugWithSQL` captures raw SQLite execution details, whereas `Debug`, `Info`, `Warn`, and `Error` successively reduce output volume. Select an appropriate logging level according to your troubleshooting requirements.
 
 ## Write application logs
 
-Use `logs()` to write application logs to the SDK log:
+When you need to persist application-level diagnostics alongside SDK events in local log files, call `logs()`:
 
 ```java
 OpenIMClient.getInstance().logs(
@@ -61,13 +60,13 @@ OpenIMClient.getInstance().logs(
 );
 ```
 
-`currentClassName` and `currentLineNum` identify the call site. `msgStr` is a short action description, and `errStr` is the error information. `Warn`, `Error`, `Panic`, and `Fatal` require a non-empty error string. Pass trailing `extra` values as key-value pairs.
+`currentClassName` and `currentLineNum` locate the call site, `msgStr` provides an action description, and `errStr` contains the failure details. Levels `Warn`, `Error`, `Panic`, and `Fatal` require a non-empty `errStr`. Key-value attributes at the end are passed in trailing alternating pairs.
 
-The older `logs()` overload with `OnBase<String>` and `Map` parameters is deprecated and should not be used in new code.
+Legacy overloads that accepted callback listeners or `Map` parameters are deprecated; use the varargs signature above.
 
 ## Upload logs
 
-Use `uploadLogs()` to upload client logs to the server, primarily when a user actively submits diagnostic logs.
+When users report unexpected behavior or customer support requests diagnostics, upload client log files to the server:
 
 ```java
 String cancelID = UUID.randomUUID().toString();
@@ -76,7 +75,7 @@ OpenIMClient.getInstance().uploadLogs(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // The log upload request completed.
+            // Log upload request completed successfully.
         }
 
         @Override
@@ -91,26 +90,29 @@ OpenIMClient.getInstance().uploadLogs(
     new UploadLogProgress() {
         @Override
         public void onProgress(long current, long total) {
-            // current and total indicate upload progress.
+            // current and total report upload progress.
         }
     }
 );
 ```
 
-| Parameter           | Description                                                                                                            |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `params`            | Legacy parameter that the current SDK does not use. Pass an empty list, such as `new ArrayList<>()`.                 |
-| `line`              | Number of log lines configured for this upload.                                                                        |
-| `cancelID`          | Stable identifier for this upload, such as an application-generated UUID.                                              |
-| `ex`                | Context attached to the upload task, such as a support ticket ID.                                                     |
-| `UploadLogProgress` | Reports current progress and total work for the upload interface.                                                      |
+## Parameters
 
-The success callback means that the log upload request completed.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the final upload status. |
+| `params` | `List<String>` | No | Legacy parameter unused by the current SDK; pass an empty list, such as `new ArrayList<>()`. |
+| `line` | `int` | Yes | Number of log lines to extract and upload. |
+| `cancelID` | `String` | Yes | Unique task identifier for this upload session, such as a random UUID. |
+| `ex` | `String` | No | Business metadata attached to the upload task, such as a support ticket ID. |
+| `UploadLogProgress` | `UploadLogProgress` | No | Progress listener reporting uploaded and total byte counters. |
 
-After the upload completes, use the occurrence time, action name, and relevant `conversationID`, `clientMsgID`, `groupID`, or `roomID` to locate the corresponding call.
+## Return value
 
-## Related pages
+The successful callback indicates that the log package has been uploaded to the server. You can cross-reference the upload with timestamps, operation names, and identifiers such as `conversationID`, `clientMsgID`, `groupID`, or `roomID` to trace issues.
 
-- [Implement for the Android environment](/sdk/android/getting-started/environment-specific-implementation)
+## Related guides
+
+- [Integrate for Android](/sdk/android/getting-started/environment-specific-implementation)
 - [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session)
 - [Send a message](/sdk/android/message/sending-messages/send-message)

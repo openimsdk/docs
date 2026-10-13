@@ -1,17 +1,91 @@
 ---
 title: 'Get the friend list'
-description: 'OpenIM uni-app / uni-app x SDK guide for Get the friend list.'
+description: 'Query the authenticated user’s friends and relationship profiles with pagination.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/user/friends/get-friend-list-page'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `getFriendListPage()` to retrieve a paginated snapshot of the authenticated user's friend list. Start with `offset: 0` for the first page, and increment the offset by the number of received records for subsequent pages. Reset pagination and re-query after additions or deletions occur.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `number` | Yes | Pagination offset index; pass `0` for the initial page. |
+| `count` | `number` | Yes | Number of friend records to retrieve in this page. |
+
+The UTS pagination parameters do not include `filterBlack`. Friends and blacklisted contacts are maintained as distinct data sets; determine whether a friend is blacklisted by matching their `userID` against the list returned by [Get the blacklist](/sdk/uniapp/user/blacklist/get-black-list).
+
+## Code example
+
+```uts
+import { getFriendListPage } from '@/uni_modules/unix-openim-sdk'
+
+const result = await getFriendListPage({
+  offset: 0,
+  count: 50,
+})
+const friends = result?.friends ?? []
+replaceFriends(friends)
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMFriendListResult | null` object containing an array of `OpenIMFriendUserItem` elements in `friends`:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `userID` | `string` | The friend's user ID; serves as the primary merge key for relationship updates. |
+| `nickname` | `string` | The friend's account-level display nickname. |
+| `faceURL` | `string` | The friend's account-level avatar URL. |
+| `remark` | `string` | Custom friend alias or remark set by the current account. |
+| `isPinned` | `boolean` | Whether this friend is pinned in the contact list. |
+| `ownerUserID` | `string` | The user ID owning this friendship record (the active account). |
+| `operatorUserID` | `string` | The user ID that created or last updated this friendship. |
+| `addSource` | `number` | Numeric source code describing how this friendship was initiated. |
+| `createTime` | `number` | Timestamp when the friendship was formed, in Unix milliseconds. |
+| `ex` | `string` | Custom relationship extension string. |
+| `attachedInfo` | `string` | SDK internal metadata. |
+
+The `nickname` and `faceURL` fields reflect account data, while `remark`, `isPinned`, and `ex` are specific to this friendship. Do not write remarks back into account nicknames, and do not overwrite public stranger profiles with friend records.
+
+## Monitor friend updates
+
+Friendship lifecycle events are centrally managed here. Use queries to populate initial state, and stream incremental updates via events. Merge items into your local state using `userID`:
+
+```uts
+import {
+  OpenIMFriendUserItem,
+  off,
+  onFriendAdded,
+  onFriendDeleted,
+  onFriendInfoChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleFriendChanged = (friend: OpenIMFriendUserItem | null) => {
+  if (friend == null) return
+  mergeFriend(friend)
+}
+
+const handleFriendDeleted = (friend: OpenIMFriendUserItem | null) => {
+  if (friend == null) return
+  removeFriend(friend.userID)
+}
+
+const friendAddedSubscription = onFriendAdded(handleFriendChanged)
+const friendChangedSubscription = onFriendInfoChanged(handleFriendChanged)
+const friendDeletedSubscription = onFriendDeleted(handleFriendDeleted)
+
+function removeFriendListeners() {
+  off(friendAddedSubscription)
+  off(friendChangedSubscription)
+  off(friendDeletedSubscription)
+}
+```
+
+Unsubscribe from these listeners when logging out, switching accounts, or tearing down the contact store. If event delivery might have been interrupted during connection loss, re-query the full list to restore accuracy.

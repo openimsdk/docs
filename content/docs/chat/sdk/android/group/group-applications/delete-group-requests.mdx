@@ -1,29 +1,55 @@
 ---
-title: 'Delete group applications'
-description: 'Use deleteGroupRequests to delete specified group application records in a batch.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/group-applications/delete-group-requests'
+title: "Delete group applications"
+description: "Use deleteGroupRequests to delete specified group application records in a batch."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/group-applications/delete-group-requests"
 ---
 
-`deleteGroupRequests()` accepts `DeleteGroupRequestsReq`, which can contain multiple `SimpleGroupRequests` items to delete application records in a batch. Each item contains `fromUserID`, the applicant's user ID, and `groupID`, the ID of the group the user applied to join.
+Batch-delete historical group application records. This method clears processed, expired, or obsolete application items from the application history list. It does not alter the underlying approval status (such as accepted or rejected) of the application itself. To reject a pending application, call [Reject a group application](/sdk/android/group/group-applications/refuse-group-application).
+
+## Code example
 
 ```java
-SimpleGroupRequests[] groupRequests = {
-    new SimpleGroupRequests(firstApplicantUserID, firstGroupID),
-    new SimpleGroupRequests(secondApplicantUserID, secondGroupID)
+SimpleGroupRequests[] requests = {
+    new SimpleGroupRequests("user_a", "group_123"),
+    new SimpleGroupRequests("user_b", "group_456")
 };
-DeleteGroupRequestsReq request = new DeleteGroupRequestsReq(groupRequests);
+DeleteGroupRequestsReq deleteReq = new DeleteGroupRequestsReq(requests);
 
-OpenIMClient.getInstance().groupManager.deleteGroupRequests(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, request);
+OpenIMClient.getInstance().groupManager.deleteGroupRequests(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group application records deleted successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to delete application records
+        }
+    },
+    deleteReq
+);
 ```
 
-Deleting an application record is not the same as rejecting an application. To reject an application, use `refuseGroupApplication()`.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `deleteGroupRequestsReq` | `DeleteGroupRequestsReq` | Yes | Request object containing an array of `SimpleGroupRequests`. Each entry specifies `fromUserID` (the applicant user ID) and `groupID` (the target group ID) to identify the specific application record. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the specified group application records were removed from the server.
+2. **Asynchronous event delivery**: This operation deletes history records and does not trigger group membership or status events.
+3. **Re-query calibration**: The client should remove the deleted items from the local application cache matching `groupID:userID`, or call [Get group application list as recipient](/sdk/android/group/group-applications/get-group-application-list-as-recipient) to refresh the list from the server.

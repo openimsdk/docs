@@ -1,64 +1,63 @@
 ---
 title: 'Before you start'
-description: 'Prepare OpenIMServer, user credentials, and the Android project before initializing, authenticating, or sending messages.'
+description: 'Prepare your OpenIMServer, credentials, and Android project environment before initializing, authenticating, or sending messages.'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/getting-started/before-you-start'
 ---
 
-Before integrating OpenIMClientSDK into a native Android application, prepare an accessible OpenIMServer deployment, user login information, and an Android project that satisfies the SDK build requirements. These prerequisites apply to both [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session) and [Send your first message](/sdk/android/getting-started/send-first-message).
+Before integrating the OpenIM Android SDK into a native Android app, verify that you have an accessible OpenIMServer deployment, valid user authentication credentials, and an Android project configured to meet SDK build requirements. These prerequisites apply to both [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session) and [Send your first message](/sdk/android/getting-started/send-first-message).
 
 ## Prepare OpenIMServer
 
-If OpenIMServer is not yet available, follow the [Docker deployment guide](/docs/guides/quick-deployment/docker). Confirm that both physical devices and emulators can reach these endpoints:
+If you have not deployed an OpenIMServer instance yet, follow the [Docker deployment guide](/docs/guides/deployment/docker-compose). Ensure that both physical Android devices and emulators can reach the following server endpoints:
 
-| Field     | Description                                                                              |
-| --------- | ---------------------------------------------------------------------------------------- |
-| `apiAddr` | OpenIMServer HTTP API endpoint used for login, synchronization, and resource requests.   |
-| `wsAddr`  | OpenIMServer WebSocket endpoint used for the persistent connection and real-time events. |
+| Endpoint | Description |
+| --- | --- |
+| `apiAddr` | OpenIMServer HTTP API endpoint used for authentication, data synchronization, and resource requests. |
+| `wsAddr` | OpenIMServer WebSocket endpoint used for persistent connections and real-time events. |
 
-Do not validate the endpoints only from the development computer. `localhost` inside an Android emulator refers to the emulator itself, so it cannot directly access services running locally on the development computer. When OpenIMServer runs on the development computer, map the API and WebSocket ports to the emulator first:
+Do not verify endpoints only on your development workstation. In the Android emulator, `localhost` points to the virtual device itself, not your host computer. When running OpenIMServer locally on your development machine, forward the HTTP and WebSocket ports to the emulator using `adb`:
 
 ```bash
 adb reverse tcp:10002 tcp:10002
 adb reverse tcp:10001 tcp:10001
 ```
 
-After mapping, the emulator can use `http://127.0.0.1:10002` as `apiAddr` and `ws://127.0.0.1:10001` as `wsAddr`. Replace the port numbers with the ports that the development computer actually listens on, and confirm that `adb` is connected to the target emulator before running the commands. Production applications should use HTTPS and WSS, with DNS, TLS certificates, firewalls, reverse proxies, and WebSocket upgrades verified from a physical device.
+Once forwarded, the app inside the emulator can use `http://127.0.0.1:10002` as `apiAddr` and `ws://127.0.0.1:10001` as `wsAddr`. Replace port numbers with the actual listening ports configured on your machine, and confirm that `adb` is connected to your target emulator before executing the commands. For production environments, use HTTPS and WSS endpoints, and verify DNS resolution, TLS certificates, firewalls, reverse proxies, and WebSocket upgrade handshakes on physical devices.
 
-## Prepare the user and token
+## Prepare users and tokens
 
-`userID` identifies an OpenIMSDK user, while the token authenticates that user. The application backend creates or associates users and supplies the Android application with a matching `userID` and token.
+A `userID` uniquely identifies a user in OpenIM, while a `token` authenticates that user session. Your business backend is responsible for creating or binding users and issuing matching `userID` and `token` pairs to the Android client.
 
-For the backend flow, see [Prepare to use the Platform API](/platform-api/prepare-to-use-api) and [Issue a session token](/platform-api/user/managing-session-tokens/issue-a-session-token). Android SDK login requires the following data:
+Before integrating OpenIMServer REST APIs into your backend service, refer to [Preparation](/platform-api/prepare-to-use-api) and [Get a user token](/platform-api/auth/tokens/get-user-token). The Android SDK login requires the following values:
 
-| Data | Description |
+| Field | Description |
 | --- | --- |
-| `userID` | The current user's OpenIM user ID. |
-| `token` | The login token associated with that user. |
-| `apiAddr` | The OpenIMServer HTTP API endpoint. |
-| `wsAddr` | The OpenIMServer WebSocket endpoint. |
+| `userID` | The OpenIM user ID of the signing-in user. |
+| `token` | The authentication token corresponding to the user ID. |
+| `apiAddr` | The OpenIMServer HTTP API URL. |
+| `wsAddr` | The OpenIMServer WebSocket URL. |
 
-The `userID` must correspond to the token; otherwise, login fails.
+The `userID` must match the token subject; otherwise, authentication fails.
 
 ## Prepare the Android project
 
-Before integration, verify that the Android project meets the following requirements:
+Before integrating the SDK, verify that your Android project meets the following requirements:
 
-- The application uses `minSdk` 21 or later, Java 8 compiler options, and `compileSdk` 36 or later.
-- The application manifest declares `android.permission.INTERNET` and permits the SDK to inspect network state.
-- An application-private persistent data directory is available, such as a dedicated directory under `Application.getFilesDir()`. Do not store the SDK database in a temporary cache or shared storage.
-- Physical devices can reach `apiAddr`, `wsAddr`, and message-media domains.
-- The release package covers the target device ABI; verify the native ABIs included in the actual delivery package.
-- The application handles network recovery, foreground and background transitions, token failure, forced logout, and multi-device login state changes.
+- Set `minSdk` to `21` or higher, enable Java 8 language desugaring/compilation options, and configure `compileSdk` to `36` or higher.
+- Declare `android.permission.INTERNET` in your `AndroidManifest.xml` and grant permissions to access network states.
+- Prepare a dedicated, persistent directory in private app storage (such as a subfolder in `context.filesDir`); never place SDK local SQLite databases in cache or shared external storage.
+- Ensure physical devices can resolve and connect to `apiAddr`, `wsAddr`, and media storage domains.
+- Verify that your app release packaging includes the native ABIs required by your target architectures.
+- Ensure your app gracefully handles lifecycle events, including network reconnection, foreground/background switching, token expiration, forced logout (kicked offline), and multi-device synchronization.
 
-For dependencies and manifest entries, see [Integrate for Android](/sdk/android/getting-started/environment-specific-implementation). For SDK initialization and authentication, see [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
+For dependency declarations and manifest configuration, see [Integrate for Android](/sdk/android/getting-started/environment-specific-implementation). For SDK initialization and login flows, see [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session).
 
-## Continue the integration
+## Next steps
 
-Complete [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session) first. After the login callback succeeds and `OnConnListener.onConnectSuccess()` arrives, verify the messaging path with [Send your first message](/sdk/android/getting-started/send-first-message).
+After completing your preparations, proceed to [Authenticate and manage a session](/sdk/android/getting-started/authenticate-and-manage-session). After confirming that authentication succeeds and receiving the connection established callback (`OnConnListener.onConnectSuccess`), verify message delivery with [Send your first message](/sdk/android/getting-started/send-first-message).

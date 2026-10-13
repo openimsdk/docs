@@ -1,17 +1,54 @@
 ---
-title: 'Create a group'
-description: 'OpenIM HarmonyOS SDK guide for Create a group.'
+title: 'Create group'
+description: 'Create a new chat group and configure initial administrators and regular members.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/group/create-group'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Supply initial group properties along with separate arrays of administrator and regular member user IDs. The current creator becomes the owner automatically, indicated by `ownerUserID` on the returned group object:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, { CreateGroupReq, CreateGroupResp } from '@openimsdk/imsdk';
+
+const request: CreateGroupReq = {
+  groupName: 'Project Discussion',
+  faceURL: 'https://example.com/group.png',
+  adminUserIDs: ['user_002'],
+  memberUserIDs: ['user_003', 'user_004'],
+};
+const response: CreateGroupResp = await sdk.createGroup(request);
+openGroupPage(response.groupInfo.groupID);
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupName` | `string` | Yes | Display name for the new group. |
+| `adminUserIDs` | `string[]` | Yes | Initial administrator user IDs. Pass an empty array if none. |
+| `memberUserIDs` | `string[]` | Yes | Initial regular member user IDs. Pass an empty array if none. |
+| `groupID` | `string` | No | Explicit group identifier pre-allocated by the backend. Usually omitted for auto-generation. |
+| `notification` | `string` | No | Initial group announcement text. |
+| `introduction` | `string` | No | Initial group introduction description. |
+| `faceURL` | `string` | No | Group avatar image URL. |
+| `needVerification` | `GroupNeedVerification` | No | Group join verification policy. |
+| `lookMemberInfo` | `GroupLookMemberInfo` | No | Member profile visibility permission. |
+| `applyMemberFriend` | `GroupApplyMemberFriend` | No | Member-to-member friend addition permission. |
+| `ex` | `string` | No | Custom metadata extension string. |
+
+Deduplicate all user IDs, and ensure that `adminUserIDs` and `memberUserIDs` do not contain overlapping accounts or the creator's ID.
+
+## Return value
+
+Returns a Promise that resolves to a `CreateGroupResp` object containing `groupInfo: IMGroup`.
+
+## State changes after the call
+
+Resolving the Promise yields the newly created `IMGroup` record. Connected clients receive `EventOnJoinedGroupAdded`; merge the new group into your joined groups list keyed by `groupID`. For event listeners, see [Group overview](/sdk/harmony/group/overview-group).

@@ -1,188 +1,181 @@
 ## OpenIMSDK stress and reliability testing
 
-## Terminology & Scope
+## Terminology and scope
 
-- **OpenIMSDK**: General term, including **OpenIMClientSDK** (client SDK) and **OpenIMServer** (server).
-- **ChatServer**: The business extension server. It is separate from the OpenIMServer core benchmark unless explicitly stated.
-- **App Administrator**: Administrator account used for management-side API calls (e.g., obtaining tokens, batch operations).
-- **App Business Server**: The business backend integrating with OpenIMServer (handles your business logic, integrated with the IM system via API/callback/SDK).
+- **OpenIMSDK:** The complete open-source project umbrella, consisting of the client SDK (**OpenIMClientSDK**) and the backend server (**OpenIMServer**).
+- **ChatServer:** The business extension server. Unless stated otherwise, the core performance benchmarks on this page evaluate OpenIMServer without ChatServer.
+- **Application administrator:** Administrative accounts used for platform management API calls (such as issuing tokens and executing batch migrations).
+- **Application business backend:** The host application backend connecting to OpenIMServer, handling custom business logic and integrating via REST APIs, webhooks, or SDK events.
 
----
+## Test methodology
 
-## Background
+OpenIMSDK provides embeddable instant messaging infrastructure rather than a pre-packaged consumer chat application. Because OpenIMClientSDK core logic is implemented in Go via `openim-sdk-core`, deploying thousands of physical mobile devices for repeatable testing is impractical. These benchmarks use automated test harnesses to simulate large fleets of concurrent online clients and continuous message traffic to quantify system capacity, delivery reliability, and end-to-end latency.
 
-OpenIMSDK is not a standalone chat application such as WeChat or Slack. It is an instant messaging solution that includes OpenIMClientSDK and OpenIMServer. Because OpenIMClientSDK relies on the Go-based `openim-sdk-core` and large fleets of real devices are impractical for repeatable tests, the benchmark programs simulate large-scale online presence and message traffic to evaluate system capacity, reliability, and latency.
+Two coordinated benchmark tools were used:
 
-This test uses two test programs in coordination:
+1. **Test Program A: `openim-sdk-core/integration_test`** (reliability, latency, and state consistency verification)
+   - Runs `openim-sdk-core` instances to emulate full OpenIMClientSDK behavior, validating the complete message receipt, decryption, and local SQLite storage pipeline.
+2. **Test Program B: `openim-sdk-core/msgtest`** (stress and throughput generation)
+   - Focuses on concurrent logins and high-volume message publishing to generate realistic peak traffic loads.
 
-1. **Test Program A: openim-sdk-core/integration_test** (for reliability/latency and consistency verification)
-   - Loads and runs `openim-sdk-core` instances to simulate OpenIMClientSDK instances, covering a comprehensive client pipeline.
+**Recommended workflow:** Use **msgtest** to generate background connection and throughput load, and use **integration_test** to perform sampled statistical validation of delivery reliability and round-trip latency.
 
-2. **Test Program B: openim-sdk-core/msgtest** (for stress/capacity)
-   - Focuses on login and message sending/receiving, used to launch large numbers of instances simulating high-concurrency stress scenarios.
+## Metrics definitions
 
-Recommended approach: **msgtest generates the stress load**; **integration_test performs sampling verification for reliability and latency**.
+- **Reliability:** Message delivery rate, defined as the percentage of messages published by senders that are successfully received and acknowledged by recipients.
+- **Latency:** End-to-end elapsed time from the moment Client A creates and dispatches a message until Client B successfully receives and persists it locally.
 
----
+## Test environment
 
-## Reliability & Latency Definitions
+- **Server 1:** Ubuntu 22.04.2 LTS, 16 vCPUs, 64 GB RAM, 150 GB HDD. Hosts OpenIMServer and infrastructure dependencies (MongoDB, Redis, Kafka, Etcd, MinIO) and runs Test Program B. Test Program A can also run from `/dev/shm` shared memory.
+- **Server 2:** Ubuntu 18.04.5 LTS, 4 vCPUs, 8 GB RAM, 40 GB HDD. Runs Test Program A from `/dev/shm` shared memory.
+- **Service scaling:** In `open-im-server/start-config.yml`, workers were scaled to `openim-push: 8` and `openim-msgtransfer: 8`. Other microservices ran as single instances.
 
-- **Reliability**: Message delivery reliability ("guaranteed delivery") — messages sent must be received by the recipient.
-- **Latency**: Time elapsed from Client A creating and sending a message to Client B successfully receiving and persisting it.
+## Test scenarios and results
 
----
+### Test 1: Baseline load with 200 users
 
-## Test Resources
-
-Server 1: Ubuntu 22.04.2, 16 Core, 64GB RAM, 150GB HDD: Deploys components and OpenIMServer; also deploys Test Program B; may deploy Test Program A in shared memory `/dev/shm`.
-
-Server 2: Ubuntu 18.04.5, 4 Core, 8GB RAM, 40GB HDD: Deploys Test Program A in shared memory `/dev/shm`.
-
-Server config `open-im-server/start-config.yml`: Service instances adjusted to `openim-push: 8`, `openim-msgtransfer: 8`, others remain at 1.
-
----
-
-## Test Scenarios & Results
-
-### Test 1: 200 Users
-
-Test Program A simulates 200 users, with 100 logging in immediately, sending messages to small groups and friends.
+Test Program A simulates 200 users (100 logging in immediately and 100 logging in gradually), exchanging messages across friend chats and small groups.
 
 Command:
 
-`go run main.go -lgr 0.5 -imf -crg -ckgn -ckcon -sem -ckmsn -u 200 -su 10 -lg 2 -cg 2 -cgm 5 -sm 5 -gm 5 -reg`
+```bash
+go run main.go -lgr 0.5 -imf -crg -ckgn -ckcon -sem -ckmsn -u 200 -su 10 -lg 2 -cg 2 -cgm 5 -sm 5 -gm 5 -reg
+```
 
-Deployment: Test Program A deployed on Server 1's shared memory `/dev/shm`.
+Deployment: Test Program A runs in shared memory `/dev/shm` on Server 1.
 
-| Parameter/Result | Description |
+| Metric | Result |
 | --- | --- |
-| Test Purpose | Test message reliability and latency with a small number of users |
-| User Count | 200 users, 100 log in immediately, 100 delayed login |
-| Group Count & Size | Each user joins 0-10 regular groups with 5 members |
-| Message Rate | Peak 40 msg/s |
-| Total Messages | 112,350 |
-| Message Integrity | 100% (all messages delivered accurately) |
-| Average Latency | 0.231 seconds |
-| Maximum Latency | 1.703 seconds |
+| Test objective | Validate delivery reliability and latency in small-team communication |
+| User count | 200 registered users (100 immediate logins, 100 staggered logins) |
+| Group topology | Each user belongs to 0–10 normal groups of 5 members each |
+| Message throughput | Peak 40 msgs/sec |
+| Total messages delivered | 112,350 messages |
+| Delivery reliability | 100% (zero message loss) |
+| Average latency | 0.231 s |
+| Maximum latency | 1.703 s |
 
----
+### Test 2: 50,000 concurrent online users with small groups
 
-### Test 2: 50K Online Users + Small Groups
+- Test Program B simulates 50,000 active online users publishing random messages to generate background system load.
+- Test Program A simulates 100 users to perform sampled statistical measurements of delivery reliability and latency.
 
-- Test Program B: Simulates 50,000 online users sending messages randomly (generating stress).
-- Test Program A: Simulates 100 users (sampling reliability and latency statistics).
+Benchmark commands:
 
-Commands (examples):
+```bash
+# 1. Register 100,000 user accounts (Program A)
+go run main.go -reg -u 100000
 
-- Test Program A registers 100K users: `go run main.go -reg -u 100000`
-- Test Program B starts 50K online users: `go run main.go -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000`
-- Test Program A sampling: `go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 100 -su 3 -lg 0 -cg 4 -cgm 5 -sm 100 -gm 100 -msgitv 1500 -test`
+# 2. Maintain 50,000 concurrent connections generating load (Program B)
+go run main.go -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000
 
-Deployment: Test Program A on Server 2's `/dev/shm`, Test Program B on Server 1.
+# 3. Sample delivery reliability and latency (Program A)
+go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 100 -su 3 -lg 0 -cg 4 -cgm 5 -sm 100 -gm 100 -msgitv 1500 -test
+```
 
-| Parameter/Result | Description |
+Deployment: Test Program A runs in `/dev/shm` on Server 2; Test Program B runs on Server 1. The full benchmark test duration is approximately 4 hours.
+
+| Metric | Result |
 | --- | --- |
-| Stress Load | 50,000 users online, ~1,700 messages/second |
-| Sampling User Count | 100 users, 80 log in immediately, 20 delayed login |
-| Sampling Group Count & Size | Each user joins 0-20 regular groups with 5 members |
-| Sampling Message Send Rate | Peak 54 msg/s |
-| Sampling Message Count | 170,800 |
-| Sampling Message Integrity | 100% (all messages delivered accurately) |
-| Sampling Average Latency | 0.202 seconds |
-| Sampling Maximum Latency | 3.641 seconds |
+| Background stress load | 50,000 concurrent online users, ~1,700 msgs/sec |
+| Sampled user pool | 100 users (80 immediate logins, 20 staggered logins) |
+| Sampled group topology | Each user belongs to 0–20 normal groups of 5 members each |
+| Sampled message send rate | Peak 54 msgs/sec |
+| Sampled message volume | 170,800 messages |
+| Delivery reliability | 100% (all sampled messages successfully delivered) |
+| Sampled average latency | 0.202 s |
+| Sampled maximum latency | 3.641 s |
 
-#### Test 2: Server Resource Consumption
+#### Server resource utilization (Test 2)
 
-Online users:
+Concurrent online connections:
 
 ![Online users](/assets/guides/assets/br-login.png)
 
-Message pressure (metric below indicates messages received by the server per minute):
+Message throughput (metric indicates inbound message count per minute):
 
 ![Message pressure](/assets/guides/assets/br-msg.png)
 
-CPU usage:
+CPU utilization breakdown:
 
 ![CPU usage](/assets/guides/assets/br-cpu.png)
 
-| Process | CPU Usage |
+| Process | CPU utilization |
 | --- | --- |
 | openim-msggateway | 210% |
 | mongo | 100% |
 | kafka | 84% |
 | redis | 67% |
 | openim-rpc-msg | 56% |
-| openim-msgtransfer | 27%*8 |
-| openim-push | 13%*8 |
-| Other OpenIMServer services and components | 65% |
-| Total | 902% |
+| openim-msgtransfer | 27% × 8 |
+| openim-push | 13% × 8 |
+| Other OpenIMServer services & components | 65% |
+| Total | 902% (approx. 9 cores) |
 
-Physical memory usage:
+Resident memory footprint:
 
 ![Physical memory usage](/assets/guides/assets/br-mem.png)
 
-| Process | Memory Usage |
+| Process | Resident memory |
 | --- | --- |
 | openim-msggateway | 2.1 GiB |
 | mongo | 717 MiB |
 | kafka | 1.1 GiB |
 | redis | 85 MiB |
 | openim-rpc-msg | 162 MiB |
-| openim-msgtransfer | 74 MiB*8 |
-| openim-push | 126 MiB*8 |
-| Other OpenIMServer services and components | 457 MiB |
-| Total (all OpenIMServer services and components) | 6.986 GiB |
+| openim-msgtransfer | 74 MiB × 8 |
+| openim-push | 126 MiB × 8 |
+| Other OpenIMServer services & components | 457 MiB |
+| Total (all OpenIMServer services & components) | 6.986 GiB |
 
-Note: The above table is an approximate summary and does not include Docker's overhead for forwarding data to containers.
+*Note: Figures are approximate process measurements and exclude Docker bridge container packet routing overhead.*
 
----
+### Test 3: 50,000 concurrent users with 50,000-member supergroups
 
-### Test 3: 50K online users and 50K-member large groups
+- Test Program B generates background load with 50,000 concurrent online users sending random messages.
+- Test Program A simulates 20 users (16 logging in immediately) sending messages to friend chats and 10 large groups with 50,000 members each.
 
-- Test Program B simulates 50,000 online users sending messages randomly.
-- Test Program A simulates 20 users, 16 of whom sign in immediately, and sends messages to friends and ten groups with 50,000 members each.
+Benchmark commands:
 
-Test Program A registers 100,000 users:
+```bash
+# Register 100,000 users
+go run main.go -reg -u 100000
 
-`go run main.go -reg -u 100000`
+# Maintain 50,000 online connections
+go run main.go -o 50000 -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000
 
-Test Program B starts 50,000 online users:
+# Measure message integrity and latency in 50,000-member groups
+go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 3 -lg 10 -cg 0 -cgm 5 -sm 0 -gm 10
+```
 
-`go run main.go -o 50000 -s 49500 -e 99500 -c 100 -i 500 -rs 1000 -rr 1000`
+Deployment: Test Program A runs in `/dev/shm` on Server 2; Test Program B runs on Server 1.
 
-Test Program A measures message integrity and latency:
-
-`go run main.go -lgr 0.8 -imf -crg -ckgn -ckcon -sem -ckmsn -u 20 -su 3 -lg 10 -cg 0 -cgm 5 -sm 0 -gm 10`
-
-Test Program A runs from `/dev/shm` on Server 2, while Test Program B runs on Server 1.
-
-| Parameter/Result | Description |
+| Metric | Result |
 | --- | --- |
-| Stress Load | 50,000 users online, approximately 1,700 messages per second |
-| Sampling User Count | 20 users: 16 sign in immediately and 4 sign in later |
-| Sampling Group Count & Size | 10 large groups with 50,000 members each, including 500 online members |
-| Sampling Message Send Rate | Peak 32 msg/s |
-| Sampling Message Count | 24,000 |
-| Sampling Message Integrity | 100% (all messages delivered accurately) |
-| Sampling Average Latency | 0.022 seconds |
-| Sampling Maximum Latency | 1.664 seconds |
+| Background stress load | 50,000 concurrent users, ~1,700 msgs/sec |
+| Sampled user pool | 20 users (16 immediate logins, 4 staggered logins) |
+| Sampled group topology | 10 large groups of 50,000 members each (500 online per group) |
+| Sampled message send rate | Peak 32 msgs/sec |
+| Sampled message volume | 24,000 messages |
+| Delivery reliability | 100% (zero message loss) |
+| Sampled average latency | 0.022 s |
+| Sampled maximum latency | 1.664 s |
 
----
+## Benchmark analysis
 
-## Results Analysis
+Under the tested hardware and architecture profile, OpenIMServer reliably sustained 50,000 concurrent online WebSocket connections and multiple 50,000-member supergroups. Under continuous throughput of ~1,700 messages per second, measured delivery reliability reached 100%, average round-trip latency was below 1 second, and peak latency remained under 3 seconds.
 
-OpenIMServer supports 50,000 concurrent online users and multiple 50,000-member large groups under the tested configuration. At 1,700 messages per second, the measured delivery rate was 100%, average latency remained below one second, and maximum latency remained below three seconds.
+These benchmark figures reflect specific releases, hardware profiles, deployment topologies, and workload patterns, and should not be interpreted as absolute capacity guarantees for all production deployments. Perform load testing in your target staging environment with representative message sizes, user traffic patterns, storage engines, and high-availability configurations before launch.
 
----
+## Recommended production specifications
 
-## Configuration Recommendations
+For a baseline deployment supporting 100,000 registered users, a 10% daily concurrent online rate (~10,000 CCU), 50,000-member supergroups, and sustained throughput of 600 messages per second:
 
-Based on 100K registered users, 10% daily online rate, support for 50K-member large groups, and 600 messages per second, recommended configuration:
-
-| Resource | Configuration |
+| Resource | Recommended minimum specification |
 | --- | --- |
-| Memory | 16 GB |
-| CPU | 8 Cores |
-| Network Bandwidth | 10 Mbps |
+| RAM | 16 GB |
+| CPU | 8 vCPUs |
+| Network bandwidth | 10 Mbps dedicated |
 
-Note: Message packet size is calculated at 2 KB; actual size varies with message content. Typical text message packets are approximately 700 bytes.
+*Calculations assume an average message payload size of 2 KB. Actual requirements depend on payload content; plain-text chat packets typically average ~700 bytes. For configuration parameters, execution flags, and step-by-step instructions on running the benchmark suites, see [Benchmark tools](./benchmark-tools).*

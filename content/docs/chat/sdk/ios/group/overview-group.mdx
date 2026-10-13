@@ -5,23 +5,22 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/overview-group'
 ---
 
-OpenIMSDK uses groups to hold shared profiles, membership, and permissions for multi-user chats. `groupID` is the stable group identifier used to send group messages, retrieve group profiles, administer members, and process join applications. A group conversation in the chat list is still managed by `conversationID`; do not use the two identifiers interchangeably.
+OpenIM manages multi-user chat scenarios through groups, encapsulating shared profiles, membership relations, and role-based permissions. The `groupID` uniquely identifies a group and is required whenever sending group messages, querying profiles, administering members, or handling join requests. Conversations in the chat list continue to use `conversationID`; maintain clear separation between both keys.
 
 ## Core data types
 
-| Type | Purpose |
+| Type | Description |
 | --- | --- |
-| `OIMGroupInfo` | The group name, avatar, announcement, owner, verification settings, member count, and extension field. |
-| `OIMGroupMemberInfo` | A user's nickname, role, mute state, and join information within one group. |
-| `OIMGroupApplicationInfo` | A group application and its handling state. |
+| `OIMGroupInfo` | Contains group name, avatar URL, announcement, owner user ID, join verification mode, member counts, and extension attributes. |
+| `OIMGroupMemberInfo` | Represents a member's profile within a specific group, including nickname, role, mute status, and join timestamp. |
+| `OIMGroupApplicationInfo` | Represents join applications and their administrative review states. |
 
-Group roles use `OIMGroupMemberRole`: a regular member is `OIMGroupMemberRoleMember` (`20`), an administrator is `OIMGroupMemberRoleAdmin` (`60`), and the owner is `OIMGroupMemberRoleOwner` (`100`). The UI can use these values to control available actions, but OpenIMServer performs the final permission checks.
+Group roles are represented by the `OIMGroupMemberRole` enumeration: regular member (`OIMGroupMemberRoleMember` = `20`), administrator (`OIMGroupMemberRoleAdmin` = `60`), and group owner (`OIMGroupMemberRoleOwner` = `100`). While client apps use these values to adjust UI controls, final permission enforcement is performed by the OpenIM server.
 
 ## Group profile and lifecycle
 
@@ -35,13 +34,14 @@ Group roles use `OIMGroupMemberRole`: a regular member is `OIMGroupMemberRoleMem
 - [Apply to join a group](/sdk/ios/group/join-group)
 - [Leave a group](/sdk/ios/group/quit-group)
 - [Dismiss a group](/sdk/ios/group/dismiss-group)
-- [Retrieve and search groups](/sdk/ios/group/retrieving-groups/get-specified-groups-info)
+- [Retrieve group profiles](/sdk/ios/group/retrieving-groups/get-specified-groups-info)
+- [Search groups](/sdk/ios/group/retrieving-groups/search-groups)
 
 ## Group members and applications
 
-- [Group applications](/sdk/ios/group/group-applications/overview-group-applications)
-- [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)
-- [Manage group members](/sdk/ios/group/managing-group-members/invite-user-to-group)
+- [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications)
+- [Retrieve group members overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members)
+- [Invite users to a group](/sdk/ios/group/managing-group-members/invite-user-to-group)
 
 ## Group moderation
 
@@ -50,20 +50,34 @@ Group roles use `OIMGroupMemberRole`: a regular member is `OIMGroupMemberRoleMem
 
 ## State updates
 
-This page owns the complete handlers for group-profile changes, the current user joining or leaving, and group dismissal:
+Listen to group profile changes, member joins/leaves, and group dissolutions by implementing the `OIMGroupListener` protocol:
 
 ```objc
-- (void)startGroupEvents { [[OIMManager callbacker] addGroupListener:self]; }
-- (void)stopGroupEvents { [[OIMManager callbacker] removeGroupListener:self]; }
+- (void)startGroupEvents {
+    [[OIMManager callbacker] addGroupListener:self];
+}
 
-- (void)onJoinedGroupAdded:(OIMGroupInfo *)group { [self upsertGroup:group]; }
-- (void)onJoinedGroupDeleted:(OIMGroupInfo *)group { [self removeGroupID:group.groupID]; }
-- (void)onGroupInfoChanged:(OIMGroupInfo *)group { [self upsertGroup:group]; }
-- (void)onGroupDismissed:(OIMGroupInfo *)group { [self markDismissed:group.groupID]; }
+- (void)stopGroupEvents {
+    [[OIMManager callbacker] removeGroupListener:self];
+}
+
+- (void)onJoinedGroupAdded:(OIMGroupInfo *)group {
+    [self upsertGroup:group];
+}
+
+- (void)onJoinedGroupDeleted:(OIMGroupInfo *)group {
+    [self removeGroupID:group.groupID];
+}
+
+- (void)onGroupInfoChanged:(OIMGroupInfo *)group {
+    [self upsertGroup:group];
+}
+
+- (void)onGroupDismissed:(OIMGroupInfo *)group {
+    [self markDismissed:group.groupID];
+}
 ```
 
-Retain one stable `OIMGroupListener` object strongly and use the same instance when adding and removing it. Merge events idempotently by `groupID`. Handle a successful callback, incremental delegate update, and reconciliation query as separate stages.
+Retain a stable `OIMGroupListener` instance and pass the exact same reference when adding or removing listeners. Merge group state using `groupID` as the primary key. Method return callbacks, asynchronous delegate notifications, and local cache calibrations represent three distinct stages.
 
-Member events belong to [Retrieve group members](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members), while application events belong to [Group applications](/sdk/ios/group/group-applications/overview-group-applications).
-
-Group APIs in OpenIM iOS SDK manage only OpenIMSDK group profiles, membership, and permissions. Public discovery, complex directories, and capacity governance for very large groups belong to your application backend and OpenIMServer configuration; do not represent them as nonexistent client-side group types.
+For member events, refer to [Retrieve group members overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members). For join request events, refer to [Group applications overview](/sdk/ios/group/group-applications/overview-group-applications).

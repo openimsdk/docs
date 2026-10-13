@@ -1,89 +1,88 @@
 ---
 title: 'Conversations overview'
-description: 'Understand the responsibilities of ConversationInfo, conversationID, conversation settings, and conversation events in the OpenIM Flutter SDK.'
+description: 'Understand ConversationInfo, conversationID, conversation settings, and event responsibilities in the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
-template: 'guide'
+template: 'overview'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/overview-conversation'
 ---
 
-In OpenIMSDK, a conversation is client-side chat state maintained around one one-to-one or group chat. The current user has one `ConversationInfo` record for each conversation. It stores list state such as the unread count, latest message, pin state, draft, message receive option, and extension data. The conversation record and chat target have separate identifiers: `conversationID` locates the current account's conversation state, while a one-to-one target uses the other user's `userID` and a group target uses `groupID`.
+In OpenIM, a Conversation encapsulates the chat state maintained locally by the client for a single-chat or group-chat channel. It is represented by a `ConversationInfo` record scoped to the currently signed-in user. It holds list-level state including unread counts, latest messages, pin status, drafts, notification reception options, and custom extensions. A conversation record is distinguished from chat destinations: `conversationID` identifies the conversation state of the active account, single-chat targets use the counterparty's `userID`, and group-chat targets use `groupID`.
 
-Both one-to-one and group chats use conversation records for chat-list state. Group profiles, memberships, and permissions remain under the Group APIs. A group-chat page therefore uses `groupID` for group capabilities and `conversationID` for conversation settings, unread state, drafts, and message history.
+Both single-chat and group-chat channels project their list status onto conversation records; group metadata, membership relations, and permissions remain governed by Group APIs. A group chat view uses `groupID` to access group capabilities while using `conversationID` to manage conversation settings, unread counts, drafts, and message history.
 
 ## Conversation identifiers
 
-A one-to-one conversation uses the target user ID as `sourceID` and `ConversationType.single` as its type. A group conversation uses `groupID` as `sourceID` and `ConversationType.superGroup` as its type. Call `getConversationIDBySessionType()` to obtain the stable `conversationID`, then use it for settings, read state, hiding, and cleanup operations.
+Single-chat conversations use the counterparty user ID as `sourceID` with `conversationType` set to `ConversationType.single`; group-chat conversations use `groupID` as `sourceID` with `conversationType` set to `ConversationType.superGroup`. Call [Get conversation ID](/sdk/flutter/conversation/retrieving-conversations/get-conversation-id) to obtain a deterministic `conversationID` before invoking conversation settings, read receipts, hiding, or message deletion.
 
 | Identifier | Purpose |
 | --- | --- |
-| `conversationID` | Conversation-record ID for the current account, used for conversation settings, message history, and unread state. |
-| `userID` | User ID of the other participant in a one-to-one chat. |
-| `groupID` | Group ID of a group chat and the target identifier used by Group APIs. |
-| `sourceID` | Chat target passed to a type-based query: `userID` for one-to-one chats and `groupID` for group chats. |
+| `conversationID` | Local conversation record ID of the active account. Used for settings, history queries, and unread states. |
+| `userID` | Counterparty user ID in a single-chat conversation. |
+| `groupID` | Target group ID in a group-chat conversation; also used for Group APIs. |
+| `sourceID` | Target ID passed when querying by session type: `userID` for single chat, `groupID` for group chat. |
 
 ## ConversationInfo
 
-Common `ConversationInfo` fields include:
+Key fields in `ConversationInfo`:
 
 | Field | Description |
 | --- | --- |
 | `conversationID` | Conversation ID. |
 | `conversationType` | Conversation type. |
-| `userID` | Other participant's user ID in a one-to-one chat. |
-| `groupID` | Group ID in a group chat. |
-| `showName` | Current display name of the conversation. |
-| `faceURL` | Current display avatar of the conversation. |
-| `unreadCount` | Current conversation unread count. |
-| `latestMsg` | Latest message. |
-| `latestMsgSendTime` | Send time of the latest message. |
-| `recvMsgOpt` | Message receive option for this conversation. |
-| `groupAtType` | @ mention state in a group chat. |
-| `draftText` | Current conversation draft. |
-| `draftTextTime` | Time when the draft was updated. |
-| `isPinned` | Whether the conversation is pinned. |
-| `isPrivateChat` <span className="enterprise-field-badge">Enterprise</span> | Whether private-chat mode is enabled. |
-| `isMsgDestruct` <span className="enterprise-field-badge">Enterprise</span> | Whether message destruction is enabled. |
-| `burnDuration` <span className="enterprise-field-badge">Enterprise</span> | Burn-after-reading duration. |
-| `msgDestructTime` <span className="enterprise-field-badge">Enterprise</span> | Message-destruction time configuration. |
-| `ex` | Application-defined conversation extension string. |
+| `userID` | Counterparty user ID in single chats. |
+| `groupID` | Target group ID in group chats. |
+| `showName` | Display name of the conversation. |
+| `faceURL` | Display avatar URL of the conversation. |
+| `unreadCount` | Unread message count of this conversation. |
+| `latestMsg` | The most recent message payload. |
+| `latestMsgSendTime` | Timestamp when the latest message was sent. |
+| `recvMsgOpt` | Message reception option for this conversation. |
+| `groupAtType` | Mention notification state in group chats. |
+| `draftText` | Local draft message content. |
+| `draftTextTime` | Timestamp when the draft was updated. |
+| `isPinned` | Whether the conversation is pinned to the top. |
+| `isPrivateChat` <span className="enterprise-field-badge">Enterprise</span> | Whether private chat mode is enabled. |
+| `isMsgDestruct` <span className="enterprise-field-badge">Enterprise</span> | Whether message auto-destruction is enabled. |
+| `burnDuration` <span className="enterprise-field-badge">Enterprise</span> | Self-destruct countdown duration in seconds. |
+| `msgDestructTime` <span className="enterprise-field-badge">Enterprise</span> | Message destruction time configuration. |
+| `ex` | Custom business extension string. |
 
 ## Queries and settings
 
-- [Retrieve a specified conversation](/sdk/flutter/conversation/retrieving-conversations/get-conversation-by-target)
-- [Retrieve conversations by ID](/sdk/flutter/conversation/retrieving-conversations/get-conversations-by-id)
-- [Retrieve the conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)
+- [Get conversation by target](/sdk/flutter/conversation/retrieving-conversations/get-conversation-by-target)
+- [Get conversations by ID](/sdk/flutter/conversation/retrieving-conversations/get-conversations-by-id)
+- [Retrieve conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list)
 - [Pin or unpin a conversation](/sdk/flutter/conversation/managing-conversations/pin-conversation)
-- [Set the conversation message receive option](/sdk/flutter/conversation/managing-conversations/set-message-receive-option)
-- [Enable or disable burn after reading](/sdk/flutter/conversation/managing-conversations/set-private-chat)
-- [Periodically delete server-side messages](/sdk/flutter/conversation/managing-conversations/set-message-destruct)
-- [Reset group @ mention state](/sdk/flutter/conversation/managing-conversations/clear-group-mentions)
-- [Set the conversation extension field](/sdk/flutter/conversation/managing-conversations/set-conversation-extension)
-- [Set a conversation draft](/sdk/flutter/conversation/managing-conversations/set-conversation-draft)
-- [Mark a conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)
-- [Maintain the total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count)
+- [Set conversation message receive option](/sdk/flutter/conversation/managing-conversations/set-message-receive-option)
+- [Set private chat](/sdk/flutter/conversation/managing-conversations/set-private-chat)
+- [Set message destruct](/sdk/flutter/conversation/managing-conversations/set-message-destruct)
+- [Clear group mentions](/sdk/flutter/conversation/managing-conversations/clear-group-mentions)
+- [Set conversation extension](/sdk/flutter/conversation/managing-conversations/set-conversation-extension)
+- [Set conversation draft](/sdk/flutter/conversation/managing-conversations/set-conversation-draft)
+- [Mark conversation as read](/sdk/flutter/conversation/managing-conversations/mark-conversation-read)
+- [Get total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count)
 
 ## Conversation lifecycle
 
 - [Hide a conversation](/sdk/flutter/conversation/managing-conversations/hide-a-conversation)
-- [Delete a conversation and its messages](/sdk/flutter/conversation/managing-conversations/delete-conversation-with-messages)
+- [Delete conversation with messages](/sdk/flutter/conversation/managing-conversations/delete-conversation-with-messages)
 - [Clear conversation messages](/sdk/flutter/conversation/managing-conversations/clear-conversation-messages)
 
 ## Conversation groups
 
-[Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) explains how to organize several conversations into custom groups. A group member is identified by `conversationID`, while the group itself uses `conversationGroupID`. This changes only how the current account organizes conversations; it does not create a chat group or alter a `groupID`, group profile, or group membership.
+[Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups) covers organizing conversations into custom folders or tags. Group entries use `conversationID`, while the group itself uses `conversationGroupID`. It only reorganizes conversations for the current account; it does not create chat groups or alter `groupID` membership or permissions.
 
-The Flutter SDK exposes this capability through `ConversationGroupManager`. Query results establish group snapshots. Group events update records by `conversationGroupID`, while member events use both `conversationGroupID` and `conversationID`. The overview contains the data model, complete listener, and links to each individual API page.
+The Flutter SDK provides this capability through `ConversationGroupManager`. Queries return folder hierarchies, group events update by `conversationGroupID`, and member events update by combining `conversationGroupID` with `conversationID`. The overview page provides data models, complete listener setup, and links to individual APIs.
 
-## State updates
+## State synchronization
 
-Queries establish page snapshots, and events merge subsequent changes:
+Query methods load the initial snapshot required by the view, while events merge subsequent incremental changes:
 
-- [Retrieve the conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list) owns listeners for new conversations and conversation-property changes.
-- [Maintain the total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count) owns changes to the current account's total unread count.
+- New conversations and conversation property changes are monitored centrally in [Retrieve conversation list](/sdk/flutter/conversation/retrieving-conversations/retrieve-conversation-list).
+- Account-wide total unread changes are monitored centrally in [Get total unread count](/sdk/flutter/conversation/managing-conversations/get-total-unread-count).
 
-This overview identifies event ownership but does not set a listener. Treat a button action's successful `Future`, the event increment, and a reconciliation query as separate stages. Do not infer final conversation state from the user's action alone.
+Register listeners centrally within dedicated capability modules rather than fragmenting listeners across Widget trees. Future completion, subsequent event arrivals, and query recalibrations represent distinct lifecycle phases; handle each explicitly rather than assuming immediate state transitions based on local user interactions.

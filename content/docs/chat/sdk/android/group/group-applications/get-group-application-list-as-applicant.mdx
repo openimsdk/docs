@@ -1,25 +1,56 @@
 ---
 title: 'Get sent group applications'
-description: 'Use getSendGroupApplicationList to retrieve group applications sent by the current user.'
+description: 'Paginate group join requests sent by the authenticated user using getSendGroupApplicationList().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/group-applications/get-group-application-list-as-applicant'
 ---
 
-Configure pagination and filters in `GetGroupApplicationListAsApplicantReq`, then call `getSendGroupApplicationList()`.
+Paginate outgoing group join applications submitted by the authenticated user. Configure the request object with paging offset and count to render request statuses (such as pending, approved, or rejected).
+
+## Code example
 
 ```java
 GetGroupApplicationListAsApplicantReq request = new GetGroupApplicationListAsApplicantReq(0, 20);
+
 OpenIMClient.getInstance().groupManager.getSendGroupApplicationList(
     new OnBase<List<GroupApplicationInfo>>() {
-        @Override public void onSuccess(List<GroupApplicationInfo> items) { /* items contains the current page. */ }
-        @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-    }, request);
+        @Override
+        public void onSuccess(List<GroupApplicationInfo> items) {
+            // items contains the current page of application records
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle query failure
+        }
+    },
+    request
+);
 ```
 
-After an application is accepted, receive the group-joined notification through `onJoinedGroupAdded`.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupApplicationInfo>>` | Yes | Callback delivering the asynchronous operation result. |
+| `request` | `GetGroupApplicationListAsApplicantReq` | Yes | Paging parameter object holding `offset` and `count`. |
+
+## Return value
+
+The successful callback returns the current page as `List<GroupApplicationInfo>`. Core properties of each outgoing record include:
+
+| Field | Description |
+| --- | --- |
+| `groupID` | Target group ID of the join application. |
+| `groupName` | Name of the target group. |
+| `reqMsg` | Note or greeting submitted with the application. |
+| `handleResult` | Approval status: `0` for pending, `1` for approved, `-1` for rejected. |
+| `handledMsg` | Review note or response returned by the group administrator. |
+| `reqTime` | Timestamp (in milliseconds) when the application was sent. |
+
+Manage and display application statuses using `groupID` as the primary key. When an administrator approves the application, the client receives the `onJoinedGroupAdded` event on `OnGroupListener` to merge the group into the user's joined list. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

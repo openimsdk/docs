@@ -5,13 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/retrieving-messages/load-older-messages'
 ---
 
-Use this selector to establish the first snapshot when opening a chat page. When loading more history, pass the `clientMsgID` of the current boundary message.
+When entering a conversation or pulling down to view earlier messages, invoke `getAdvancedHistoryMessageList:onSuccess:onFailure:` on `OIMManager` to query history paginated backward in time:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `opts` | `OIMGetAdvancedHistoryMessageListParam *` | Yes | Query configuration parameters object. |
+
+### Properties of OIMGetAdvancedHistoryMessageListParam
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `startClientMsgID` | `NSString * _Nullable` | No | Client message ID (`clientMsgID`) of the pagination anchor message. Pass `nil` for the initial page of latest history; pass the topmost message's `clientMsgID` when loading earlier messages. |
+| `count` | `NSInteger` | Yes | Maximum number of messages to retrieve per page. |
+| `viewType` | `OIMGetHistoryViewType` | Yes | History query view type (typically `OIMGetHistoryViewTypeHistory`). |
+
+## Code example
 
 ```objc
 OIMGetAdvancedHistoryMessageListParam *param = [OIMGetAdvancedHistoryMessageListParam new];
@@ -21,10 +37,25 @@ param.count = 20;
 param.viewType = OIMGetHistoryViewTypeHistory;
 
 [[OIMManager manager] getAdvancedHistoryMessageList:param
-    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo *result) {
+    onSuccess:^(OIMGetAdvancedHistoryMessageListInfo * _Nullable result) {
+        // Prepend retrieved messages and update pagination boundaries
         [self prependMessages:result.messageList ?: @[]];
     }
-    onFailure:nil];
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // Handle retrieval failure
+    }];
 ```
 
-`startClientMsgID` may be `nil` for the first page. The success result is also nullable and must be checked before use. When present, use `messageList` and `isEnd` to update pagination state. The query does not trigger the new-message delegate. Deduplicate merged results by `conversationID:clientMsgID`.
+## Return value
+
+The `onSuccess` callback delivers an `OIMGetAdvancedHistoryMessageListInfo` instance containing:
+
+- `messageList`: Array of retrieved `OIMMessageInfo` models (`NSArray<OIMMessageInfo *> *`).
+- `isEnd`: Boolean indicating whether the beginning of conversation history has been reached. When `YES`, stop further backward pagination.
+- `lastMinSeq`: Minimum sequence number in the current retrieved chunk.
+
+## State changes after the call
+
+1. **Snapshot establishment**: History queries establish or extend the local message snapshot. Calling this method does not trigger incoming message event listeners.
+2. **Deduplication**: Retrieved historical messages may overlap with messages received via real-time listeners. Merge items into the UI list idempotently using `clientMsgID` scoped to `conversationID`.
+3. **Forward pagination**: If you need to retrieve messages moving forward from a specific historical anchor, see [Load message history in reverse](/sdk/ios/message/retrieving-messages/load-newer-messages).

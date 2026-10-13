@@ -1,16 +1,18 @@
 ---
-title: 'Send an uploaded media message'
-description: 'OpenIM React Native SDK guide for send an uploaded media message.'
+title: 'Send uploaded media message'
+description: 'Send a pre-uploaded media message using remote URLs without triggering SDK file upload using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/message/sending-messages/send-message-not-oss'
 ---
 
-Call `sendMessageNotOss()` to send an image, audio, video, or file message that already contains remote resource URLs. The SDK does not upload these resources again.
+Send an image, audio, video, or file message that already contains accessible remote URLs:
+
+When your application hosts media assets on a private cloud or has completed file uploads independently, use this method to dispatch messages directly, bypassing the SDK's internal file upload workflow.
 
 ```ts
 const sentMessage = await OpenIMSDK.sendMessageNotOss({
@@ -24,10 +26,20 @@ const sentMessage = await OpenIMSDK.sendMessageNotOss({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `recvID` | `string` | Conditional | Recipient user ID for a direct chat; pass an empty string for a group chat. |
-| `groupID` | `string` | Conditional | Target group ID for a group chat; pass an empty string for a direct chat. |
-| `message` | `MessageItem` | Yes | Message created by a URL-based message-creation API. |
-| `offlinePushInfo` | `OfflinePush` | No | Offline push configuration. |
-| `isOnlineOnly` | `boolean` | No | Whether to deliver only to online clients. |
+| `recvID` | `string` | Conditional | Recipient user ID for one-to-one chats; pass an empty string `""` for group chats. |
+| `groupID` | `string` | Conditional | Target group ID for group chats; pass an empty string `""` for one-to-one chats. |
+| `message` | `MessageItem` | Yes | Message object constructed via URL-based message creation methods. |
+| `offlinePushInfo` | `OfflinePush` | No | Custom offline push notification title, content, and passthrough payload. |
+| `isOnlineOnly` | `boolean` | No | Whether to deliver solely to currently online clients without storing in server offline history. |
 
-The call returns the sent `MessageItem`. Resource URLs, sizes, types, and dimensions in `message` should come from the actual upload result. For local-path media messages, use [Send a message](/sdk/react-native/message/sending-messages/send-message).
+## Return value
+
+A resolved Promise returns the dispatched `MessageItem` containing server-assigned fields including `serverMsgID`, `sendTime`, and updated `status`.
+
+### State changes and lifecycle phases
+
+1. **Promise resolution**: Indicates the message with remote URLs has been written to local storage and delivered to the server queue.
+2. **Event arrival**: Because the media asset is already hosted remotely, no upload progress events are triggered. Recipient clients receive normal incoming message notifications.
+3. **Re-query reconciliation**: In offline or uncertain network conditions, re-query conversation history via [Load older messages](/sdk/react-native/message/retrieving-messages/load-older-messages).
+
+Always reconcile local message status using `clientMsgID`. For local filesystem assets requiring automatic SDK uploads, use [Send message](/sdk/react-native/message/sending-messages/send-message).

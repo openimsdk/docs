@@ -5,13 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/retrieving-messages/load-message-context'
 ---
 
-After locating a message, use it as the anchor for retrieving surrounding context:
+When navigating from global search results, jump-to-quote interactions, or specific message alerts, invoke `fetchSurroundingMessages:onSuccess:onFailure:` on `OIMManager` to load historical messages surrounding a target anchor message:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `req` | `OIMFetchSurroundingMessagesReq *` | Yes | Request configuration parameters object. |
+
+### Properties of OIMFetchSurroundingMessagesReq
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `startMessage` | `OIMMessageInfo *` | Yes | Reference anchor message model. |
+| `before` | `NSInteger` | Yes | Number of messages to retrieve before (earlier than) the anchor. |
+| `after` | `NSInteger` | Yes | Number of messages to retrieve after (newer than) the anchor. |
+| `viewType` | `OIMFetchSurroundingHistoryViewType` | Yes | Context view query type (e.g. `OIMFetchSurroundingHistoryViewTypeSearch` for search jumps). |
+
+## Code example
 
 ```objc
 OIMFetchSurroundingMessagesReq *request = [OIMFetchSurroundingMessagesReq new];
@@ -21,10 +37,20 @@ request.before = 20;
 request.after = 20;
 
 [[OIMManager manager] fetchSurroundingMessages:request
-                                     onSuccess:^(NSArray<OIMMessageInfo *> *messages) {
-                                         [self replaceContext:messages ?: @[]];
-                                     }
-                                     onFailure:nil];
+    onSuccess:^(NSArray<OIMMessageInfo *> * _Nullable messages) {
+        // Refresh context view with messages sorted in chronological order
+        [self replaceContext:messages ?: @[]];
+    }
+    onFailure:^(NSInteger code, NSString * _Nullable msg) {
+        // Handle context fetch failure
+    }];
 ```
 
-Choose `viewType` for the search or quote scenario. The result may contain fewer than `before + after + 1` messages. Identify the anchor and deduplicate by `clientMsgID`; do not depend on a fixed array position. To retrieve the anchor first, see [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id).
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMMessageInfo` models sorted in chronological order (`NSArray<OIMMessageInfo *> *`).
+
+## State changes after the call
+
+1. **Context array boundaries**: The actual number of returned messages may be smaller than `before + after + 1` if the anchor is near the start or end of the conversation history. Deduplicate items using `clientMsgID` scoped to `conversationID` rather than relying on fixed index positions.
+2. **Obtaining anchor models**: If you only have a message ID rather than a complete model, locate the anchor object first using [Find messages by ID](/sdk/ios/message/retrieving-messages/find-messages-by-id).

@@ -1,17 +1,57 @@
 ---
-title: 'Track the total unread count'
-description: 'OpenIM uni-app / uni-app x SDK guide for Track the total unread count.'
+title: 'Get total unread count'
+description: 'Query and listen for changes to the total unread message count across all conversations.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/conversation/managing-conversations/get-total-unread-count'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Query the aggregate unread message count across all conversations belonging to the authenticated account. This method accepts no parameters. Avoid summing only the `unreadCount` values of conversations currently loaded in your visible paginated list, as conversations that have not yet been paged into memory may also hold unread messages.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```uts
+import { getTotalUnreadMsgCount } from '@/uni_modules/unix-openim-sdk'
+
+const totalUnread = await getTotalUnreadMsgCount()
+if (totalUnread != null) {
+  updateApplicationBadge(totalUnread)
+}
+```
+
+## Return value
+
+The Promise resolves with a `number | null` value representing the aggregate unread message count at the time of invocation.
+
+## State changes after the call
+
+This call is a local read-only query that retrieves the current unread total without triggering events.
+
+## Listen for total unread count changes
+
+Subscribe centrally to total unread count transitions. The callback receives the newly computed aggregate unread count directly as a `number`.
+
+```uts
+import {
+  off,
+  onTotalUnreadMessageCountChanged,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleTotalUnreadChanged = (count: number) => {
+  updateApplicationBadge(count)
+}
+
+const totalUnreadSubscription = onTotalUnreadMessageCountChanged(
+  handleTotalUnreadChanged,
+)
+
+function removeTotalUnreadListener() {
+  off(totalUnreadSubscription)
+}
+```
+
+Invoke `removeTotalUnreadListener()` when the component unmounts, when logging out, or when switching accounts. Upon re-logging in or network reconnection, invoke `getTotalUnreadMsgCount()` to calibrate badges against the latest server state. To synchronize this count with operating system application icons, see [Set app badge](/sdk/uniapp/message/set-app-badge).

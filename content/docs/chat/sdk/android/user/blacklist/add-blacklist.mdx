@@ -1,27 +1,30 @@
 ---
-title: 'Block a user'
-description: 'Use addBlacklist() to add a user to the current account blacklist.'
+title: 'Add to blacklist'
+description: 'Add a specified user to the authenticated account blocklist using addBlacklist().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-06'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/user/blacklist/add-blacklist'
 ---
+
+Add a specified user to the authenticated account's blocklist. Blocking is an asymmetric relationship; once blocked, the target user cannot send direct messages to the authenticated user.
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().friendshipManager.addBlacklist(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // User blocked successfully.
+            // User blocked successfully
         }
 
         @Override
         public void onError(int code, String error) {
-            // Handle the error.
+            // Handle error
         }
     },
     targetUserID,
@@ -29,15 +32,27 @@ OpenIMClient.getInstance().friendshipManager.addBlacklist(
 );
 ```
 
-The second argument is the target `userID`, and the third argument is optional extension data. Use the overload without `ex` when no extension data is needed. A successful callback means the block request completed, not that the event has arrived.
+## Parameters
 
-The blacklist is one-way: the blocked user cannot send messages to the current account. Whether the current account can continue to send messages is an application-level rule. `ex` stores blacklist extension data and can contain a JSON string.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `targetUserID` | `String` | Yes | Target user ID to block. |
+| `ex` | `String` | No | Custom business extension string. Pass an empty string or omit when no extension metadata is needed. |
 
-Receive `onBlacklistAdded` through `OnFriendshipListener`:
+## Return value
+
+The successful callback indicates that the server placed the target user on the authenticated account's blocklist.
+
+## State changes after the call
+
+Once the block takes effect, the SDK triggers the `onBlacklistAdded(BlacklistInfo user)` event via `OnFriendshipListener`. Locate and update the user entry matching `user.getUserID()` in your local blocklist cache:
 
 ```java
 @Override
 public void onBlacklistAdded(BlacklistInfo user) {
-    // Handle the added blacklist record.
+    // Received block event; update local blocklist using user.getUserID()
 }
 ```
+
+For complete listener registration details, see [Get the blacklist](/sdk/android/user/blacklist/get-blacklist). To unblock a user, see [Remove from blacklist](/sdk/android/user/blacklist/remove-blacklist).

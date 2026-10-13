@@ -1,17 +1,60 @@
 ---
 title: 'Create a group'
-description: 'OpenIM uni-app / uni-app x SDK guide for Create a group.'
+description: 'Create a new group and configure initial administrators and regular members.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/create-group'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `createGroup()` to initialize a new group with specified profile data, regular members, and optional initial administrators. You cannot explicitly designate an arbitrary owner during creation; OpenIMServer automatically sets the creator as the group owner (`ownerUserID`).
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `OpenIMCreateGroupInfo` | Yes | Initial group profile configuration object. |
+| `groupInfo.groupName` | `string` | Yes | Display name of the new group. |
+| `groupInfo.groupType` | `OpenIMGroupType` | Yes | Group type constant; pass `OpenIMGroupTypeWorkingGroup` for standard working groups. |
+| `groupInfo.notification` | `string` | No | Initial group announcement string. |
+| `groupInfo.introduction` | `string` | No | Initial group introduction or description. |
+| `groupInfo.faceURL` | `string` | No | Avatar image URL for the group. |
+| `groupInfo.ex` | `string` | No | Custom group extension string. |
+| `memberUserIDs` | `string[]` | Yes | Array of user IDs to add as initial regular members. |
+| `adminUserIDs` | `string[]` | No | Array of user IDs to designate as initial administrators. |
+
+Deduplicate both user ID arrays and ensure there is no overlap between `memberUserIDs` and `adminUserIDs`.
+
+## Code example
+
+```uts
+import {
+  OpenIMGroupTypeWorkingGroup,
+  createGroup,
+} from '@/uni_modules/unix-openim-sdk'
+
+const group = await createGroup({
+  groupInfo: {
+    groupName: 'Project Discussion Group',
+    groupType: OpenIMGroupTypeWorkingGroup,
+    faceURL: 'https://example.com/group.png',
+  },
+  memberUserIDs: ['user-003', 'user-004'],
+  adminUserIDs: ['user-002'],
+})
+
+if (group != null) {
+  openGroupPage(group.groupID)
+}
+```
+
+## Return value
+
+The Promise resolves with an `OpenIMGroupItem | null` object containing the newly created group record. A non-null return value provides the new `groupID` and initial metadata.
+
+## State changes after the call
+
+A resolved Promise confirms that the group was created on OpenIMServer. The active user's joined group roster is updated via the `onJoinedGroupAdded` event using `groupID`. For complete group event listener registration, see [Group overview](/sdk/uniapp/group/overview-group).

@@ -1,17 +1,45 @@
 ---
 title: 'Message overview'
-description: 'OpenIM HarmonyOS SDK guide for Message overview.'
+description: 'Understand message creation, transmission, reception, query patterns, and state synchronization boundaries.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/message/overview-message'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+The OpenIM HarmonyOS SDK uses `IMMessage` to represent a chat message. Transmission follows a two-stage pattern: first create the message object from local content, then dispatch it to a direct chat peer or group. Creation methods only build local message objects and do not perform network transmission; resolving the transmission Promise confirms local dispatch and server acceptance, but does not indicate that remote clients have rendered the message.
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+Message lists locate and identify messages using `conversationID` and `clientMsgID`. `conversationID` originates from the current conversation, query filters, or event payloads; `clientMsgID` serves as the immutable client-side identifier for deduplication and local state reconciliation.
+
+## Message lifecycle stages
+
+| Stage | Primary operations | Description |
+| --- | --- | --- |
+| Create | [Create text message](/sdk/harmony/message/creating-messages/create-text-message) and other message factory methods | Returns an `IMMessage` object instantiated locally without network dispatch. |
+| Send | [Send message](/sdk/harmony/message/sending-messages/send-message) | Specify `recvID` for direct chats or `groupID` for group chats. |
+| Receive | [Receive messages](/sdk/harmony/message/receiving-messages/receive-messages) events | Merge incoming messages by `conversationID:clientMsgID`; drop duplicate events. |
+| Query | History retrieval, keyword search, or lookup by ID | Returns snapshots available at invocation time without triggering new-message events. |
+| Update | Delete, revoke, edit, pin, or mark as read | Process the Promise resolution, corresponding event notifications, and active query calibration separately. |
+
+Local image, audio, video, and file messages are uploaded by the SDK during transmission. For assets pre-uploaded by application servers, use URL-based factory methods. Both variants are dispatched via [Send message](/sdk/harmony/message/sending-messages/send-message).
+
+## Common message properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `clientMsgID`, `serverMsgID` | `string` | Client-generated and server-assigned message identifiers. |
+| `sessionType` | `SessionType` | Conversation category, such as single or group chat. |
+| `sendID`, `recvID`, `groupID` | `string` | Sender user ID and destination peer or group IDs. |
+| `contentType` | `ContentType` | Message type determining which content element field to read. |
+| `createTime`, `sendTime`, `seq` | `number` | Client creation timestamp, dispatch timestamp, and server sequence number. |
+| `status` | `MsgStatus` | Current message delivery status. |
+| `isRead` | `boolean` | Read receipt status. |
+| `ex` | `string` | Distributed extension string synchronized across clients. |
+| `localEx` | `string` | Device-local extension string stored only on the current client. |
+
+Payload content resides in the property corresponding to `contentType`, such as `textElem`, `pictureElem`, `soundElem`, `videoElem`, `fileElem`, `atTextElem`, `quoteElem`, `mergeElem`, or `customElem`. Never identify or key messages by rendered text, array index, or paginated list length.
+
+Creating message objects and executing local queries do not fire shared message events. For state-changing operations like sending or revoking messages, clearly separate the three distinct stages: Promise resolution, event notifications, and re-query calibration. Use message event listeners to update conversations and message timeline interfaces reliably.

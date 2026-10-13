@@ -1,27 +1,51 @@
 ---
-title: 'Set group extra data'
-description: 'Store application-defined group data in GroupInfo.ex.'
+title: 'Set group extension data'
+description: 'Store custom application metadata on a group using setGroupInfo().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/set-group-extension'
 ---
 
-`GroupInfo.ex` is a complete string; the SDK does not merge JSON values. Submitting a new value replaces the previous content.
+Configure custom business extension metadata on a group. Populate the `ex` field on a `GroupInfo` instance to attach arbitrary business metadata (such as a JSON string holding project tags or department IDs). The server replaces the existing extension string in its entirety; provide the complete updated payload on each call.
+
+## Code example
 
 ```java
 GroupInfo update = new GroupInfo();
-update.setGroupID(groupID);
+update.setGroupID("group_123");
 update.setEx("{\"projectCode\":\"mobile\",\"archived\":false}");
 
-OpenIMClient.getInstance().groupManager.setGroupInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group extension updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle update failure
+        }
+    }
+);
 ```
 
-A successful callback means that the extension update request completed; it does not mean that every client has updated its UI. `onGroupInfoChanged` provides the updated `GroupInfo`. Merge it by `groupID` and replace the group's `ex`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfo` | `GroupInfo` | Yes | Group entity holding the target `groupID` and the updated `ex` extension string. |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+
+## Return value
+
+The successful callback confirms that the extension string was persisted on the server.
+
+## State changes after the call
+
+Once the extension string is saved, online group members receive the `onGroupInfoChanged(GroupInfo group)` event via `OnGroupListener`. Merge the updated `ex` field into your local group records using `groupID`. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

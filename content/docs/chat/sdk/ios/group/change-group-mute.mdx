@@ -5,21 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/change-group-mute'
 ---
 
+Invoke `changeGroupMute:isMute:onSuccess:onFailure:` to enable or disable group-wide muting (typically restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `isMute` | `BOOL` | Yes | Pass `YES` to enable group-wide mute, or `NO` to disable. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] changeGroupMute:groupID
-    isMute:YES
-    onSuccess:^(NSString * _Nullable data) { [self showGroupMuted]; }
-    onFailure:^(NSInteger code, NSString *message) {
-        [self showErrorCode:code message:message];
-    }];
+                               isMute:YES
+                            onSuccess:^(NSString * _Nullable data) {
+                                NSLog(@"changeGroupMute success");
+                            }
+                            onFailure:^(NSInteger code, NSString *message) {
+                                NSLog(@"changeGroupMute failed: %ld %@", (long)code, message);
+                            }];
 ```
 
-Pass `YES` to enable group-wide mute or `NO` to disable it. This method does not provide an exempt-user parameter.
+## Return value
 
-A successful callback means that the server completed the setting request. `onGroupInfoChanged:` may subsequently return an updated `OIMGroupInfo`. For the complete delegate, see [Groups overview](/sdk/ios/group/overview-group).
+The `onSuccess` callback returns confirmation when the server accepts the group mute status change.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the local cached group's `status` or mute attribute matching `groupID`. Regular members are prohibited from sending messages, while the group owner and administrators remain unaffected.
+2. **Event notification**: All members in the group receive an updated `OIMGroupInfo` object via the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: To mute an individual member for a specified duration, refer to [Mute or unmute a group member](/sdk/ios/group/managing-group-members/change-group-member-mute). For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

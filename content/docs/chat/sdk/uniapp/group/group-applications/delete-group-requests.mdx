@@ -1,17 +1,46 @@
 ---
 title: 'Delete group applications'
-description: 'OpenIM uni-app / uni-app x SDK guide for Delete group applications.'
+description: 'Batch remove group join application records using composite group and applicant identifiers.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/group/group-applications/delete-group-requests'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+Invoke `deleteGroupRequests()` to delete historical group join applications identified by their composite `groupID` and `fromUserID` pairs, ideal for purging processed records from audit lists.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupRequests` | `OpenIMSimpleGroupRequest[]` | Yes | An array of group application objects to remove. |
+| `groupRequests[].groupID` | `string` | Yes | Target group identifier. |
+| `groupRequests[].fromUserID` | `string` | Yes | Applicant user ID (matching `userID` in the application record). |
+
+## Code example
+
+```uts
+import { deleteGroupRequests } from '@/uni_modules/unix-openim-sdk'
+
+await deleteGroupRequests({
+  groupRequests: [
+    {
+      groupID: application.groupID,
+      fromUserID: application.userID,
+    },
+  ],
+})
+```
+
+Deleting application history is distinct from declining a request. If a formal resolution is required, invoke [Accept a group application](/sdk/uniapp/group/group-applications/accept-group-application) or [Reject a group application](/sdk/uniapp/group/group-applications/refuse-group-application) before deleting the record. Once deleted, the application can no longer be reviewed.
+
+## Return value
+
+The Promise resolves with `void` once OpenIMServer removes the application entries.
+
+## State changes after the call
+
+A resolved Promise confirms that the records were deleted. When `onGroupApplicationDeleted` fires, the client removes the record matching `groupID:userID` from its application lists. For complete event registration logic, see [Get received group applications](/sdk/uniapp/group/group-applications/get-group-application-list-as-recipient).

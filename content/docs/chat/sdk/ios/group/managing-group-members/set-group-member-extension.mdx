@@ -5,24 +5,51 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/managing-group-members/set-group-member-extension'
 ---
 
+Invoke `setGroupMemberInfo:onSuccess:onFailure:` with a parameter dictionary containing `ex` to set custom application-defined extension data for a specified group member:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupMemberInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing member identification and updated extension string. |
+
+### Dictionary keys
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `userID` | `NSString *` | Yes | Target member user ID. |
+| `ex` | `NSString *` | Yes | Custom extension string (typically formatted as JSON). |
+
+## Code example
+
 ```objc
 NSDictionary *updates = @{
-    @"groupID": groupID,
-    @"userID": targetUserID,
-    @"ex": mergedExtensionJSON
+    @"groupID": @"group_1001",
+    @"userID": @"user_003",
+    @"ex": @"{\"level\":5,\"title\":\"Technical Lead\"}"
 };
 
 [[OIMManager manager] setGroupMemberInfo:updates
-    onSuccess:nil
-    onFailure:nil];
+                               onSuccess:^(NSString * _Nullable data) {
+                                   NSLog(@"setGroupMemberInfo ex success");
+                               }
+                               onFailure:^(NSInteger code, NSString *message) {
+                                   NSLog(@"setGroupMemberInfo ex failed: %ld %@", (long)code, message);
+                               }];
 ```
 
-`ex` is replaced as a complete string. The SDK does not merge JSON automatically. Preserve namespaces owned by other application modules before writing.
+## Return value
 
-The success callback, arrival of `onGroupMemberInfoChanged:`, and a new query are three separate stages. Merge the final member profile by `groupID:userID`.
+The `onSuccess` callback returns confirmation when the server saves the member extension string.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the member's `ex` attribute matching `groupID:userID`. The write operation completely replaces the stored extension string without merging nested keys.
+2. **Event notification**: Updated member details broadcast across active client sessions through `onGroupMemberInfoChanged:`.
+3. **Re-query calibration**: For member queries, refer to [Group member queries overview](/sdk/ios/group/retrieving-group-members/overview-retrieving-group-members).

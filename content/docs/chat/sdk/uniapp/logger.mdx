@@ -1,17 +1,92 @@
 ---
-title: 'Logging'
-description: 'OpenIM uni-app / uni-app x SDK guide for Logging.'
+title: 'Logging and diagnostics'
+description: 'Configure UniApp SDK log levels and upload native diagnostic logs.'
 product: 'sdk'
 context: 'chat/sdk/uniapp'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'uniapp'
 sourcePath: '/sdk/uniapp/logger'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+UniApp SDK logs help trace native mobile app initialization, connection lifecycles, and API execution. You can configure log levels, enable standard output logging, and designate native storage directories to accommodate diagnostics across development and production environments.
 
-The English version of this OpenIM uni-app / uni-app x SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Configure log levels
+
+Log settings are configured through initialization parameters when calling `initSDK()`:
+
+```uts
+import {
+  OpenIMLogLevelDebug,
+  initSDK,
+} from '@/uni_modules/unix-openim-sdk'
+
+await initSDK({
+  platformID: currentOpenIMPlatform,
+  apiAddr,
+  wsAddr,
+  dataDir: '',
+  logFilePath: '',
+  logLevel: OpenIMLogLevelDebug,
+  isLogStandardOutput: true,
+  systemType: 'your-app',
+})
+```
+
+| Enum value | Numeric value | Description |
+| --- | --- | --- |
+| `OpenIMLogLevelPanic` | `0` | Catastrophic failures only; terminates the runtime. |
+| `OpenIMLogLevelFatal` | `1` | Fatal crashes and non-recoverable internal errors. |
+| `OpenIMLogLevelError` | `2` | Errors affecting operations; recommended for production troubleshooting. |
+| `OpenIMLogLevelWarn` | `3` | Non-critical warnings; standard for production environments. |
+| `OpenIMLogLevelInfo` | `4` | General lifecycle milestones and connectivity updates. |
+| `OpenIMLogLevelDebug` | `5` | Detailed logs for local development and integration debugging. |
+| `OpenIMLogLevelVerbose` | `6` | Deep diagnostic tracing; avoid leaving enabled long-term in production. |
+
+Set `isLogStandardOutput` to control whether the SDK prints logs to standard output. Use `logFilePath` to designate the local directory where native logs are written. Ensure this path points to a writable application directory rather than a read-only bundle directory. Refer to [Integrate by project and platform](/sdk/uniapp/getting-started/environment-specific-implementation) for full initialization options.
+
+## Upload diagnostic logs
+
+Invoke `uploadLogs()` to package and transmit locally stored native SDK logs to the log collection service configured for your OpenIM deployment.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `line` | `number` | Yes | The number of recent log lines to collect and upload. |
+| `ex` | `string` | Yes | Additional diagnostic context or metadata formatted according to your server deployment conventions. |
+
+## Code example
+
+```uts
+import {
+  OpenIMUploadLogsProgressEvent,
+  off,
+  onUploadLogsProgress,
+  uploadLogs,
+} from '@/uni_modules/unix-openim-sdk'
+
+const handleLogUploadProgress = (
+  event: OpenIMUploadLogsProgressEvent | null,
+) => {
+  if (event == null) return
+  setDiagnosticUploadProgress(event.progress)
+}
+
+const logUploadSubscription =
+  onUploadLogsProgress(handleLogUploadProgress)
+
+await uploadLogs({
+  line: 2000,
+  ex: 'connection-diagnostic-session',
+})
+
+off(logUploadSubscription)
+```
+
+## Return value
+
+The returned Promise resolves with a string confirming that the log upload completed successfully. This call does not modify user records, conversations, or messages, nor does it trigger domain events. If the upload fails, the Promise rejects with an error containing `errCode` and `errMsg`.
+
+Except for this diagnostics guide, API methods in this SDK do not require client code to generate or pass an `operationID`. When tracing specific request traces against OpenIMServer logs, diagnostic tools parse the internal identifiers managed by the SDK.

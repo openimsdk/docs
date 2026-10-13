@@ -1,24 +1,53 @@
 ---
-title: 'Get group owners and admins'
-description: 'Use getGroupMemberOwnerAndAdmin to retrieve the group owner and administrator profiles.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin'
+title: "Get group owners and admins"
+description: "Use getGroupMemberOwnerAndAdmin to retrieve the group owner and administrator profiles."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin"
 ---
 
-Use `getGroupMemberOwnerAndAdmin()` when you need to display or check members with management roles.
+Retrieve member profile records for the group owner and all group administrators in a specified group. This is typically used for group settings displays, permission checks, and administrative approval workflows.
+
+## Code example
 
 ```java
+String groupID = "group_123";
+
 OpenIMClient.getInstance().groupManager.getGroupMemberOwnerAndAdmin(
     new OnBase<List<GroupMembersInfo>>() {
-        @Override public void onSuccess(List<GroupMembersInfo> members) { /* members contains owner and admin profiles. */ }
-        @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-    }, groupID);
+        @Override
+        public void onSuccess(List<GroupMembersInfo> members) {
+            // members contains profiles for the group owner and all administrators
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to retrieve administrative members
+        }
+    },
+    groupID
+);
 ```
 
-The owner, administrator, and regular-member `roleLevel` constants are defined in `GroupRole`.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<List<GroupMembersInfo>>` | Yes | Callback handler for the asynchronous request. |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+
+## Return value
+
+Upon success, `onSuccess` returns a list of administrative member profiles (`List<GroupMembersInfo>`).
+
+Administrative roles can be distinguished by `roleLevel`: `100` (`GroupRole.OWNER`) represents the group owner, and `60` (`GroupRole.ADMIN`) represents an administrator.
+
+## State changes after the call
+
+1. **Snapshot retrieval**: This is a read-only query that returns the current administrative roster without mutating group state.
+2. **Local cache maintenance**: Clients should cache and merge administrative members using `groupID:userID` as the unique key.
+3. **Role changes**: When administrator roles change, the SDK emits `onGroupMemberInfoChanged`. To assign or revoke administrator privileges, see [Set group member role level](/sdk/android/group/managing-group-members/set-group-member-role-level).

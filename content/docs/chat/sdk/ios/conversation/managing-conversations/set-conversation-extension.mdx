@@ -5,18 +5,43 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/managing-conversations/set-conversation-extension'
 ---
 
+Attach custom business metadata to a conversation using `setConversationEx:ex:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `ex` | `NSString *` | Yes | Custom extension string (typically JSON-formatted). Overwrites the existing field completely. |
+
+## Code example
+
 ```objc
-NSString *ex = @"{\"category\":\"work\"}";
-[[OIMManager manager] setConversationEx:conversationID
+NSString *ex = @"{\"category\":\"work\",\"tag\":\"important\"}";
+
+[[OIMManager manager] setConversationEx:@"c2c_user1002"
                                      ex:ex
-                              onSuccess:nil
-                              onFailure:nil];
+                              onSuccess:^(NSString * _Nullable data) {
+                                  NSLog(@"setConversationEx success");
+                              }
+                              onFailure:^(NSInteger code, NSString *message) {
+                                  NSLog(@"setConversationEx failed: %ld %@", (long)code, message);
+                              }];
 ```
 
-`ex` is replaced as a complete string. The SDK does not merge JSON on behalf of the application. Before updating it, parse the previous value and preserve fields owned by other parts of your application. After success, merge the latest conversation through `onConversationChanged:`.
+The `ex` property is written as an atomic replacement string. The SDK does not parse or merge JSON keys on the client. To update specific keys without losing existing metadata, fetch the existing conversation snapshot first, merge your dictionary changes, and then submit the updated serialized string.
+
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer processed the conversation extension update.
+
+## State changes after the call
+
+- **Local state merge**: Merge the new `ex` property into local conversation records using `conversationID` as the entity key.
+- **Asynchronous event listening**: Multi-device clients observe updates via `onConversationChanged:` in `OIMConversationListener` (see [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list)).
+- **Re-query calibration**: To restore authoritative conversation metadata, invoke [Retrieve conversations by ID](/sdk/ios/conversation/retrieving-conversations/get-conversations-by-id).

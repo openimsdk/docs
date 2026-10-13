@@ -1,6 +1,6 @@
 ---
 title: 'Retrieve joined groups by page'
-description: 'Retrieve groups joined by the current Flutter user by page.'
+description: 'Retrieve the list of groups joined by the current Flutter user with pagination.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -11,6 +11,17 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/group/retrieving-groups/get-joined-group-list-page'
 ---
 
+Retrieve the list of groups the current logged-in user has joined in paginated batches, suitable for loading large numbers of groups incrementally.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `int` | No | Starting offset for pagination. Defaults to `0` for the first page. |
+| `count` | `int` | No | Maximum number of groups to retrieve in a single page. |
+
+## Code example
+
 ```dart
 final groups = await OpenIM.iMManager.groupManager.getJoinedGroupListPage(
   offset: 0,
@@ -18,4 +29,12 @@ final groups = await OpenIM.iMManager.groupManager.getJoinedGroupListPage(
 );
 ```
 
-For each subsequent page, advance `offset` by the number of items already requested. If group-add or group-delete events arrive during pagination, restart the query from the first page.
+## Return value
+
+Returns a `Future` resolving to a `List<GroupInfo>` containing the joined groups for the requested page.
+
+When fetching subsequent pages, increment `offset` by the total number of items requested so far. Never calculate offsets using local list lengths that fluctuate with real-time events. If group events arrive while paging through the list, reset the offset and restart from the first page.
+
+## State changes after the call
+
+This query retrieves a point-in-time snapshot and does not trigger event callbacks. For incremental group synchronization and state merging keyed by `groupID`, see [Group overview](/sdk/flutter/group/overview-group).

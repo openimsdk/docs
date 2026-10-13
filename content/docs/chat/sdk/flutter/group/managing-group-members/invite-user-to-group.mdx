@@ -1,26 +1,39 @@
 ---
-title: 'Invite users to a group'
-description: 'Invite users to a group with the OpenIM Flutter SDK.'
+title: 'Invite users to group'
+description: 'Invite users to join an OpenIM group using the Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/group/managing-group-members/invite-user-to-group'
 ---
 
-`inviteUserToGroup()` invites a list of users to one group. The client can control the UI entry point based on the current member's role, but OpenIMServer performs the final permission check.
+Group members or administrators can invite a list of users to join a group. Enforce entry point controls in the UI based on group settings; final authorization and verification logic are handled by the server:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `String` | Yes | Target group ID. |
+| `reason` | `String` | Yes | Invitation description or application note. |
+| `userIDList` | `List<String>` | Yes | List of user IDs invited to join the group. |
+
+## Code example
 
 ```dart
 await OpenIM.iMManager.groupManager.inviteUserToGroup(
   groupID: groupID,
-  reason: 'Join the project discussion',
+  reason: 'Join project discussion',
   userIDList: selectedUserIDs,
 );
 ```
 
-`groupID`, `reason`, and `userIDList` identify the target group, invitation note, and target users. A successful `Future` means that the server handled the invitation request; it does not mean every target user's state has updated on every client.
+## Return value
 
-Relevant clients may subsequently receive a member-added event or application change. Do not treat event arrival as completion of this `Future`. See [Group member queries overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members) for merge rules.
+A successful `Future` indicates that the invitation request was accepted by the server. Depending on the group's join verification policy, users are either admitted immediately or an application record is created for review.
+
+## State changes after the call
+
+When users join directly, connected clients receive `onGroupMemberAdded` event notifications. Use `groupID:userID` as the key to merge new members into the local roster. For complete listener integration, see [Retrieving group members overview](/sdk/flutter/group/retrieving-group-members/overview-retrieving-group-members).

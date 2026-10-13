@@ -1,16 +1,16 @@
 ---
 title: 'Start a group call'
-description: 'Start a group audio or video call with OpenIM React Native SDK.'
+description: 'Initiate a multi-party group audio or video call using the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/calling/managing-calls/start-group-call'
 ---
 
-Call `signalingInviteInGroup()` to start a group audio or video call. `groupID` identifies the group where the call starts. `inviteeUserIDList` specifies the members to invite; it does not automatically invite every group member.
+Initiate a multi-party group audio or video call with selected group members. Supply the target `groupID` and specify `inviteeUserIDList` with the user IDs of the invited members; it does not automatically ring all members of the group.
 
 ```ts
 const roomCredentials = await OpenIMSDK.signalingInviteInGroup({
@@ -31,25 +31,27 @@ const roomCredentials = await OpenIMSDK.signalingInviteInGroup({
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `invitation` | `RtcInvite` | Yes | The call invitation. |
-| `invitation.inviterUserID` | `string` | Yes | User ID of the user starting the call. |
-| `invitation.inviteeUserIDList` | `string[]` | Yes | User IDs of the group members to invite. |
+| `invitation` | `RtcInvite` | Yes | Call invitation payload. |
+| `invitation.inviterUserID` | `string` | Yes | User ID of the caller initiating the call. |
+| `invitation.inviteeUserIDList` | `string[]` | Yes | List of user IDs of group members to invite. |
 | `invitation.groupID` | `string` | Yes | Target group ID. |
-| `invitation.roomID` | `string` | Yes | Room ID for this group call. |
-| `invitation.timeout` | `number` | Yes | Invitation timeout in seconds. |
-| `invitation.mediaType` | `string` | Yes | Media type, such as `audio` or `video`. |
-| `invitation.sessionType` | `SessionType` | Yes | Pass `SessionType.Group` for a group call. |
-| `invitation.platformID` | `Platform` | Yes | Inviter platform. Pass the `Platform` enum value for the current client. |
-| `invitation.customData` | `string` | No | Application-defined extension string sent with the invitation. |
-| `invitation.initiateTime` | `number` | No | Invitation start time as a Unix timestamp in milliseconds. It is usually managed by the calling flow and does not need to be set manually. |
-| `invitation.busyLineUserIDList` | `string[]` | No | Busy-user list. It is usually omitted when starting a new invitation. |
-| `offlinePushInfo` | `OfflinePush` | No | Push content for invited users when they are offline. |
-| `offlinePushInfo.title` | `string` | Conditional | Push title when `offlinePushInfo` is provided. |
-| `offlinePushInfo.desc` | `string` | Conditional | Push body when `offlinePushInfo` is provided. |
-| `offlinePushInfo.ex` | `string` | Conditional | Extension string when `offlinePushInfo` is provided. Pass an empty string when there is no content. |
-| `offlinePushInfo.iOSPushSound` | `string` | Conditional | iOS push sound when `offlinePushInfo` is provided. |
-| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditional | Whether to update the iOS badge when `offlinePushInfo` is provided. |
+| `invitation.roomID` | `string` | Yes | Unique room identifier for this group call session. |
+| `invitation.timeout` | `number` | Yes | Invitation timeout duration in seconds. |
+| `invitation.mediaType` | `string` | Yes | Call media type, typically `'audio'` or `'video'`. |
+| `invitation.sessionType` | `SessionType` | Yes | Pass `SessionType.Group` for group calls. |
+| `invitation.platformID` | `Platform` | Yes | Platform enum value representing the caller's operating platform. |
+| `invitation.customData` | `string` | No | Optional business extension string attached to the invitation. |
+| `invitation.initiateTime` | `number` | No | Initiation timestamp in Unix milliseconds. Automatically populated by the SDK if omitted. |
+| `invitation.busyLineUserIDList` | `string[]` | No | List of users currently on a busy line. Leave empty when initiating. |
+| `offlinePushInfo` | `OfflinePush` | No | Offline APNs/FCM push configuration for invitees. |
+| `offlinePushInfo.title` | `string` | Conditional | Notification title when `offlinePushInfo` is provided. |
+| `offlinePushInfo.desc` | `string` | Conditional | Notification body text when `offlinePushInfo` is provided. |
+| `offlinePushInfo.ex` | `string` | Conditional | Custom extra payload string. Pass empty string `""` if not needed. |
+| `offlinePushInfo.iOSPushSound` | `string` | Conditional | iOS push sound file identifier. |
+| `offlinePushInfo.iOSBadgeCount` | `boolean` | Conditional | Whether to increment the iOS application badge count. |
 
-The call returns `RtcInviteResults`, which includes `roomID`, `token`, `liveURL`, and an optional `busyLineUserIDList`. For field descriptions, see [Start a one-to-one call](/sdk/react-native/calling/managing-calls/start-single-call).
+## Return value
 
-Invited members receive `OnReceiveNewInvitation` with `OnReceiveNewInvitationPayload`. For member acceptance, rejection, and room-leave status, see [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events).
+Resolves to an `RtcInviteResults` object containing `roomID`, `token`, `liveURL`, and an optional `busyLineUserIDList`. See [Start a one-to-one call](/sdk/react-native/calling/managing-calls/start-single-call) for complete field descriptions.
+
+Invited group members receive the invitation via the `OnReceiveNewInvitation` event. Identify the call session using `roomID` and combine `roomID:userID` to manage member calling and connected states. For complete event listeners, see [Handle call events](/sdk/react-native/calling/managing-calls/handle-call-events).

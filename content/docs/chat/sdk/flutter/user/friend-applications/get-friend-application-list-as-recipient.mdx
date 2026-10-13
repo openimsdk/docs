@@ -1,15 +1,26 @@
 ---
-title: 'Retrieve received friend applications'
-description: 'Retrieve friend applications received by the current Flutter user by page.'
+title: 'Get friend application list as recipient'
+description: 'Query incoming friend applications received by the current user using pagination in Flutter.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/user/friend-applications/get-friend-application-list-as-recipient'
 ---
+
+Retrieve pending and processed incoming friend requests received by the currently logged-in user using pagination:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `int` | No | Pagination offset index. Start at `0` for the first page. |
+| `count` | `int` | No | Number of application records to fetch per page. |
+| `handleResults` | `List<int>?` | No | Filter records by resolution status: `0` for pending, `1` for approved, `-1` for rejected. |
+
+## Code example
 
 ```dart
 final items = await OpenIM.iMManager.friendshipManager
@@ -18,13 +29,15 @@ final items = await OpenIM.iMManager.friendshipManager
 );
 ```
 
-Use `handleResults` in the request to filter by handling state. The SDK does not expose a corresponding Dart enum, so pass only values explicitly defined by the server contract. `offset` and `count` control pagination.
+## Return value
 
-The `Future` returns the current page as `List<FriendApplicationInfo>`. This query establishes a snapshot only and does not trigger application events.
+A successful `Future` returns a list of incoming friend application records for the requested page (`List<FriendApplicationInfo>`).
 
-## Synchronize friend-application changes
+Query operations return an immediate data snapshot and do not emit listener events. For application handling actions, see [Accept a friend application](/sdk/flutter/user/friend-applications/accept-friend-application) and [Refuse a friend application](/sdk/flutter/user/friend-applications/refuse-friend-application).
 
-This page owns state handling for the friend-application listener. Locate an application by `fromUserID:toUserID`:
+## Synchronize friend application events
+
+Listen to friend application events centrally and merge state incrementally using the composite key `fromUserID:toUserID`:
 
 ```dart
 void handleFriendApplicationChanged(FriendApplicationInfo item) {
@@ -36,6 +49,6 @@ void handleFriendApplicationDeleted(FriendApplicationInfo item) {
 }
 ```
 
-In the application's single `OnFriendshipListener`, route `onFriendApplicationAdded`, `onFriendApplicationAccepted`, and `onFriendApplicationRejected` to `handleFriendApplicationChanged`. Route `onFriendApplicationDeleted` to `handleFriendApplicationDeleted`. See [Events overview](/sdk/flutter/events/overview-events) for the complete composition entry point.
+Within your single `OnFriendshipListener`, route `onFriendApplicationAdded`, `onFriendApplicationAccepted`, and `onFriendApplicationRejected` to `handleFriendApplicationChanged`, and route `onFriendApplicationDeleted` to `handleFriendApplicationDeleted`. See [Events overview](/sdk/flutter/events/overview-events) for the consolidated registration entry point.
 
-Use `toUserID == currentUserID` to distinguish received applications from sent applications. The Flutter SDK does not expose a method for deleting application records. Do not simulate deletion by rejecting an application or deleting a friend relationship.
+Distinguish incoming requests from outgoing requests by checking `toUserID == currentUserID`. The Flutter SDK does not expose a public method for deleting friend application history; do not simulate deletion by rejecting applications or deleting friends.

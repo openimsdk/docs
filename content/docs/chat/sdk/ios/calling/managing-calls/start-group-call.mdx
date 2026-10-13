@@ -5,13 +5,24 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/calling/managing-calls/start-group-call'
 ---
 
-A group call invites only the members explicitly included in `inviteeUserIDList`. Providing a `groupID` does not automatically invite every group member.
+Initiate a multi-party group audio or video call using `signalingInviteInGroup:offlinePushInfo:onSuccess:onFailure:`. The SDK dispatches invitations solely to members explicitly enumerated in `inviteeUserIDList`, rather than automatically inviting all members in the group.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `inviteeUserIDList` | `NSArray<NSString *> *` | Yes | List of target group member user IDs to invite. |
+| `groupID` | `NSString *` | Yes | Target group identifier. Must not be empty. |
+| `roomID` | `NSString *` | Yes | Room identifier. You can pass the `groupID` or a uniquely assigned business room ID. |
+| `timeout` | `NSInteger` | Yes | Invitation timeout duration in seconds. |
+| `mediaType` | `NSString *` | Yes | Media stream format: `@"video"` or `@"audio"`. |
+
+## Code example
 
 ```objc
 OIMInvitationInfo *invitation = [OIMInvitationInfo new];
@@ -24,11 +35,21 @@ invitation.mediaType = @"video";
 [[OIMManager manager] signalingInviteInGroup:invitation
                               offlinePushInfo:nil
                                     onSuccess:^(OIMInvitationResultInfo * _Nullable credentials) {
-    if (credentials != nil) [self joinMediaRoom:credentials];
+    if (credentials != nil) {
+        [self joinMediaRoom:credentials];
+    }
 }
                                      onFailure:^(NSInteger code, NSString * _Nullable message) {
-    [self showCallError:code message:message ?: @"Failed to start the group call"];
+    [self showCallError:code message:message ?: @"Failed to initiate group call"];
 }];
 ```
 
-`groupID` must not be empty. This example uses the group ID as `roomID`. If your application generates its own room ID, every participating client must use the same value. `busyLineUserIDList` means that some members are busy; it should not prevent invitations from proceeding for other members.
+## Return value
+
+The `onSuccess` callback delivers an `OIMInvitationResultInfo` instance containing the confirmed `roomID`, media `token`, `liveURL`, and busy user list (`busyLineUserIDList`). Entries in `busyLineUserIDList` indicate that specific members are engaged in other calls; this does not abort invitations destined for available members.
+
+## State changes after the call
+
+- **Local state merge**: Merge call state by `roomID`, combining with `userID` to maintain participant states. If your application provides custom room IDs, ensure all clients utilize the identical `roomID`.
+- **Remote event notification**: Selected group members receive invitations via `onReceiveNewInvitation:` in `OIMSignalingListener`.
+- **Participant updates**: Track group member responses via `onInviteeAccepted:` and `onInviteeRejected:`, updating active member rosters accordingly (see [Handle call events](/sdk/ios/calling/managing-calls/handle-call-events)).

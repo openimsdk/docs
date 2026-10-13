@@ -5,11 +5,27 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/set-group-extension'
 ---
+
+Invoke `setGroupInfoDictionary:onSuccess:onFailure:` to update custom application-defined extension data for a group (typically restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing the target `groupID` and extension key-value pairs. |
+
+### Dictionary keys
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `NSString *` | Yes | Target group ID. |
+| `ex` | `NSString *` | Yes | Custom extension string (such as serialized JSON). The write completely overwrites the existing value; preserve other module namespaces before saving. |
+
+## Code example
 
 ```objc
 NSDictionary *changes = @{
@@ -18,10 +34,20 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"setGroupInfoDictionary success");
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        NSLog(@"setGroupInfoDictionary failed: %ld %@", (long)code, message);
+    }];
 ```
 
-`ex` is replaced as a complete string. The SDK does not merge JSON automatically. Parse the previous value before writing and preserve namespaces owned by other application modules.
+## Return value
 
-The success callback, arrival of `onGroupInfoChanged:`, and a new query are three separate stages. For the complete delegate, see [Groups overview](/sdk/ios/group/overview-group).
+The `onSuccess` callback returns confirmation when the server accepts the extension update.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the local cached group's `ex` attribute matching `groupID`.
+2. **Event notification**: Group members receive an updated `OIMGroupInfo` object through the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: To calibrate local cache values, call `getSpecifiedGroupsInfo:onSuccess:onFailure:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

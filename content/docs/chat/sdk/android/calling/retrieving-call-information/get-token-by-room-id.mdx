@@ -1,24 +1,25 @@
 ---
-title: 'Get room credentials'
-description: 'Use the Android SDK to retrieve fresh join credentials for a known room ID.'
+title: 'Get call room token'
+description: 'Retrieve or refresh access credentials for an active calling room by room ID using signalingGetTokenByRoomID().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-10'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/calling/retrieving-call-information/get-token-by-room-id'
 ---
 
-When you know the `roomID` but need new join credentials, call `signalingGetTokenByRoomID()`.
+When the client knows the `roomID` but needs to acquire or refresh media room access tokens, fetch updated credentials using `signalingGetTokenByRoomID()`:
+
+## Code example
 
 ```java
 OpenIMClient.getInstance().signalingManager.signalingGetTokenByRoomID(
     new OnBase<SignalingCertificate>() {
         @Override
         public void onSuccess(SignalingCertificate credentials) {
-            // credentials provides the roomID, token, and liveURL for joining a media room.
+            // credentials provides roomID, token, and liveURL to connect to the media room.
         }
 
         @Override
@@ -30,6 +31,20 @@ OpenIMClient.getInstance().signalingManager.signalingGetTokenByRoomID(
 );
 ```
 
-The success callback returns `SignalingCertificate`, which provides the `token` and `liveURL` required to join the audio/video room.
+## Parameters
 
-Connect the media engine with the returned `roomID`, `token`, and `liveURL` after obtaining valid credentials. Call this method again when the credentials expire.
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<SignalingCertificate>` | Yes | Callback delivering the asynchronous operation result. |
+| `roomID` | `String` | Yes | Target call room identifier. |
+
+## Return value
+
+The successful callback returns a `SignalingCertificate` object containing:
+
+- `roomID`: Unique global identifier of the call room.
+- `token`: Authentication token used to join the media room.
+- `liveURL`: Media server endpoint URL.
+- `busyLineUserIDList`: List of busy users.
+
+Once valid credentials are received, connect to your media engine. If credentials expire during reconnection or extended waiting, call this method again to refresh them.

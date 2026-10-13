@@ -1,17 +1,25 @@
 ---
-title: 'Retrieve conversations in a group'
-description: 'Retrieve conversations in a Flutter conversation group by page.'
+title: 'Query conversations in group'
+description: 'Paginate conversations contained within a specified conversation group using the OpenIM Flutter SDK.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'flutter'
 sourcePath: '/sdk/flutter/conversation/managing-conversation-groups/get-conversation-group-info-with-conversations'
 ---
 
-Use `getConversationGroupInfoWithConversations()` to retrieve a conversation group together with one page of its current conversation details.
+Retrieve conversation group metadata and its member conversations using pagination:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupID` | `String` | Yes | Target conversation group ID (`conversationGroupID`, not a chat group ID). |
+| `pagination` | `RequestPagination` | Yes | Pagination options. `pageNumber` starts at 1; `showNumber` specifies items per page. |
+
+## Code example
 
 ```dart
 final page = await OpenIM.iMManager.conversationGroupManager
@@ -25,10 +33,14 @@ final page = await OpenIM.iMManager.conversationGroupManager
 renderConversationGroup(page.group, page.conversationElems ?? const []);
 ```
 
-In this request, `groupID` means `conversationGroupID`. `pageNumber` starts at `1`, and `showNumber` is the page size.
+## Return value
 
-## Result
+A successful `Future` returns a paginated container object with group metadata and conversation items:
 
-The response provides nullable `group`, the current page in `conversationElems`, and `isEnd`; it does not contain `conversationTotal`. Use `isEnd` to determine when pagination is complete.
+| Field | Type | Description |
+| --- | --- | --- |
+| `group` | `ConversationGroupInfo?` | Current conversation group metadata. |
+| `conversationElems` | `List<ConversationInfo>?` | List of conversations on the requested page. |
+| `isEnd` | `bool?` | Whether the last page has been reached; use this flag to stop further pagination. |
 
-This query does not trigger the group listener. If changes occur while paging, query again after loading to reconcile the snapshot.
+This query returns an immediate data snapshot and does not emit event notifications. If group or member change events arrive while browsing, reload the active page upon completing the current request. For complete event listening, see [Conversation groups overview](/sdk/flutter/conversation/managing-conversation-groups/overview-conversation-groups).

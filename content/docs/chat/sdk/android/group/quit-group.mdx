@@ -1,23 +1,51 @@
 ---
-title: 'Leave a group'
-description: 'Use the Android SDK to remove the current signed-in user from a group.'
+title: 'Quit a group'
+description: 'Leave a specified group as the authenticated user using quitGroup().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/quit-group'
 ---
 
-`quitGroup()` only removes the current signed-in user. It does not dismiss the group or remove other members.
+Leave a specified group that the authenticated user currently belongs to. This operation affects only the leaving user; the group itself and other members remain active. Group owners must transfer ownership or dismiss the group before quitting.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.quitGroup(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID);
+String groupID = "group_123";
+
+OpenIMClient.getInstance().groupManager.quitGroup(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group quitted successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle failure
+        }
+    },
+    groupID
+);
 ```
 
-A successful callback means that the leave request completed; it does not mean that the group-list event has arrived. `onJoinedGroupDeleted` provides the departed group's `GroupInfo`. Remove it from the current user's group list by `groupID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `groupID` | `String` | Yes | Target group ID to quit. |
+
+## Return value
+
+The successful callback confirms that the server processed the exit operation.
+
+## State changes after the call
+
+A successful callback confirms that the user was removed from the group on the server. The SDK then triggers the `onJoinedGroupDeleted(GroupInfo group)` event on `OnGroupListener`. Remove the group record matching `groupID` from your local joined groups list, and adjust or clear the associated group conversation view. For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).
+
+For group owners transferring ownership before leaving, see [Transfer group ownership](/sdk/android/group/managing-group-members/transfer-group-owner); to terminate the group entirely, see [Dismiss a group](/sdk/android/group/dismiss-group).

@@ -1,17 +1,101 @@
 ---
-title: 'Get received group applications'
-description: 'OpenIM HarmonyOS SDK guide for Get received group applications.'
+title: 'Retrieve received group applications'
+description: 'Paginate group join applications that the current user has authority to process, and listen for application lifecycle events.'
 product: 'sdk'
 context: 'chat/sdk/harmony'
 template: 'guide'
-status: 'draft'
-lastUpdated: '2026-07-20'
+status: 'published'
 version: 'v4'
 platform: 'harmony'
 sourcePath: '/sdk/harmony/group/group-applications/get-group-application-list-as-recipient'
-generatedBy: 'sync-client-sdk-route-skeletons'
 ---
 
-## Overview
+When querying applications received by group owners or administrators, set `send: false`. Filter by group IDs and review states by supplying non-empty arrays; pass empty arrays to query without restrictions:
 
-The English version of this OpenIM HarmonyOS SDK guide is deferred until the reviewed Chinese documentation is complete.
+## Code example
+
+```ts
+import sdk, {
+  EventOnGroupApplicationAcceptedData,
+  EventOnGroupApplicationAddedData,
+  EventOnGroupApplicationBadgeCountChangedData,
+  EventOnGroupApplicationDeletedData,
+  EventOnGroupApplicationRejectedData,
+  GetGroupApplicationReq,
+  GetGroupApplicationResp,
+  HandleResult,
+  OpenIMSDKEvent,
+} from '@openimsdk/imsdk';
+
+const request: GetGroupApplicationReq = {
+  send: false,
+  groupIDs: [],
+  handleResults: [HandleResult.ResultDefault],
+  pagination: { pageNumber: 1, showNumber: 20 },
+};
+const response: GetGroupApplicationResp = await sdk.getGroupApplication(request);
+const applications = response.applications;
+
+const handleApplicationAdded = (data: EventOnGroupApplicationAddedData): void => {
+  mergeGroupApplication(data.application);
+};
+const handleApplicationAccepted = (data: EventOnGroupApplicationAcceptedData): void => {
+  mergeGroupApplication(data.application);
+};
+const handleApplicationRejected = (data: EventOnGroupApplicationRejectedData): void => {
+  mergeGroupApplication(data.application);
+};
+const handleApplicationDeleted = (data: EventOnGroupApplicationDeletedData): void => {
+  removeGroupApplication(data.application.groupID, data.application.userID);
+};
+const handleApplicationBadge = (data: EventOnGroupApplicationBadgeCountChangedData): void => {
+  setGroupApplicationBadge(data.count);
+};
+
+const unsubscribeApplicationAdded = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationAdded,
+  handleApplicationAdded,
+);
+const unsubscribeApplicationAccepted = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationAccepted,
+  handleApplicationAccepted,
+);
+const unsubscribeApplicationRejected = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationRejected,
+  handleApplicationRejected,
+);
+const unsubscribeApplicationDeleted = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationDeleted,
+  handleApplicationDeleted,
+);
+const unsubscribeApplicationBadge = sdk.on(
+  OpenIMSDKEvent.EventOnGroupApplicationBadgeCountChanged,
+  handleApplicationBadge,
+);
+
+export function removeGroupApplicationListeners(): void {
+  unsubscribeApplicationAdded();
+  unsubscribeApplicationAccepted();
+  unsubscribeApplicationRejected();
+  unsubscribeApplicationDeleted();
+  unsubscribeApplicationBadge();
+}
+```
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `send` | `boolean` | Yes | Fixed as `false` when querying incoming received applications. |
+| `groupIDs` | `string[]` | Yes | Target group IDs to filter. Pass `[]` for all administered groups. |
+| `handleResults` | `HandleResult[]` | Yes | Review status filter (`ResultDefault`, `ResultAccept`, `ResultDecline`). Pass `[]` for all. |
+| `pagination.pageNumber` | `number` | Yes | Page index, starting from `1`. |
+| `pagination.showNumber` | `number` | Yes | Number of records to retrieve per page. |
+
+## Return value
+
+Returns a Promise that resolves to a `GetGroupApplicationResp` object containing `applications: IMGroupApplication[]`.
+
+## State changes after the call
+
+Identify unique applications using the composite key `groupID:userID`. The nickname, avatar, and group information embedded in an application record capture historical snapshots from when the application was created; query current user or group endpoints if real-time profiles are needed. If application events arrive while paging, reset the pagination offset and re-query. Release all subscriptions using `removeGroupApplicationListeners()` upon signing out or unmounting application components.

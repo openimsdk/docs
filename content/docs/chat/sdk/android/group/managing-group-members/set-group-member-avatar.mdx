@@ -1,28 +1,56 @@
 ---
-title: 'Update a group member avatar'
-description: 'Use SetGroupMemberInfo.faceURL to update the avatar displayed for a member in a group.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/managing-group-members/set-group-member-avatar'
+title: "Update a group member avatar"
+description: "Use SetGroupMemberInfo.faceURL to update the avatar displayed for a member in a group."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/managing-group-members/set-group-member-avatar"
 ---
 
-A group member avatar is a group-specific profile field and does not change the user's global avatar. Pass an avatar URL that group members can access.
+Update the dedicated avatar displayed for a specific member within a group. This avatar change applies exclusively inside the target group and does not modify the user's global profile avatar.
+
+## Code example
 
 ```java
 SetGroupMemberInfo update = new SetGroupMemberInfo();
-update.setGroupID(groupID);
-update.setUserID(userID);
-update.setFaceURL(avatarURL);
+update.setGroupID("group_123");
+update.setUserID("user_a");
+update.setFaceURL("https://example.com/member_avatar.png");
 
-OpenIMClient.getInstance().groupManager.setGroupMemberInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupMemberInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group member avatar updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to update group member avatar
+        }
+    }
+);
 ```
 
-After the update succeeds, receive the member profile change notification through `onGroupMemberInfoChanged`.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupMemberInfo` | `SetGroupMemberInfo` | Yes | Member update object. Must specify `groupID`, member `userID`, and the new avatar URL `faceURL`. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the member avatar URL has been persisted on the server.
+2. **Asynchronous event delivery**: Group members receive the `onGroupMemberInfoChanged` event delivering the updated `GroupMembersInfo`. The client should update the member avatar in its cache using `groupID:userID` as the unique key.
+3. **Re-query calibration**: If avatar caches become inconsistent, call [Get group member profiles](/sdk/android/group/retrieving-group-members/get-specified-group-members-info) to reload up-to-date member records.
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

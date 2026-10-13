@@ -5,18 +5,37 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-groups/get-specified-groups-info'
 ---
 
-A group query only establishes a snapshot at call time and does not trigger the group delegate. Public group discovery, cross-application directories, and complex permission filtering should be provided by your application backend. SDK queries target known groups and groups joined by the current account.
+Invoke `getSpecifiedGroupsInfo:onSuccess:onFailure:` to query detailed profile snapshots for specified group IDs in a batch:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupsID` | `NSArray<NSString *> *` | Yes | List of target group IDs to query. |
+
+## Code example
 
 ```objc
-[[OIMManager manager] getSpecifiedGroupsInfo:@[groupID]
-    onSuccess:^(NSArray<OIMGroupInfo *> *groups) { [self renderGroup:groups.firstObject]; }
-    onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getSpecifiedGroupsInfo:@[@"group_1001", @"group_1002"]
+                                   onSuccess:^(NSArray<OIMGroupInfo *> *groups) {
+                                       [groupStore mergeGroups:groups];
+                                   }
+                                   onFailure:^(NSInteger code, NSString *message) {
+                                       NSLog(@"getSpecifiedGroupsInfo failed: %ld %@", (long)code, message);
+                                   }];
 ```
 
-The success callback returns an array of matching `OIMGroupInfo` objects. Even when retrieving one group, pass an array and check its first item. Subsequent increments are handled by the stable delegate on [Groups overview](/sdk/ios/group/overview-group).
+## Return value
+
+The `onSuccess` callback delivers an array of matched `OIMGroupInfo` objects (`NSArray<OIMGroupInfo *> *`). When retrieving a single group, pass an array containing one ID and read the first result item; an empty array indicates that no matching groups were found.
+
+## State changes after the call
+
+1. **Snapshot query**: This method retrieves an instantaneous profile snapshot without triggering group delegate callbacks.
+2. **Local cache update**: The client updates local cached group records using `groupID` as the primary key.
+3. **Event notification**: Subsequent group profile updates across sessions broadcast via `onGroupInfoChanged:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

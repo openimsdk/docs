@@ -1,28 +1,65 @@
 ---
-title: 'Manage group administrators'
-description: 'Use SetGroupMemberInfo.roleLevel to change a member’s role in a group.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/managing-group-members/set-group-member-role-level'
+title: "Manage group administrators"
+description: "Use SetGroupMemberInfo.roleLevel to change a member’s role in a group."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/managing-group-members/set-group-member-role-level"
 ---
 
-Set `roleLevel` with a `GroupRole` constant: `OWNER`, `ADMIN`, or `MEMBER`. To transfer group ownership, use [Transfer group ownership](/sdk/android/group/managing-group-members/transfer-group-owner).
+Update the administrative role level of a specified group member. Group owners can promote regular members to administrators or demote administrators back to regular members. To transfer group ownership, see [Transfer group ownership](/sdk/android/group/managing-group-members/transfer-group-owner).
+
+## Code example
 
 ```java
 SetGroupMemberInfo update = new SetGroupMemberInfo();
-update.setGroupID(groupID);
-update.setUserID(userID);
+update.setGroupID("group_123");
+update.setUserID("user_b");
 update.setRoleLevel(GroupRole.ADMIN);
 
-OpenIMClient.getInstance().groupManager.setGroupMemberInfo(update, new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-});
+OpenIMClient.getInstance().groupManager.setGroupMemberInfo(
+    update,
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group member role updated successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to update group member role
+        }
+    }
+);
 ```
 
-After the role update succeeds, receive the member profile change notification through `onGroupMemberInfoChanged`.
+## Role constants
+
+Use constants defined in `GroupRole` to set the `roleLevel`:
+
+| Constant | Value | Description |
+| --- | --- | --- |
+| `GroupRole.MEMBER` | `20` | Regular group member. |
+| `GroupRole.ADMIN` | `60` | Group administrator with member management and mute privileges. |
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupMemberInfo` | `SetGroupMemberInfo` | Yes | Member update object. Must specify `groupID`, member `userID`, and the new role level constant `roleLevel`. |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the role change was committed on the server.
+2. **Asynchronous event delivery**: Group members receive the `onGroupMemberInfoChanged` event delivering the updated `GroupMembersInfo`. The client should merge the updated `roleLevel` into the cached member record using `groupID:userID` as the unique key.
+3. **Re-query calibration**: If administrator rosters diverge, call [Get group owners and admins](/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin) to reload the verified administrative list.
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

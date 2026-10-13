@@ -5,48 +5,47 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/conversation/overview-conversation'
 ---
 
-In OpenIMSDK, a conversation is the client-side chat state maintained for a one-to-one or group chat. One `OIMConversationInfo` record represents that state for the signed-in user. It stores list-related state such as the unread count, latest message, pinned status, draft, message-reception option, and extension field. A conversation record and its chat target have separate identifiers: `conversationID` locates the current account's conversation state, while a one-to-one target uses the other user's `userID` and a group-chat target uses its `groupID`.
+In the OpenIM architecture, a conversation encapsulates the local client state maintained for a direct 1-on-1 chat or group session, represented by an `OIMConversationInfo` object. It tracks list presentation states including unread counts, latest messages, pinned statuses, drafts, message reception preferences, and custom extension strings. Conversation records are identified separately from their underlying chat targets: `conversationID` identifies the authenticated user's personal conversation session, whereas direct chat targets use the recipient's `userID` and group chat targets use `groupID`.
 
-Both one-to-one and group chats use conversation records for chat-list state. Group profiles, membership, and permissions remain under the Group APIs. A group-chat page therefore uses `groupID` for group capabilities and `conversationID` for conversation settings, unread counts, drafts, and message history.
+Both direct and group chats maintain chat-list states via conversation records. Group metadata, member lists, and role permissions remain managed under the Group API domain. Group chat views consume `groupID` for group member capabilities, while utilizing `conversationID` for conversation settings, unread counts, drafts, and message history.
 
 ## Conversation identifiers
 
-For a one-to-one conversation, `sourceID` is the target user's ID and the conversation type is `OIMConversationTypeC2C`. For a group conversation, `sourceID` is the `groupID` and the conversation type is `OIMConversationTypeGroup`. Call `getConversationIDBySessionType:sourceID:` to obtain a stable `conversationID`, then use it for conversation settings, read status, hiding, and message cleanup.
+Direct 1-on-1 conversations use the peer user ID as `sourceID` with conversation type `OIMConversationTypeC2C`. Group conversations use `groupID` as `sourceID` with conversation type `OIMConversationTypeGroup`. Invoke [Generate a conversation ID](/sdk/ios/conversation/retrieving-conversations/get-conversation-id) to obtain a deterministic `conversationID` for conversation settings, read marks, hiding, and message clearance.
 
 | Identifier | Purpose |
 | --- | --- |
-| `conversationID` | The current account's conversation-record ID, used for conversation settings, message history, and unread state. |
-| `userID` | The other user's ID in a one-to-one chat. |
-| `groupID` | The group ID for a group chat and the target identifier used by Group APIs. |
-| `sourceID` | The chat-target ID used in a type-based lookup: `userID` for a one-to-one chat or `groupID` for a group chat. |
+| `conversationID` | Personal conversation record ID for the signed-in account; routes settings, message history, and unread states. |
+| `userID` | Target peer user ID for direct 1-on-1 conversations. |
+| `groupID` | Target group ID for group chats, serving as the entity key for Group APIs. |
+| `sourceID` | Target entity ID used in type-based queries: `userID` for 1-on-1 chats, or `groupID` for group chats. |
 
-## OIMConversationInfo
+## OIMConversationInfo properties
 
 | Property | Description |
 | --- | --- |
-| `conversationID` | The conversation ID. |
-| `conversationType` | The `OIMConversationType` value. |
-| `userID` / `groupID` | The user or group identifier for the chat. |
-| `showName` / `faceURL` | The conversation's current display name and avatar. |
-| `unreadCount` | The current unread count for the conversation. |
-| `latestMsg` / `latestMsgSendTime` | The latest message and its send time. |
-| `recvMsgOpt` | The `OIMReceiveMessageOpt` message-reception option. |
-| `groupAtType` | The `OIMGroupAtType` group-mention state. |
-| `draftText` / `draftTextTime` | The draft and its last update time. |
-| `isPinned` | Whether the conversation is pinned. |
-| `isPrivateChat` / `burnDuration` <span className="enterprise-field-badge">Enterprise</span> | The private-chat state and burn-after-reading duration. |
-| `isMsgDestruct` / `msgDestructTime` <span className="enterprise-field-badge">Enterprise</span> | Whether scheduled server-message deletion is enabled and its deletion interval. |
-| `isNotInGroup` | Whether the current user is no longer in the group. |
-| `attachedInfo` | Additional SDK information. |
-| `ex` | A conversation extension string whose format is defined by your application. |
+| `conversationID` | Unique conversation identifier. |
+| `conversationType` | `OIMConversationType` enum indicating conversation category. |
+| `userID` / `groupID` | Target peer user ID or group ID for the conversation. |
+| `showName` / `faceURL` | Resolved display name and avatar URL for UI rendering. |
+| `unreadCount` | Unread message count for this conversation. |
+| `latestMsg` / `latestMsgSendTime` | Last message content preview and its send timestamp in milliseconds. |
+| `recvMsgOpt` | `OIMReceiveMessageOpt` message reception and notification setting. |
+| `groupAtType` | `OIMGroupAtType` mention state (e.g., at-all, at-me). |
+| `draftText` / `draftTextTime` | Draft message text and last update timestamp. |
+| `isPinned` | Whether the conversation is pinned to the top of the chat list. |
+| `isPrivateChat` / `burnDuration` <span className="enterprise-field-badge">Enterprise</span> | Burn-after-reading private chat toggle and countdown duration in seconds. |
+| `isMsgDestruct` / `msgDestructTime` <span className="enterprise-field-badge">Enterprise</span> | Scheduled server message deletion toggle and destruction cycle. |
+| `isNotInGroup` | Whether the current user has left or been removed from the group. |
+| `attachedInfo` | Reserved SDK metadata string. |
+| `ex` | Custom application-defined extension string. |
 
-## Queries and settings
+## Feature navigation
 
 - [Retrieve a conversation by chat target](/sdk/ios/conversation/retrieving-conversations/get-conversation-by-target)
 - [Retrieve conversations by ID](/sdk/ios/conversation/retrieving-conversations/get-conversations-by-id)
@@ -56,6 +55,7 @@ For a one-to-one conversation, `sourceID` is the target user's ID and the conver
 - [Enable or disable burn after reading](/sdk/ios/conversation/managing-conversations/set-private-chat)
 - [Set the burn-after-reading duration](/sdk/ios/conversation/managing-conversations/set-burn-duration)
 - [Periodically delete server-side messages](/sdk/ios/conversation/managing-conversations/set-message-destruct)
+- [Set the server message deletion cycle](/sdk/ios/conversation/managing-conversations/set-message-destruct-time)
 - [Reset group-mention state](/sdk/ios/conversation/managing-conversations/clear-group-mentions)
 - [Set the conversation extension field](/sdk/ios/conversation/managing-conversations/set-conversation-extension)
 - [Set a conversation draft](/sdk/ios/conversation/managing-conversations/set-conversation-draft)
@@ -65,20 +65,21 @@ For a one-to-one conversation, `sourceID` is the target user's ID and the conver
 ## Conversation lifecycle
 
 - [Hide a conversation](/sdk/ios/conversation/managing-conversations/hide-a-conversation)
+- [Hide all conversations](/sdk/ios/conversation/managing-conversations/hide-all-conversations)
 - [Delete a conversation and its messages](/sdk/ios/conversation/managing-conversations/delete-conversation-with-messages)
 - [Clear conversation messages](/sdk/ios/conversation/managing-conversations/clear-conversation-messages)
 
 ## Conversation groups
 
-[Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups) explains how to organize conversations into custom groups. A group member is identified by `conversationID`, while the group itself uses `conversationGroupID`. This organization affects only the current account's conversation list. It does not create a chat group or change its `groupID`, profile, or membership.
+[Conversation groups overview](/sdk/ios/conversation/managing-conversation-groups/overview-conversation-groups) explains how to classify conversations into user-defined folders. Members are referenced by `conversationID`, while the group itself uses `conversationGroupID`. Conversation grouping reorganizes personal chat presentation without creating group chats or altering `groupID`, group metadata, or membership.
 
-The iOS enterprise SDK exposes this capability through the OpenIMCore JSON interface bundled with the SDK and merges incremental updates through one conversation-group listener. Query results establish group snapshots. Group events update records by `conversationGroupID`, while membership events use `conversationGroupID + conversationID`. The overview describes these data boundaries, provides the complete listener setup, and links to every individual API page.
+The iOS SDK exposes conversation grouping through OpenIMCore JSON interfaces bundled with the SDK and tracks updates via a single conversation group listener. Query calls return current category snapshots. Group updates merge by `conversationGroupID`, and member associations merge by `conversationGroupID` and `conversationID`.
 
-## State updates
+## State synchronization
 
-Queries establish page snapshots, and delegates merge subsequent changes:
+Query APIs establish initial data snapshots, while delegate methods merge subsequent changes:
 
-- New conversations and conversation-property changes are handled on [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).
-- Changes to the current account's total unread count are handled on [Maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count).
+- New conversations and property alterations are observed in [Retrieve the conversation list](/sdk/ios/conversation/retrieving-conversations/retrieve-conversation-list).
+- Account-level total unread changes are observed in [Maintain the total unread count](/sdk/ios/conversation/managing-conversations/get-total-unread-count).
 
-This overview identifies event ownership without registering delegates again. Handle an operation's success callback, delegate updates, and reconciliation queries separately. Do not infer final conversation state solely from the action the user initiated.
+Treat API completion callbacks, asynchronous delegate events, and reconciliation queries as distinct operational phases. Never assume remote multi-terminal synchronization has completed solely because a local write callback returned successfully.

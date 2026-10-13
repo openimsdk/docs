@@ -5,19 +5,64 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/user/moderating-a-user/block-user'
 ---
 
+Add a specified user to the authenticated account's blacklist using `addToBlackList:ex:onSuccess:onFailure:`.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userID` | `NSString *` | Yes | Target user ID to blacklist. |
+| `ex` | `NSString *` | No | Custom extension string (e.g., JSON payload documenting reason or origin). Pass an empty string `@""` when omitted. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] addToBlackList:targetUserID
-    ex:@"{\"source\":\"profile-menu\"}"
-    onSuccess:nil
-    onFailure:nil];
+                                  ex:@"{\"source\":\"profile-menu\"}"
+                           onSuccess:^(NSString *data) {
+    [blacklistStore addUserID:targetUserID];
+}
+                           onFailure:^(NSInteger code, NSString *message) {
+    NSLog(@"addToBlackList failed: %ld %@", (long)code, message);
+}];
 ```
 
-A blocklist entry is a one-way relationship and is distinct from a group mute or platform-level account suspension. A successful callback does not mean that the event has already arrived.
+Blacklisting is a unilateral relationship established by the local user. It suppresses incoming messages and direct interactions from the blocked user; it is distinct from channel-level mutes or system-wide account bans.
 
-This page owns `onBlackAdded:`. Upsert the supplied `OIMBlackInfo` by `userID`. Register and remove the same stable `OIMFriendshipListener` instance.
+## Return value
+
+The `onSuccess` callback signifies that OpenIMServer recorded the blacklist relationship.
+
+## State changes after the call
+
+- **Local state merge**: Insert or merge the newly blocked user into blacklist collections using `userID` as the unique entity key.
+- **Asynchronous event listening**: Linked devices observe blacklist changes in real time via `onBlackAdded:` in `OIMFriendshipListener`.
+- **Re-query calibration**: To retrieve a full snapshot of all blocked accounts, invoke [Retrieve the blocklist](/sdk/ios/user/moderating-a-user/retrieve-a-list-of-blocked-users).
+
+```objc
+@interface BlacklistStore () <OIMFriendshipListener>
+@end
+
+@implementation BlacklistStore
+
+- (void)startListening {
+    [[OIMManager callbacker] addFriendListener:self];
+}
+
+- (void)stopListening {
+    [[OIMManager callbacker] removeFriendListener:self];
+}
+
+- (void)onBlackAdded:(OIMBlackInfo *)info {
+    [self upsertBlackInfo:info];
+}
+
+@end
+```
+
+Retain this listener instance strongly, and invoke `removeFriendListener:` when signing out or switching accounts.

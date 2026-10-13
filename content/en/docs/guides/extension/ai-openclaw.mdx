@@ -1,55 +1,60 @@
 ## Integrate OpenClaw
 
-This document is intended for OpenIMSDK users. It explains how to connect OpenIMServer through OpenClaw Gateway and verify the integration by sending the first message.
+This guide explains how to connect OpenIMServer to OpenClaw Gateway and verify the integration by sending and receiving a test message.
 
-## 1. Prerequisites
+## Prerequisites
 
-- You have already [deployed OpenIMServer and ChatServer](../deployment/docker-compose), deployed and started OpenClaw Gateway, and can run the `openclaw` command on the machine where Gateway is running.
+- [OpenIMServer and ChatServer deployed](/docs/guides/deployment/docker-compose).
+- OpenClaw Gateway deployed and running.
+- Access to the `openclaw` CLI command on the gateway host.
 
-## 2. Register an OpenClaw User
+## Register an OpenClaw bot user
 
-### 1. Register a user
+### Register the user account
 
-Log in to the admin console. The default address is `http://server_ip:11002`, where `server_ip` is the IP address where `open-im-server` is deployed.
+Log in to the Admin Console (default address: `http://server_ip:11002`, where `server_ip` is the IP address of your OpenIMServer host).
 
-Select User Management -> User List, then click **Create New User** on the right:
+Navigate to **User Management > User List** and click **Create New User**:
+
 ![Create an OpenClaw user](/assets/guides/solution/openclaw.assets/1.png)
 
-Enter the account information:
+Enter the account credentials and profile details:
 
 ![Enter OpenClaw account information](/assets/guides/solution/openclaw.assets/2.png)
 
-### Get an admin token
+### Retrieve an admin token
 
-Refer to the [Get Admin Token](/platform-api/auth/tokens/get-admin-token) document to obtain an admin token.
+Call the [Get admin token](/platform-api/auth/tokens/get-admin-token) endpoint to obtain administrative credentials.
 
-### Get a user token
+### Issue a user token
 
-After obtaining an admin token, refer to the [Get User Token](/platform-api/auth/tokens/get-user-token) document to issue a login token for the specified user. Set `userID` to the `userID` of the user you just registered, and set `platformID` to 12 (which indicates bot).
+With the admin token, call the [Get user token](/platform-api/auth/tokens/get-user-token) endpoint to generate a login token for the newly registered user. Set `userID` to the registered account ID and set `platformID` to `12` (representing the Bot platform).
 
-## 3. Install the OpenIMSDK Channel Plugin
+## Install the OpenIMSDK Channel plugin
+
+Install the OpenClaw channel plugin from npm:
 
 ```bash
 openclaw plugins install @openim/openclaw-channel
 ```
 
-Plugin URL: https://www.npmjs.com/package/@openim/openclaw-channel
+Plugin package: <https://www.npmjs.com/package/@openim/openclaw-channel>
 
-## 4. Enable the Plugin and Configure the OpenIMSDK Channel
+## Enable and configure the OpenIMSDK Channel
 
-### Method A: Interactive setup (recommended)
+### Option 1: Interactive wizard (recommended)
+
+Run the interactive setup tool:
 
 ```bash
 openclaw openim setup
 ```
 
-Follow the prompts to fill in `token`, `wsAddr`, `apiAddr`, and other information.
+Follow the prompts to enter `token`, `wsAddr`, and `apiAddr`.
 
-### Method B: Edit the configuration file directly
+### Option 2: Edit configuration directly
 
-Edit: `~/.openclaw/openclaw.json`
-
-Example:
+Open `~/.openclaw/openclaw.json` and configure the channel:
 
 ```json
 {
@@ -68,14 +73,14 @@ Example:
 }
 ```
 
-## 5. Verification: Send the First Message
+## Verify: Send the first message
 
-In an app built with OpenIMClientSDK, search for the corresponding bot account by `userID`, then send a message to verify whether it can auto-reply.
+In an application integrating OpenIMClientSDK, search for the bot account using its `userID`, then send a message to confirm it replies automatically.
 
-If the other side successfully receives the message, OpenClaw has completed integration with OpenIMSDK.
+If the client successfully receives an automatic reply, the OpenClaw bot integration is functioning properly.
 
 ![Verify an OpenClaw reply](/assets/guides/solution/openclaw.assets/3.png)
 
-## 6. FAQ
+## Troubleshooting
 
-- **The plugin reports `OpenIM is not connected`**: This literal error is usually caused by incorrect `token`, `wsAddr`, or `apiAddr` configuration, or by network inaccessibility. First verify the configuration, then troubleshoot based on OpenClaw Gateway logs.
+- **`OpenIM is not connected` error:** This error is returned by the channel plugin when `token`, `wsAddr`, or `apiAddr` are misconfigured or when the network endpoint is unreachable. Verify your connection parameters and review OpenClaw Gateway logs for connection details.

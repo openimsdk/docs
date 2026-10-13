@@ -5,16 +5,39 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/retrieving-groups/get-joined-group-list-page'
 ---
 
+Invoke `getJoinedGroupListPageWithOffset:count:onSuccess:onFailure:` to retrieve groups joined by the current user with pagination:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `offset` | `NSInteger` | Yes | Pagination offset index; pass `0` for the initial page. |
+| `count` | `NSInteger` | Yes | Number of group items to fetch per page. |
+
+## Code example
+
 ```objc
-[[OIMManager manager] getJoinedGroupListPageWithOffset:0 count:50
-    onSuccess:^(NSArray<OIMGroupInfo *> *groups) { [self replaceFirstPage:groups]; }
-    onFailure:^(NSInteger code, NSString *message) { [self showErrorCode:code message:message]; }];
+[[OIMManager manager] getJoinedGroupListPageWithOffset:0
+                                                 count:50
+                                             onSuccess:^(NSArray<OIMGroupInfo *> *groups) {
+                                                 [self replaceFirstPage:groups];
+                                             }
+                                             onFailure:^(NSInteger code, NSString *message) {
+                                                 NSLog(@"getJoinedGroupListPage failed: %ld %@", (long)code, message);
+                                             }];
 ```
 
-`offset` starts at `0`. Increment it by the number of requested items when loading more. If group addition or deletion events arrive during pagination, rebuild the snapshot from the first page.
+## Return value
+
+The `onSuccess` callback delivers an array of `OIMGroupInfo` objects (`NSArray<OIMGroupInfo *> *`) representing the requested page.
+
+## State changes after the call
+
+1. **Snapshot query**: This method retrieves an instantaneous paginated slice without triggering group delegate callbacks.
+2. **Local pagination merge**: When loading more items, increment `offset` by the count of received records and merge items idempotently using `groupID`.
+3. **Event notification**: Subsequent additions or removals of joined groups broadcast via `onJoinedGroupAdded:` and `onJoinedGroupDeleted:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

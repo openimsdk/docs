@@ -1,57 +1,89 @@
 ---
-title: 'Search messages'
-description: 'Use searchLocalMessages to search messages synchronized to the current account’s local storage.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-10'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/message/searching-messages/search-messages'
+title: "Search messages"
+description: "Use searchLocalMessages to search messages synchronized to the current account’s local storage."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/message/searching-messages/search-messages"
 ---
 
-`searchLocalMessages()` searches messages already synchronized to the current account on this device. It does not query a global application backend. Limit the search by conversation, keywords, senders, message types, and time range. Pass `null` for `conversationID` to search all local conversations.
+Perform keyword searches across messages stored in the current account's local database. You can scope searches to a specific conversation, filter by sender, restrict message types (such as text or files), and bound results by time ranges. Passing `null` for `conversationID` executes a global search across all local conversations.
+
+## Code example
+
+```java
+String conversationID = null; // Pass null for global search across all conversations, or a specific ID
+List<String> keywords = Collections.singletonList("proposal review");
+int keywordMatchType = 1; // 1: match any keyword (OR), 0: match all keywords (AND)
+List<String> senderIDs = null;
+List<Integer> messageTypes = null;
+int searchTimePosition = 0;
+int searchTimePeriod = 0;
+int pageIndex = 0;
+int count = 20;
+
+OpenIMClient.getInstance().messageManager.searchLocalMessages(
+    new OnBase<SearchResult>() {
+        @Override
+        public void onSuccess(SearchResult result) {
+            // result.getSearchResultItems() groups matching messages by conversation
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to search messages
+        }
+    },
+    conversationID,
+    keywords,
+    keywordMatchType,
+    senderIDs,
+    messageTypes,
+    searchTimePosition,
+    searchTimePeriod,
+    pageIndex,
+    count
+);
+```
+
+## Keyword match modes
+
+The `keywordListMatchType` parameter controls boolean keyword logic:
+
+| Mode | Value | Description |
+| --- | --- | --- |
+| Match all (AND) | `0` | Message content must contain all terms in the keyword list. |
+| Match any (OR) | `1` | Message content must contain at least one term in the keyword list. |
 
 ## Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `conversationID` | `String` | No | Conversation restriction; pass `null` for all local conversations. |
-| `keywordList` | `List<String>` | Yes | Non-empty search terms. |
-| `keywordListMatchType` | `int` | Yes | SDK match mode for requiring all terms or any term. |
-| `senderUserIDList` | `List<String>` | No | Sender filter; pass an empty list for no restriction. |
-| `messageTypeList` | `List<Integer>` | No | Message-type filter; pass an empty list for no restriction. |
-| `searchTimePosition` | `int` | Yes | Time anchor; `0` means no anchor restriction. |
-| `searchTimePeriod` | `int` | Yes | Seconds searched backward from the anchor; `0` means no time restriction. |
-| `pageIndex` | `int` | Yes | Page index, starting at `0`. |
-| `count` | `int` | Yes | Maximum results per page. |
+| `base` | `OnBase<SearchResult>` | Yes | Callback handler for the asynchronous request. |
+| `conversationID` | `String` | No | Target conversation ID to scope search. Pass `null` to search globally across all conversations. |
+| `keywordList` | `List<String>` | Yes | List of search keywords. The search should not be initiated if keywords are empty. |
+| `keywordListMatchType` | `int` | Yes | Match logic: `0` for AND, `1` for OR. |
+| `senderUserIDList` | `List<String>` | No | Restrict search to messages sent by specified user IDs. Pass `null` or empty list for all senders. |
+| `messageTypeList` | `List<Integer>` | No | Restrict search to specific message types (such as text, image, etc.). Pass `null` or empty list for all types. |
+| `searchTimePosition` | `int` | Yes | Anchor start timestamp in seconds; pass `0` to search backward from current time. |
+| `searchTimePeriod` | `int` | Yes | Time span in seconds to search backward from the anchor; pass `0` for unbounded time. |
+| `pageIndex` | `int` | Yes | Page index for pagination, starting from `0`. |
+| `count` | `int` | Yes | Maximum number of results to return per page. |
 
-```java
-OpenIMClient.getInstance().messageManager.searchLocalMessages(
-    new OnBase<SearchResult>() {
-        @Override
-        public void onSuccess(SearchResult result) {
-            // result.getSearchResultItems() groups matching messages by conversation.
-        }
+## Return value
 
-        @Override
-        public void onError(int code, String error) {
-            // Keep previous results and report the failure.
-        }
-    },
-    conversationID,
-    keywords,
-    1,
-    senderIDs,
-    messageTypes,
-    0,
-    0,
-    0,
-    20
-);
-```
+Upon success, `onSuccess` returns a `SearchResult` object containing:
 
-## Result
+| Field | Description |
+| --- | --- |
+| `totalCount` | Total number of matching message records found. |
+| `searchResultItems` | List of result items grouped by conversation (`List<SearchResultItem>`). |
 
-The success callback returns `SearchResult`. `totalCount` is the number of matched messages. `searchResultItems` groups the conversation ID, display name, avatar, match count, and message list for each conversation. Search results belong to the current search UI and do not replace a conversation's complete message list or trigger message events.
+Each `SearchResultItem` contains the conversation's `conversationID`, display name, avatar, matched `messageCount`, and matched `messageList`. When the user selects a search result, call [Load message context](/sdk/android/message/retrieving-messages/load-message-context) to locate the message and reconstruct its surrounding conversation thread.
+
+## State changes after the call
+
+1. **Local search execution**: This is a read-only query executed entirely against local SQLite storage without issuing network calls.

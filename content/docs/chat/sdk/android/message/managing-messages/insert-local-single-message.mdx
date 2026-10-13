@@ -5,27 +5,29 @@ product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-17'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/message/managing-messages/insert-local-single-message'
 ---
 
-`insertSingleMessageToLocalStorage()` writes a message to a one-to-one chat on the current device. Use it for imported records or application notices that must remain local. It does not send the message to the server.
+Write a pre-constructed message directly into the local SQLite database of the current device for a one-to-one conversation. This operation does not issue a network request to the server, does not deliver the message to the peer user, and does not synchronize to other devices logged into the same account. It is commonly used for inserting local security prompts, client-side assistant messages, or migrating offline records. To send an actual message across the network, call [Send a message](/sdk/android/message/sending-messages/send-message).
 
-`message` is the complete message object, `receiver` is the recipient user ID, and `sender` is the sender user ID. These two IDs determine the message direction and are not interchangeable.
+## Code example
 
 ```java
+String receiverUserID = "user_b";
+String senderUserID = "user_a";
+
 OpenIMClient.getInstance().messageManager.insertSingleMessageToLocalStorage(
     new OnBase<String>() {
         @Override
         public void onSuccess(String data) {
-            // Re-read or update the one-to-one message list on this device.
+            // Message written to local storage, refresh direct chat UI
         }
 
         @Override
         public void onError(int code, String error) {
-            // Report the local write failure.
+            // Handle insertion failure
         }
     },
     message,
@@ -34,4 +36,21 @@ OpenIMClient.getInstance().messageManager.insertSingleMessageToLocalStorage(
 );
 ```
 
-The success callback means the local write completed. This operation does not trigger a new-message event and cannot replace [Send a message](/sdk/android/message/sending-messages/send-message).
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `message` | `Message` | Yes | Pre-constructed message object (typically created via one of the `create*Message` APIs). |
+| `receiver` | `String` | Yes | User ID of the direct chat recipient. |
+| `sender` | `String` | Yes | User ID of the direct chat sender. These two fields determine message direction and must not be inverted. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the message was saved to local storage on this device. Insert the item into your conversation timeline using `clientMsgID` as the distinct key.
+2. **Local scope**: This is a local-only operation that does not trigger network requests or dispatch `OnAdvanceMsgListener.onRecvNewMessage` events.
+3. **Re-query calibration**: The inserted message exists only in the local database on this device. It will not synchronize to cloud roaming history or appear on other devices logged into the same account.

@@ -1,20 +1,20 @@
 ---
 title: 'Handle call events'
-description: 'Listen for call events with OpenIM React Native SDK.'
+description: 'Listen to RTC call invitations, participant changes, and media stream events with the OpenIM React Native SDK.'
 product: 'sdk'
 context: 'chat/sdk/react-native'
 template: 'guide'
-status: 'draft'
+status: 'published'
 version: 'v4'
 platform: 'react-native'
 sourcePath: '/sdk/react-native/calling/managing-calls/handle-call-events'
 ---
 
-Call events report invitation status, participant status, and media-stream status. For invitation events, read room information from `invitation` in the callback parameter. Media-stream events provide `roomID` directly. To send and receive custom signals, see [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal).
+Calling events notify applications of invitation state changes, participant joins and leaves, and media stream mutations. Invitation events provide room metadata within `payload.invitation`, while media stream events supply `roomID` directly. For custom signaling, see [Send a custom signal](/sdk/react-native/calling/sending-custom-signals/send-a-custom-signal).
 
 ## Event parameters
 
-| Event | Callback parameter type | Common fields |
+| Event | Payload type | Key fields |
 | --- | --- | --- |
 | `OnReceiveNewInvitation` | `OnReceiveNewInvitationPayload` | `invitation`, `userID`, `participant`, `offlinePushInfo`. |
 | `OnInviteeAccepted` | `OnInviteeAcceptedPayload` | `invitation`, `userID`, `participant`, `opUserPlatformID`. |
@@ -28,106 +28,80 @@ Call events report invitation status, participant status, and media-stream statu
 | `OnRoomParticipantDisconnected` | `OnRoomParticipantDisconnectedPayload` | `invitation`, `groupID`, `participant`. |
 | `OnStreamChange` | `OnStreamChangePayload` | `roomID`, `streamType`, `mute`. |
 
-Use `invitation.roomID` or `roomID` to distinguish calls. Use `participant.userInfo.userID` to distinguish participants.
+When merging and reconciling call state in local caches or UI stores, always use `roomID` (or `invitation.roomID`) as the primary key for the calling room. For participant statuses inside the room, combine `roomID` with the user ID (`participant.userInfo.userID`).
+
+## Code example
 
 ```ts
 function handleReceiveNewInvitation(payload: OnReceiveNewInvitationPayload) {
-  // ...
+  // Update state for new incoming call invitation
 }
 
 function handleInviteeAccepted(payload: OnInviteeAcceptedPayload) {
-  // ...
+  // Update state when an invitee accepts
 }
 
 function handleInviteeRejected(payload: OnInviteeRejectedPayload) {
-  // ...
+  // Update state when an invitee rejects
 }
 
 function handleInvitationCancelled(payload: OnInvitationCancelledPayload) {
-  // ...
+  // Clear call state when inviter cancels
 }
 
 function handleInvitationTimeout(payload: OnReceiveNewInvitationPayload) {
-  // ...
+  // Handle invitation timeout
 }
 
 function handleInviteeAcceptedByOtherDevice(payload: OnInviteeAcceptedPayload) {
-  // ...
+  // Synchronize state when accepted on another device
 }
 
 function handleInviteeRejectedByOtherDevice(payload: OnInviteeRejectedPayload) {
-  // ...
+  // Synchronize state when rejected on another device
 }
 
 function handleHangUp(payload: OnHangUpPayload) {
-  // ...
+  // Handle call hangup
 }
 
-function handleRoomParticipantConnected(
-  payload: OnRoomParticipantConnectedPayload,
-) {
-  // ...
+function handleRoomParticipantConnected(payload: OnRoomParticipantConnectedPayload) {
+  // Add participant to the active room
 }
 
-function handleRoomParticipantDisconnected(
-  payload: OnRoomParticipantDisconnectedPayload,
-) {
-  // ...
+function handleRoomParticipantDisconnected(payload: OnRoomParticipantDisconnectedPayload) {
+  // Remove participant from the active room
 }
 
 function handleStreamChange(payload: OnStreamChangePayload) {
-  // ...
+  // Update audio/video stream mute status
 }
 
-// Start listening
+// Register listeners
 OpenIMSDK.on(OpenIMEvent.OnReceiveNewInvitation, handleReceiveNewInvitation);
 OpenIMSDK.on(OpenIMEvent.OnInviteeAccepted, handleInviteeAccepted);
 OpenIMSDK.on(OpenIMEvent.OnInviteeRejected, handleInviteeRejected);
 OpenIMSDK.on(OpenIMEvent.OnInvitationCancelled, handleInvitationCancelled);
 OpenIMSDK.on(OpenIMEvent.OnInvitationTimeout, handleInvitationTimeout);
-OpenIMSDK.on(
-  OpenIMEvent.OnInviteeAcceptedByOtherDevice,
-  handleInviteeAcceptedByOtherDevice,
-);
-OpenIMSDK.on(
-  OpenIMEvent.OnInviteeRejectedByOtherDevice,
-  handleInviteeRejectedByOtherDevice,
-);
+OpenIMSDK.on(OpenIMEvent.OnInviteeAcceptedByOtherDevice, handleInviteeAcceptedByOtherDevice);
+OpenIMSDK.on(OpenIMEvent.OnInviteeRejectedByOtherDevice, handleInviteeRejectedByOtherDevice);
 OpenIMSDK.on(OpenIMEvent.OnHangUp, handleHangUp);
-OpenIMSDK.on(
-  OpenIMEvent.OnRoomParticipantConnected,
-  handleRoomParticipantConnected,
-);
-OpenIMSDK.on(
-  OpenIMEvent.OnRoomParticipantDisconnected,
-  handleRoomParticipantDisconnected,
-);
+OpenIMSDK.on(OpenIMEvent.OnRoomParticipantConnected, handleRoomParticipantConnected);
+OpenIMSDK.on(OpenIMEvent.OnRoomParticipantDisconnected, handleRoomParticipantDisconnected);
 OpenIMSDK.on(OpenIMEvent.OnStreamChange, handleStreamChange);
 
-// Stop listening
+// Unregister listeners
 OpenIMSDK.off(OpenIMEvent.OnReceiveNewInvitation, handleReceiveNewInvitation);
 OpenIMSDK.off(OpenIMEvent.OnInviteeAccepted, handleInviteeAccepted);
 OpenIMSDK.off(OpenIMEvent.OnInviteeRejected, handleInviteeRejected);
 OpenIMSDK.off(OpenIMEvent.OnInvitationCancelled, handleInvitationCancelled);
 OpenIMSDK.off(OpenIMEvent.OnInvitationTimeout, handleInvitationTimeout);
-OpenIMSDK.off(
-  OpenIMEvent.OnInviteeAcceptedByOtherDevice,
-  handleInviteeAcceptedByOtherDevice,
-);
-OpenIMSDK.off(
-  OpenIMEvent.OnInviteeRejectedByOtherDevice,
-  handleInviteeRejectedByOtherDevice,
-);
+OpenIMSDK.off(OpenIMEvent.OnInviteeAcceptedByOtherDevice, handleInviteeAcceptedByOtherDevice);
+OpenIMSDK.off(OpenIMEvent.OnInviteeRejectedByOtherDevice, handleInviteeRejectedByOtherDevice);
 OpenIMSDK.off(OpenIMEvent.OnHangUp, handleHangUp);
-OpenIMSDK.off(
-  OpenIMEvent.OnRoomParticipantConnected,
-  handleRoomParticipantConnected,
-);
-OpenIMSDK.off(
-  OpenIMEvent.OnRoomParticipantDisconnected,
-  handleRoomParticipantDisconnected,
-);
+OpenIMSDK.off(OpenIMEvent.OnRoomParticipantConnected, handleRoomParticipantConnected);
+OpenIMSDK.off(OpenIMEvent.OnRoomParticipantDisconnected, handleRoomParticipantDisconnected);
 OpenIMSDK.off(OpenIMEvent.OnStreamChange, handleStreamChange);
 ```
 
-Stop listening when the component is unmounted, the user signs out, or the account changes.
+Unregister these listeners when the call component unmounts, the user signs out, or accounts switch.

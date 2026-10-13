@@ -1,6 +1,6 @@
 ---
-title: 'Load message history in reverse'
-description: 'Use the Flutter SDK to page from a message anchor toward newer history.'
+title: 'Load newer message history'
+description: 'Use the Flutter SDK to page from a message anchor toward newer message history.'
 product: 'sdk'
 context: 'chat/sdk/flutter'
 template: 'guide'
@@ -11,7 +11,18 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/retrieving-messages/load-newer-messages'
 ---
 
-Use this method when you already have a message anchor and need to load the messages that follow it:
+Page forward from a specific message anchor (such as after searching or jumping to a quoted message) toward newer message history:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `String` | Yes | Target conversation ID. |
+| `startMsg` | `Message?` | No | Starting anchor message for reverse pagination. Loads messages created after this anchor. |
+| `count` | `int` | Yes | Number of messages to retrieve in this batch. |
+| `viewType` | `int?` | No | History view type, defaulting to normal history (`GetHistoryViewType.history`). |
+
+## Code example
 
 ```dart
 final page = await OpenIM.iMManager.messageManager
@@ -23,4 +34,12 @@ final page = await OpenIM.iMManager.messageManager
 );
 ```
 
-Do not mix both loading directions at the same scrolling boundary. The Future returns a message snapshot in the requested direction and does not trigger the new-message listener. When merging, keep the result within its `conversationID` and require a non-empty `clientMsgID`.
+Avoid mixing forward and reverse cursor directions on the same scrolling boundary to prevent timeline rendering discontinuities.
+
+## Return value
+
+Returns a `Future` resolving to an advanced message pagination object (`AdvancedMessage`). Its `messageList` contains messages retrieved forward toward the newest timestamp.
+
+## State changes after the call
+
+This query retrieves a point-in-time snapshot and does not trigger new-message event callbacks. When merging into your UI list, constrain updates to the target `conversationID` and deduplicate records strictly by non-empty `clientMsgID`. To load older historical messages while scrolling upward, see [Load older messages](/sdk/flutter/message/retrieving-messages/load-older-messages).

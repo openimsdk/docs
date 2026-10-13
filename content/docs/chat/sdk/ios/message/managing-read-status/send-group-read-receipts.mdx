@@ -5,27 +5,55 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-read-status/send-group-read-receipts'
 ---
 
+When group chat messages become visible on the user's screen, invoke `sendGroupMessageReadReceipt:clientMsgIDs:onSuccess:onFailure:` on `OIMManager` to report read status to the server. The server records the read timestamps and broadcasts receipt updates to other group members:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target group conversation identifier. |
+| `clientMsgIDs` | `NSArray<NSString *> *` | Yes | Array of client message IDs visible and read on the screen. All IDs in a batch must belong to the same group conversation. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming receipts were accepted by the server. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] sendGroupMessageReadReceipt:conversationID
-    clientMsgIDs:visibleClientMsgIDs
-    onSuccess:nil
-    onFailure:nil];
+                                     clientMsgIDs:visibleClientMsgIDs
+                                        onSuccess:^(NSString * _Nullable data) {
+    // Read receipts sent to server successfully
+}
+                                        onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle reporting failure
+}];
 ```
 
-Every ID in one batch must belong to the target group conversation. A successful callback means only that the reporting request has completed, not that other clients have received the receipt. Maintain the conversation unread count through the separate conversation-read API.
+## Return value
 
-Other clients receive member-level group read changes through `onRecvGroupReadReceipt:`. This page owns that delegate. Merge read counts, unread counts, and member information by `conversationID + clientMsgID`.
+The `onSuccess` callback confirms that the read receipts were transmitted to and acknowledged by the server.
+
+## Listen for group read receipt events
+
+When other members read messages in the group, the SDK dispatches updates via `onRecvGroupReadReceipt:` in `OIMAdvancedMsgListener`:
 
 ```objc
 - (void)onRecvGroupReadReceipt:(OIMGroupMessageReceipt *)receipt {
+    if (receipt == nil) {
+        return;
+    }
+    // Update read/unread participant counts by conversationID and clientMsgID
     [self mergeGroupReceipt:receipt];
 }
 ```
 
-Register the stable listener that receives this callback with `addAdvancedMsgListener:` and remove it with `removeAdvancedMsgListener:`. For the complete lifecycle, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages). The reporting callback, group-receipt delegate, and member snapshot from [Retrieve group-message readers](/sdk/ios/message/managing-read-status/get-group-message-readers) are three separate stages.
+## State changes after the call
+
+1. **Client merge key**: The merge key is `clientMsgID` scoped to `conversationID`. Upon receiving `onRecvGroupReadReceipt:`, update read and unread participant counters on the corresponding message bubble.
+2. **Conversation unread count separation**: Reporting group message receipts informs other members of your read progress; update the local conversation's overall unread badge using the dedicated conversation-read API.
+3. **Distinct operational phases**: Reporting receipts, receiving incoming receipt broadcasts, and querying reader lists are distinct stages. To inspect the detailed list of members who have read a specific message, see [Retrieve group-message readers](/sdk/ios/message/managing-read-status/get-group-message-readers). For listener setup, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

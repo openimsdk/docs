@@ -1,23 +1,64 @@
 ---
 title: 'Apply to join a group'
-description: 'Use the Android SDK to submit a group application or join request.'
+description: 'Submit an application to join a group or enter directly based on verification settings using joinGroup().'
 product: 'sdk'
 context: 'chat/sdk/android'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-18'
 version: 'v4'
 platform: 'android'
 sourcePath: '/sdk/android/group/join-group'
 ---
 
-Use `joinGroup()` to submit a request to join a group. `joinSource` identifies how the user joined: `2` for an invitation, `3` for search, or `4` for a QR code. Use the five-parameter overload when attaching extra data.
+Submit a request to join a specified group. Depending on the group's verification mode, this operation either adds the user immediately or forwards an application to group administrators for approval.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.joinGroup(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request was submitted. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID, "I would like to join the project discussion", 3, "{\"from\":\"search\"}");
+String groupID = "group_123";
+String reqMsg = "Requesting to join the developer group";
+int joinSource = 3; // 3 indicates joining via search
+String ex = "{\"source\":\"search_page\"}";
+
+OpenIMClient.getInstance().groupManager.joinGroup(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Join request processed or application submitted successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Handle failure
+        }
+    },
+    groupID,
+    reqMsg,
+    joinSource,
+    ex
+);
 ```
 
-[The verification mode](/sdk/android/group/set-group-join-verification) determines whether the user joins immediately or submits an application first. When approval is required, a successful callback means only that the application was submitted. After the user joins, `onJoinedGroupAdded` provides the joined group's `GroupInfo`; add it to the current user's group list by `groupID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback delivering the asynchronous operation result. |
+| `groupID` | `String` | Yes | Target group ID. |
+| `reqMsg` | `String` | No | Optional application greeting or reason message sent to administrators. |
+| `joinSource` | `int` | Yes | Join source code: `2` for invitation, `3` for search, `4` for QR code scan. |
+| `ex` | `String` | No | Custom metadata string attached to the request (such as a JSON string). Pass `""` if not needed. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback confirms that the request was accepted and processed by the server. The group's configured policy in [Set group join verification](/sdk/android/group/set-group-join-verification) determines the subsequent lifecycle.
+2. **Direct join vs. application verification**:
+   - **Direct join**: The user becomes a group member immediately. The SDK triggers `OnGroupListener.onJoinedGroupAdded`, delivering the new `GroupInfo` to merge into the joined groups list using `groupID`.
+   - **Requires verification**: The application is stored on the server awaiting owner or admin approval. Once approved, the client receives `onJoinedGroupAdded`.
+3. **Re-query calibration**: To verify current group membership or refresh joined groups, call [Check group membership](/sdk/android/group/retrieving-groups/is-join-group) or [Get joined groups](/sdk/android/group/retrieving-groups/get-joined-group-list-page).
+
+For complete listener registration details, see [Group overview](/sdk/android/group/overview-group).

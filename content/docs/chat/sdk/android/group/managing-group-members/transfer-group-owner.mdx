@@ -1,23 +1,58 @@
 ---
-title: 'Transfer group ownership'
-description: 'Use the Android SDK to transfer group ownership to a specified member.'
-product: 'sdk'
-context: 'chat/sdk/android'
-template: 'guide'
-status: 'published'
-lastUpdated: '2026-08-18'
-version: 'v4'
-platform: 'android'
-sourcePath: '/sdk/android/group/managing-group-members/transfer-group-owner'
+title: "Transfer group ownership"
+description: "Use the Android SDK to transfer group ownership to a specified member."
+product: "sdk"
+context: "chat/sdk/android"
+template: "guide"
+status: "published"
+version: "v4"
+platform: "android"
+sourcePath: "/sdk/android/group/managing-group-members/transfer-group-owner"
 ---
 
-`transferGroupOwner()` accepts two parameters: `groupID`, the ID of the group whose ownership is being transferred, and `newOwnerUserID`, the ID of the new owner. The target user must already be a member of the group.
+Transfer group ownership to another member in the group. After the transfer succeeds, the original owner becomes a regular group member, and the new owner gains full administrative control, including the authority to dismiss the group.
+
+## Code example
 
 ```java
-OpenIMClient.getInstance().groupManager.transferGroupOwner(new OnBase<String>() {
-    @Override public void onSuccess(String data) { /* The request completed. */ }
-    @Override public void onError(int code, String error) { /* code and error describe the failure. */ }
-}, groupID, newOwnerUserID);
+String groupID = "group_123";
+String newOwnerUserID = "user_b";
+
+OpenIMClient.getInstance().groupManager.transferGroupOwner(
+    new OnBase<String>() {
+        @Override
+        public void onSuccess(String data) {
+            // Group ownership transferred successfully
+        }
+
+        @Override
+        public void onError(int code, String error) {
+            // Failed to transfer group ownership
+        }
+    },
+    groupID,
+    newOwnerUserID
+);
 ```
 
-A successful callback means that the transfer request completed. The previous and new owners can produce separate `onGroupMemberInfoChanged` events; each provides an updated `GroupMembersInfo`. Merge them by `groupID:userID`. See [Group overview](/sdk/android/group/overview-group) for the complete listener setup, and [retrieve the group owner and administrators](/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin) again when displaying the current management list.
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `base` | `OnBase<String>` | Yes | Callback handler for the asynchronous request. |
+| `groupID` | `String` | Yes | Globally unique ID of the target group. |
+| `newOwnerUserID` | `String` | Yes | User ID of the new owner. The user must already be an existing member of the group. |
+
+## Return value
+
+Upon success, `data` in `onSuccess` returns a confirmation message.
+
+## State changes after the call
+
+1. **Callback confirmation**: The `onSuccess` callback indicates that the group ownership transition has been committed on the server.
+2. **Asynchronous event delivery**: Members in the group receive synchronization events:
+   - `onGroupMemberInfoChanged`: Delivered for both the former owner and the new owner with their updated `roleLevel` values. Merge using `groupID:userID`.
+   - `onGroupInfoChanged`: Delivers the updated `GroupInfo` reflecting the new `ownerUserID`. Merge using `groupID`.
+3. **Re-query calibration**: To calibrate administrative roles or group details, call [Get group owners and admins](/sdk/android/group/retrieving-group-members/get-group-member-owner-and-admin) or [Get group profiles](/sdk/android/group/retrieving-groups/get-specified-groups-info).
+
+For complete listener registration and lifecycle management, see [Group overview](/sdk/android/group/overview-group).

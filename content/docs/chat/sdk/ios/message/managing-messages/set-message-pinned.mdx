@@ -5,18 +5,57 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/message/managing-messages/set-message-pinned'
 ---
 
+Invoke `setConversationPinnedMsgWithConversationID:clientMsgID:pinned:onSuccess:onFailure:` on `OIMManager` to pin an important historical message to the top of a conversation, or unpin a currently pinned message:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `conversationID` | `NSString *` | Yes | Target conversation identifier. |
+| `clientMsgID` | `NSString *` | Yes | Client message ID of the target message to pin or unpin. |
+| `pinned` | `BOOL` | Yes | Pin status flag. Pass `YES` to pin the message; pass `NO` to unpin it. |
+| `onSuccess` | `OIMSuccessCallback` | Yes | Success callback confirming the pin state request was accepted. |
+| `onFailure` | `OIMFailureCallback` | Yes | Failure callback returning error code `code` and descriptive message `msg`. |
+
+## Code example
+
 ```objc
 [[OIMManager manager] setConversationPinnedMsgWithConversationID:conversationID
-    clientMsgID:message.clientMsgID
-    pinned:YES
-    onSuccess:nil
-    onFailure:nil];
+                                                     clientMsgID:message.clientMsgID
+                                                          pinned:YES
+                                                       onSuccess:^(NSString * _Nullable data) {
+    // Pin status request submitted successfully
+}
+                                                       onFailure:^(NSInteger code, NSString * _Nullable msg) {
+    // Handle pinning failure
+}];
 ```
 
-Pass `NO` to unpin the message. A successful callback does not return a new list or mean that the event has arrived. This page owns `onChangedPinnedMsg:`. Replace the collection identified by `OIMChangedPinnedMsg.conversationID`, then deduplicate its `msg` items by `clientMsgID`. For the listener lifecycle, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).
+## Return value
+
+The `onSuccess` callback confirms that the server accepted the pin status modification.
+
+## Listen for pinned message changes
+
+When pinned messages in a conversation change, the SDK notifies group members via `onChangedPinnedMsg:` in `OIMAdvancedMsgListener`:
+
+```objc
+- (void)onChangedPinnedMsg:(OIMChangedPinnedMsg *)changedPinnedMsg {
+    if (changedPinnedMsg == nil) {
+        return;
+    }
+    // Refresh the pinned message list for the corresponding conversation
+    [self replacePinnedMessages:changedPinnedMsg.messageList
+                 conversationID:changedPinnedMsg.conversationID];
+}
+```
+
+## State changes after the call
+
+1. **Client merge key**: The merge key is `clientMsgID` scoped to `conversationID`. Upon receiving `onChangedPinnedMsg:`, replace the pinned messages collection for that conversation and deduplicate items by `clientMsgID`.
+2. **Multi-client synchronization**: Calling the API confirms server receipt, while the updated pinned banner across all clients is refreshed upon event arrival. To actively retrieve the current pinned snapshot, see [Retrieve pinned messages](/sdk/ios/message/managing-messages/get-pinned-messages). For listener lifecycle management, see [Receive messages](/sdk/ios/message/receiving-messages/receive-messages).

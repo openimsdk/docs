@@ -5,11 +5,28 @@ product: 'sdk'
 context: 'chat/sdk/ios'
 template: 'guide'
 status: 'published'
-lastUpdated: '2026-08-04'
 version: 'v4'
 platform: 'ios'
 sourcePath: '/sdk/ios/group/set-group-join-verification'
 ---
+
+Invoke `setGroupInfoDictionary:onSuccess:onFailure:` to configure join verification requirements for applications and member invitations (typically restricted to group owners and administrators):
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `groupInfoDictionary` | `NSDictionary *` | Yes | Dictionary containing the target `groupID` and the join verification mode. |
+
+### Verification type options
+
+| Enumeration value | Numeric value | Description |
+| --- | --- | --- |
+| `OIMGroupVerificationTypeApplyNeedVerificationInviteDirectly` | `0` | Join applications require review; member invitations join directly. |
+| `OIMGroupVerificationTypeAllNeedVerification` | `1` | Both join applications and regular member invitations require review (owner/admin invitations bypass review). |
+| `OIMGroupVerificationTypeDirectly` | `2` | Anyone can join directly without requiring approval. |
+
+## Code example
 
 ```objc
 NSDictionary *changes = @{
@@ -18,14 +35,20 @@ NSDictionary *changes = @{
 };
 
 [[OIMManager manager] setGroupInfoDictionary:changes
-    onSuccess:nil
-    onFailure:nil];
+    onSuccess:^(NSString * _Nullable data) {
+        NSLog(@"setGroupInfoDictionary success");
+    }
+    onFailure:^(NSInteger code, NSString *message) {
+        NSLog(@"setGroupInfoDictionary failed: %ld %@", (long)code, message);
+    }];
 ```
 
-| Enum value | Numeric value | Meaning |
-| --- | --- | --- |
-| `OIMGroupVerificationTypeApplyNeedVerificationInviteDirectly` | `0` | User applications require approval; invitations from group members join directly. |
-| `OIMGroupVerificationTypeAllNeedVerification` | `1` | Applications and invitations from regular members require approval; invitations from the owner or an administrator do not. |
-| `OIMGroupVerificationTypeDirectly` | `2` | Applications and invitations join directly. |
+## Return value
 
-After the success callback, reconcile the final state through `onGroupInfoChanged:` or a new query.
+The `onSuccess` callback returns confirmation when the server accepts the updated verification policy.
+
+## State changes after the call
+
+1. **Local state update**: The client updates the local cached group's `needVerification` property matching `groupID`.
+2. **Event notification**: Group members receive an updated `OIMGroupInfo` object through the `onGroupInfoChanged:` listener callback.
+3. **Re-query calibration**: To calibrate local cache values, call `getSpecifiedGroupsInfo:onSuccess:onFailure:`. For listener setup, refer to [Groups overview](/sdk/ios/group/overview-group).

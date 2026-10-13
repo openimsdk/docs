@@ -11,6 +11,18 @@ platform: 'flutter'
 sourcePath: '/sdk/flutter/message/creating-messages/create-custom-message'
 ---
 
+Encapsulate application-specific custom data structures (such as polls, red packets, or order cards) into a message object ready for delivery:
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `data` | `String` | Yes | Core custom payload, typically formatted as a JSON string. |
+| `extension` | `String` | Yes | Custom extension string, commonly used to identify schema namespaces or protocol versions. |
+| `description` | `String` | Yes | Plain text summary of the custom message, used for offline push notifications or fallback UI rendering. |
+
+## Code example
+
 ```dart
 final message = await OpenIM.iMManager.messageManager.createCustomMessage(
   data: jsonEncode({'version': 1, 'orderID': orderID}),
@@ -19,4 +31,12 @@ final message = await OpenIM.iMManager.messageManager.createCustomMessage(
 );
 ```
 
-Recipients should validate the protocol version and fields. The application service must remain the authority for business state. The `Future` returns an object waiting to be sent.
+Recipients should validate the payload structure and schema version upon decoding. Authoritative business state must remain on your application backend; custom messages serve as delivery carriers.
+
+## Return value
+
+Returns a `Future` resolving to a custom `Message` object ready for transmission. Its custom data is stored in `customElem`.
+
+## State changes after the call
+
+Creating a message only constructs the local message data structure in memory; it does not perform network transmission and does not trigger new-message event callbacks. Once constructed, pass the returned `Message` instance to [Send a message](/sdk/flutter/message/sending-messages/send-message) to deliver it to a direct or group conversation.
